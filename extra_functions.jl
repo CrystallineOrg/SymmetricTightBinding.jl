@@ -86,3 +86,45 @@ function prune_klab_irreps_vecs(v::BandSummary, klab::String="Γ")
     )
     return prune_klab_irreps_vecs!(v´, klab)
 end
+
+function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
+    brs = bandreps(sg_num) # elementary band representations
+    lgs = littlegroups(sg_num) # little groups
+    filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
+    map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting (without reducing translations)
+    lgirsd = pick_lgirreps(lgs; timereversal=true) # small irreps associated with `lgs`
+
+    symeigsd = Dict{String,Vector{Vector{ComplexF64}}}()
+    for (klab, lg) in lgs
+        kv = mp.Vector3(position(lg)()...)
+        ms.solve_kpoint(kv)
+
+        symeigsd[klab] = [Vector{ComplexF64}(undef, length(lg)) for n in 1:ms.num_bands]
+        for (i, gᵢ) in enumerate(lg)
+            W = mp.Matrix(eachcol(rotation(gᵢ))...) # decompose gᵢ = {W|w}
+            w = mp.Vector3(translation(gᵢ)...)
+            symeigs = ms.compute_symmetries(W, w) # compute ⟨Eₙₖ|gᵢDₙₖ⟩ for all bands
+            setindex!.(symeigsd[klab], symeigs, i) # update container of symmetry eigenvalues
+        end
+    end
+
+    # --- fix singular photonic symmetry content at Γ, ω=0 --- # TODO: Maybe we can skip this step or try to change the condition on Γ
+    fixup_gamma_symmetry!(symeigsd, lgs)
+
+    # --- analyze connectivity and topology of symmetry data ---
+    summaries = analyze_symmetry_data(symeigsd, lgirsd, brs)
+
+    return summaries
+end
+
+function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
+    long_cand = PBC.filling_symmetry_constrained_expansions(t, Int[], d, brs, Int[])
+
+    return long_cand
+end
+
+function find_all_band_representataions(μ::Int, v::Vector{Int64}, d::Vector{Int64}, brs::BandRepSet)
+    idxs = collect(1:size(matrix(brs), 1))
+    brs_cand = PBC.filling_symmetry_constrained_expansions(μ, v, d, brs, idxs)
+    return brs_cand
+end

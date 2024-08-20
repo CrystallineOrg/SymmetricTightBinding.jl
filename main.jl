@@ -12,7 +12,7 @@ const PBC = PhotonicBandConnectivity # just to shorten things up
 mp = pyimport("meep")
 mpb = pyimport("meep.mpb")
 
-### Compute the symmetry vector for an especific structure
+### construct the structure under srudy
 
 R1 = 0.2 #cylinder radius
 mat = mp.Medium(epsilon=12)
@@ -30,48 +30,32 @@ ms = mpb.ModeSolver(
 )
 ms.init_params(p=mp.ALL, reset_fields=true)
 
-sg_num = 221                                        # P-4 (Z₂×Z₂ symmetry indicator group)
-brs = bandreps(sg_num)                             # elementary band representations
-lgs = littlegroups(sg_num)                         # little groups
-filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
-map!(lg -> primitivize(lg, false), values(lgs))   # convert to primitive setting (without reducing translations)
-lgirsd = pick_lgirreps(lgs; timereversal=true);    # small irreps associated with `lgs`
+### obtain the symmetry vectors of the bands under study
+sg_num = 221
+band_summaries = obtain_symmetry_vectors(ms, sg_num)
 
-symeigsd = Dict{String,Vector{Vector{ComplexF64}}}()
-for (klab, lg) in lgs
-    kv = mp.Vector3(position(lg)()...)
-    ms.solve_kpoint(kv)
+vᵀ = band_summaries[1] # pick the 2 lower bands
 
-    symeigsd[klab] = [Vector{ComplexF64}(undef, length(lg)) for n in 1:ms.num_bands]
-    for (i, gᵢ) in enumerate(lg)
-        W = mp.Matrix(eachcol(rotation(gᵢ))...) # decompose gᵢ = {W|w}
-        w = mp.Vector3(translation(gᵢ)...)
-        symeigs = ms.compute_symmetries(W, w)   # compute ⟨Eₙₖ|gᵢDₙₖ⟩ for all bands
-        setindex!.(symeigsd[klab], symeigs, i)  # update container of symmetry eigenvalues
-    end
-end
+t = 1
+brs = bandreps(sg_num)
+d = matrix(brs)[end, :]
 
-# --- fix singular photonic symmetry content at Γ, ω=0 --- # TODO: Maybe we can skip this step or try to change the condition on Γ
-fixup_gamma_symmetry!(symeigsd, lgs)
+long_modes = find_auxiliary_modes(t, d, brs)
 
-# --- analyze connectivity and topology of symmetry data ---
-summaries = analyze_symmetry_data(symeigsd, lgirsd, brs)
-vᵀ = summaries[1]
+nᴸ = sum(brs[long_modes[1]]) # pick one specific auxiliary modes
 
-### Now we want to find a possible EBR decomposition of that vector
-B = matrix(brs) # matrix of EBRs with their dimensions in the last row
-A = B[1:end-1, :]
-d = B[end, :]
-
-#### We need also the same matrice but without Γ
+# if we want to work being Γ agnostic
 brs´ = prune_klab_irreps_brs(brs, "Γ")
-B´ = matrix(brs´) # matrix of EBRs with their dimensions in the last row
-A´ = B´[1:end-1, :]
+vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
+nᴸ´ = sum(brs´[long_modes[1]])
 
-t = 3
-candidates = PBC.filling_symmetry_constrained_expansions(t, Int[], d, brs, Int[]); # search for all long. modes of dimension
-# `t``
-vᴸ = sum(brs[candidates[1]])
-vᴸ´ = sum(brs´[candidates[1]])
+vᵀ⁺ᴸ´ = vᵀ´.n + nᴸ´
+μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
 
-vᵀ⁺ᴸ = vᵀ.n + vᴸ
+band_repre = find_all_band_representataions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´)
+
+nᵀ⁺ᴸ = brs[band_repre[1][1]]
+
+nᵀ⁺ᴸ - vᵀ.n
+
+println((nᵀ⁺ᴸ.label, nᴸ.label))
