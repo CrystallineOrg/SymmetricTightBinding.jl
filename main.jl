@@ -58,4 +58,4 @@ nᵀ⁺ᴸ = brs[band_repre[1][1]]
 
 nᵀ⁺ᴸ - vᵀ.n
 
-println((nᵀ⁺ᴸ.label, nᴸ.label))
+println("(nᵀ⁺ᴸ, nᴸ)", " = ", (nᵀ⁺ᴸ.label, nᴸ.label))
