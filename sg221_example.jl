@@ -42,20 +42,6 @@ d = matrix(brs)[end, :]
 
 long_modes = find_auxiliary_modes(t, d, brs)
 
-nᴸ = sum(brs[long_modes[1]]) # pick one specific auxiliary modes
+band_repre = find_all_band_representataions(vᵀ, long_modes, d, brs)
 
-# if we want to work being Γ agnostic
-brs´ = prune_klab_irreps_brs(brs, "Γ")
-vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
-nᴸ´ = sum(brs´[long_modes[1]])
-
-vᵀ⁺ᴸ´ = vᵀ´.n + nᴸ´
-μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
-
-band_repre = find_all_band_representataions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´)
-
-nᵀ⁺ᴸ = brs[band_repre[1][1]]
-
-nᵀ⁺ᴸ - vᵀ.n
-
-println((nᵀ⁺ᴸ.label, nᴸ.label))
+println()

@@ -123,8 +123,23 @@ function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
     return long_cand
 end
 
-function find_all_band_representataions(μ::Int, v::Vector{Int64}, d::Vector{Int64}, brs::BandRepSet)
-    idxs = collect(1:size(matrix(brs), 1))
-    brs_cand = PBC.filling_symmetry_constrained_expansions(μ, v, d, brs, idxs)
-    return brs_cand
+function find_all_band_representataions(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet)
+    brs´ = prune_klab_irreps_brs(brs, "Γ")
+    vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
+    idxs = collect(1:size(matrix(brs´), 1))
+
+    output = AbstractVector[]
+    for i in 1:length(long_modes)
+        nᴸ = long_modes[i]
+        vᴸ´ = sum(brs´[nᴸ])
+        vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
+        μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
+
+        nᵀ⁺ᴸ = PBC.filling_symmetry_constrained_expansions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´, idxs)
+
+        if nᵀ⁺ᴸ != []
+            push!(output, [nᵀ⁺ᴸ, nᴸ])
+        end
+    end
+    return output
 end
