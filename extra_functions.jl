@@ -123,6 +123,11 @@ function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
     return long_cand
 end
 
+function physical(vᵀ::BandSummary, nᵀ⁺ᴸ, nᴸ)
+
+    return all(>=(0), vᵀ.n - (nᵀ⁺ᴸ - nᴸ))
+end
+
 function find_all_band_representataions(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
@@ -138,12 +143,9 @@ function find_all_band_representataions(vᵀ::BandSummary, long_modes::Vector{Ve
         nᵀ⁺ᴸ = PBC.filling_symmetry_constrained_expansions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´, idxs)
 
         if nᵀ⁺ᴸ != []
-            push!(output, [nᵀ⁺ᴸ, nᴸ])
+            phys = [physical(vᵀ, sum(brs[j]), sum(brs[nᴸ])) for j in nᵀ⁺ᴸ]
+            push!(output, [nᵀ⁺ᴸ, nᴸ, phys])
         end
     end
     return output
-end
-
-function physical()
-
 end

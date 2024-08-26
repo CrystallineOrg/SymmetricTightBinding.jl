@@ -48,3 +48,6 @@ nᵀ⁺ᴸ = brs[band_repre[1][1][1]...]
 nᴸ = brs[long_modes[1]...]
 
 println("(nᵀ⁺ᴸ, nᴸ)", " = ", (nᵀ⁺ᴸ.label, nᴸ.label))
+
+band_repre[1][1][1]
+sum(brs[band_repre[1][1][1]])
