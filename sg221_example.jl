@@ -44,4 +44,7 @@ long_modes = find_auxiliary_modes(t, d, brs)
 
 band_repre = find_all_band_representataions(vᵀ, long_modes, d, brs)
 
-println()
+nᵀ⁺ᴸ = brs[band_repre[1][1][1]...]
+nᴸ = brs[long_modes[1]...]
+
+println("(nᵀ⁺ᴸ, nᴸ)", " = ", (nᵀ⁺ᴸ.label, nᴸ.label))
