@@ -133,7 +133,7 @@ function find_all_band_representataions(vᵀ::BandSummary, long_modes::Vector{Ve
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
 
-    output = AbstractVector[]
+    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Bool}}[]
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -144,7 +144,7 @@ function find_all_band_representataions(vᵀ::BandSummary, long_modes::Vector{Ve
 
         if nᵀ⁺ᴸ != []
             phys = [physical(vᵀ, sum(brs[j]), sum(brs[nᴸ])) for j in nᵀ⁺ᴸ]
-            push!(output, [nᵀ⁺ᴸ, nᴸ, phys])
+            push!(output, (nᵀ⁺ᴸ, nᴸ, phys))
         end
     end
     return output

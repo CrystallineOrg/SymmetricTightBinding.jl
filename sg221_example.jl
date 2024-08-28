@@ -47,7 +47,4 @@ band_repre = find_all_band_representataions(vᵀ, long_modes, d, brs)
 nᵀ⁺ᴸ = brs[band_repre[1][1][1]...]
 nᴸ = brs[long_modes[1]...]
 
-println("(nᵀ⁺ᴸ, nᴸ)", " = ", (nᵀ⁺ᴸ.label, nᴸ.label))
-
-band_repre[1][1][1]
-sum(brs[band_repre[1][1][1]])
+println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ", nᴸ.wyckpos)
