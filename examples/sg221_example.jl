@@ -1,4 +1,5 @@
-using Pkg; Pkg.activate(@__DIR__)
+using Pkg;
+Pkg.activate(@__DIR__);
 
 using Crystalline, MPBUtils
 using PhotonicBandConnectivity, SymmetryBases
@@ -39,8 +40,7 @@ long_modes = find_auxiliary_modes(t, d, brs)
 
 band_repre = find_all_band_representations(vᵀ, long_modes, d, brs)
 
-nᵀ⁺ᴸ = brs[band_repre[1][1][1]][1]
+nᵀ⁺ᴸ = brs[band_repre[1][1][1]...]
+nᴸ = brs[long_modes[1]...]
 
-    nᵀ⁺ᴸ - vᵀ.n
-
-println((nᵀ⁺ᴸ.label, nᴸ.label))
+println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ", nᴸ.wyckpos)
