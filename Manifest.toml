@@ -2,7 +2,7 @@
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "dfd9d497aee47704c525de9a54dd52a14ad5333f"
+project_hash = "6a68e20709579f2e20d6cfdeef87f4a0d8af359b"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -274,18 +274,6 @@ git-tree-sha1 = "ebd18c326fa6cee1efb7da9a3b45cf69da2ed4d9"
 uuid = "86223c79-3864-5bf0-83f7-82e725a168b6"
 version = "1.11.2"
 
-[[deps.Gurobi]]
-deps = ["Gurobi_jll", "Libdl", "MathOptInterface"]
-git-tree-sha1 = "86bb48959ff82fdcf981c55462bd8427773ea6fc"
-uuid = "2e9cd046-0924-5485-92f1-d5272153d98b"
-version = "1.3.0"
-
-[[deps.Gurobi_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "179143cef0916daf0afc83a629501da3fa76af4d"
-uuid = "c018c7e6-a5b0-4aea-8f80-9c1ef9991411"
-version = "11.0.2+2"
-
 [[deps.HiGHS]]
 deps = ["HiGHS_jll", "MathOptInterface", "PrecompileTools", "SparseArrays"]
 git-tree-sha1 = "477bde3ee57657239b38d3bacafcb20082d9a1b2"
@@ -363,6 +351,12 @@ version = "1.23.0"
 
     [deps.JuMP.weakdeps]
     DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+
+[[deps.LLLplus]]
+deps = ["DelimitedFiles", "LinearAlgebra", "Printf"]
+git-tree-sha1 = "92e492e5c0bee62a1b17dfc6f7bacb439ef9c951"
+uuid = "142c1900-a1c3-58ae-a66d-b187f9ca6423"
+version = "1.4.0"
 
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
@@ -443,9 +437,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.MPBUtils]]
 deps = ["Crystalline", "DelimitedFiles", "DocStringExtensions", "LinearAlgebra", "Requires", "StaticArrays", "Statistics", "SymmetryBases"]
-git-tree-sha1 = "1416a52cea270cf55493847db06b8cdad9011149"
-repo-rev = "master"
-repo-url = "https://github.com/thchr/MPBUtils.jl"
+path = "../MPBUtils"
 uuid = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 version = "0.1.11"
 
@@ -533,12 +525,10 @@ uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.8.1"
 
 [[deps.PhotonicBandConnectivity]]
-deps = ["Crystalline", "DocStringExtensions", "LinearAlgebra", "SymmetryBases"]
-git-tree-sha1 = "3b0de34d47f6ba573ce6f28a3bb2952f95821c42"
-repo-rev = "master"
-repo-url = "https://github.com/thchr/PhotonicBandConnectivity.jl"
+deps = ["Crystalline", "DocStringExtensions", "LLLplus", "LinearAlgebra", "SymmetryBases"]
+path = "../PhotonicBandConnectivity"
 uuid = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
-version = "0.3.1"
+version = "0.4.0"
 
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
