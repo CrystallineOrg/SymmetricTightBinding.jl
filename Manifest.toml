@@ -364,6 +364,12 @@ version = "1.23.0"
     [deps.JuMP.weakdeps]
     DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 
+[[deps.LLLplus]]
+deps = ["DelimitedFiles", "LinearAlgebra", "Printf"]
+git-tree-sha1 = "92e492e5c0bee62a1b17dfc6f7bacb439ef9c951"
+uuid = "142c1900-a1c3-58ae-a66d-b187f9ca6423"
+version = "1.4.0"
+
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -533,12 +539,12 @@ uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.8.1"
 
 [[deps.PhotonicBandConnectivity]]
-deps = ["Crystalline", "DocStringExtensions", "LinearAlgebra", "SymmetryBases"]
-git-tree-sha1 = "3b0de34d47f6ba573ce6f28a3bb2952f95821c42"
+deps = ["Crystalline", "DocStringExtensions", "LLLplus", "LinearAlgebra", "SymmetryBases"]
+git-tree-sha1 = "0ac87bf18743e1d628ea61051904800ed05dc150"
 repo-rev = "master"
 repo-url = "https://github.com/thchr/PhotonicBandConnectivity.jl"
 uuid = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
-version = "0.3.1"
+version = "0.4.0"
 
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]

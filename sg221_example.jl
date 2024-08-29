@@ -5,6 +5,8 @@ using PhotonicBandConnectivity, SymmetryBases
 
 const PBC = PhotonicBandConnectivity # just to shorten things up
 
+include("utils.jl")
+
 mp = pyimport("meep")
 mpb = pyimport("meep.mpb")
 
