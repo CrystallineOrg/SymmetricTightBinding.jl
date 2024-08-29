@@ -140,6 +140,7 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
         vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
         μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
 
+        # TODO: update to use `find_all_admissible_expansions` instead
         nᵀ⁺ᴸ = PBC.filling_symmetry_constrained_expansions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´, idxs)
 
         if nᵀ⁺ᴸ != []
