@@ -437,7 +437,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.MPBUtils]]
 deps = ["Crystalline", "DelimitedFiles", "DocStringExtensions", "LinearAlgebra", "Requires", "StaticArrays", "Statistics", "SymmetryBases"]
-path = "../MPBUtils"
+git-tree-sha1 = "1416a52cea270cf55493847db06b8cdad9011149"
+repo-rev = "master"
+repo-url = "https://github.com/thchr/MPBUtils.jl"
 uuid = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 version = "0.1.11"
 
@@ -526,7 +528,9 @@ version = "2.8.1"
 
 [[deps.PhotonicBandConnectivity]]
 deps = ["Crystalline", "DocStringExtensions", "LLLplus", "LinearAlgebra", "SymmetryBases"]
-path = "../PhotonicBandConnectivity"
+git-tree-sha1 = "0ac87bf18743e1d628ea61051904800ed05dc150"
+repo-rev = "master"
+repo-url = "https://github.com/thchr/PhotonicBandConnectivity.jl"
 uuid = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
 version = "0.4.0"
 
