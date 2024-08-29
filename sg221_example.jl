@@ -1,13 +1,11 @@
-using Pkg
-Pkg.activate(".")
 
 using Crystalline, MPBUtils
 using PyCall, Pkg
 using PhotonicBandConnectivity, SymmetryBases
 
-include("extra_functions.jl")
-
 const PBC = PhotonicBandConnectivity # just to shorten things up
+
+include("utils.jl")
 
 mp = pyimport("meep")
 mpb = pyimport("meep.mpb")
