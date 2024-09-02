@@ -235,3 +235,16 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     end
     return output
 end
+
+# Computes the generalized inverse `Xᵍ` of `X`, computed from the Smith normal form.
+function generalized_inv(X::AbstractMatrix{<:Integer})
+    F = smith(X)
+    Λ = MPBUtils.diagm(F)
+    Λg = zeros(Float64, size(Λ)[2], size(Λ)[1])
+    for (n, λₙ) in enumerate(F.SNF)
+        Λg[n, n] = iszero(λₙ) ? λₙ : inv(λₙ)
+    end
+    Xᵍ = F.Tinv * Λg * F.Sinv # generalized inverse
+
+    return Xᵍ
+end
