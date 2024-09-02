@@ -1,0 +1,5 @@
+[deps]
+Crystalline = "ae5e2be0-a263-11e9-351e-f94dad1eb351"
+MPBUtils = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
+PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
+SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
