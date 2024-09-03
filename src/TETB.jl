@@ -14,7 +14,7 @@ using PyCall
 
 const mp = PyNULL()
 const mpb = PyNULL()
-function __init__() 
+function __init__()
     # import the mp and mpb libraries
     # https://github.com/JuliaPy/PyCall.jl#using-pycall-from-julia-modules)
     try
@@ -32,7 +32,7 @@ export mp, mpb
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 
-export find_all_band_representations, find_auxiliary_modes, obtain_symmetry_vectors
+export find_all_band_representations, find_auxiliary_modes, obtain_symmetry_vectors, find_physical_band_representations
 
 # ---------------------------------------------------------------------------------------- #
 end # module
