@@ -205,8 +205,8 @@ end
 
 function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
     long_cand = find_all_admissible_expansions(
-        #= basis =# brs, #= basis_occupations =# d, #= occupation =# t,
-        #= constraints =# Int[], #= idxs =# Int[])
+        brs, d, t, #= occupation =#
+        Int[], Int[]) #= idxs =#
 
     return long_cand
 end
@@ -244,30 +244,17 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
 
-<<<<<<< HEAD
-    output = Tuple{Vector{Vector{Int64}}, Vector{Int64}, Vector{Bool}}[]
-=======
-    brsᵧ = pick_klab_irreps_brs(brs, "Γ")
-    vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
-
     output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Bool}}[]
->>>>>>> dev
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
         vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
         μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
 
-        nᵀ⁺ᴸ = find_all_admissible_expansions(#= basis =# brs´, #= basis_occupations =# d,
-                    #= occupation =# μᵀ⁺ᴸ, #= constraints =# vᵀ⁺ᴸ´, #= idxs =# idxs)
+        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs) #= idxs =#
 
-<<<<<<< HEAD
         if !isempty(nᵀ⁺ᴸ)
-            phys = [physical(vᵀ, sum(brs[j]), sum(brs[nᴸ])) for j in nᵀ⁺ᴸ]
-=======
-        if nᵀ⁺ᴸ != []
-            phys = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
->>>>>>> dev
+            phys = [physical(vᵀ, sum(brs[j]), sum(brs[nᴸ], sg_num)) for j in nᵀ⁺ᴸ]
             push!(output, (nᵀ⁺ᴸ, nᴸ, phys))
         end
     end
