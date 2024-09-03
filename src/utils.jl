@@ -211,17 +211,47 @@ function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
     return long_cand
 end
 
-function physical(vᵀ::BandSummary, nᵀ⁺ᴸ, nᴸ)
+# Computes the generalized inverse `Xᵍ` of `X`, computed from the Smith normal form.
+function generalized_inv(X::AbstractMatrix{<:Integer})
+    F = smith(X)
+    Λ = MPBUtils.diagm(F)
+    Λg = zeros(Float64, size(Λ)[2], size(Λ)[1])
+    for (n, λₙ) in enumerate(F.SNF)
+        Λg[n, n] = iszero(λₙ) ? λₙ : inv(λₙ)
+    end
+    Xᵍ = F.Tinv * Λg * F.Sinv # generalized inverse
 
-    return all(>=(0), vᵀ.n - (nᵀ⁺ᴸ - nᴸ))
+    return Xᵍ
 end
 
-function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet)
+function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
+    lgirs = realify(lgirreps(sg_num)["Γ"])
+    _, Q = physical_zero_frequency_gamma_irreps(
+        lgirs;
+        supergroup_constraints=true,
+        force_fixed=true,
+        lattice_reduce=true)
+
+    Q⁻¹ = generalized_inv(Q)
+    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
+    y = Q⁻¹ * (nᵀᵧ-vᵀᵧ.n)[1:end-1]
+
+    return all([(y[i] - round(y[i])) == 0 for i in eachindex(y)])
+end
+
+function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
 
+<<<<<<< HEAD
     output = Tuple{Vector{Vector{Int64}}, Vector{Int64}, Vector{Bool}}[]
+=======
+    brsᵧ = pick_klab_irreps_brs(brs, "Γ")
+    vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
+
+    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Bool}}[]
+>>>>>>> dev
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -231,9 +261,42 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
         nᵀ⁺ᴸ = find_all_admissible_expansions(#= basis =# brs´, #= basis_occupations =# d,
                     #= occupation =# μᵀ⁺ᴸ, #= constraints =# vᵀ⁺ᴸ´, #= idxs =# idxs)
 
+<<<<<<< HEAD
         if !isempty(nᵀ⁺ᴸ)
             phys = [physical(vᵀ, sum(brs[j]), sum(brs[nᴸ])) for j in nᵀ⁺ᴸ]
+=======
+        if nᵀ⁺ᴸ != []
+            phys = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
+>>>>>>> dev
             push!(output, (nᵀ⁺ᴸ, nᴸ, phys))
+        end
+    end
+    return output
+end
+
+function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
+    brs´ = prune_klab_irreps_brs(brs, "Γ")
+    vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
+    idxs = collect(1:size(matrix(brs´), 1))
+
+    brsᵧ = pick_klab_irreps_brs(brs, "Γ")
+    vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
+
+    output = Tuple{Vector{Int64},Vector{Int64}}[]
+    for i in 1:length(long_modes)
+        nᴸ = long_modes[i]
+        vᴸ´ = sum(brs´[nᴸ])
+        vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
+        μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
+
+        nᵀ⁺ᴸ = PBC.filling_symmetry_constrained_expansions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´, idxs)
+
+        if nᵀ⁺ᴸ != []
+            for j in eachindex(nᵀ⁺ᴸ)
+                if physical(vᵀᵧ, sum(brsᵧ[nᵀ⁺ᴸ[j]]), sum(brsᵧ[nᴸ]), sg_num)
+                    push!(output, (nᵀ⁺ᴸ[j], nᴸ))
+                end
+            end
         end
     end
     return output
