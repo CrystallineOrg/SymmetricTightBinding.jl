@@ -2,7 +2,7 @@
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "2f4f9aca2e7625920685b5d08a846239b443e842"
+project_hash = "b47b8d8495ef53385c91fbd5b59119b3c0678b14"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -28,7 +28,7 @@ version = "1.5.0"
 
 [[deps.Bravais]]
 deps = ["LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "b40f38f758a15e4fe9599d47bc73ffc2c96932ab"
+path = "../../Crystalline/Bravais"
 uuid = "ada6cbde-b013-4edf-aa94-f6abe8bd6e6b"
 version = "0.1.9"
 
@@ -94,17 +94,18 @@ uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 version = "1.10.2"
 
 [[deps.ConstructionBase]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "a33b7ced222c6165f624a3f2b55945fac5a598d9"
+git-tree-sha1 = "76219f1ed5771adbb096743bff43fb5fdd4c1157"
 uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
-version = "1.5.7"
+version = "1.5.8"
 
     [deps.ConstructionBase.extensions]
     ConstructionBaseIntervalSetsExt = "IntervalSets"
+    ConstructionBaseLinearAlgebraExt = "LinearAlgebra"
     ConstructionBaseStaticArraysExt = "StaticArrays"
 
     [deps.ConstructionBase.weakdeps]
     IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+    LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.Crayons]]
@@ -250,11 +251,16 @@ git-tree-sha1 = "39783f639367ea6d6673540134e62f6c1bc2b4d2"
 uuid = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
 version = "0.3.12"
 
+[[deps.GeoFormatTypes]]
+git-tree-sha1 = "59107c179a586f0fe667024c5eb7033e81333271"
+uuid = "68eda718-8dee-11e9-39e7-89f7f65f511f"
+version = "0.4.2"
+
 [[deps.GeoInterface]]
-deps = ["Extents"]
-git-tree-sha1 = "9fff8990361d5127b770e3454488360443019bb3"
+deps = ["Extents", "GeoFormatTypes"]
+git-tree-sha1 = "5921fc0704e40c024571eca551800c699f86ceb4"
 uuid = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
-version = "1.3.5"
+version = "1.3.6"
 
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "Extents", "GeoInterface", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
@@ -324,15 +330,15 @@ version = "1.0.0"
 
 [[deps.JLD2]]
 deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "PrecompileTools", "Requires", "TranscodingStreams"]
-git-tree-sha1 = "049950edff105ff73918d29dbf109220ff364157"
+git-tree-sha1 = "a0746c21bdc986d0dc293efa6b1faee112c37c28"
 uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-version = "0.4.52"
+version = "0.4.53"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
+git-tree-sha1 = "f389674c99bfcde17dc57454011aa44d5a260a40"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.5.0"
+version = "1.6.0"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
@@ -342,9 +348,9 @@ version = "0.21.4"
 
 [[deps.JuMP]]
 deps = ["LinearAlgebra", "MacroTools", "MathOptInterface", "MutableArithmetics", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays"]
-git-tree-sha1 = "1171edaad5873df2c93808fb13fd6f87de6510fd"
+git-tree-sha1 = "82bc707a67639be45ec9abf3a7640af19c4172fe"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
-version = "1.23.0"
+version = "1.23.1"
 
     [deps.JuMP.extensions]
     JuMPDimensionalDataExt = "DimensionalData"
@@ -455,9 +461,9 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[deps.MathOptInterface]]
 deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
-git-tree-sha1 = "c0fe113e9c72aa0c9a185fd3c5ca1daa51de1486"
+git-tree-sha1 = "5b246fca5420ae176d65ed43a2d0ee5897775216"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-version = "1.31.1"
+version = "1.31.2"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -702,6 +708,12 @@ repo-rev = "master"
 repo-url = "https://github.com/thchr/SymmetryBases.jl"
 uuid = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 version = "0.4.1"
+
+[[deps.TETB]]
+deps = ["Crystalline", "MPBUtils", "PhotonicBandConnectivity", "PyCall", "SymmetryBases"]
+path = ".."
+uuid = "0d4be8d3-4503-476c-b33f-e073dd414f32"
+version = "0.0.1"
 
 [[deps.TOML]]
 deps = ["Dates"]
