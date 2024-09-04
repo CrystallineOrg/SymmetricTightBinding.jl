@@ -232,7 +232,7 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
         lattice_reduce=true)
 
     # sort Q in the same order as the SG irreps order
-    irs = string.(lgirs.irs) # change them from 
+    irs = label.(lgirs) # change them from 
     irlabs = vᵀᵧ.brs.irlabs
     perm = sortperm(irs)[invperm(sortperm(irlabs))]
     Q_ordered = Q[perm, :]
@@ -241,7 +241,7 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
     nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
     y = Q⁻¹ * (nᵀᵧ-vᵀᵧ.n)[1:end-1]
 
-    return (all([(y[i] - round(y[i])) == 0 for i in eachindex(y)]), y)
+    return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
 end
 
 function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)

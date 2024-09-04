@@ -2,7 +2,7 @@
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "821f4974536003d5c08cbf6afe4cf5c2e0f17d6a"
+project_hash = "aa398135ddb278e5e6ef57bc43d81357b4706a84"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -732,6 +732,12 @@ repo-rev = "master"
 repo-url = "https://github.com/thchr/SymmetryBases.jl"
 uuid = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 version = "0.4.1"
+
+[[deps.TETB]]
+deps = ["Crystalline", "MPBUtils", "PhotonicBandConnectivity", "PyCall", "Revise", "SymmetryBases"]
+path = ".."
+uuid = "0d4be8d3-4503-476c-b33f-e073dd414f32"
+version = "0.0.1"
 
 [[deps.TOML]]
 deps = ["Dates"]
