@@ -1,5 +1,5 @@
 using Pkg;
-Pkg.activate(".");
+Pkg.activate(@__DIR__);
 
 using Crystalline, MPBUtils
 using PhotonicBandConnectivity, SymmetryBases

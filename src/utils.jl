@@ -204,7 +204,13 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
 end
 
 function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
+<<<<<<< HEAD
     long_cand = find_all_admissible_expansions(brs, d, t, Int[], Int[])
+=======
+    long_cand = find_all_admissible_expansions(
+        brs, d, t, #= occupation =#
+        Int[], Int[]) #= idxs =#
+>>>>>>> main
 
     return long_cand
 end
@@ -254,7 +260,7 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
 
         nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
 
-        if nᵀ⁺ᴸ != []
+        if !isempty(nᵀ⁺ᴸ)
             phys = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
             push!(output, (nᵀ⁺ᴸ, nᴸ, phys))
         end
@@ -277,7 +283,7 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
         vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
         μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
 
-        nᵀ⁺ᴸ = PBC.filling_symmetry_constrained_expansions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´, idxs)
+        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
 
         if nᵀ⁺ᴸ != []
             for j in eachindex(nᵀ⁺ᴸ)
