@@ -244,6 +244,9 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
 
+    brsᵧ = pick_klab_irreps_brs(brs, "Γ")
+    vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
+
     output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Bool}}[]
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
@@ -251,10 +254,10 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
         vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
         μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
 
-        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs) #= idxs =#
+        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
 
         if !isempty(nᵀ⁺ᴸ)
-            phys = [physical(vᵀ, sum(brs[j]), sum(brs[nᴸ], sg_num)) for j in nᵀ⁺ᴸ]
+            phys = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
             push!(output, (nᵀ⁺ᴸ, nᴸ, phys))
         end
     end
@@ -276,7 +279,7 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
         vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
         μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
 
-        nᵀ⁺ᴸ = PBC.filling_symmetry_constrained_expansions(μᵀ⁺ᴸ, vᵀ⁺ᴸ´, d, brs´, idxs)
+        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
 
         if nᵀ⁺ᴸ != []
             for j in eachindex(nᵀ⁺ᴸ)
