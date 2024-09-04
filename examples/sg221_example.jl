@@ -37,9 +37,9 @@ long_modes = find_auxiliary_modes(t, d, brs)
 
 all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs, sg_num)
 
-nᵀ⁺ᴸ = brs[all_band_repre[1][1][1]...]
-nᴸ = brs[all_band_repre[1][2]...]
-phys = all_band_repre[1][3][1]
+nᵀ⁺ᴸ = brs[all_band_repre[2][1][1]...]
+nᴸ = brs[all_band_repre[2][2]...]
+phys = all_band_repre[2][3][1]
 
 println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ", nᴸ.wyckpos, "; Are they physical? ", phys)
 

@@ -1,5 +1,4 @@
-# Just a file with the functions that we are building to solve all the things
-
+# 
 function prune_klab_irreps_brs!(brs::BandRepSet, klab::String="Γ")
     prune_kidx = findfirst(==(klab), brs.klabs)
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
@@ -232,11 +231,17 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
         force_fixed=true,
         lattice_reduce=true)
 
-    Q⁻¹ = generalized_inv(Q)
+    # sort Q in the same order as the SG irreps order
+    irs = string.(lgirs.irs) # change them from 
+    irlabs = vᵀᵧ.brs.irlabs
+    perm = sortperm(irs)[invperm(sortperm(irlabs))]
+    Q_ordered = Q[perm, :]
+
+    Q⁻¹ = generalized_inv(Q_ordered)
     nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
     y = Q⁻¹ * (nᵀᵧ-vᵀᵧ.n)[1:end-1]
 
-    return all([(y[i] - round(y[i])) == 0 for i in eachindex(y)])
+    return (all([(y[i] - round(y[i])) == 0 for i in eachindex(y)]), y)
 end
 
 function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
@@ -247,7 +252,7 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     brsᵧ = pick_klab_irreps_brs(brs, "Γ")
     vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
 
-    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Bool}}[]
+    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Any}[]
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -272,7 +277,7 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
     brsᵧ = pick_klab_irreps_brs(brs, "Γ")
     vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
 
-    output = Tuple{Vector{Int64},Vector{Int64}}[]
+    output = Tuple{Vector{Int64},Vector{Int64},Any}[]
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -283,8 +288,9 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
 
         if nᵀ⁺ᴸ != []
             for j in eachindex(nᵀ⁺ᴸ)
-                if physical(vᵀᵧ, sum(brsᵧ[nᵀ⁺ᴸ[j]]), sum(brsᵧ[nᴸ]), sg_num)
-                    push!(output, (nᵀ⁺ᴸ[j], nᴸ))
+                phys = physical(vᵀᵧ, sum(brsᵧ[nᵀ⁺ᴸ[j]]), sum(brsᵧ[nᴸ]), sg_num)
+                if phys[1]
+                    push!(output, (nᵀ⁺ᴸ[j], nᴸ, phys[2]))
                 end
             end
         end
