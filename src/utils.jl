@@ -204,9 +204,7 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
 end
 
 function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
-    long_cand = find_all_admissible_expansions(
-        brs, d, t, #= occupation =#
-        Int[], Int[]) #= idxs =#
+    long_cand = find_all_admissible_expansions(brs, d, t, Int[], Int[])
 
     return long_cand
 end
