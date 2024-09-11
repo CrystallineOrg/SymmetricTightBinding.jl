@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.5"
 manifest_format = "2.0"
 project_hash = "aa398135ddb278e5e6ef57bc43d81357b4706a84"
 
@@ -28,9 +28,9 @@ version = "1.5.0"
 
 [[deps.Bravais]]
 deps = ["LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "b40f38f758a15e4fe9599d47bc73ffc2c96932ab"
+git-tree-sha1 = "05dbb70c9e5a30fc208b169aa145afbf891e14ed"
 uuid = "ada6cbde-b013-4edf-aa94-f6abe8bd6e6b"
-version = "0.1.9"
+version = "0.2.0"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -121,9 +121,9 @@ version = "4.1.1"
 
 [[deps.Crystalline]]
 deps = ["Bravais", "Combinatorics", "DelimitedFiles", "DocStringExtensions", "Graphs", "JLD2", "LayeredLayouts", "LinearAlgebra", "Meshing", "PrettyTables", "Reexport", "Requires", "SparseArrays", "StaticArrays", "Statistics"]
-git-tree-sha1 = "0e381f68e408f46d9821dd0f1b5ad5bc935fab17"
+git-tree-sha1 = "02f79e0f539e57f89e994dc20a7a3b678c206162"
 uuid = "ae5e2be0-a263-11e9-351e-f94dad1eb351"
-version = "0.5.3"
+version = "0.5.4"
 
     [deps.Crystalline.extensions]
     CrystallineGraphMakieExt = "GraphMakie"
@@ -366,9 +366,9 @@ version = "1.23.1"
 
 [[deps.JuliaInterpreter]]
 deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
-git-tree-sha1 = "4b415b6cccb9ab61fec78a621572c82ac7fa5776"
+git-tree-sha1 = "2984284a8abcfcc4784d95a9e2ea4e352dd8ede7"
 uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
-version = "0.9.35"
+version = "0.9.36"
 
 [[deps.LLLplus]]
 deps = ["DelimitedFiles", "LinearAlgebra", "Printf"]
@@ -455,9 +455,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.LoweredCodeUtils]]
 deps = ["JuliaInterpreter"]
-git-tree-sha1 = "1ce1834f9644a8f7c011eb0592b7fd6c42c90653"
+git-tree-sha1 = "c2b5e92eaf5101404a58ce9c6083d595472361d6"
 uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
-version = "3.0.1"
+version = "3.0.2"
 
 [[deps.MPBUtils]]
 deps = ["Crystalline", "DelimitedFiles", "DocStringExtensions", "LinearAlgebra", "Requires", "StaticArrays", "Statistics", "SymmetryBases"]
@@ -790,7 +790,7 @@ version = "1.2.13+1"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.8.0+1"
+version = "5.11.0+0"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]

@@ -176,7 +176,7 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     brs = bandreps(sg_num) # elementary band representations
     lgs = littlegroups(sg_num) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
-    map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting (without reducing translations)
+    map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
     lgirsd = pick_lgirreps(lgs; timereversal=true) # small irreps associated with `lgs`
 
     symeigsd = Dict{String,Vector{Vector{ComplexF64}}}()
@@ -193,7 +193,8 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
         end
     end
 
-    # --- fix singular photonic symmetry content at Γ, ω=0 --- # TODO: Maybe we can skip this step or try to change the condition on Γ
+    # --- fix singular photonic symmetry content at Γ, ω=0 --- 
+    # TODO: Maybe we can skip this step or try to change the condition on Γ
     fixup_gamma_symmetry!(symeigsd, lgs)
 
     # --- analyze connectivity and topology of symmetry data ---
@@ -244,7 +245,8 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
     return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
 end
 
-function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
+function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
+    d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
@@ -269,7 +271,8 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     return output
 end
 
-function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
+function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
+    d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))

@@ -41,11 +41,13 @@ nᵀ⁺ᴸ = brs[all_band_repre[2][1][1]...]
 nᴸ = brs[all_band_repre[2][2]...]
 phys = all_band_repre[2][3][1]
 
-println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ", nᴸ.wyckpos, "; Are they physical? ", phys)
+println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ",
+    nᴸ.wyckpos, "; Are they physical? ", phys)
 
 phys_band_repre = find_physical_band_representations(vᵀ, long_modes, d, brs, sg_num)
 
 nᵀ⁺ᴸ = brs[phys_band_repre[1][1]...]
 nᴸ = brs[phys_band_repre[1][2]...]
 
-println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ", nᴸ.wyckpos)
+println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ",
+    nᴸ.wyckpos)
