@@ -245,6 +245,13 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
     return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
 end
 
+struct TightBindingCandidates
+    solutions::Vector{Vector{Vector{Int64}}}
+    long_modes::Vector{Vector{Int64}}
+    phys::Vector{Vector{Bool}}
+    p::Vector{Vector{Vector{Float64}}}
+end
+
 function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
     d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
@@ -254,7 +261,8 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     brsᵧ = pick_klab_irreps_brs(brs, "Γ")
     vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
 
-    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Any}[]
+    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Tuple{Bool,Vector{Float64}}}}[]
+    # TODO: make this a class so it can me called more intuitevely
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
