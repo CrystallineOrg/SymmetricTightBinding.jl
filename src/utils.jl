@@ -1,5 +1,4 @@
-# Just a file with the functions that we are building to solve all the things
-
+# 
 function prune_klab_irreps_brs!(brs::BandRepSet, klab::String="Γ")
     prune_kidx = findfirst(==(klab), brs.klabs)
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
@@ -177,7 +176,7 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     brs = bandreps(sg_num) # elementary band representations
     lgs = littlegroups(sg_num) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
-    map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting (without reducing translations)
+    map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
     lgirsd = pick_lgirreps(lgs; timereversal=true) # small irreps associated with `lgs`
 
     symeigsd = Dict{String,Vector{Vector{ComplexF64}}}()
@@ -194,7 +193,8 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
         end
     end
 
-    # --- fix singular photonic symmetry content at Γ, ω=0 --- # TODO: Maybe we can skip this step or try to change the condition on Γ
+    # --- fix singular photonic symmetry content at Γ, ω=0 --- 
+    # TODO: Maybe we can skip this step or try to change the condition on Γ
     fixup_gamma_symmetry!(symeigsd, lgs)
 
     # --- analyze connectivity and topology of symmetry data ---
@@ -230,14 +230,28 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
         force_fixed=true,
         lattice_reduce=true)
 
-    Q⁻¹ = generalized_inv(Q)
+    # sort Q in the same order as the SG irreps order
+    irs = label.(lgirs) # change them from 
+    irlabs = vᵀᵧ.brs.irlabs
+    perm = sortperm(irs)[invperm(sortperm(irlabs))]
+    Q_ordered = Q[perm, :]
+
+    Q⁻¹ = generalized_inv(Q_ordered)
     nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
     y = Q⁻¹ * (nᵀᵧ-vᵀᵧ.n)[1:end-1]
 
-    return all([(y[i] - round(y[i])) == 0 for i in eachindex(y)])
+    return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
 end
 
-function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
+struct TightBindingCandidates
+    solutions::Vector{Vector{Vector{Int64}}}
+    long_modes::Vector{Vector{Int64}}
+    phys::Vector{Vector{Bool}}
+    p::Vector{Vector{Vector{Float64}}}
+end
+
+function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
+    d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
@@ -245,7 +259,8 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     brsᵧ = pick_klab_irreps_brs(brs, "Γ")
     vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
 
-    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Bool}}[]
+    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Tuple{Bool,Vector{Float64}}}}[]
+    # TODO: make this a class so it can me called more intuitevely
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -262,7 +277,8 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     return output
 end
 
-function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}}, d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
+function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
+    d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
     brs´ = prune_klab_irreps_brs(brs, "Γ")
     vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
@@ -270,7 +286,7 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
     brsᵧ = pick_klab_irreps_brs(brs, "Γ")
     vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
 
-    output = Tuple{Vector{Int64},Vector{Int64}}[]
+    output = Tuple{Vector{Int64},Vector{Int64},Any}[]
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -281,8 +297,9 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
 
         if nᵀ⁺ᴸ != []
             for j in eachindex(nᵀ⁺ᴸ)
-                if physical(vᵀᵧ, sum(brsᵧ[nᵀ⁺ᴸ[j]]), sum(brsᵧ[nᴸ]), sg_num)
-                    push!(output, (nᵀ⁺ᴸ[j], nᴸ))
+                phys = physical(vᵀᵧ, sum(brsᵧ[nᵀ⁺ᴸ[j]]), sum(brsᵧ[nᴸ]), sg_num)
+                if phys[1]
+                    push!(output, (nᵀ⁺ᴸ[j], nᴸ, phys[2]))
                 end
             end
         end
