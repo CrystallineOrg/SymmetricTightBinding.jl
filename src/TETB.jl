@@ -29,6 +29,7 @@ export mp, mpb
 
 # ---------------------------------------------------------------------------------------- #
 
+include("read_utils.jl")
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 

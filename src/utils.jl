@@ -1,5 +1,5 @@
 # 
-function prune_klab_irreps_brs!(brs::BandRepSet, klab::String="Γ")
+function prune_klab_irreps!(brs::BandRepSet, klab::String="Γ")
     prune_kidx = findfirst(==(klab), brs.klabs)
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
     deleteat!(brs.klabs, prune_kidx)
@@ -15,7 +15,7 @@ function prune_klab_irreps_brs!(brs::BandRepSet, klab::String="Γ")
     return brs
 end
 
-function prune_klab_irreps_brs(brs::BandRepSet, klab::String="Γ")
+function prune_klab_irreps(brs::BandRepSet, klab::String="Γ")
     irlabs′ = copy(brs.irlabs)
     brs′ = BandRepSet(
         brs.sgnum,
@@ -38,10 +38,10 @@ function prune_klab_irreps_brs(brs::BandRepSet, klab::String="Γ")
         brs.spinful,
         brs.timereversal
     )
-    return prune_klab_irreps_brs!(brs′, klab)
+    return prune_klab_irreps!(brs′, klab)
 end
 
-function pick_klab_irreps_brs!(brs::BandRepSet, klab::String="Γ")
+function pick_klab_irreps!(brs::BandRepSet, klab::String="Γ")
     prune_kidx = findall(!=(klab), brs.klabs)
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
     deleteat!(brs.klabs, prune_kidx)
@@ -57,7 +57,7 @@ function pick_klab_irreps_brs!(brs::BandRepSet, klab::String="Γ")
     return brs
 end
 
-function pick_klab_irreps_brs(brs::BandRepSet, klab::String="Γ")
+function pick_klab_irreps(brs::BandRepSet, klab::String="Γ")
     irlabs′ = copy(brs.irlabs)
     brs′ = BandRepSet(
         brs.sgnum,
@@ -80,21 +80,21 @@ function pick_klab_irreps_brs(brs::BandRepSet, klab::String="Γ")
         brs.spinful,
         brs.timereversal
     )
-    return pick_klab_irreps_brs!(brs′, klab)
+    return pick_klab_irreps!(brs′, klab)
 end
 
 
-function prune_klab_irreps_vecs!(v::BandSummary, klab::String="Γ")
+function prune_klab_irreps!(v::BandSummary, klab::String="Γ")
     prune_iridxs = findall(irlab -> klabel(irlab) == klab, v.brs.irlabs)
     isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
     deleteat!(v.n, prune_iridxs)
 
-    prune_klab_irreps_brs!(v.brs, klab)
+    prune_klab_irreps!(v.brs, klab)
 
     return v
 end
 
-function prune_klab_irreps_vecs(v::BandSummary, klab::String="Γ")
+function prune_klab_irreps(v::BandSummary, klab::String="Γ")
     brs = v.brs
     irlabs´ = copy(brs.irlabs)
     v´ = BandSummary(
@@ -125,20 +125,20 @@ function prune_klab_irreps_vecs(v::BandSummary, klab::String="Γ")
         v.indicators,
         v.indicator_group
     )
-    return prune_klab_irreps_vecs!(v´, klab)
+    return prune_klab_irreps!(v´, klab)
 end
 
-function pick_klab_irreps_vecs!(v::BandSummary, klab::String="Γ")
+function pick_klab_irreps!(v::BandSummary, klab::String="Γ")
     prune_iridxs = findall(irlab -> klabel(irlab) != klab, v.brs.irlabs)
     isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
     deleteat!(v.n, prune_iridxs)
 
-    pick_klab_irreps_brs!(v.brs, klab)
+    pick_klab_irreps!(v.brs, klab)
 
     return v
 end
 
-function pick_klab_irreps_vecs(v::BandSummary, klab::String="Γ")
+function pick_klab_irreps(v::BandSummary, klab::String="Γ")
     brs = v.brs
     irlabs´ = copy(brs.irlabs)
     v´ = BandSummary(
@@ -169,7 +169,7 @@ function pick_klab_irreps_vecs(v::BandSummary, klab::String="Γ")
         v.indicators,
         v.indicator_group
     )
-    return pick_klab_irreps_vecs!(v´, klab)
+    return pick_klab_irreps!(v´, klab)
 end
 
 function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
@@ -245,24 +245,20 @@ function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
     return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
 end
 
-struct TightBindingCandidates
-    solutions::Vector{Vector{Vector{Int64}}}
-    long_modes::Vector{Vector{Int64}}
-    phys::Vector{Vector{Bool}}
-    p::Vector{Vector{Vector{Float64}}}
-end
-
 function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
     d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
-    brs´ = prune_klab_irreps_brs(brs, "Γ")
-    vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
+    brs´ = prune_klab_irreps(brs, "Γ")
+    vᵀ´ = prune_klab_irreps(vᵀ, "Γ")
     idxs = collect(1:size(matrix(brs´), 1))
 
-    brsᵧ = pick_klab_irreps_brs(brs, "Γ")
-    vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
+    brsᵧ = pick_klab_irreps(brs, "Γ")
+    vᵀᵧ = pick_klab_irreps(vᵀ, "Γ")
 
-    output = Tuple{Vector{Vector{Int64}},Vector{Int64},Vector{Tuple{Bool,Vector{Float64}}}}[]
-    # TODO: make this a class so it can me called more intuitevely
+    phys_vec = Vector{Bool}[]
+    p_vec = Vector{Vector{Float64}}[]
+    solutions = Vector{Vector{Int64}}[]
+    long_solutions = Vector{Int64}[]
+
     for i in 1:length(long_modes)
         nᴸ = long_modes[i]
         vᴸ´ = sum(brs´[nᴸ])
@@ -272,39 +268,33 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
         nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
 
         if !isempty(nᵀ⁺ᴸ)
-            phys = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
-            push!(output, (nᵀ⁺ᴸ, nᴸ, phys))
+            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
+            push!(solutions, nᵀ⁺ᴸ)
+            push!(long_solutions, nᴸ)
+            push!(phys_vec, [check[j][1] for j in 1:length(nᵀ⁺ᴸ)])
+            push!(p_vec, [check[j][2] for j in 1:length(nᵀ⁺ᴸ)])
         end
     end
-    return output
+    return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec)
 end
 
 function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
     d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
-    brs´ = prune_klab_irreps_brs(brs, "Γ")
-    vᵀ´ = prune_klab_irreps_vecs(vᵀ, "Γ")
-    idxs = collect(1:size(matrix(brs´), 1))
+    all_solutions = find_all_band_representations(vᵀ, long_modes, d, brs, sg_num)
 
-    brsᵧ = pick_klab_irreps_brs(brs, "Γ")
-    vᵀᵧ = pick_klab_irreps_vecs(vᵀ, "Γ")
+    p_vec = Vector{Vector{Float64}}[]
+    solutions = Vector{Vector{Int64}}[]
+    long_solutions = Vector{Int64}[]
 
-    output = Tuple{Vector{Int64},Vector{Int64},Any}[]
-    for i in 1:length(long_modes)
-        nᴸ = long_modes[i]
-        vᴸ´ = sum(brs´[nᴸ])
-        vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
-        μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
-
-        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
-
-        if nᵀ⁺ᴸ != []
-            for j in eachindex(nᵀ⁺ᴸ)
-                phys = physical(vᵀᵧ, sum(brsᵧ[nᵀ⁺ᴸ[j]]), sum(brsᵧ[nᴸ]), sg_num)
-                if phys[1]
-                    push!(output, (nᵀ⁺ᴸ[j], nᴸ, phys[2]))
-                end
+    for i in 1:length(all_solutions.phys)
+        for j in 1:length(all_solutions.phys[i])
+            if all_solutions.phys[i][j]
+                push!(solutions, all_solutions.solutions[i])
+                push!(long_solutions, all_solutions.long_modes[i])
+                push!(p_vec, all_solutions.p[i])
             end
         end
     end
-    return output
+
+    return PhysicalTightBindingCandidates(solutions, long_solutions, p_vec)
 end
