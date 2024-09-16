@@ -33,7 +33,8 @@ include("read_utils.jl")
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 
-export find_all_band_representations, find_auxiliary_modes, obtain_symmetry_vectors, find_physical_band_representations
+export find_all_band_representations, find_auxiliary_modes, obtain_symmetry_vectors,
+    find_physical_band_representations
 
 # ---------------------------------------------------------------------------------------- #
 end # module

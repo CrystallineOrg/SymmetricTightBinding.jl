@@ -275,7 +275,7 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
             push!(p_vec, [check[j][2] for j in 1:length(nᵀ⁺ᴸ)])
         end
     end
-    return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec)
+    return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
 function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},

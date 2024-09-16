@@ -29,7 +29,7 @@ band_summaries = obtain_symmetry_vectors(ms, sg_num)
 
 vᵀ = band_summaries[1] # pick the 2 lower bands
 
-t = 1
+t = 2
 brs = bandreps(sg_num)
 d = matrix(brs)[end, :]
 
@@ -39,13 +39,24 @@ all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs, sg_num)
 
 # TODO: it needs to be generalized to multiple band representations
 for i in 1:length(all_band_repre.long_modes)
-    nᴸ = brs[all_band_repre.long_modes[i]...]
-    println("Solutions using the auxiliary mode: ", nᴸ.label, " at ", nᴸ.wyckpos)
+    nᴸ = [brs[j...] for j in all_band_repre.long_modes[i]]
+    print("Solutions using the auxiliary mode: ")
 
-    nᵀ⁺ᴸ = [brs[k...] for j in all_band_repre.solutions[i] for k in j]
+    for j in nᴸ[1:end-1]
+        print(j.label, " at ", j.wyckpos, " ⊕ ")
+    end
+
+    println(nᴸ[end].label, " at ", nᴸ[end].wyckpos)
+
+    nᵀ⁺ᴸ = [[brs[m...] for k in j for m in k] for j in all_band_repre.solutions[i]]
     count = 1
     for j in nᵀ⁺ᴸ
-        println("   ↪Solution #", count, ": ", j.label, " at ", j.wyckpos)
+        print("   ↪Solution #$count: ")
+        for k in j[1:end-1]
+            print(k.label, " at ", k.wyckpos, " ⊕ ")
+        end
+        println(j[end].label, " at ", j[end].wyckpos)
+        count += 1
     end
 end
 
