@@ -195,7 +195,10 @@ function find_all_band_representations(
             push!(p_vec, [check[j][2] for j in eachindex(nᵀ⁺ᴸ)])
         end
     end
+<<<<<<< HEAD
 
+=======
+>>>>>>> 064494f (fancy printing for `TightBindingCandidates` in `read_utils.jl`)
     return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
