@@ -5,6 +5,7 @@ struct TightBindingCandidates
     phys::Vector{Vector{Bool}} # physicallity of each solution nᵀ⁺ᴸ
     p::Vector{Vector{Vector{Float64}}} # vector of integers neccesary to compute the surrogate
     # representation
+    bandreps::BandRepSet
 end
 
 struct PhysicalTightBindingCandidates

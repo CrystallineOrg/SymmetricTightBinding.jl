@@ -25,7 +25,6 @@ function prune_klab_irreps(brs::BandRepSet, klab::String="Γ")
                 br.sitesym,
                 br.label,
                 br.dim,
-                br.decomposable,
                 br.spinful,
                 copy(br.irvec),
                 irlabs′
@@ -34,7 +33,6 @@ function prune_klab_irreps(brs::BandRepSet, klab::String="Γ")
         copy(brs.kvs),
         copy(brs.klabs),
         irlabs′,
-        brs.allpaths,
         brs.spinful,
         brs.timereversal
     )
@@ -67,7 +65,6 @@ function pick_klab_irreps(brs::BandRepSet, klab::String="Γ")
                 br.sitesym,
                 br.label,
                 br.dim,
-                br.decomposable,
                 br.spinful,
                 copy(br.irvec),
                 irlabs′
@@ -76,7 +73,6 @@ function pick_klab_irreps(brs::BandRepSet, klab::String="Γ")
         copy(brs.kvs),
         copy(brs.klabs),
         irlabs′,
-        brs.allpaths,
         brs.spinful,
         brs.timereversal
     )
@@ -109,7 +105,6 @@ function prune_klab_irreps(v::BandSummary, klab::String="Γ")
                     br.sitesym,
                     br.label,
                     br.dim,
-                    br.decomposable,
                     br.spinful,
                     copy(br.irvec),
                     irlabs´
@@ -118,7 +113,6 @@ function prune_klab_irreps(v::BandSummary, klab::String="Γ")
             copy(brs.kvs),
             copy(brs.klabs),
             irlabs´,
-            brs.allpaths,
             brs.spinful,
             brs.timereversal
         ),
@@ -153,7 +147,6 @@ function pick_klab_irreps(v::BandSummary, klab::String="Γ")
                     br.sitesym,
                     br.label,
                     br.dim,
-                    br.decomposable,
                     br.spinful,
                     copy(br.irvec),
                     irlabs´
@@ -162,7 +155,6 @@ function pick_klab_irreps(v::BandSummary, klab::String="Γ")
             copy(brs.kvs),
             copy(brs.klabs),
             irlabs´,
-            brs.allpaths,
             brs.spinful,
             brs.timereversal
         ),
@@ -275,7 +267,7 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
             push!(p_vec, [check[j][2] for j in 1:length(nᵀ⁺ᴸ)])
         end
     end
-    return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec)
+    return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
 function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
