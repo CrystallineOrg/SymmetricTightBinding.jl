@@ -54,8 +54,8 @@ function prune_klab_irreps!(v::SymmetryVector, klab::String="Γ")
     deleteat!(irreps(v), prune_iridxs)
     return v
 end
-function prune_klab_irreps!(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
-    prune_klab_irreps!(SymmetryVector{D}(v), klab)
+function prune_klab_irreps!(v::AbstractSymmetryVector, klab::String="Γ")
+    prune_klab_irreps!(SymmetryVector(v), klab)
 end
 
 function prune_klab_irreps(v::SymmetryVector, klab::String="Γ")
@@ -64,31 +64,31 @@ function prune_klab_irreps(v::SymmetryVector, klab::String="Γ")
     v´ = SymmetryVector(lgirsv´, multsv´, occupation(v))
     return prune_klab_irreps!(v´, klab)
 end
-function prune_klab_irreps(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
-    prune_klab_irreps(SymmetryVector{D}(v), klab)
+function prune_klab_irreps(v::AbstractSymmetryVector, klab::String="Γ")
+    prune_klab_irreps(SymmetryVector(v), klab)
 end
 
 
-function pick_klab_irreps!(v::SymmetryVector{D}, klab::String="Γ") where D
+function pick_klab_irreps!(v::SymmetryVector, klab::String="Γ")
     prune_iridxs = findall(lgirs -> klabel(first(lgirs)) != klab, irreps(v))
     isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
     deleteat!(multiplicities(v), prune_iridxs)
     deleteat!(irreps(v), prune_iridxs)
     return v
 end
-function pick_klab_irreps!(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
-    pick_klab_irreps!(SymmetryVector{D}(v), klab)
+function pick_klab_irreps!(v::AbstractSymmetryVector, klab::String="Γ")
+    pick_klab_irreps!(SymmetryVector(v), klab)
 end
 
 
-function pick_klab_irreps(v::SymmetryVector{D}, klab::String="Γ") where D
+function pick_klab_irreps(v::SymmetryVector, klab::String="Γ")
     lgirsv´ = copy(irreps(v))
     multsv´ = copy(multiplicities(v))
     v´ = SymmetryVector(lgirsv´, multsv´, occupation(v))
     return pick_klab_irreps!(v´, klab)
 end
-function pick_klab_irreps(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
-    pick_klab_irreps(SymmetryVector{D}(v), klab)
+function pick_klab_irreps(v::AbstractSymmetryVector, klab::String="Γ")
+    pick_klab_irreps(SymmetryVector(v), klab)
 end
 
 function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
