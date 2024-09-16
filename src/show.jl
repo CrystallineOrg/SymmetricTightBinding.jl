@@ -2,27 +2,17 @@ function Base.show(io::IO, ::MIME"text/plain", candidates::TightBindingCandidate
     summary(io, candidates)
     println(io, ":")
     for is in 1:length(candidates.long_modes)
-        nᴸs = [candidates.bandreps[j] for j in candidates.long_modes[is]]
+        nᴸs = [candidates.brs[j] for j in candidates.long_modes[is]]
         print(io, " nᴸ = ")
 
-        labs = String[]
-        for j in nᴸs
-            lab = "(" * j.wyckpos * "|" * replace(j.label, "↑G"=>"") * ")"
-            push!(labs, lab)
-        end
-        join(io, labs, " + ")
+        join(io, nᴸs, " + ")
         println(io)
 
-        nᵀ⁺ᴸs = [[candidates.bandreps[m] for k in js for m in k] for js in candidates.solutions[is]]
-        for (count, j) in enumerate(nᵀ⁺ᴸs)
+        nᵀ⁺ᴸss = [[candidates.brs[m] for k in js for m in k] for js in candidates.solutions[is]]
+        for (count, nᵀ⁺ᴸs) in enumerate(nᵀ⁺ᴸss)
             printstyled(io, "   ⁽", Crystalline.supscriptify(string(count)), "⁾ "; color=:light_black)
             print(io, "nᵀ⁺ᴸ = ")
-            labsᵀ⁺ᴸ = String[]
-            for k in j
-                lab = "(" * k.wyckpos * "|" * replace(k.label, "↑G"=>"") * ")"
-                push!(labsᵀ⁺ᴸ, lab)
-            end
-            join(io, labsᵀ⁺ᴸ, " + ")
+            join(io, nᵀ⁺ᴸs, " + ")
             println(io)
         end
     end

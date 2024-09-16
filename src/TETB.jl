@@ -7,7 +7,7 @@ using MPBUtils
 using SymmetryBases
 using PhotonicBandConnectivity
 const PBC = PhotonicBandConnectivity
-
+using Crystalline: AbstractSymmetryVector
 # ---------------------------------------------------------------------------------------- #
 
 using PyCall

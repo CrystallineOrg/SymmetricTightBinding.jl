@@ -1,167 +1,94 @@
-# 
-function prune_klab_irreps!(brs::BandRepSet, klab::String="Γ")
-    prune_kidx = findfirst(==(klab), brs.klabs)
+@eval TETB begin
+function prune_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
+    prune_kidx = findfirst(==(klab), klabels(brs))
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
-    deleteat!(brs.klabs, prune_kidx)
-
-    prune_iridxs = findall(irlab -> klabel(irlab) == klab, brs.irlabs)
-    isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
-    deleteat!(brs.irlabs, prune_iridxs)
-
-    foreach(brs.bandreps) do br
-        deleteat!(br.irvec, prune_iridxs)
+    
+    lgirsv = irreps(first(brs))
+    foreach(brs) do br
+        deleteat!(multiplicities(br.n), prune_kidx)
+        @assert irreps(br.n) === lgirsv
     end
+    deleteat!(lgirsv, prune_kidx)
+    
+    return brs
+end
+
+function _symmetry_vector_shallow_copy(brs::Collection{<:NewBandRep})
+    lgirsv′ = copy(irreps(first(brs)))
+    brs′ = Collection(map(brs) do br
+        NewBandRep(
+            br.siteir,
+            SymmetryVector(lgirsv′, copy(multiplicities(br)), occupation(br)),
+            br.spinful,
+            br.timereversal)
+    end)
+    return brs′
+end
+function prune_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")   
+    return prune_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
+end
+
+function pick_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
+    prune_kidx = findall(!=(klab), klabels(brs))
+    isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
+
+    lgirsv = irreps(first(brs))
+    foreach(brs) do br
+        deleteat!(multiplicities(br.n), prune_kidx)
+        @assert irreps(br.n) === lgirsv
+    end
+    deleteat!(lgirsv, prune_kidx)
 
     return brs
 end
 
-function prune_klab_irreps(brs::BandRepSet, klab::String="Γ")
-    irlabs′ = copy(brs.irlabs)
-    brs′ = BandRepSet(
-        brs.sgnum,
-        map(brs.bandreps) do br
-            BandRep(
-                br.wyckpos,
-                br.sitesym,
-                br.label,
-                br.dim,
-                br.spinful,
-                copy(br.irvec),
-                irlabs′
-            )
-        end,
-        copy(brs.kvs),
-        copy(brs.klabs),
-        irlabs′,
-        brs.spinful,
-        brs.timereversal
-    )
-    return prune_klab_irreps!(brs′, klab)
+function pick_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
+    return pick_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
+end
 end
 
-function pick_klab_irreps!(brs::BandRepSet, klab::String="Γ")
-    prune_kidx = findall(!=(klab), brs.klabs)
-    isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
-    deleteat!(brs.klabs, prune_kidx)
-
-    prune_iridxs = findall(irlab -> klabel(irlab) != klab, brs.irlabs)
+function prune_klab_irreps!(v::SymmetryVector, klab::String="Γ")
+    prune_iridxs = findall(lgirs -> klabel(first(lgirs)) == klab, irreps(v))
     isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
-    deleteat!(brs.irlabs, prune_iridxs)
-
-    foreach(brs.bandreps) do br
-        deleteat!(br.irvec, prune_iridxs)
-    end
-
-    return brs
-end
-
-function pick_klab_irreps(brs::BandRepSet, klab::String="Γ")
-    irlabs′ = copy(brs.irlabs)
-    brs′ = BandRepSet(
-        brs.sgnum,
-        map(brs.bandreps) do br
-            BandRep(
-                br.wyckpos,
-                br.sitesym,
-                br.label,
-                br.dim,
-                br.spinful,
-                copy(br.irvec),
-                irlabs′
-            )
-        end,
-        copy(brs.kvs),
-        copy(brs.klabs),
-        irlabs′,
-        brs.spinful,
-        brs.timereversal
-    )
-    return pick_klab_irreps!(brs′, klab)
-end
-
-
-function prune_klab_irreps!(v::BandSummary, klab::String="Γ")
-    prune_iridxs = findall(irlab -> klabel(irlab) == klab, v.brs.irlabs)
-    isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
-    deleteat!(v.n, prune_iridxs)
-
-    prune_klab_irreps!(v.brs, klab)
-
+    deleteat!(multiplicities(v), prune_iridxs)
+    deleteat!(irreps(v), prune_iridxs)
     return v
 end
+function prune_klab_irreps!(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
+    prune_klab_irreps!(SymmetryVector{D}(v), klab)
+end
 
-function prune_klab_irreps(v::BandSummary, klab::String="Γ")
-    brs = v.brs
-    irlabs´ = copy(brs.irlabs)
-    v´ = BandSummary(
-        v.topology,
-        v.bands,
-        copy(v.n),
-        BandRepSet(
-            brs.sgnum,
-            map(brs.bandreps) do br
-                BandRep(
-                    br.wyckpos,
-                    br.sitesym,
-                    br.label,
-                    br.dim,
-                    br.spinful,
-                    copy(br.irvec),
-                    irlabs´
-                )
-            end,
-            copy(brs.kvs),
-            copy(brs.klabs),
-            irlabs´,
-            brs.spinful,
-            brs.timereversal
-        ),
-        v.indicators,
-        v.indicator_group
-    )
+function prune_klab_irreps(v::SymmetryVector, klab::String="Γ")
+    lgirsv´ = copy(irreps(v))
+    multsv´ = copy(multiplicities(v))
+    v´ = SymmetryVector(lgirsv´, multsv´, occupation(v))
     return prune_klab_irreps!(v´, klab)
 end
-
-function pick_klab_irreps!(v::BandSummary, klab::String="Γ")
-    prune_iridxs = findall(irlab -> klabel(irlab) != klab, v.brs.irlabs)
-    isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
-    deleteat!(v.n, prune_iridxs)
-
-    pick_klab_irreps!(v.brs, klab)
-
-    return v
+function prune_klab_irreps(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
+    prune_klab_irreps(SymmetryVector{D}(v), klab)
 end
 
-function pick_klab_irreps(v::BandSummary, klab::String="Γ")
-    brs = v.brs
-    irlabs´ = copy(brs.irlabs)
-    v´ = BandSummary(
-        v.topology,
-        v.bands,
-        copy(v.n),
-        BandRepSet(
-            brs.sgnum,
-            map(brs.bandreps) do br
-                BandRep(
-                    br.wyckpos,
-                    br.sitesym,
-                    br.label,
-                    br.dim,
-                    br.spinful,
-                    copy(br.irvec),
-                    irlabs´
-                )
-            end,
-            copy(brs.kvs),
-            copy(brs.klabs),
-            irlabs´,
-            brs.spinful,
-            brs.timereversal
-        ),
-        v.indicators,
-        v.indicator_group
-    )
+
+function pick_klab_irreps!(v::SymmetryVector{D}, klab::String="Γ") where D
+    prune_iridxs = findall(lgirs -> klabel(first(lgirs)) != klab, irreps(v))
+    isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
+    deleteat!(multiplicities(v), prune_iridxs)
+    deleteat!(irreps(v), prune_iridxs)
+    return v
+end
+function pick_klab_irreps!(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
+    pick_klab_irreps!(SymmetryVector{D}(v), klab)
+end
+
+
+function pick_klab_irreps(v::SymmetryVector{D}, klab::String="Γ") where D
+    lgirsv´ = copy(irreps(v))
+    multsv´ = copy(multiplicities(v))
+    v´ = SymmetryVector(lgirsv´, multsv´, occupation(v))
     return pick_klab_irreps!(v´, klab)
+end
+function pick_klab_irreps(v::AbstractSymmetryVector{D}, klab::String="Γ") where D
+    pick_klab_irreps(SymmetryVector{D}(v), klab)
 end
 
 function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
@@ -192,10 +119,14 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     # --- analyze connectivity and topology of symmetry data ---
     summaries = analyze_symmetry_data(symeigsd, lgirsd, brs)
 
-    return summaries
+    # --- convert to `SymmetryVector`s ---
+    c_brs = calc_bandreps(sg_num, Val(3))
+    symvecs = bandsum2symvec.(summaries, Ref(c_brs))
+    topologies = getfield.(summaries, Ref(:topology))
+    return symvecs, topologies
 end
 
-function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::BandRepSet)
+function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::Collection{<:NewBandRep})
     long_cand = find_all_admissible_expansions(
         brs, d, t, #= occupation =#
         Int[], Int[]) #= idxs =#
@@ -216,32 +147,31 @@ function generalized_inv(X::AbstractMatrix{<:Integer})
     return Xᵍ
 end
 
-function physical(vᵀᵧ::BandSummary, nᵀ⁺ᴸᵧ, nᴸᵧ, sg_num::Int)
-    lgirs = realify(lgirreps(sg_num)["Γ"])
+function physical(vᵀᵧ::AbstractSymmetryVector, nᵀ⁺ᴸᵧ, nᴸᵧ)
+    lgirs = only(irreps(vᵀᵧ))
+    klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only reference Γ-contents")
+    
     _, Q = physical_zero_frequency_gamma_irreps(
         lgirs;
         supergroup_constraints=true,
         force_fixed=true,
         lattice_reduce=true)
 
-    # sort Q in the same order as the SG irreps order
-    irs = label.(lgirs) # change them from 
-    irlabs = vᵀᵧ.brs.irlabs
-    perm = sortperm(irs)[invperm(sortperm(irlabs))]
-    Q_ordered = Q[perm, :]
-
-    Q⁻¹ = generalized_inv(Q_ordered)
+    Q⁻¹ = generalized_inv(Q)
     nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
-    y = Q⁻¹ * (nᵀᵧ-vᵀᵧ.n)[1:end-1]
+    y = Q⁻¹ * (nᵀᵧ-Vector(vᵀᵧ))[1:end-1]
 
     return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
 end
 
-function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
-    d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
+function find_all_band_representations(
+            vᵀ::AbstractSymmetryVector, 
+            long_modes::Vector{Vector{Int64}},
+            d::Vector{Int64},
+            brs::Collection{<:NewBandRep})
     brs´ = prune_klab_irreps(brs, "Γ")
     vᵀ´ = prune_klab_irreps(vᵀ, "Γ")
-    idxs = collect(1:size(matrix(brs´), 1))
+    idxs = 1:length(first(brs´))
 
     brsᵧ = pick_klab_irreps(brs, "Γ")
     vᵀᵧ = pick_klab_irreps(vᵀ, "Γ")
@@ -251,35 +181,36 @@ function find_all_band_representations(vᵀ::BandSummary, long_modes::Vector{Vec
     solutions = Vector{Vector{Int64}}[]
     long_solutions = Vector{Int64}[]
 
-    for i in 1:length(long_modes)
+    for i in eachindex(long_modes)
         nᴸ = long_modes[i]
-        vᴸ´ = sum(brs´[nᴸ])
-        vᵀ⁺ᴸ´ = vᵀ´.n + vᴸ´
-        μᵀ⁺ᴸ = vᵀ⁺ᴸ´[end]
+        vᴸ´ = sum(@view brs´[nᴸ])
+        vᵀ⁺ᴸ´ = vᵀ´ + vᴸ´
+        μᵀ⁺ᴸ = occupation(vᵀ⁺ᴸ´)
 
-        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, vᵀ⁺ᴸ´, idxs)
+        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, Vector(vᵀ⁺ᴸ´), idxs)
 
         if !isempty(nᵀ⁺ᴸ)
-            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), sg_num) for j in nᵀ⁺ᴸ]
+            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ])) for j in nᵀ⁺ᴸ]
             push!(solutions, nᵀ⁺ᴸ)
             push!(long_solutions, nᴸ)
-            push!(phys_vec, [check[j][1] for j in 1:length(nᵀ⁺ᴸ)])
-            push!(p_vec, [check[j][2] for j in 1:length(nᵀ⁺ᴸ)])
+            push!(phys_vec, [check[j][1] for j in eachindex(nᵀ⁺ᴸ)])
+            push!(p_vec, [check[j][2] for j in eachindex(nᵀ⁺ᴸ)])
         end
     end
+
     return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
 function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
-    d::Vector{Int64}, brs::BandRepSet, sg_num::Int)
-    all_solutions = find_all_band_representations(vᵀ, long_modes, d, brs, sg_num)
+    d::Vector{Int64}, brs::Collection{<:NewBandRep})
+    all_solutions = find_all_band_representations(vᵀ, long_modes, d, brs)
 
     p_vec = Vector{Vector{Float64}}[]
     solutions = Vector{Vector{Int64}}[]
     long_solutions = Vector{Int64}[]
 
-    for i in 1:length(all_solutions.phys)
-        for j in 1:length(all_solutions.phys[i])
+    for i in eachindex(all_solutions.phys)
+        for j in eachindex(all_solutions.phys[i])
             if all_solutions.phys[i][j]
                 push!(solutions, all_solutions.solutions[i])
                 push!(long_solutions, all_solutions.long_modes[i])

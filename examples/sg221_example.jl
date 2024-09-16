@@ -25,14 +25,14 @@ ms.init_params(p=mp.ALL, reset_fields=true)
 
 ### obtain the symmetry vectors of the bands under study
 sg_num = 221
-band_summaries = obtain_symmetry_vectors(ms, sg_num)
+symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 
-vᵀ = band_summaries[1] # pick the 2 lower bands
+vᵀ = symvecs[1] # pick the 2 lower bands
 
 t = 1
-brs = bandreps(sg_num)
-d = matrix(brs)[end, :]
+brs = calc_bandreps(sg_num)
+d = stack(brs)[end, :]
 
 long_modes = find_auxiliary_modes(t, d, brs)
 
-all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs, sg_num)
+all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs)
