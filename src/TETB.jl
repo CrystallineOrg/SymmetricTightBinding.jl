@@ -32,7 +32,6 @@ export mp, mpb
 include("types.jl")
 export TightBindingCandidates
 include("conversion.jl")
-export string2symvec
 include("show.jl")
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
