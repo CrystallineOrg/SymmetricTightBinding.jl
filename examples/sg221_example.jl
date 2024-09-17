@@ -29,7 +29,7 @@ symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 
 vᵀ = symvecs[1] # pick the 2 lower bands
 
-t = 1
+t = 2
 brs = calc_bandreps(sg_num)
 d = stack(brs)[end, :]
 
