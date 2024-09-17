@@ -202,7 +202,9 @@ function find_all_band_representations(
     return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
-function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vector{Vector{Int64}},
+function find_physical_band_representations(
+    vᵀ::AbstractSymmetryVector,
+    long_modes::Vector{Vector{Int64}},
     d::Vector{Int64}, brs::Collection{<:NewBandRep})
     all_solutions = find_all_band_representations(vᵀ, long_modes, d, brs)
 
@@ -220,5 +222,5 @@ function find_physical_band_representations(vᵀ::BandSummary, long_modes::Vecto
         end
     end
 
-    return PhysicalTightBindingCandidates(solutions, long_solutions, p_vec)
+    return PhysicalTightBindingCandidates(solutions, long_solutions, p_vec, brs)
 end

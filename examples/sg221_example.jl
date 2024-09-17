@@ -1,11 +1,13 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-using Crystalline, MPBUtils
-using PhotonicBandConnectivity, SymmetryBases
+### necessary packages
+using Crystalline
+using SymmetryBases, MPBUtils
+using PhotonicBandConnectivity
 using TETB
 
-### construct the structure under srudy
+### construct the structure under study
 
 R1 = 0.2 #cylinder radius
 mat = mp.Medium(epsilon=12)
@@ -14,6 +16,8 @@ geometry = [
     mp.Cylinder(radius=R1, center=[0, 0, 0], axis=[0, 1, 0], height=1, material=mat),
     mp.Cylinder(radius=R1, center=[0, 0, 0], axis=[1, 0, 0], height=1, material=mat),
 ]
+
+### solve the system
 ms = mpb.ModeSolver(
     num_bands=8,
     geometry_lattice=mp.Lattice(basis1=[1, 0, 0], basis2=[0, 1, 0], basis3=[0, 0, 1],
@@ -23,20 +27,22 @@ ms = mpb.ModeSolver(
 )
 ms.init_params(p=mp.ALL, reset_fields=true)
 
-### obtain the symmetry vectors of the bands under study
+### obtain the symmetry vectors of the bands computed above
 sg_num = 221
 symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 
 vᵀ = symvecs[1] # pick the 2 lower bands
 
+### obtain additional modes with dimendion `t`
 t = 2
 <<<<<<< HEAD
 brs = calc_bandreps(sg_num)
 d = stack(brs)[end, :]
-
 long_modes = find_auxiliary_modes(t, d, brs)
 
+### compute all possible decomposition into EBRs of vᵀ using the additional modes computed
 all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs)
+<<<<<<< HEAD
 =======
 brs = bandreps(sg_num)
 d = matrix(brs)[end, :]
@@ -79,3 +85,8 @@ nᴸ = brs[phys_band_repre[1][2]...]
 println("nᵀ⁺ᴸ", " = ", nᵀ⁺ᴸ.label, " at ", nᵀ⁺ᴸ.wyckpos, "; nᴸ", " = ", nᴸ.label, " at ",
     nᴸ.wyckpos)
 >>>>>>> 064494f (fancy printing for `TightBindingCandidates` in `read_utils.jl`)
+=======
+
+### filter the physical ones 
+physical_band_repre = find_physical_band_representations(vᵀ, long_modes, d, brs)
+>>>>>>> ee15112 (include `PhysicalTightBindingCandidates` structure and its printing functionalities)
