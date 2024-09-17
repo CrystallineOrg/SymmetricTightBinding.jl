@@ -31,6 +31,7 @@ export mp, mpb
 
 include("types.jl")
 export TightBindingCandidates
+export PhysicalTightBindingCandidates
 include("conversion.jl")
 include("show.jl")
 include("constrained_nonnegative_expansions.jl")
