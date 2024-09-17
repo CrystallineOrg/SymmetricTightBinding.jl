@@ -1,4 +1,3 @@
-@eval TETB begin
 function prune_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
     prune_kidx = findfirst(==(klab), klabels(brs))
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
@@ -44,7 +43,6 @@ end
 
 function pick_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
     return pick_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
-end
 end
 
 function prune_klab_irreps!(v::SymmetryVector, klab::String="Γ")
