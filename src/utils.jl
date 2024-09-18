@@ -111,7 +111,6 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     end
 
     # --- fix singular photonic symmetry content at Γ, ω=0 --- 
-    # TODO: Maybe we can skip this step or try to change the condition on Γ
     fixup_gamma_symmetry!(symeigsd, lgs)
 
     # --- analyze connectivity and topology of symmetry data ---
@@ -145,14 +144,76 @@ function generalized_inv(X::AbstractMatrix{<:Integer})
     return Xᵍ
 end
 
-function physical(vᵀᵧ::AbstractSymmetryVector, nᵀ⁺ᴸᵧ, nᴸᵧ)
-    lgirs = only(irreps(vᵀᵧ))
+#=
+Different notation used explained here. First we define the notation for symmetry vectors
+obtained from MPB vs the ones for the solutions:
 
+    m                        =====> MPB
+    nᴸ, nᵀ⁺ᴸ, nᵀ = nᵀ⁺ᴸ - nᴸ =====> solutions
+
+Then, symmetry vectors can be explitted in several ways depending of if the irreps belong to
+Γ or not and if the irreps belongs to higher frecuency bands or just ω=0:
+
+    m = mᵧ + m₋ᵧ =====> Diffrentiate from Γ and not Γ
+    n = nᵧ + n₋ᵧ =====> Diffrentiate from Γ and not Γ
+
+    mᵧ = mᵧ⁼⁰ + mᵧꜛ⁰ =====> Diffrentiate from ω=0 and ω>0
+    nᵧ = nᵧ⁼⁰ + nᵧꜛ⁰ =====> Diffrentiate from ω=0 and ω>0
+
+We can obtain nᵀᵧ⁼⁰ from mᵧ⁼⁰ by:
+
+    nᵀᵧ⁼⁰ = mᵧ⁼⁰ + Q*p
+
+Now if p ∈ Ζ, the solution will be physical otherwise not. Additionally we must check if all
+the irreps for ω>0 are reproduced so then:
+
+    nᵀᵧꜛ⁰ - mᵧꜛ⁰ = nᵀᵧ - nᵀᵧ⁼⁰ - mᵧꜛ⁰ == 0
+
+=#
+
+function physical(mᵧ::AbstractSymmetryVector,
+    nᵀ⁺ᴸᵧ::AbstractSymmetryVector,
+    nᴸᵧ::AbstractSymmetryVector,
+    nfree::Vector{Int},
+    Q::Matrix{Int})
     # convert everythin into vectors w/o occupation
-    vᵀᵧ = Vector(vᵀᵧ)[1:end-1]
+    mᵧ = Vector(mᵧ)[1:end-1]
     nᵀ⁺ᴸᵧ = Vector(nᵀ⁺ᴸᵧ)[1:end-1]
     nᴸᵧ = Vector(nᴸᵧ)[1:end-1]
 
+    Q⁺ = generalized_inv(Q)
+    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the tranversal modes
+    mᵧꜛ⁰ = mᵧ - nfree # obtain the system's symmetry vector for ω>0
+
+    p = Q⁺ * (nᵀᵧ - mᵧ) # compute the vector p
+    nᵀᵧꜛ⁰ = nᵀᵧ - Q * p # obtain the transverse symmetry vector for ω>0
+
+    if nᵀᵧꜛ⁰ == mᵧꜛ⁰
+        return all(pᵢ -> pᵢ ≈ round(pᵢ), p), p
+
+    else
+        return false, []
+    end
+end
+
+function find_all_band_representations(
+    vᵀ::AbstractSymmetryVector,
+    long_modes::Vector{Vector{Int64}},
+    d::Vector{Int64},
+    brs::Collection{<:NewBandRep})
+
+    # erase Γ from the high-symmetry points
+    brs´ = prune_klab_irreps(brs, "Γ")
+    vᵀ´ = prune_klab_irreps(vᵀ, "Γ")
+    idxs = 1:length(first(brs´))
+
+
+    # pick up only Γ from the high-symmetry points
+    brsᵧ = pick_klab_irreps(brs, "Γ")
+    vᵀᵧ = pick_klab_irreps(vᵀ, "Γ")
+
+    # compute the fixed part and the free part of the physical ω=0 irreps at Γ
+    lgirs = only(irreps(vᵀᵧ))
     klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only 
                                             reference Γ-contents")
 
@@ -162,30 +223,7 @@ function physical(vᵀᵧ::AbstractSymmetryVector, nᵀ⁺ᴸᵧ, nᴸᵧ)
         force_fixed=true,
         lattice_reduce=true)
 
-    Q⁻¹ = generalized_inv(Q)
-    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the tranversal modes
-    vᵀᵧꜛ⁰ = vᵀᵧ - nfree # obtain the system's symmetry vector for ω>0
-
-    if any(<(0), nᵀ⁺ᴸᵧ - vᵀᵧꜛ⁰) # check if the ω>0 frequency modes are present in the TB model
-        return false, []
-    else # if all ω>0 modes are there check if ω=0 can be obtained for an integer 𝐩
-        y = Q⁻¹ * (nᵀᵧ - vᵀᵧ)
-        return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
-    end
-end
-
-function find_all_band_representations(
-    vᵀ::AbstractSymmetryVector,
-    long_modes::Vector{Vector{Int64}},
-    d::Vector{Int64},
-    brs::Collection{<:NewBandRep})
-    brs´ = prune_klab_irreps(brs, "Γ")
-    vᵀ´ = prune_klab_irreps(vᵀ, "Γ")
-    idxs = 1:length(first(brs´))
-
-    brsᵧ = pick_klab_irreps(brs, "Γ")
-    vᵀᵧ = pick_klab_irreps(vᵀ, "Γ")
-
+    # construct te vectors that will store the solutions
     phys_vec = Vector{Bool}[]
     p_vec = Vector{Vector{Float64}}[]
     solutions = Vector{Vector{Int64}}[]
@@ -193,14 +231,14 @@ function find_all_band_representations(
 
     for i in eachindex(long_modes)
         nᴸ = long_modes[i]
-        vᴸ´ = sum(@view brs´[nᴸ])
+        vᴸ´ = sum(brs´[nᴸ])
         vᵀ⁺ᴸ´ = vᵀ´ + vᴸ´
         μᵀ⁺ᴸ = occupation(vᵀ⁺ᴸ´)
 
         nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, Vector(vᵀ⁺ᴸ´), idxs)
 
         if !isempty(nᵀ⁺ᴸ)
-            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ])) for j in nᵀ⁺ᴸ]
+            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), nfree, Q) for j in nᵀ⁺ᴸ]
             push!(solutions, nᵀ⁺ᴸ)
             push!(long_solutions, nᴸ)
             push!(phys_vec, [check[j][1] for j in eachindex(nᵀ⁺ᴸ)])
