@@ -147,19 +147,31 @@ end
 
 function physical(vᵀᵧ::AbstractSymmetryVector, nᵀ⁺ᴸᵧ, nᴸᵧ)
     lgirs = only(irreps(vᵀᵧ))
-    klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only reference Γ-contents")
 
-    _, Q = physical_zero_frequency_gamma_irreps(
+    # convert everythin into vectors w/o occupation
+    vᵀᵧ = Vector(vᵀᵧ)[1:end-1]
+    nᵀ⁺ᴸᵧ = Vector(nᵀ⁺ᴸᵧ)[1:end-1]
+    nᴸᵧ = Vector(nᴸᵧ)[1:end-1]
+
+    klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only 
+                                            reference Γ-contents")
+
+    nfree, Q = physical_zero_frequency_gamma_irreps(
         lgirs;
         supergroup_constraints=true,
         force_fixed=true,
         lattice_reduce=true)
 
     Q⁻¹ = generalized_inv(Q)
-    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
-    y = Q⁻¹ * (nᵀᵧ-Vector(vᵀᵧ))[1:end-1]
+    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the tranversal modes
+    vᵀᵧꜛ⁰ = vᵀᵧ - nfree # obtain the system's symmetry vector for ω>0
 
-    return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
+    if any(<(0), nᵀ⁺ᴸᵧ - vᵀᵧꜛ⁰) # check if the ω>0 frequency modes are present in the TB model
+        return false, []
+    else # if all ω>0 modes are there check if ω=0 can be obtained for an integer 𝐩
+        y = Q⁻¹ * (nᵀᵧ - vᵀᵧ)
+        return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
+    end
 end
 
 function find_all_band_representations(
