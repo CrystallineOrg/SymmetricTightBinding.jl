@@ -14,8 +14,8 @@ function Base.show(io::IO, ::MIME"text/plain", candidates::TightBindingCandidate
                 color=:light_black)
             print(io, "nᵀ⁺ᴸ = ")
             join(io, nᵀ⁺ᴸss[js], " + ")
-            print(io, "; Physical? = ", candidates.phys[js][1])
-            print(io, "; 𝐩 = ", candidates.p[js][1])
+            print(io, "; Physical? = ", candidates.phys[is][js])
+            print(io, "; 𝐩 = ", candidates.p[is][js])
             println(io)
         end
     end
@@ -37,7 +37,7 @@ function Base.show(io::IO, ::MIME"text/plain", candidates::PhysicalTightBindingC
                 color=:light_black)
             print(io, "nᵀ⁺ᴸ = ")
             join(io, nᵀ⁺ᴸss[js], " + ")
-            print(io, "; 𝐩 = ", candidates.p[js][1])
+            print(io, "; 𝐩 = ", candidates.p[is][js])
             println(io)
         end
     end

@@ -1,14 +1,14 @@
 function prune_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
     prune_kidx = findfirst(==(klab), klabels(brs))
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
-    
+
     lgirsv = irreps(first(brs))
     foreach(brs) do br
         deleteat!(multiplicities(br.n), prune_kidx)
         @assert irreps(br.n) === lgirsv
     end
     deleteat!(lgirsv, prune_kidx)
-    
+
     return brs
 end
 
@@ -23,7 +23,7 @@ function _symmetry_vector_shallow_copy(brs::Collection{<:NewBandRep})
     end)
     return brs′
 end
-function prune_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")   
+function prune_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
     return prune_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
 end
 
@@ -147,26 +147,38 @@ end
 
 function physical(vᵀᵧ::AbstractSymmetryVector, nᵀ⁺ᴸᵧ, nᴸᵧ)
     lgirs = only(irreps(vᵀᵧ))
-    klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only reference Γ-contents")
-    
-    _, Q = physical_zero_frequency_gamma_irreps(
+
+    # convert everythin into vectors w/o occupation
+    vᵀᵧ = Vector(vᵀᵧ)[1:end-1]
+    nᵀ⁺ᴸᵧ = Vector(nᵀ⁺ᴸᵧ)[1:end-1]
+    nᴸᵧ = Vector(nᴸᵧ)[1:end-1]
+
+    klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only 
+                                            reference Γ-contents")
+
+    nfree, Q = physical_zero_frequency_gamma_irreps(
         lgirs;
         supergroup_constraints=true,
         force_fixed=true,
         lattice_reduce=true)
 
     Q⁻¹ = generalized_inv(Q)
-    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ
-    y = Q⁻¹ * (nᵀᵧ-Vector(vᵀᵧ))[1:end-1]
+    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the tranversal modes
+    vᵀᵧꜛ⁰ = vᵀᵧ - nfree # obtain the system's symmetry vector for ω>0
 
-    return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
+    if any(<(0), nᵀ⁺ᴸᵧ - vᵀᵧꜛ⁰) # check if the ω>0 frequency modes are present in the TB model
+        return false, []
+    else # if all ω>0 modes are there check if ω=0 can be obtained for an integer 𝐩
+        y = Q⁻¹ * (nᵀᵧ - vᵀᵧ)
+        return all(yᵢ -> yᵢ ≈ round(yᵢ), y), y
+    end
 end
 
 function find_all_band_representations(
-            vᵀ::AbstractSymmetryVector, 
-            long_modes::Vector{Vector{Int64}},
-            d::Vector{Int64},
-            brs::Collection{<:NewBandRep})
+    vᵀ::AbstractSymmetryVector,
+    long_modes::Vector{Vector{Int64}},
+    d::Vector{Int64},
+    brs::Collection{<:NewBandRep})
     brs´ = prune_klab_irreps(brs, "Γ")
     vᵀ´ = prune_klab_irreps(vᵀ, "Γ")
     idxs = 1:length(first(brs´))
@@ -195,10 +207,6 @@ function find_all_band_representations(
             push!(p_vec, [check[j][2] for j in eachindex(nᵀ⁺ᴸ)])
         end
     end
-<<<<<<< HEAD
-
-=======
->>>>>>> 064494f (fancy printing for `TightBindingCandidates` in `read_utils.jl`)
     return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
