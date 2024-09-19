@@ -123,6 +123,12 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     return symvecs, topologies
 end
 
+#= 
+
+`t` -> dimension os the auxiliary modes to search
+`d` -> vector containing the dimension of the BRs of the SG
+`brs` -> collection of the BRs of the SG
+=#
 function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::Collection{<:NewBandRep})
     long_cand = find_all_admissible_expansions(
         brs, d, t, #= occupation =#
@@ -160,21 +166,17 @@ Then, symmetry vectors can be explitted in several ways depending of if the irre
     mᵧ = mᵧ⁼⁰ + mᵧꜛ⁰ =====> Diffrentiate from ω=0 and ω>0
     nᵧ = nᵧ⁼⁰ + nᵧꜛ⁰ =====> Diffrentiate from ω=0 and ω>0
 
-We can obtain nᵀᵧ⁼⁰ from mᵧ⁼⁰ by:
+with the notation clear, now we need to check if the solution we have obtained is physical
+or not. In other words, we need to check two things:
 
-    nᵀᵧ⁼⁰ = mᵧ⁼⁰ + Q*p
-
-Now if p ∈ Ζ, the solution will be physical otherwise not. Additionally we must check if all
-the irreps for ω>0 are reproduced so then:
-
-    nᵀᵧꜛ⁰ - mᵧꜛ⁰ = nᵀᵧ - nᵀᵧ⁼⁰ - mᵧꜛ⁰ == 0
+1. 
 
 =#
 
 function physical(mᵧ::AbstractSymmetryVector,
     nᵀ⁺ᴸᵧ::AbstractSymmetryVector,
     nᴸᵧ::AbstractSymmetryVector,
-    nfree::Vector{Int},
+    nfixed::Vector{Int},
     Q::Matrix{Int})
     # convert everythin into vectors w/o occupation
     mᵧ = Vector(mᵧ)[1:end-1]
@@ -183,16 +185,16 @@ function physical(mᵧ::AbstractSymmetryVector,
 
     Q⁺ = generalized_inv(Q)
     nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the tranversal modes
-    mᵧꜛ⁰ = mᵧ - nfree # obtain the system's symmetry vector for ω>0
+    mᵧꜛ⁰ = mᵧ - nfixed # obtain the symmetry vecotr of the modes for ω>0
 
     p = Q⁺ * (nᵀᵧ - mᵧ) # compute the vector p
-    nᵀᵧꜛ⁰ = nᵀᵧ - Q * p # obtain the transverse symmetry vector for ω>0
 
-    if nᵀᵧꜛ⁰ == mᵧꜛ⁰
-        return all(pᵢ -> pᵢ ≈ round(pᵢ), p), p
-
+    # finally check if the vector p is an integer vector and if all the irreps with 
+    # negative multiplicite are present on the longitudinal modes
+    if all(pᵢ -> pᵢ ≈ round(pᵢ), p) && nᵀ⁺ᴸᵧ - mᵧꜛ⁰ == abs.(nᵀ⁺ᴸᵧ - mᵧꜛ⁰)
+        return true, p
     else
-        return false, []
+        return false, p
     end
 end
 
@@ -217,7 +219,7 @@ function find_all_band_representations(
     klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only 
                                             reference Γ-contents")
 
-    nfree, Q = physical_zero_frequency_gamma_irreps(
+    nfixed, Q = physical_zero_frequency_gamma_irreps(
         lgirs;
         supergroup_constraints=true,
         force_fixed=true,
@@ -238,7 +240,7 @@ function find_all_band_representations(
         nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, Vector(vᵀ⁺ᴸ´), idxs)
 
         if !isempty(nᵀ⁺ᴸ)
-            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), nfree, Q) for j in nᵀ⁺ᴸ]
+            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), nfixed, Q) for j in nᵀ⁺ᴸ]
             push!(solutions, nᵀ⁺ᴸ)
             push!(long_solutions, nᴸ)
             push!(phys_vec, [check[j][1] for j in eachindex(nᵀ⁺ᴸ)])
