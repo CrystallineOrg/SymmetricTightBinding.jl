@@ -169,7 +169,24 @@ Then, symmetry vectors can be explitted in several ways depending of if the irre
 with the notation clear, now we need to check if the solution we have obtained is physical
 or not. In other words, we need to check two things:
 
-1. 
+1. Whether if our solution subduce properly the $O(3)$ representation at $\Gamma$ and zero 
+frequency. This can be check easily using `PhotonicBandConnectivity.jl`. As estipulated 
+before in [Problem 2](#problem-2), this is fulfilled if $\mathbf{p}\in\mathbb{Z}$.
+
+2. Whether if our solution doesn't make use of the higher frequency irreps present in 
+$m_\Gamma^{>0}$ to regularize the symmetry content at zero frequency, and that instead those 
+negative multiplicities in the irreps are cancel out by the longitudinal modes $n^L$. This 
+is checked in the following way:
+
+    - If $n_{\Gamma,i}^{T+L} > m^{>0}_\Gamma \quad \forall i$, all higher frequency irreps 
+    are present on the model so the model perfectly represent the system bans.
+    - If $n_{\Gamma,i}^{T+L} < m^{>0}_\Gamma$ for some $i$ that higher frequency irrep is 
+    lacking in the model so the solution do not proper represent the higher frequency bands 
+    so it must be discarded.
+
+    Those conditions can be easily checked by the following condition:
+
+    $$ n_{\Gamma,i}^{T+L} - m^{>0}_\Gamma = abs(n_{\Gamma,i}^{T+L} - m^{>0}_\Gamma) $$ 
 
 =#
 
