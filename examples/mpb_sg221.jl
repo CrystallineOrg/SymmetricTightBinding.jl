@@ -34,7 +34,7 @@ symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 vᵀ = symvecs[1] # pick the 2 lower bands
 
 ### obtain additional modes with dimendion `t`
-t = 2
+t = 1
 brs = calc_bandreps(sg_num)
 d = stack(brs)[end, :]
 long_modes = find_auxiliary_modes(t, d, brs)
