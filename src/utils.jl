@@ -1,3 +1,6 @@
+"""
+Erase the content of a certain HSP from the input object. This HSP is settle by default to Γ.
+"""
 function prune_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
     prune_kidx = findfirst(==(klab), klabels(brs))
     isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
@@ -12,6 +15,9 @@ function prune_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
     return brs
 end
 
+"""
+Copies the symmetry vectors of the bandreps inside the collection so they are not overwritten
+"""
 function _symmetry_vector_shallow_copy(brs::Collection{<:NewBandRep})
     lgirsv′ = copy(irreps(first(brs)))
     brs′ = Collection(map(brs) do br
@@ -23,26 +29,11 @@ function _symmetry_vector_shallow_copy(brs::Collection{<:NewBandRep})
     end)
     return brs′
 end
+"""
+Erase the content of a certain HSP from the input object. This HSP is settle by default to Γ.
+"""
 function prune_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
     return prune_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
-end
-
-function pick_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
-    prune_kidx = findall(!=(klab), klabels(brs))
-    isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
-
-    lgirsv = irreps(first(brs))
-    foreach(brs) do br
-        deleteat!(multiplicities(br.n), prune_kidx)
-        @assert irreps(br.n) === lgirsv
-    end
-    deleteat!(lgirsv, prune_kidx)
-
-    return brs
-end
-
-function pick_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
-    return pick_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
 end
 
 function prune_klab_irreps!(v::SymmetryVector, klab::String="Γ")
@@ -64,6 +55,28 @@ function prune_klab_irreps(v::SymmetryVector, klab::String="Γ")
 end
 function prune_klab_irreps(v::AbstractSymmetryVector, klab::String="Γ")
     prune_klab_irreps(SymmetryVector(v), klab)
+end
+
+"""
+Picks the content of a certain HSP from the input object, erasing all the content for other 
+HSPs. This HSP is settle by default to Γ.
+"""
+function pick_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
+    prune_kidx = findall(!=(klab), klabels(brs))
+    isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
+
+    lgirsv = irreps(first(brs))
+    foreach(brs) do br
+        deleteat!(multiplicities(br.n), prune_kidx)
+        @assert irreps(br.n) === lgirsv
+    end
+    deleteat!(lgirsv, prune_kidx)
+
+    return brs
+end
+
+function pick_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
+    return pick_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
 end
 
 
@@ -89,6 +102,11 @@ function pick_klab_irreps(v::AbstractSymmetryVector, klab::String="Γ")
     pick_klab_irreps(SymmetryVector(v), klab)
 end
 
+"""
+Obtains directly the symmetry vectos for the bands computed in the MPB model `ms` for the space
+group defined in `sg_num`. It fixs up the symmetry content at Γ and ω=0 and returns the symmetry
+vectors and topoligies of the bands.
+"""
 function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     brs = bandreps(sg_num) # elementary band representations
     lgs = littlegroups(sg_num) # little groups
@@ -129,6 +147,14 @@ end
 `d` -> vector containing the dimension of the BRs of the SG
 `brs` -> collection of the BRs of the SG
 =#
+
+"""
+Finds all sets of bands in the SG that have dimension equal to `t`.
+
+1. `t` -> dimension of the auxiliary modes to search
+2. `d` -> vector containing the dimension of the BRs of the SG
+3. `brs` -> collection of the BRs of the SG
+"""
 function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::Collection{<:NewBandRep})
     long_cand = find_all_admissible_expansions(
         brs, d, t, #= occupation =#
@@ -137,7 +163,9 @@ function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::Collection{<:NewBan
     return long_cand
 end
 
-# Computes the generalized inverse `Xᵍ` of `X`, computed from the Smith normal form.
+"""
+Computes the generalized inverse `Xᵍ` of `X`, computed from the Smith normal form.
+"""
 function generalized_inv(X::AbstractMatrix{<:Integer})
     F = smith(X)
     Λ = MPBUtils.diagm(F)
@@ -190,6 +218,14 @@ is checked in the following way:
 
 =#
 
+"""
+Check if a certain solution `(nᵀ⁺ᴸ, nᴸ)` is *physical* given a symmetry vector `m`. A solution
+is physical if it fulfills to checks:
+
+    1. It subduces properly the O(3) representation at Γ and zero frequency.
+    2. It doesn't make use of the higher frequency irreps to regularize the symmetry content 
+    at zero frequency, and that instead uses the auxiliary modes `nᴸ` to cancel them.
+"""
 function physical(mᵧ::AbstractSymmetryVector,
     nᵀ⁺ᴸᵧ::AbstractSymmetryVector,
     nᴸᵧ::AbstractSymmetryVector,
@@ -215,6 +251,10 @@ function physical(mᵧ::AbstractSymmetryVector,
     end
 end
 
+"""
+Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `long_modes`. Additionally,
+it checks if the solution provided is physical or not.
+"""
 function find_all_band_representations(
     vᵀ::AbstractSymmetryVector,
     long_modes::Vector{Vector{Int64}},
@@ -267,6 +307,9 @@ function find_all_band_representations(
     return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
 end
 
+"""
+Filter the physical solutions from `find_all_band_representations`.
+"""
 function find_physical_band_representations(
     vᵀ::AbstractSymmetryVector,
     long_modes::Vector{Vector{Int64}},
