@@ -44,3 +44,22 @@ all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs)
 
 ### filter the physical ones 
 physical_band_repre = find_physical_band_representations(vᵀ, long_modes, d, brs)
+
+#------------------------------------------------------------------------------------------#
+# make a TB model out of one of the solutions
+
+## fisrt I need to construct the representations of the operations of the SG. At least the 
+## generators
+nᵀ⁺ᴸ = brs[physical_band_repre.solutions[1][1]...]
+
+# TODO: I did this manually, can I extract it from nᵀ⁺ᴸ?
+gen = generators(sg_num)
+wp = wyckoffs(221)[end-2]
+siteg = sitegroup(sg_num, wp)
+cosetsg = cosets(siteg)
+
+# for i in cosetsg
+
+# end
+
+#------------------------------------------------------------------------------------------#

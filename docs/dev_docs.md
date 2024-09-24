@@ -18,7 +18,7 @@ this differentiation we are going to use the following notation:
    the one representing only the longitudinal modes $n^L$. You can obtain the symmetry vector 
    of transversal modes from those two by $n^T=n^{T+L}-n^L$.
 
-Additionally it is interesting to separate those symmetry vectors into the irreps belonging 
+Additionally, it is interesting to separate those symmetry vectors into the irreps belonging 
 to $\Gamma$ and the others. This is because we need to test if the zero frequency modes are 
 well represented by the model as stipulated by 
 [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066), and that any negative 
@@ -96,14 +96,14 @@ need to check two things:
    those negative multiplicities in the irreps are cancel out by the longitudinal modes $n^L$. 
    This is checked in the following way:
 
-    - If $n_{\Gamma,i}^{T+L} > m^{>0}_\Gamma \quad \forall i$, all higher frequency irreps 
+    - If $m^{>0}_{\Gamma,i} \in n_{\Gamma}^{T+L} \quad \forall i$, all higher frequency irreps 
         are present on the model so the model perfectly represent the system bans.
-    - If $n_{\Gamma,i}^{T+L} < m^{>0}_\Gamma$ for some $i$ that higher frequency irrep is 
+    - If $m^{>0}_{\Gamma,i} \notin n_{\Gamma}^{T+L}$ for some $i$ that higher frequency irrep is 
         lacking in the model so the solution do not proper represent the higher frequency 
         bands so it must be discarded.
 
     Those conditions can be easily checked by the following condition:
 
-    $$ n_{\Gamma,i}^{T+L} - m^{>0}_\Gamma = abs(n_{\Gamma,i}^{T+L} - m^{>0}_\Gamma) $$
+    $$ n_{\Gamma}^{T+L} - m^{>0}_\Gamma = abs(n_{\Gamma}^{T+L} - m^{>0}_\Gamma) $$
 
 Both of this conditions are checked for every solution on the function `physical`.
