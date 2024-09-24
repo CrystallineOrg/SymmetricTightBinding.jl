@@ -32,4 +32,4 @@ m4 = parse(SymmetryVector, s4, lgirsv)
 idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 
 ### compute all possible decomposition into EBRs of m using the additional modes computed
-candidates = find_apolar_modes(m3, idxsᴸs, brs)
+candidatesv = find_apolar_modes(m3, idxsᴸs, brs)

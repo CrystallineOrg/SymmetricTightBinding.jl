@@ -269,11 +269,7 @@ function find_apolar_modes(
         force_fixed=true,
         lattice_reduce=true)
 
-    # construct te vectors that will store the solutions
-    p_vec = Vector{Vector{Float64}}[]
-    solutions = Vector{Vector{Int64}}[]
-    long_solutions = Vector{Int64}[]
-
+    candidatesv = TightBindingCandidateSet[]
     for idxsᴸ in idxsᴸs
         nᴸ = if isempty(idxsᴸ)
             zero(first(brs))
@@ -298,12 +294,12 @@ function find_apolar_modes(
                 nᵀ⁺ᴸ = SymmetryVector(sum(brs[idxsᵀ⁺ᴸ]))
                 is_integer_p_check(m, nᵀ⁺ᴸ, nᴸ, Q, Γidx)
             end
-            push!(solutions, idxsᵀ⁺ᴸs)
-            push!(long_solutions, idxsᴸ)
-            push!(p_vec, ps)
+
+            candidates = TightBindingCandidateSet(idxsᴸ, idxsᵀ⁺ᴸs, ps, brs)
+            push!(candidatesv, candidates)
         end
     end
-    return TightBindingCandidates(solutions, long_solutions, p_vec, brs)
+    return candidatesv
 end
 
 
@@ -323,8 +319,8 @@ function find_bandrep_decompositions(
         idxsᴸs = find_auxiliary_modes(μᴸ, brs)
         (isempty(idxsᴸs) && μᴸ ≠ 0) && continue
         # compute all possible decomposition of m into valid combinations of nᴸ and nᵀ⁺ᴸ
-        candidates = find_apolar_modes(m, idxsᴸs, brs)
-        isempty(candidates.idxsᵀ⁺ᴸss) || return candidates
+        candidatesv = find_apolar_modes(m, idxsᴸs, brs)
+        isempty(candidatesv) || return candidatesv
     end
     error("""failed to find possible auxiliary-apolar decompositions for provided \
              symmetry vector in search range for auxiliary modes; increasing kwarg \

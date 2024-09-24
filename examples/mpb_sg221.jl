@@ -39,4 +39,4 @@ brs = calc_bandreps(sg_num)
 idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 
 ### compute all possible decomposition into EBRs of m using the additional modes computed
-candidates = find_apolar_modes(m, idxsᴸs, brs)
+candidatesv = find_apolar_modes(m, idxsᴸs, brs)
