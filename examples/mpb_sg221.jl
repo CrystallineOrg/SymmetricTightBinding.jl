@@ -31,16 +31,12 @@ ms.init_params(p=mp.ALL, reset_fields=true)
 sg_num = 221
 symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 
-vᵀ = symvecs[1] # pick the 2 lower bands
+m = symvecs[1] # pick the 2 lower bands
 
 ### obtain additional modes with dimendion `t`
-t = 1
+μᴸ = 1
 brs = calc_bandreps(sg_num)
-d = stack(brs)[end, :]
-long_modes = find_auxiliary_modes(t, d, brs)
+idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 
-### compute all possible decomposition into EBRs of vᵀ using the additional modes computed
-all_band_repre = find_all_band_representations(vᵀ, long_modes, d, brs)
-
-### filter the physical ones 
-physical_band_repre = find_physical_band_representations(vᵀ, long_modes, d, brs)
+### compute all possible decomposition into EBRs of m using the additional modes computed
+candidates = find_apolar_modes(m, idxsᴸs, brs)

@@ -31,15 +31,14 @@ export mp, mpb
 
 include("types.jl")
 export TightBindingCandidates
-export PhysicalTightBindingCandidates
 include("conversion.jl")
 include("show.jl")
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
-export find_all_band_representations
+export find_apolar_modes
 export find_auxiliary_modes
+export find_bandrep_decompositions
 export obtain_symmetry_vectors
-export find_physical_band_representations
 
 # ---------------------------------------------------------------------------------------- #
 end # module

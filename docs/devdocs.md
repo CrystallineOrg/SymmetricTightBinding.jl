@@ -57,7 +57,7 @@ First we find all possible longitudinal modes $n^L$ in the SG for a given (usual
 This is performed with the function `find_auxiliary_modes`.
 
 Then, using the identified set of of fixed-occupation $\{n^L\}$, we search if there are transverse+longitudinal modes $n^{T+L}$ that satisfy the previous equation. This is done in the function 
-`find_all_band_representations`.
+`find_apolar_modes`.
 
 ### Problem 2
 

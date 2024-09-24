@@ -11,21 +11,19 @@ sg_num = 221
 brs = calc_bandreps(sg_num)
 lgirsv = irreps(brs)
 
-
 #------------------------------------------------------------------------------------------#
 # First minimal solutions in SG #221
 
-s_1 = "[-Γ₁⁺+Γ₄⁻, R₃⁻, M₂⁻+M₃⁺, X₅⁺]"
-v_1 = parse(SymmetryVector, s_1, lgirsv)
+s1 = "[-Γ₁⁺+Γ₄⁻, R₃⁻, M₂⁻+M₃⁺, X₅⁺]"
+m1 = parse(SymmetryVector, s1, lgirsv)
 
-s_2 = "[-Γ₁⁺+Γ₄⁻, R₃⁺, M₂⁺+M₃⁻, X₅⁻]"
-v_2 = parse(SymmetryVector, s_2, lgirsv)
+s2 = "[-Γ₁⁺+Γ₄⁻, R₃⁺, M₂⁺+M₃⁻, X₅⁻]"
+m2 = parse(SymmetryVector, s2, lgirsv)
 
 #------------------------------------------------------------------------------------------#
 
-t = 1
-d = stack(brs)[end, :]
-long_modes = find_auxiliary_modes(t, d, brs)
+μᴸ = 1
+idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 
-### compute all possible decomposition into EBRs of vᵀ using the additional modes computed
-all_band_repre = find_all_band_representations(v_2, long_modes, d, brs)
+### compute all possible decomposition into EBRs of m using the additional modes computed
+candidates = find_apolar_modes(m2, idxsᴸs, brs)
