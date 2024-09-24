@@ -107,3 +107,11 @@ need to check two things:
     $$ n_{\Gamma}^{T+L} - m^{>0}_\Gamma = abs(n_{\Gamma}^{T+L} - m^{>0}_\Gamma) $$
 
 Both of this conditions are checked for every solution on the function `physical`.
+
+## Representation of the SG operations in $\mathbf{k}$-space
+
+As discussed in Section 3.3 of 
+[Barry's article](https://doi.org/10.1146/annurev-conmatphys-041720-124134), we know Wannier
+functions transform in the following way:
+
+$$ \rho_G(g)a_{i,\alpha}(\mathbf{r}-\mathbf{t}) = \sum_{j=1}^{dim(\rho)} \left[  \right]

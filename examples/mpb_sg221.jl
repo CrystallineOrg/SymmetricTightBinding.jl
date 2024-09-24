@@ -58,7 +58,14 @@ wp = wyckoffs(221)[end-2]
 siteg = sitegroup(sg_num, wp)
 cosetsg = cosets(siteg)
 
-# for i in cosetsg
+siterep = nᵀ⁺ᴸ.siteir
+
+n_wp = wp.mult
+dim_rep = size(siterep.matrices[1][1]) # TODO: maybe some dim of the siteir?
+
+# for i in gen
+#     D = zeros((n_wp, dim_rep))
+
 
 # end
 

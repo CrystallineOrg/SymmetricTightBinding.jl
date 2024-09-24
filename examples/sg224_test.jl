@@ -30,4 +30,4 @@ d = stack(brs)[end, :]
 long_modes = find_auxiliary_modes(t, d, brs)
 
 ### compute all possible decomposition into EBRs of vᵀ using the additional modes computed
-all_band_repre = find_all_band_representations(v_3, long_modes, d, brs)
+all_band_repre = find_all_band_representations(v_2, long_modes, d, brs)
