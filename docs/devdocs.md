@@ -106,9 +106,43 @@ functionalities of `find_all_admissible_expansions`.
 
 ## Representation of the SG operations in $\mathbf{k}$-space
 
-As discussed in Section 3.3 of 
+As discussed in Section 3 of 
 [Barry's article](https://doi.org/10.1146/annurev-conmatphys-041720-124134), we know Wannier
 functions transform in the following way:
 
-$$ \rho_G(g)a_{i,\alpha}(\mathbf{r}-\mathbf{t}) = \sum_{j=1}^{dim(\rho)} \left[  \right]$$
+$$ \rho_G(g)a_{i\alpha}(\mathbf{r}-\mathbf{t}) = \rho_G(g) \{E|\mathbf{t}\} a_{i\alpha}(\mathbf{r}) 
+    = \{E|R\mathbf{t}+\mathbf{v}\} \{E|\mathbf{t}_{\beta\alpha}\} g_\beta \rho(h) g_\alpha^{-1} 
+    a_{i\alpha}(\mathbf{r}) = \{E|R\mathbf{t}+\mathbf{v}\} \{E|\mathbf{t}_{\beta\alpha}\} g_\beta 
+    \rho(h) a_{i1}(\mathbf{r}) \\ = \{E|R\mathbf{t}+\mathbf{v}\} \{E|\mathbf{t}_{\beta\alpha}\}
+    g_\beta [\rho(h)]_{ji} a_{j1}(\mathbf{r}) = [\rho(h)]_{ji} \{E|R\mathbf{t}+\mathbf{v}\} 
+    a_{j\beta}(\mathbf{r}-\mathbf{t}_{\beta\alpha}) = [\rho(h)]_{ji} 
+    a_{j\beta}(\mathbf{r}-R\mathbf{t}-\mathbf{v}-\mathbf{t}_{\beta\alpha})$$
 
+being $g \in G$ and $h \in G_{\mathbf{q}}$, such that given a coset decomposition $G = \bigcup_\alpha
+g_\alpha G_\mathbf{q}$ : $g = \{E|\mathbf{t}_{\beta\alpha}\} g_\beta h g_\alpha^{-1}$ and
+$\mathbf{t}_{\beta\alpha} = g\mathbf{q}_\alpha - \mathbf{q}_\beta$. We assume we know a 
+site-symmetry group representation: $h a_{i1}(\mathbf{r}) = [\rho(h)]_{ji} a_{j1}(\mathbf{r})$,
+where we are assuming Einstein's summation rule.
+
+Considering the following Fourier transform we want to study how Bloch functions will transform:
+
+$$ a_{i\alpha}(\mathbf{k},\mathbf{r}) = \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot 
+    (\mathbf{t}+\mathbf{q}_\alpha)} a_{i\alpha}(\mathbf{r}-\mathbf{t}) $$
+
+Then:
+
+$$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r}) = \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot 
+    (\mathbf{t}+\mathbf{q}_\alpha)} \rho_G(g) a_{i\alpha}(\mathbf{r}-\mathbf{t}) = 
+    \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot 
+    (\mathbf{t}+\mathbf{q}_\alpha)} [\rho(h)]_{ji} a_{j\beta}(\mathbf{r}-R\mathbf{t}-\mathbf{v}-
+    \mathbf{t}_{\beta\alpha}) $$
+
+If we now make the substitution: $\mathbf{t}^\prime = R\mathbf{t} + \mathbf{v} + \mathbf{t}_{
+\beta\alpha} \Rightarrow \mathbf{t} = R^{-1}\mathbf{t}^\prime - \mathbf{q}_\alpha + R^{-1}
+\mathbf{q}_\beta$, then:
+
+$$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r}) = \sum_{\mathbf{t}^\prime} e^{i\mathbf{k} \cdot 
+    R^{-1}(\mathbf{t}^\prime+\mathbf{q}_\beta)} [\rho(h)]_{ji} 
+    a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime) = [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r}) $$
+
+This functionality is implemented under the function `obtain_sg_representation`.
