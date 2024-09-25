@@ -95,13 +95,18 @@ need to check two things:
    those negative multiplicities in the irreps are cancelled out by the longitudinal modes $n^L$. 
    We ensure this by the following check:
 
-    If $m_{\Gamma,i}^{=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq -m_{\Gamma,i}^{=0}$ for
-    that $i$. Since all other entries of $m_{\Gamma}^{=0}$ are non-negative and $n_{\Gamma,i}^L$
-    is non-negative, when can directly impose:
+    Define the candidate-solution's zero-frequency content at $\Gamma$ by:
+    $$n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = n_{\Gamma}^{T+L} - n_{\Gamma}^L - m_{\Gamma}^{>0} = m_{\Gamma}^{=0} + Q\mathbf{p}.$$
+    Consider the following two cases:
+    - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ for
+    that $i$; equivalently, in this case $n_{\Gamma,i}^L \geq -n_{\Gamma,i}^{T,=0}$.
+    - Conversely, if  $n_{\Gamma,i}^{T,=0} ≥ 0$ for some $i$, we still have $n_{\Gamma,i}^L ≥ 0$ and consequently also $n_{\Gamma,i}^L ≥ -n_{\Gamma,i}^{T,=0}$.
 
-    $$ n_{\Gamma}^L \geq -m_{\Gamma}^{=0} $$
+    Thus, regardless of the sign of $n_{\Gamma,i}^{T,=0}$, we may require that:
 
-All of this constrains are directly imposed in the function `find_apolar_modes` thanks to the
+    $$ n_{\Gamma}^L \geq -n_\Gamma^{T,=0}$$
+
+These constraints are directly imposed in the function `find_apolar_modes` thanks to the
 functionalities of `find_all_admissible_expansions`.
 
 ## Representation of the SG operations in $\mathbf{k}$-space
