@@ -46,7 +46,7 @@ candidatesv = find_apolar_modes(m, idxsᴸs, brs)
 
 ## fisrt I need to construct the representations of the operations of the SG. At least the 
 ## generators
-nᵀ⁺ᴸ = brs[physical_band_repre.solutions[1][1]...]
+nᵀ⁺ᴸ = candidatesv[1][1][1]
 
 # TODO: I did this manually, can I extract it from nᵀ⁺ᴸ?
 gen = generators(sg_num)
@@ -58,6 +58,50 @@ siterep = nᵀ⁺ᴸ.siteir
 
 n_wp = wp.mult
 dim_rep = size(siterep.matrices[1][1]) # TODO: maybe some dim of the siteir?
+
+wps = orbit(group(nᵀ⁺ᴸ))
+siteir = nᵀ⁺ᴸ.siteir
+siteir_dim = Crystalline.irdim(siteir)
+##
+
+using Crystalline: irdim, constant
+
+# we do not include the (usually redundant) exponential phases below
+# TODO: check & write doc string describing what this does
+function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where D
+    siteir = br.siteir
+    siteir_dim = irdim(siteir)
+    siteg = group(siteir)
+    wps = orbit(siteg)
+    mult = length(wps)
+    gens = generators(num(siteg))
+    
+    ρs = [BlockArray{ComplexF64}(
+            zeros(ComplexF64, siteir_dim*mult, siteir_dim*mult),
+            fill(siteir_dim, mult), fill(siteir_dim, mult)) for _ in eachindex(gens)]
+    for (n, g) in enumerate(gens)
+        ρ = ρs[n]
+        for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
+            check = false
+            for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
+                tᵦₐ = constant(g*parent(qₐ) - parent(qᵦ)) # ignore free parts
+                # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
+                h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
+                idx_h = findfirst(==(h), siteg)
+                if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by g
+                    ρ[Block(α, β)] .= siteir.matrices[idx_h]
+                    check = true
+                    break
+                end
+            end
+            check || error("failed to find any nonzero block")
+        end
+    end
+
+    return gens .=> ρs
+end
+br = brs[1]
+sgrep_induced_by_siteir_generators(br)[1][2]
 
 # for i in gen
 #     D = zeros((n_wp, dim_rep))
