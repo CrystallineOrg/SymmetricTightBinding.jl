@@ -1,44 +1,12 @@
-function Base.show(io::IO, ::MIME"text/plain", candidates::TightBindingCandidates)
-    summary(io, candidates)
-    println(io, ":")
-    for is in 1:length(candidates.long_modes)
-        nᴸs = [candidates.brs[j] for j in candidates.long_modes[is]]
-        print(io, " nᴸ = ")
+function Base.show(io::IO, candidates::TightBindingCandidateSet)
+    printstyled(io, "nᴸ"; bold=true, color=:light_black)
+    printstyled(io, " = ", join(auxiliary(candidates), "+"), ": "; color=:light_black)
 
-        join(io, nᴸs, " + ")
-        println(io)
-
-        nᵀ⁺ᴸss = [[candidates.brs[m] for k in js for m in k] for js in candidates.solutions[is]]
-        for js in eachindex(nᵀ⁺ᴸss)
-            printstyled(io, "   ⁽", Crystalline.supscriptify(string(js)), "⁾ ";
-                color=:light_black)
-            print(io, "nᵀ⁺ᴸ = ")
-            join(io, nᵀ⁺ᴸss[js], " + ")
-            print(io, "; Physical? = ", candidates.phys[is][js])
-            print(io, "; 𝐩 = ", candidates.p[is][js])
-            println(io)
-        end
+    printstyled(io, "nᵀ⁺ᴸ"; bold=true)
+    print(io, " ∈ [")
+    for (j, idxsᵀ⁺ᴸ) in enumerate(candidates.idxsᵀ⁺ᴸs)
+        join(io, candidates.brs[idxsᵀ⁺ᴸ], "+")
+        j ≠ length(candidates) && print(io, ", ")
     end
-end
-
-function Base.show(io::IO, ::MIME"text/plain", candidates::PhysicalTightBindingCandidates)
-    summary(io, candidates)
-    println(io, ":")
-    for is in 1:length(candidates.long_modes)
-        nᴸs = [candidates.brs[j] for j in candidates.long_modes[is]]
-        print(io, " nᴸ = ")
-
-        join(io, nᴸs, " + ")
-        println(io)
-
-        nᵀ⁺ᴸss = [[candidates.brs[m] for k in js for m in k] for js in candidates.solutions[is]]
-        for js in eachindex(nᵀ⁺ᴸss)
-            printstyled(io, "   ⁽", Crystalline.supscriptify(string(js)), "⁾ ";
-                color=:light_black)
-            print(io, "nᵀ⁺ᴸ = ")
-            join(io, nᵀ⁺ᴸss[js], " + ")
-            print(io, "; 𝐩 = ", candidates.p[is][js])
-            println(io)
-        end
-    end
+    print(io, "]")
 end

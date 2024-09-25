@@ -14,23 +14,22 @@ lgirsv = irreps(brs)
 #------------------------------------------------------------------------------------------#
 # First minimal solutions in SG #224
 
-s_1 = "[Γ₄⁻+Γ₂⁻, R₂⁻+R₄⁻, M₁+M₄, X₁+X₃]"
-v_1 = parse(SymmetryVector, s_1, lgirsv)
+s1 = "[Γ₄⁻+Γ₂⁻, R₂⁻+R₄⁻, M₁+M₄, X₁+X₃]"
+m1 = parse(SymmetryVector, s1, lgirsv)
 
-s_2 = "[Γ₄⁻+Γ₂⁻, R₁⁺+R₅⁺, M₁+M₄, X₁+X₄]"
-v_2 = parse(SymmetryVector, s_2, lgirsv)
+s2 = "[Γ₄⁻+Γ₂⁻, R₁⁺+R₅⁺, M₁+M₄, X₁+X₄]"
+m2 = parse(SymmetryVector, s2, lgirsv)
 
-s_3 = "[-Γ₁⁺+Γ₄⁻+Γ₁⁻+Γ₂⁻, R₂⁺+R₄⁺, M₂+M₄, X₂+X₃]"
-v_3 = parse(SymmetryVector, s_3, lgirsv)
+s3 = "[-Γ₁⁺+Γ₄⁻+Γ₁⁻+Γ₂⁻, R₂⁺+R₄⁺, M₂+M₄, X₂+X₃]"
+m3 = parse(SymmetryVector, s3, lgirsv)
 
-s_4 = "[-Γ₁⁺+Γ₄⁻+Γ₁⁻+Γ₂⁻, R₁⁻+R₅⁻, M₂+M₄, X₂+X₄]"
-v_4 = parse(SymmetryVector, s_4, lgirsv)
+s4 = "[-Γ₁⁺+Γ₄⁻+Γ₁⁻+Γ₂⁻, R₁⁻+R₅⁻, M₂+M₄, X₂+X₄]"
+m4 = parse(SymmetryVector, s4, lgirsv)
 
 #------------------------------------------------------------------------------------------#
 
-t = 4
-d = stack(brs)[end, :]
-long_modes = find_auxiliary_modes(t, d, brs)
+μᴸ = 4
+idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 
-### compute all possible decomposition into EBRs of vᵀ using the additional modes computed
-all_band_repre = find_all_band_representations(v_3, long_modes, d, brs)
+### compute all possible decomposition into EBRs of m using the additional modes computed
+candidatesv = find_apolar_modes(m3, idxsᴸs, brs)

@@ -1,108 +1,4 @@
 """
-Erase the content of a certain HSP from the input object. This HSP is settle by default to Γ.
-"""
-function prune_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
-    prune_kidx = findfirst(==(klab), klabels(brs))
-    isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
-
-    lgirsv = irreps(first(brs))
-    foreach(brs) do br
-        deleteat!(multiplicities(br.n), prune_kidx)
-        @assert irreps(br.n) === lgirsv
-    end
-    deleteat!(lgirsv, prune_kidx)
-
-    return brs
-end
-
-"""
-Copies the symmetry vectors of the bandreps inside the collection so they are not overwritten
-"""
-function _symmetry_vector_shallow_copy(brs::Collection{<:NewBandRep})
-    lgirsv′ = copy(irreps(first(brs)))
-    brs′ = Collection(map(brs) do br
-        NewBandRep(
-            br.siteir,
-            SymmetryVector(lgirsv′, copy(multiplicities(br)), occupation(br)),
-            br.spinful,
-            br.timereversal)
-    end)
-    return brs′
-end
-"""
-Erase the content of a certain HSP from the input object. This HSP is settle by default to Γ.
-"""
-function prune_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
-    return prune_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
-end
-
-function prune_klab_irreps!(v::SymmetryVector, klab::String="Γ")
-    prune_iridxs = findall(lgirs -> klabel(first(lgirs)) == klab, irreps(v))
-    isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
-    deleteat!(multiplicities(v), prune_iridxs)
-    deleteat!(irreps(v), prune_iridxs)
-    return v
-end
-function prune_klab_irreps!(v::AbstractSymmetryVector, klab::String="Γ")
-    prune_klab_irreps!(SymmetryVector(v), klab)
-end
-
-function prune_klab_irreps(v::SymmetryVector, klab::String="Γ")
-    lgirsv´ = copy(irreps(v))
-    multsv´ = copy(multiplicities(v))
-    v´ = SymmetryVector(lgirsv´, multsv´, occupation(v))
-    return prune_klab_irreps!(v´, klab)
-end
-function prune_klab_irreps(v::AbstractSymmetryVector, klab::String="Γ")
-    prune_klab_irreps(SymmetryVector(v), klab)
-end
-
-"""
-Picks the content of a certain HSP from the input object, erasing all the content for other 
-HSPs. This HSP is settle by default to Γ.
-"""
-function pick_klab_irreps!(brs::Collection{<:NewBandRep}, klab::String="Γ")
-    prune_kidx = findall(!=(klab), klabels(brs))
-    isnothing(prune_kidx) && error(lazy"could not find $klab among included k-points")
-
-    lgirsv = irreps(first(brs))
-    foreach(brs) do br
-        deleteat!(multiplicities(br.n), prune_kidx)
-        @assert irreps(br.n) === lgirsv
-    end
-    deleteat!(lgirsv, prune_kidx)
-
-    return brs
-end
-
-function pick_klab_irreps(brs::Collection{<:NewBandRep}, klab::String="Γ")
-    return pick_klab_irreps!(_symmetry_vector_shallow_copy(brs), klab)
-end
-
-
-function pick_klab_irreps!(v::SymmetryVector, klab::String="Γ")
-    prune_iridxs = findall(lgirs -> klabel(first(lgirs)) != klab, irreps(v))
-    isempty(prune_iridxs) && error(lazy"could not find $klab among included irreps")
-    deleteat!(multiplicities(v), prune_iridxs)
-    deleteat!(irreps(v), prune_iridxs)
-    return v
-end
-function pick_klab_irreps!(v::AbstractSymmetryVector, klab::String="Γ")
-    pick_klab_irreps!(SymmetryVector(v), klab)
-end
-
-
-function pick_klab_irreps(v::SymmetryVector, klab::String="Γ")
-    lgirsv´ = copy(irreps(v))
-    multsv´ = copy(multiplicities(v))
-    v´ = SymmetryVector(lgirsv´, multsv´, occupation(v))
-    return pick_klab_irreps!(v´, klab)
-end
-function pick_klab_irreps(v::AbstractSymmetryVector, klab::String="Γ")
-    pick_klab_irreps(SymmetryVector(v), klab)
-end
-
-"""
 Obtains directly the symmetry vectos for the bands computed in the MPB model `ms` for the space
 group defined in `sg_num`. It fixs up the symmetry content at Γ and ω=0 and returns the symmetry
 vectors and topoligies of the bands.
@@ -142,22 +38,21 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
 end
 
 #= 
-
 `t` -> dimension os the auxiliary modes to search
-`d` -> vector containing the dimension of the BRs of the SG
 `brs` -> collection of the BRs of the SG
 =#
 
 """
-Finds all sets of bands in the SG that have dimension equal to `t`.
+Finds all sets of bands in the SG that have dimension equal to `μᴸ`.
 
-1. `t` -> dimension of the auxiliary modes to search
-2. `d` -> vector containing the dimension of the BRs of the SG
-3. `brs` -> collection of the BRs of the SG
+1. `μᴸ` -> dimension of the auxiliary modes to search
+2. `brs` -> collection of the BRs of the SG
 """
-function find_auxiliary_modes(t::Int, d::Vector{Int64}, brs::Collection{<:NewBandRep})
+function find_auxiliary_modes(μᴸ::Int, brs::Collection{<:NewBandRep})
+    iszero(μᴸ) && return [Int[]]
+    μs_brs = occupation.(brs)
     long_cand = find_all_admissible_expansions(
-        brs, d, t, #= occupation =#
+        brs, μs_brs, μᴸ, #= occupation =#
         Int[], Int[]) #= idxs =#
 
     return long_cand
@@ -226,55 +121,43 @@ is physical if it fulfills to checks:
     2. It doesn't make use of the higher frequency irreps to regularize the symmetry content 
     at zero frequency, and that instead uses the auxiliary modes `nᴸ` to cancel them.
 """
-function physical(mᵧ::AbstractSymmetryVector,
-    nᵀ⁺ᴸᵧ::AbstractSymmetryVector,
-    nᴸᵧ::AbstractSymmetryVector,
-    nfixed::Vector{Int},
-    Q::Matrix{Int})
+function is_integer_p_check(m::AbstractSymmetryVector,
+    nᵀ⁺ᴸ::AbstractSymmetryVector,
+    nᴸ::AbstractSymmetryVector,
+    Q::Matrix{Int},
+    Γidx::Int
+)
     # convert everythin into vectors w/o occupation
-    mᵧ = Vector(mᵧ)[1:end-1]
-    nᵀ⁺ᴸᵧ = Vector(nᵀ⁺ᴸᵧ)[1:end-1]
-    nᴸᵧ = Vector(nᴸᵧ)[1:end-1]
+    mᵧ = multiplicities(m)[Γidx]
+    nᵀ⁺ᴸᵧ = multiplicities(nᵀ⁺ᴸ)[Γidx]
+    nᴸᵧ = multiplicities(nᴸ)[Γidx]
 
     Q⁺ = generalized_inv(Q)
     nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the tranversal modes
-    mᵧꜛ⁰ = mᵧ - nfixed # obtain the symmetry vecotr of the modes for ω>0
-
     p = Q⁺ * (nᵀᵧ - mᵧ) # compute the vector p
 
     # finally check if the vector p is an integer vector and if all the irreps with 
     # negative multiplicite are present on the longitudinal modes
-    if all(pᵢ -> pᵢ ≈ round(pᵢ), p) && nᵀ⁺ᴸᵧ - mᵧꜛ⁰ == abs.(nᵀ⁺ᴸᵧ - mᵧꜛ⁰)
-        return true, p
-    else
-        return false, p
-    end
+    p_int = round.(Int, p)
+    p_int ≈ p || error("unexpectedly found non-integer p - unhandled")
+    return p_int
 end
 
 """
-Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `long_modes`. Additionally,
+Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `idxsᴸs`. Additionally,
 it checks if the solution provided is physical or not.
 """
-function find_all_band_representations(
-    vᵀ::AbstractSymmetryVector,
-    long_modes::Vector{Vector{Int64}},
-    d::Vector{Int64},
+function find_apolar_modes(
+    m::AbstractSymmetryVector,
+    idxsᴸs::Vector{Vector{Int64}},
     brs::Collection{<:NewBandRep})
 
-    # erase Γ from the high-symmetry points
-    brs´ = prune_klab_irreps(brs, "Γ")
-    vᵀ´ = prune_klab_irreps(vᵀ, "Γ")
-    idxs = 1:length(first(brs´))
-
-
-    # pick up only Γ from the high-symmetry points
-    brsᵧ = pick_klab_irreps(brs, "Γ")
-    vᵀᵧ = pick_klab_irreps(vᵀ, "Γ")
+    μs_brs = occupation.(brs)
+    idxs = eachindex(first(brs))
 
     # compute the fixed part and the free part of the physical ω=0 irreps at Γ
-    lgirs = only(irreps(vᵀᵧ))
-    klabel(first(lgirs)) == "Γ" || error("input symmetry vector to `physical` may only 
-                                            reference Γ-contents")
+    Γidx = something(findfirst(==("Γ"), klabels(m)))
+    lgirs = irreps(m)[Γidx]
 
     nfixed, Q = physical_zero_frequency_gamma_irreps(
         lgirs;
@@ -282,53 +165,60 @@ function find_all_band_representations(
         force_fixed=true,
         lattice_reduce=true)
 
-    # construct te vectors that will store the solutions
-    phys_vec = Vector{Bool}[]
-    p_vec = Vector{Vector{Float64}}[]
-    solutions = Vector{Vector{Int64}}[]
-    long_solutions = Vector{Int64}[]
+    candidatesv = TightBindingCandidateSet[]
+    for idxsᴸ in idxsᴸs
+        nᴸ = if isempty(idxsᴸ)
+            zero(first(brs))
+        else
+            SymmetryVector(sum(brs[idxsᴸ]))
+        end
+        μᵀ⁺ᴸ = occupation(m) + occupation(nᴸ)
 
-    for i in eachindex(long_modes)
-        nᴸ = long_modes[i]
-        vᴸ´ = sum(brs´[nᴸ])
-        vᵀ⁺ᴸ´ = vᵀ´ + vᴸ´
-        μᵀ⁺ᴸ = occupation(vᵀ⁺ᴸ´)
+        # We want to enforce two constraints, one at Γ, one at "not-Γ" ≡ -Γ:
+        #   @-Γ: nᵀ⁺ᴸ[i] == (m + nᴸ)[i]   (and we translate this to nᵀ⁺ᴸ[i] ≥ (m + nᴸ)[i]
+        #                                  cf. non-negativity)
+        #   @Γ : nᴸ[i] ≥ -nfixed ==> nᵀ⁺ᴸ[i] ≥ (m - n_fixed)[i]
+        # We can fold these two sets of constraints into one, via the following 
+        # manipulations:
+        constraints = m + nᴸ # now the constraints are wrong at Γ; proceed to correct this
+        constraints.multsv[Γidx] -= nfixed + multiplicities(nᴸ)[Γidx] # now: fixed
 
-        nᵀ⁺ᴸ = find_all_admissible_expansions(brs´, d, μᵀ⁺ᴸ, Vector(vᵀ⁺ᴸ´), idxs)
+        idxsᵀ⁺ᴸs = find_all_admissible_expansions(brs, μs_brs, μᵀ⁺ᴸ, Vector(constraints), idxs)
 
-        if !isempty(nᵀ⁺ᴸ)
-            check = [physical(vᵀᵧ, sum(brsᵧ[j]), sum(brsᵧ[nᴸ]), nfixed, Q) for j in nᵀ⁺ᴸ]
-            push!(solutions, nᵀ⁺ᴸ)
-            push!(long_solutions, nᴸ)
-            push!(phys_vec, [check[j][1] for j in eachindex(nᵀ⁺ᴸ)])
-            push!(p_vec, [check[j][2] for j in eachindex(nᵀ⁺ᴸ)])
+        if !isempty(idxsᵀ⁺ᴸs)
+            ps = map(idxsᵀ⁺ᴸs) do idxsᵀ⁺ᴸ
+                nᵀ⁺ᴸ = SymmetryVector(sum(brs[idxsᵀ⁺ᴸ]))
+                is_integer_p_check(m, nᵀ⁺ᴸ, nᴸ, Q, Γidx)
+            end
+
+            candidates = TightBindingCandidateSet(idxsᴸ, idxsᵀ⁺ᴸs, ps, brs)
+            push!(candidatesv, candidates)
         end
     end
-    return TightBindingCandidates(solutions, long_solutions, phys_vec, p_vec, brs)
+    return candidatesv
 end
 
-"""
-Filter the physical solutions from `find_all_band_representations`.
-"""
-function find_physical_band_representations(
-    vᵀ::AbstractSymmetryVector,
-    long_modes::Vector{Vector{Int64}},
-    d::Vector{Int64}, brs::Collection{<:NewBandRep})
-    all_solutions = find_all_band_representations(vᵀ, long_modes, d, brs)
 
-    p_vec = Vector{Vector{Float64}}[]
-    solutions = Vector{Vector{Int64}}[]
-    long_solutions = Vector{Int64}[]
+function find_bandrep_decompositions(
+    m::AbstractSymmetryVector{D},
+    brs::Collection{NewBandRep{D}};
+    μᴸ_min::Integer=0,
+    μᴸ_max::Integer=μᴸ_min + 2 * occupation(m),
+    connected_to_zero_frequency::Bool=true
+) where {D}
 
-    for i in eachindex(all_solutions.phys)
-        for j in eachindex(all_solutions.phys[i])
-            if all_solutions.phys[i][j]
-                push!(solutions, all_solutions.solutions[i])
-                push!(long_solutions, all_solutions.long_modes[i])
-                push!(p_vec, all_solutions.p[i])
-            end
-        end
+    connected_to_zero_frequency || error("not implemented yet") # TODO
+
+    μᴸ = μᴸ_min - 1
+    while μᴸ < μᴸ_max
+        μᴸ += 1
+        idxsᴸs = find_auxiliary_modes(μᴸ, brs)
+        (isempty(idxsᴸs) && μᴸ ≠ 0) && continue
+        # compute all possible decomposition of m into valid combinations of nᴸ and nᵀ⁺ᴸ
+        candidatesv = find_apolar_modes(m, idxsᴸs, brs)
+        isempty(candidatesv) || return candidatesv
     end
-
-    return PhysicalTightBindingCandidates(solutions, long_solutions, p_vec, brs)
+    error("""failed to find possible auxiliary-apolar decompositions for provided \
+             symmetry vector in search range for auxiliary modes; increasing kwarg \
+             `μᴸ_max` may help, if a decomposition exists""")
 end
