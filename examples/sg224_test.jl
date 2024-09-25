@@ -15,7 +15,7 @@ lgirsv = irreps(brs)
 # Symmetry vector test for different cases
 
 # symmetry vector w/ possible non-physical solutions
-s1 = "[Γ₄⁻+Γ₁⁻+Γ₂⁺+Γ₅⁺, R₁⁻+R₂⁺+R₄⁻+R₅⁺ ,M₁+M₂+M₃+M₄,X₁+X₂+X₃+X₄]" 
+s1 = "[Γ₄⁻+Γ₁⁻+Γ₂⁺+Γ₅⁺, R₁⁻+R₂⁺+R₄⁻+R₅⁺ ,M₁+M₂+M₃+M₄,X₁+X₂+X₃+X₄]"
 m1 = parse(SymmetryVector, s1, lgirsv)
 
 # "normal" symmetry vector
@@ -39,4 +39,4 @@ idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 ### compute all possible decomposition into EBRs of m using the additional modes computed
 candidatesv = find_apolar_modes(m4, idxsᴸs, brs)
 
-candidatesv′ = find_bandrep_decompositions(m1, brs; μᴸ_min=μᴸ)
+candidatesv′ = find_bandrep_decompositions(m2, brs; μᴸ_min=μᴸ)
