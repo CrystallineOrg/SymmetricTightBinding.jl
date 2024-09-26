@@ -96,20 +96,25 @@ or not. In other words, we need to check two things:
 frequency. This can be check easily using `PhotonicBandConnectivity.jl`. As estipulated 
 before in [Problem 2](#problem-2), this is fulfilled if $\mathbf{p}\in\mathbb{Z}$.
 
-2. Whether if our solution doesn't make use of the higher frequency irreps present in 
-$m_\Gamma^{>0}$ to regularize the symmetry content at zero frequency, and that instead those 
-negative multiplicities in the irreps are cancel out by the longitudinal modes $n^L$. This 
-is checked in the following way:
+2. Whether our solution doesn't make use of the higher frequency irreps present in 
+$m_\Gamma^{>0}$ to regularize the symmetry content at zero frequency, and that instead 
+those negative multiplicities in the irreps are cancelled out by the longitudinal modes $n^L$. 
+We ensure this by the following check:
 
-    - If $n_{\Gamma,i}^{T+L} > m^{>0}_\Gamma \quad \forall i$, all higher frequency irreps 
-    are present on the model so the model perfectly represent the system bans.
-    - If $n_{\Gamma,i}^{T+L} < m^{>0}_\Gamma$ for some $i$ that higher frequency irrep is 
-    lacking in the model so the solution do not proper represent the higher frequency bands 
-    so it must be discarded.
+    Define the candidate-solution's zero-frequency content at $\Gamma$ by:
 
-    Those conditions can be easily checked by the following condition:
+    $$n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = n_{\Gamma}^{T+L} - n_{\Gamma}^L 
+    - m_{\Gamma}^{>0} = m_{\Gamma}^{=0} + Q\mathbf{p}.$$
 
-    $$ n_{\Gamma,i}^{T+L} - m^{>0}_\Gamma = abs(n_{\Gamma,i}^{T+L} - m^{>0}_\Gamma) $$ 
+    Consider the following two cases:
+    - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ 
+        for that $i$; equivalently, in this case $n_{\Gamma,i}^L \geq -n_{\Gamma,i}^{T,=0}$.
+    - Conversely, if  $n_{\Gamma,i}^{T,=0} ≥ 0$ for some $i$, we still have $n_{\Gamma,i}^L ≥ 0$
+         and consequently also $n_{\Gamma,i}^L ≥ -n_{\Gamma,i}^{T,=0}$.
+
+    Thus, regardless of the sign of $n_{\Gamma,i}^{T,=0}$, we may require that:
+
+    $$ n_{\Gamma}^L \geq -n_\Gamma^{T,=0}$$
 
 =#
 
@@ -119,7 +124,7 @@ is physical if it fulfills to checks:
 
     1. It subduces properly the O(3) representation at Γ and zero frequency.
     2. It doesn't make use of the higher frequency irreps to regularize the symmetry content 
-    at zero frequency, and that instead uses the auxiliary modes `nᴸ` to cancel them.
+    at zero frequency, and that instead uses the auxiliary modes `nᴸ` to achieve it.
 """
 function is_integer_p_check(m::AbstractSymmetryVector,
     nᵀ⁺ᴸ::AbstractSymmetryVector,
@@ -144,8 +149,7 @@ function is_integer_p_check(m::AbstractSymmetryVector,
 end
 
 """
-Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `idxsᴸs`. Additionally,
-it checks if the solution provided is physical or not.
+Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `idxsᴸs`.
 """
 function find_apolar_modes(
     m::AbstractSymmetryVector,
@@ -198,7 +202,13 @@ function find_apolar_modes(
     return candidatesv
 end
 
+"""
+Obtain a bandrep decomposition for the symmetry vector of the bands provided `m` with a minimal
+number of auxiliary bands in the interval `[μᴸ_min,μᴸ_max]`.
 
+If the photonic bands are connected to zero frequency corrections to the singularity at Γ are
+made. This parameter is settle by default to `true`
+"""
 function find_bandrep_decompositions(
     m::AbstractSymmetryVector{D},
     brs::Collection{NewBandRep{D}};
@@ -221,4 +231,42 @@ function find_bandrep_decompositions(
     error("""failed to find possible auxiliary-apolar decompositions for provided \
              symmetry vector in search range for auxiliary modes; increasing kwarg \
              `μᴸ_max` may help, if a decomposition exists""")
+end
+
+# we do not include the (usually redundant) exponential (k-dependet) phases below
+"""
+Induce a representation for the generators of the SG from a representation of the site-symmetry 
+group of a particular maximal WP.
+"""
+function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
+    siteir = br.siteir
+    siteir_dim = irdim(siteir)
+    siteg = group(siteir)
+    wps = orbit(siteg)
+    mult = length(wps)
+    gens = generators(num(siteg))
+
+    ρs = [BlockArray{ComplexF64}(
+        zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
+        fill(siteir_dim, mult), fill(siteir_dim, mult)) for _ in eachindex(gens)]
+    for (n, g) in enumerate(gens)
+        ρ = ρs[n]
+        for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
+            check = false
+            for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
+                tᵦₐ = constant(g * parent(qₐ) - parent(qᵦ)) # ignore free parts of the WP
+                # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
+                h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
+                idx_h = findfirst(==(h), siteg)
+                if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by g
+                    ρ[Block(α, β)] .= siteir.matrices[idx_h]
+                    check = true
+                    break
+                end
+            end
+            check || error("failed to find any nonzero block")
+        end
+    end
+
+    return gens .=> ρs
 end

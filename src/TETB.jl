@@ -6,8 +6,8 @@ using Crystalline
 using MPBUtils
 using SymmetryBases
 using PhotonicBandConnectivity
-const PBC = PhotonicBandConnectivity
-using Crystalline: AbstractSymmetryVector
+using Crystalline: AbstractSymmetryVector, irdim, constant
+
 # ---------------------------------------------------------------------------------------- #
 
 using PyCall
@@ -40,6 +40,7 @@ export find_apolar_modes
 export find_auxiliary_modes
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
+export sgrep_induced_by_siteir_generators
 
 # ---------------------------------------------------------------------------------------- #
 end # module
