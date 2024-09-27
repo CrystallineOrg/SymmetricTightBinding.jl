@@ -6,7 +6,6 @@ using Crystalline
 using SymmetryBases, MPBUtils
 using PhotonicBandConnectivity
 using TETB
-using BlockArrays
 
 ### construct the structure under study
 
@@ -34,23 +33,40 @@ symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 
 m = symvecs[1] # pick the 2 lower bands
 
-### obtain additional modes with dimendion `t`
+### obtain an EBR decomposition with at least one additional band
 μᴸ = 1
 brs = calc_bandreps(sg_num)
-idxsᴸs = find_auxiliary_modes(μᴸ, brs)
+candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
 
-### compute all possible decomposition into EBRs of m using the additional modes computed
-candidatesv = find_apolar_modes(m, idxsᴸs, brs)
-
-#------------------------------------------------------------------------------------------#
+##-----------------------------------------------------------------------------------------#
 # make a TB model out of one of the solutions
 
-## fisrt I need to construct the representations of the operations of the SG. At least the 
-## generators
-nᵀ⁺ᴸ = candidatesv[1][1][1]
+# fisrt I need to construct the representations of the operations of the SG. At least the 
+# generators
+nᵀ⁺ᴸ = candidatesv[1][1][1] # TODO: consider that this might be nᵀ⁺ᴸs!
 
 sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the SG generators in the
 # basis defined by nᵀ⁺ᴸ
 
-#------------------------------------------------------------------------------------------#
+# let me compute first the n-th nearest neighbors for the WP
+
+n = 2
+wps = Crystalline.constant.(orbit(group(nᵀ⁺ᴸ.siteir)))
+lattice_vectors = metricmatrix(directbasis(sg_num))
+t = n^2 # highes number to seaerch in the lattice_vectors multiplicities
+
+d = zeros(n^(2 * 3), length(wps))
+count = 1
+
+α = 1
+
+for (i, j, k) in Iterators.product(fill(1:n^2, 3)...)
+    for β in eachindex(wps)
+        tₐᵦ = wps[β] + lattice_vectors * [i, j, k] - wps[α]
+        d[count, β] = sqrt(sum(tₐᵦ .^ 2))
+    end
+    count += 1
+end
+
+##-----------------------------------------------------------------------------------------#
 

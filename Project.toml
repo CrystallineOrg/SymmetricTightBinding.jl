@@ -4,6 +4,7 @@ authors = ["Antonio Morales Perez <antonio.morales@dipc.org> and contributors"]
 version = "0.0.1"
 
 [deps]
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 Crystalline = "ae5e2be0-a263-11e9-351e-f94dad1eb351"
 MPBUtils = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
@@ -12,8 +13,8 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [compat]
-julia = "1.9"
 Crystalline = "0.6.1"
+julia = "1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

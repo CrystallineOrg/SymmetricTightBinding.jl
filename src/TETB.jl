@@ -7,6 +7,7 @@ using MPBUtils
 using SymmetryBases
 using PhotonicBandConnectivity
 using Crystalline: AbstractSymmetryVector, irdim, constant
+using BlockArrays
 
 # ---------------------------------------------------------------------------------------- #
 

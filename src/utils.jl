@@ -259,7 +259,7 @@ function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
                 h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
                 idx_h = findfirst(==(h), siteg)
                 if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by g
-                    ρ[Block(α, β)] .= siteir.matrices[idx_h]
+                    ρ[Block(β, α)] .= siteir.matrices[idx_h]
                     check = true
                     break
                 end
