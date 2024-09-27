@@ -194,8 +194,9 @@ function find_apolar_modes(
                 nᵀ⁺ᴸ = SymmetryVector(sum(brs[idxsᵀ⁺ᴸ]))
                 is_integer_p_check(m, nᵀ⁺ᴸ, nᴸ, Q, Γidx)
             end
-
-            candidates = TightBindingCandidateSet(idxsᴸ, idxsᵀ⁺ᴸs, ps, brs)
+            longitudinal = CompositeBandRep_from_indices(idxsᴸ, brs)
+            apolarv = CompositeBandRep_from_indices.(idxsᵀ⁺ᴸs, Ref(brs))
+            candidates = TightBindingCandidateSet(longitudinal, apolarv, ps)
             push!(candidatesv, candidates)
         end
     end

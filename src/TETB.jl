@@ -6,9 +6,8 @@ using Crystalline
 using MPBUtils
 using SymmetryBases
 using PhotonicBandConnectivity
-using Crystalline: AbstractSymmetryVector, irdim, constant
+using Crystalline: AbstractSymmetryVector, irdim, constant, CompositeBandRep_from_indices
 using BlockArrays
-
 # ---------------------------------------------------------------------------------------- #
 
 using PyCall
