@@ -96,11 +96,15 @@ need to check two things:
    We ensure this by the following check:
 
     Define the candidate-solution's zero-frequency content at $\Gamma$ by:
-    $$n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = n_{\Gamma}^{T+L} - n_{\Gamma}^L - m_{\Gamma}^{>0} = m_{\Gamma}^{=0} + Q\mathbf{p}.$$
+
+    $$n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = n_{\Gamma}^{T+L} - n_{\Gamma}^L 
+    - m_{\Gamma}^{>0} = m_{\Gamma}^{=0} + Q\mathbf{p}.$$
+  
     Consider the following two cases:
-    - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ for
-    that $i$; equivalently, in this case $n_{\Gamma,i}^L \geq -n_{\Gamma,i}^{T,=0}$.
-    - Conversely, if  $n_{\Gamma,i}^{T,=0} ≥ 0$ for some $i$, we still have $n_{\Gamma,i}^L ≥ 0$ and consequently also $n_{\Gamma,i}^L ≥ -n_{\Gamma,i}^{T,=0}$.
+    - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ 
+        for that $i$; equivalently, in this case $n_{\Gamma,i}^L \geq -n_{\Gamma,i}^{T,=0}$.
+    - Conversely, if  $n_{\Gamma,i}^{T,=0} ≥ 0$ for some $i$, we still have $n_{\Gamma,i}^L ≥ 0$
+         and consequently also $n_{\Gamma,i}^L ≥ -n_{\Gamma,i}^{T,=0}$.
 
     Thus, regardless of the sign of $n_{\Gamma,i}^{T,=0}$, we may require that:
 
@@ -136,11 +140,11 @@ $$
     a_{j\beta}(\mathbf{r}-R\mathbf{t}-\mathbf{t}_{\beta\alpha})
 $$
 
-being $g \in G$ and $h \in G_{\mathbf{q}}$, such that given a coset decomposition $G = \bigcup_\alpha
-g_\alpha G_\mathbf{q}$ : $g = \{E|\mathbf{t}_{\beta\alpha}\} g_\beta h g_\alpha^{-1}$ and
-$\mathbf{t}_{\beta\alpha} = g\mathbf{q}_\alpha - \mathbf{q}_\beta$. We assume we know a 
-site-symmetry group representation: $h a_{i1}(\mathbf{r}) = [\rho(h)]_{ji} a_{j1}(\mathbf{r})$,
-where we are assuming Einstein's summation rule.
+being $g \in G$ and $h \in G_{\mathbf{q}}$, such that given a coset decomposition $G = 
+\bigcup_\alpha g_\alpha G_\mathbf{q}$ : $g = \{E|\mathbf{t}_{\beta\alpha}\} g_\beta h 
+g_\alpha^{-1}$ and $\mathbf{t}_{\beta\alpha} = g\mathbf{q}_\alpha - \mathbf{q}_\beta$. 
+We assume we know a site-symmetry group representation: $h a_{i1}(\mathbf{r}) = [\rho(h)]_{ji} 
+a_{j1}(\mathbf{r})$, where we are assuming Einstein's summation rule.
 
 Considering the following Fourier transform we want to study how Bloch functions will transform:
 
@@ -165,4 +169,6 @@ $$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r})
     a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime)
 = e^{-i (R\mathbf{k})\cdot\mathbf{v}} [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r}) $$
 
-This functionality is implemented under the function `obtain_sg_representation`.
+This functionality is implemented under the function `sgrep_induced_by_siteir_generators`.
+Take into consideration that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is 
+ignored in `sgrep_induced_by_siteir_generators`.

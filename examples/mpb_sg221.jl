@@ -33,81 +33,40 @@ symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
 
 m = symvecs[1] # pick the 2 lower bands
 
-### obtain additional modes with dimendion `t`
+### obtain an EBR decomposition with at least one additional band
 μᴸ = 1
 brs = calc_bandreps(sg_num)
-idxsᴸs = find_auxiliary_modes(μᴸ, brs)
+candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
 
-### compute all possible decomposition into EBRs of m using the additional modes computed
-candidatesv = find_apolar_modes(m, idxsᴸs, brs)
-
-#------------------------------------------------------------------------------------------#
+##-----------------------------------------------------------------------------------------#
 # make a TB model out of one of the solutions
 
-## fisrt I need to construct the representations of the operations of the SG. At least the 
-## generators
-nᵀ⁺ᴸ = candidatesv[1][1][1]
+# fisrt I need to construct the representations of the operations of the SG. At least the 
+# generators
+nᵀ⁺ᴸ = candidatesv[1][1][1] # TODO: consider that this might be nᵀ⁺ᴸs!
 
-# TODO: I did this manually, can I extract it from nᵀ⁺ᴸ?
-gen = generators(sg_num)
-wp = wyckoffs(221)[end-2]
-siteg = sitegroup(sg_num, wp)
-cosetsg = cosets(siteg)
+sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the SG generators in the
+# basis defined by nᵀ⁺ᴸ
 
-siterep = nᵀ⁺ᴸ.siteir
+# let me compute first the n-th nearest neighbors for the WP
 
-n_wp = wp.mult
-dim_rep = size(siterep.matrices[1][1]) # TODO: maybe some dim of the siteir?
+n = 2
+wps = Crystalline.constant.(orbit(group(nᵀ⁺ᴸ.siteir)))
+lattice_vectors = metricmatrix(directbasis(sg_num))
+t = n^2 # highes number to seaerch in the lattice_vectors multiplicities
 
-wps = orbit(group(nᵀ⁺ᴸ))
-siteir = nᵀ⁺ᴸ.siteir
-siteir_dim = Crystalline.irdim(siteir)
-##
+d = zeros(n^(2 * 3), length(wps))
+count = 1
 
-using Crystalline: irdim, constant
+α = 1
 
-# we do not include the (usually redundant) exponential phases below
-# TODO: check & write doc string describing what this does
-function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where D
-    siteir = br.siteir
-    siteir_dim = irdim(siteir)
-    siteg = group(siteir)
-    wps = orbit(siteg)
-    mult = length(wps)
-    gens = generators(num(siteg))
-    
-    ρs = [BlockArray{ComplexF64}(
-            zeros(ComplexF64, siteir_dim*mult, siteir_dim*mult),
-            fill(siteir_dim, mult), fill(siteir_dim, mult)) for _ in eachindex(gens)]
-    for (n, g) in enumerate(gens)
-        ρ = ρs[n]
-        for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
-            check = false
-            for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
-                tᵦₐ = constant(g*parent(qₐ) - parent(qᵦ)) # ignore free parts
-                # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
-                h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
-                idx_h = findfirst(==(h), siteg)
-                if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by g
-                    ρ[Block(α, β)] .= siteir.matrices[idx_h]
-                    check = true
-                    break
-                end
-            end
-            check || error("failed to find any nonzero block")
-        end
+for (i, j, k) in Iterators.product(fill(1:n^2, 3)...)
+    for β in eachindex(wps)
+        tₐᵦ = wps[β] + lattice_vectors * [i, j, k] - wps[α]
+        d[count, β] = sqrt(sum(tₐᵦ .^ 2))
     end
-
-    return gens .=> ρs
+    count += 1
 end
-br = brs[1]
-sgrep_induced_by_siteir_generators(br)[1][2]
 
-# for i in gen
-#     D = zeros((n_wp, dim_rep))
-
-
-# end
-
-#------------------------------------------------------------------------------------------#
+##-----------------------------------------------------------------------------------------#
 
