@@ -13,8 +13,8 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [compat]
-julia = "1.9"
 Crystalline = "0.6.4"
+julia = "1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

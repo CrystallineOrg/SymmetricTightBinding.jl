@@ -43,7 +43,7 @@ candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
 
 # fisrt I need to construct the representations of the operations of the SG. At least the 
 # generators
-nᵀ⁺ᴸ = candidatesv[1][1][1] # TODO: consider that this might be nᵀ⁺ᴸs!
+nᵀ⁺ᴸ = candidatesv[1][1]
 
 sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the SG generators in the
 # basis defined by nᵀ⁺ᴸ
