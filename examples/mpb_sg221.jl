@@ -50,10 +50,12 @@ sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the S
 
 # let me compute first the n-th nearest neighbors for the WP
 
-n = 2
-wps = Crystalline.constant.(orbit(group(nᵀ⁺ᴸ.siteir)))
+nᵀ⁺ᴸ = brs[15]
+
+n = 2 # highest number of closest nearest neighbors to search for
+wps = Crystalline.constant.(orbit(group(nᵀ⁺ᴸ)))
 lattice_vectors = metricmatrix(directbasis(sg_num))
-t = n^2 # highes number to seaerch in the lattice_vectors multiplicities
+t = 2 * n # highes number to seaerch in the lattice_vectors multiplicities
 
 d = zeros(n^(2 * 3), length(wps))
 count = 1

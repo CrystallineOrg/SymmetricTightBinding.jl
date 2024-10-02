@@ -172,3 +172,14 @@ $$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r})
 This functionality is implemented under the function `sgrep_induced_by_siteir_generators`.
 Take into consideration that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is 
 ignored in `sgrep_induced_by_siteir_generators`.
+
+## Hamiltonian formalism
+
+Suppose we have an imaginary Bravais lattice with a set of translations denoted by $\mathcal{T}$.
+The translations inside such set will be denoted in capital letters $\mathbf{R}$. Additionally,
+we may consider that we have different atomic positions inside the unit cell. Those positions
+will be denoted by Greek letter $\alpha$ and, at first, we aren't going to differentiate between
+atomic positions belonging to different WPs.
+Then the most general Hamiltonian of such Bravais lattice can be written as:
+
+$$ \mathcal{H} =  $$

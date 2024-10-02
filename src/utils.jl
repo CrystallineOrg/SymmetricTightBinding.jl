@@ -245,7 +245,7 @@ function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
     siteg = group(siteir)
     wps = orbit(siteg)
     mult = length(wps)
-    gens = generators(num(siteg))
+    gens = generators(num(siteg), SpaceGroup{D})
 
     ρs = [BlockArray{ComplexF64}(
         zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
@@ -295,7 +295,7 @@ end
 
 
 function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
-    gens = generators(num(brs))
+    gens = generators(num(brs), SpaceGroup{D})
     ρs = [Array{Complex}(undef, 0, 0) for _ in eachindex(gens)]
 
     for (idxc, c) in enumerate(brs.coefs)
