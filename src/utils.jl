@@ -218,6 +218,8 @@ function find_bandrep_decompositions(
     connected_to_zero_frequency::Bool=true
 ) where {D}
 
+    D == 3 || error("not implemented yet") # TODO
+
     connected_to_zero_frequency || error("not implemented yet") # TODO
 
     μᴸ = μᴸ_min - 1
