@@ -33,10 +33,4 @@ m4 = parse(SymmetryVector, s4, lgirsv)
 
 ## ----------------------------------------------------------------------------------------#
 
-μᴸ = 2
-idxsᴸs = find_auxiliary_modes(μᴸ, brs)
-
-### compute all possible decomposition into EBRs of m using the additional modes computed
-candidatesv = find_apolar_modes(m4, idxsᴸs, brs)
-
-candidatesv′ = find_bandrep_decompositions(m3, brs; μᴸ_min=μᴸ)
+candidatesv′ = find_bandrep_decompositions(m4, brs, connected_to_zero_frequency=false)

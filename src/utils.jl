@@ -127,11 +127,11 @@ is physical if it fulfills to checks:
     at zero frequency, and that instead uses the auxiliary modes `nᴸ` to achieve it.
 """
 function is_integer_p_check(m::AbstractSymmetryVector,
-    nᵀ⁺ᴸ::AbstractSymmetryVector,
-    nᴸ::AbstractSymmetryVector,
+    nᵀ⁺ᴸ::AbstractSymmetryVector{D},
+    nᴸ::AbstractSymmetryVector{D},
     Q::Matrix{Int},
     Γidx::Int
-)
+) where {D}
     # convert everythin into vectors w/o occupation
     mᵧ = multiplicities(m)[Γidx]
     nᵀ⁺ᴸᵧ = multiplicities(nᵀ⁺ᴸ)[Γidx]
@@ -152,9 +152,9 @@ end
 Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `idxsᴸs`.
 """
 function find_apolar_modes(
-    m::AbstractSymmetryVector,
+    m::AbstractSymmetryVector{D},
     idxsᴸs::Vector{Vector{Int64}},
-    brs::Collection{<:NewBandRep})
+    brs::Collection{NewBandRep{D}}) where {D}
 
     μs_brs = occupation.(brs)
     idxs = eachindex(first(brs))
@@ -218,22 +218,37 @@ function find_bandrep_decompositions(
     connected_to_zero_frequency::Bool=true
 ) where {D}
 
-    D == 3 || error("not implemented yet") # TODO
+    if D < 3 || !connected_to_zero_frequency
+        μ = occupation(m)
+        μs_brs = occupation.(brs)
+        idxs_k = eachindex(first(brs))
 
-    connected_to_zero_frequency || error("not implemented yet") # TODO
+        # we don't need any longitudinal modes so we can directly find the expansions using
+        # `m` as a constraint
+        idxs_sol = find_all_admissible_expansions(brs, μs_brs, μ, Vector(m), idxs_k)
 
-    μᴸ = μᴸ_min - 1
-    while μᴸ < μᴸ_max
-        μᴸ += 1
-        idxsᴸs = find_auxiliary_modes(μᴸ, brs)
-        (isempty(idxsᴸs) && μᴸ ≠ 0) && continue
-        # compute all possible decomposition of m into valid combinations of nᴸ and nᵀ⁺ᴸ
-        candidatesv = find_apolar_modes(m, idxsᴸs, brs)
-        isempty(candidatesv) || return candidatesv
+        longitudinal = Crystalline.CompositeBandRep_from_indices(Int[], brs)
+        apolar = Crystalline.CompositeBandRep_from_indices.(idxs_sol, Ref(brs))
+
+        !isempty(apolar) || error("Check the symmetry vector and space group used")
+
+        return TightBindingCandidateSet(longitudinal, apolar, [Float64[]])
+
+    else
+
+        μᴸ = μᴸ_min - 1
+        while μᴸ < μᴸ_max
+            μᴸ += 1
+            idxsᴸs = find_auxiliary_modes(μᴸ, brs)
+            (isempty(idxsᴸs) && μᴸ ≠ 0) && continue
+            # compute all possible decomposition of m into valid combinations of nᴸ and nᵀ⁺ᴸ
+            candidatesv = find_apolar_modes(m, idxsᴸs, brs)
+            isempty(candidatesv) || return candidatesv
+        end
+        error("""failed to find possible auxiliary-apolar decompositions for provided \
+                symmetry vector in search range for auxiliary modes; increasing kwarg \
+                `μᴸ_max` may help, if a decomposition exists""")
     end
-    error("""failed to find possible auxiliary-apolar decompositions for provided \
-             symmetry vector in search range for auxiliary modes; increasing kwarg \
-             `μᴸ_max` may help, if a decomposition exists""")
 end
 
 # we do not include the (usually redundant) exponential (k-dependet) phases below
@@ -304,8 +319,8 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
         sgrep = sgrep_induced_by_siteir_generators(brs.brs[idxc])
         for idxg in eachindex(gens)
             # ρ = ρs[idxg]
-            # ρ = directSum(ρ, directSum(Int(c), Array(sgrep[idxg][2])))# TODO: I am assuming Int values
-            ρs[idxg] = directSum(ρs[idxg], directSum(Int(c), Array(sgrep[idxg][2]))) # TODO: problem on overwriting (?)
+            # ρ = directSum(ρ, directSum(Int(c), Array(sgrep[idxg][2])))# FIXME: I am assuming Int values
+            ρs[idxg] = directSum(ρs[idxg], directSum(Int(c), Array(sgrep[idxg][2]))) # FIXME: problem on overwriting (?)
         end
     end
     return gens .=> ρs
