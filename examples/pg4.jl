@@ -7,15 +7,21 @@ using Crystalline, TETB
 
 pg_num = 10
 brs = calc_bandreps(pg_num, Val(2))
-c = [0, 0, 0, 0, 1, 0, 0, 0]
-cbr = CompositeBandRep(c, brs)
 
 # needs to do that to find the WPs properly
 br = brs[end-3]
 
-gen = generators(num(cbr))
+ops = spacegroup(num(cbr), dim(cbr))
 wps = orbit(group(br))
 
 sgrep = sgrep_induced_by_siteir_generators(cbr)
 
-##- ⊕
+##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
+
+Rs = [[0, 0], [1, 0]] # vector containing the translations we want to consider
+
+Δs = TETB.find_symmetry_related_hoppings(Rs, br)
+
+println(Δs)
+
+##----------------------------------------------------------------------------------------##

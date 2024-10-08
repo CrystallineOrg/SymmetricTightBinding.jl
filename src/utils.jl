@@ -321,3 +321,27 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
     end
     return gens .=> ρs
 end
+
+# TODO: implement it to `CompositeBandRep`
+function find_symmetry_related_hoppings(Rs::Vector{Vector{Int64}}, br::NewBandRep{D}) where {D}
+    ops = spacegroup(num(br), D)
+    wps = orbit(group(br))
+
+    Δs = Vector[]
+    for R in Rs
+        for (qₐ, qᵦ) in Iterators.product(wps, wps)
+            δ = parent(qₐ) - parent(qᵦ) - R
+            if !any(x -> δ ∈ x, Δs)
+                Δ = [] # TODO: make it type consistent
+                for g in ops
+                    if !in(g * δ, Δ)
+                        push!(Δ, g * δ)
+                    end
+                end
+                push!(Δs, Δ)
+            end
+        end
+    end
+
+    return Δs
+end
