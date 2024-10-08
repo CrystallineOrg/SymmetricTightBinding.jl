@@ -290,24 +290,20 @@ function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
 end
 
 """
-Direct sum of two matrices
+Direct sum of matrices
 """
-function directSum(A::Matrix, B::Matrix)
-    return [A zeros(size(A, 1), size(B, 2)); zeros(size(B, 1), size(A, 2)) B]
+function ⊕(As::Matrix...)
+    return cat(As..., dims=Val((1, 2)))
 end
 
-function directSum(n::Int, A::Matrix)
-    n ≥ 0 || error("Repetitions must be non-negative")
+function ⊕(n::Int, A::Matrix)
+    n ≥ 0 || error("Coeficients must be non-negative")
 
     if n == 0
-        return B = Array{Complex}(undef, 0, 0)
+        return Array{Complex}(undef, 0, 0)
     else
-        B = copy(A)
-        for _ in 1:(n-1)
-            B = directSum(B, B)
-        end
+        return ⊕([A for _ in 1:n]...)
     end
-    return B
 end
 
 
@@ -320,7 +316,7 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
         for idxg in eachindex(gens)
             # ρ = ρs[idxg]
             # ρ = directSum(ρ, directSum(Int(c), Array(sgrep[idxg][2])))# FIXME: I am assuming Int values
-            ρs[idxg] = directSum(ρs[idxg], directSum(Int(c), Array(sgrep[idxg][2]))) # FIXME: problem on overwriting (?)
+            ρs[idxg] = ρs[idxg] ⊕ (Int(c) ⊕ Array(sgrep[idxg][2])) # FIXME: problem on overwriting (?)
         end
     end
     return gens .=> ρs

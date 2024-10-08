@@ -48,27 +48,5 @@ nᵀ⁺ᴸ = candidatesv[1][1]
 sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the SG generators in the
 # basis defined by nᵀ⁺ᴸ
 
-# let me compute first the n-th nearest neighbors for the WP
-
-nᵀ⁺ᴸ = brs[15]
-
-n = 2 # highest number of closest nearest neighbors to search for
-wps = Crystalline.constant.(orbit(group(nᵀ⁺ᴸ)))
-lattice_vectors = metricmatrix(directbasis(sg_num))
-t = 2 * n # highes number to seaerch in the lattice_vectors multiplicities
-
-d = zeros(n^(2 * 3), length(wps))
-count = 1
-
-α = 1
-
-for (i, j, k) in Iterators.product(fill(1:n^2, 3)...)
-    for β in eachindex(wps)
-        tₐᵦ = wps[β] + lattice_vectors * [i, j, k] - wps[α]
-        d[count, β] = sqrt(sum(tₐᵦ .^ 2))
-    end
-    count += 1
-end
-
 ##-----------------------------------------------------------------------------------------#
 
