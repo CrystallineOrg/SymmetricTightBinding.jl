@@ -292,56 +292,64 @@ end
 """
 Direct sum of matrices
 """
-function ⊕(As::Matrix...)
+function ⊕(As::AbstractMatrix...)
     return cat(As..., dims=Val((1, 2)))
-end
-
-function ⊕(n::Int, A::Matrix)
-    n ≥ 0 || error("Coeficients must be non-negative")
-
-    if n == 0
-        return Array{Complex}(undef, 0, 0)
-    else
-        return ⊕([A for _ in 1:n]...)
-    end
 end
 
 
 function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
     gens = generators(num(brs), SpaceGroup{D})
-    ρs = [Array{Complex}(undef, 0, 0) for _ in eachindex(gens)]
+    ρs = [Matrix{Complex}(undef, 0, 0) for _ in eachindex(gens)]
 
     for (idxc, c) in enumerate(brs.coefs)
         sgrep = sgrep_induced_by_siteir_generators(brs.brs[idxc])
         for idxg in eachindex(gens)
-            # ρ = ρs[idxg]
-            # ρ = directSum(ρ, directSum(Int(c), Array(sgrep[idxg][2])))# FIXME: I am assuming Int values
-            ρs[idxg] = ρs[idxg] ⊕ (Int(c) ⊕ Array(sgrep[idxg][2])) # FIXME: problem on overwriting (?)
+            iszero(c) && continue
+            ρ_idxg = sgrep[idxg][2]
+            for _ in 1:Int(c)
+                ρs[idxg] = ρs[idxg] ⊕ ρ_idxg
+            end
         end
     end
     return gens .=> ρs
 end
 
 # TODO: implement it to `CompositeBandRep`
-function find_symmetry_related_hoppings(Rs::Vector{Vector{Int64}}, br::NewBandRep{D}) where {D}
-    ops = spacegroup(num(br), D)
-    wps = orbit(group(br))
+function find_symmetry_related_hoppings(
+        Rs::AbstractVector{V}, # must be specified in the primitive basis
+        br1::NewBandRep{D},
+        br2::NewBandRep{D}
+        ) where {V<:Union{AbstractVector{<:Integer}, RVec{D}}} where D
+    
+    sgnum = num(br1)
+    num(br2) == sgnum || error("both band representations must be in the same space group")
+    # we only want to include the wyckoff positions in the primitive cell - but the default
+    # listings from `spacegroup` include operations that are "centering translations";
+    # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
+    # operations - but is still specified in a conventional basis. So, below, we remove
+    # redundant operations from the space group, and also change both the operations and the
+    # positions from a conventional to a primitive basis
+    cntr = centering(sgnum, D)
+    ops = primitivize(spacegroup(sgnum, D))
+    wps1 = primitivize.(orbit(group(br1)), cntr)
+    wps2 = primitivize.(orbit(group(br2)), cntr)
 
-    Δs = Vector[]
+    Δsv = Vector{RVec{D}}[]
     for R in Rs
-        for (qₐ, qᵦ) in Iterators.product(wps, wps)
+        for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             δ = parent(qₐ) - parent(qᵦ) - R
-            if !any(x -> δ ∈ x, Δs)
-                Δ = [] # TODO: make it type consistent
+            if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, #=modw=#false), Δsv)
+                Δs = RVec{D}[]
                 for g in ops
-                    if !in(g * δ, Δ)
-                        push!(Δ, g * δ)
+                    δ′ = g * δ
+                    if !Crystalline.isapproxin(δ′, Δs, nothing, #=modw=#false)
+                        push!(Δs, δ′)
                     end
                 end
-                push!(Δs, Δ)
+                push!(Δsv, Δs)
             end
         end
     end
 
-    return Δs
+    return Δsv
 end

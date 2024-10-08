@@ -20,4 +20,10 @@ wps2 = orbit(group(br2))
 
 sgrep = sgrep_induced_by_siteir_generators(cbr)
 
-##- 
+##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
+
+Rs = [[0,0], [0,1]] # vector containing the translations we want to consider
+
+Δs = TETB.find_symmetry_related_hoppings(Rs, br1, br2)
+
+##----------------------------------------------------------------------------------------##
