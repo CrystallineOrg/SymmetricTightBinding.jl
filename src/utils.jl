@@ -341,7 +341,8 @@ function find_symmetry_related_hoppings(
             if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, false), Δsv)
                 Δs = RVec{D}[]
                 for g in ops
-                    δ′ = ratation(g) * δ
+                    R = rotation(g)
+                    δ′ = R * δ # for g = {R|τ}, this is conceptually `compose(R, δ) = R * δ`
                     if !Crystalline.isapproxin(δ′, Δs, nothing, false)
                         push!(Δs, δ′)
                     end
