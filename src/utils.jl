@@ -316,11 +316,11 @@ end
 
 # TODO: implement it to `CompositeBandRep`
 function find_symmetry_related_hoppings(
-        Rs::AbstractVector{V}, # must be specified in the primitive basis
-        br1::NewBandRep{D},
-        br2::NewBandRep{D}
-        ) where {V<:Union{AbstractVector{<:Integer}, RVec{D}}} where D
-    
+    Rs::AbstractVector{V}, # must be specified in the primitive basis
+    br1::NewBandRep{D},
+    br2::NewBandRep{D}
+) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
+
     sgnum = num(br1)
     num(br2) == sgnum || error("both band representations must be in the same space group")
     # we only want to include the wyckoff positions in the primitive cell - but the default
@@ -338,11 +338,11 @@ function find_symmetry_related_hoppings(
     for R in Rs
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             δ = parent(qₐ) - parent(qᵦ) - R
-            if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, #=modw=#false), Δsv)
+            if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, false), Δsv) #=modw=#
                 Δs = RVec{D}[]
                 for g in ops
-                    δ′ = g * δ
-                    if !Crystalline.isapproxin(δ′, Δs, nothing, #=modw=#false)
+                    δ′ = ratation(g) * δ
+                    if !Crystalline.isapproxin(δ′, Δs, nothing, false) #=modw=#
                         push!(Δs, δ′)
                     end
                 end
