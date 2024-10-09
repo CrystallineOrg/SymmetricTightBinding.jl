@@ -148,15 +148,15 @@ a_{j1}(\mathbf{r})$, where we are assuming Einstein's summation rule.
 
 Considering the following Fourier transform we want to study how Bloch functions will transform:
 
-$$ a_{i\alpha}(\mathbf{k},\mathbf{r}) = \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot 
-    (\mathbf{t}+\mathbf{q}_\alpha)} a_{i\alpha}(\mathbf{r}-\mathbf{t}) $$
+$$ a_{i\alpha}(\mathbf{k},\mathbf{r}) = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k} 
+    \cdot (\mathbf{t}+\mathbf{q}_\alpha)} a_{i\alpha}(\mathbf{r}-\mathbf{t}) $$
 
 Then:
 
-$$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r}) = \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot 
-    (\mathbf{t}+\mathbf{q}_\alpha)} \rho_G(g) a_{i\alpha}(\mathbf{r}-\mathbf{t}) = 
-    \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot 
-    (\mathbf{t}+\mathbf{q}_\alpha)} [\rho(h)]_{ji} a_{j\beta}(\mathbf{r}-R\mathbf{t}-
+$$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r}) = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} 
+    e^{i\mathbf{k} \cdot (\mathbf{t}+\mathbf{q}_\alpha)} \rho_G(g) 
+    a_{i\alpha}(\mathbf{r}-\mathbf{t}) = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k}
+    \cdot (\mathbf{t}+\mathbf{q}_\alpha)} [\rho(h)]_{ji} a_{j\beta}(\mathbf{r}-R\mathbf{t}-
     \mathbf{t}_{\beta\alpha}) $$
 
 If we now make the substitution: $\mathbf{t}^\prime = R\mathbf{t} + \mathbf{t}_{
@@ -164,27 +164,50 @@ If we now make the substitution: $\mathbf{t}^\prime = R\mathbf{t} + \mathbf{t}_{
 \mathbf{q}_\beta - R^{-1}\mathbf{v}$, then:
 
 $$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r})
- = \sum_{\mathbf{t}^\prime} 
- e^{i\mathbf{k} \cdot R^{-1}(\mathbf{t}^\prime+\mathbf{q}_\beta - \mathbf{v})} [\rho(h)]_{ji} 
-    a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime)
-= e^{-i (R\mathbf{k})\cdot\mathbf{v}} [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r}) $$
+    = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}^\prime} e^{i\mathbf{k} \cdot 
+    R^{-1}(\mathbf{t}^\prime+\mathbf{q}_\beta - \mathbf{v})} [\rho(h)]_{ji} 
+    a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime) = e^{-i (R\mathbf{k})\cdot\mathbf{v}} 
+    [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r}) $$
 
 This functionality is implemented under the function `sgrep_induced_by_siteir_generators`.
 Take into consideration that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is 
 ignored in `sgrep_induced_by_siteir_generators`.
 
-## Hamiltonian formalism
+## Hamiltonian formalism with translational symmetries
 
 Suppose we have an imaginary Bravais lattice with a set of translations denoted by $\mathcal{T}$.
 The translations inside such set will be denoted in capital letters $\mathbf{R}$. Additionally,
 we may consider that we have different atomic positions inside the unit cell. Those positions
-will be denoted by Greek letter $\alpha$ and, at first, we aren't going to differentiate between
-atomic positions belonging to different WPs.
-Then the most general Hamiltonian of such Bravais lattice can be written as:
+will be denoted by Greek letter $\alpha$ and their positions in the unit cell will be 
+$\mathbf{q}_\alpha$. At first, we aren't going to differentiate between atomic positions 
+belonging to different WPs or any integral degrees of freedom. Then the most general
+Hamiltonian of such Bravais lattice can be written as:
 
-$$ \mathcal{H} =  $$
+$$ \mathcal{H} = \sum_{\mathbf{r}\mathbf{R},\alpha\beta} t_{\alpha\beta,\mathbf{R}} 
+    a_{\alpha,\mathbf{r}}^\dagger a_{\beta,\mathbf{r-R}} + \text{c.c.} $$
 
-### Example on 1D bipartite lattice with inversion
+We can consider on applying a Fourier transformation to this Hamiltonian, considering the 
+translational invariance of it. Let me consider the following Fourier transform of the fields:
+
+$$ a_{\alpha,\mathbf{k}} = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k}\cdot
+    (\mathbf{t}+\mathbf{q}_\alpha)} a_{\alpha,\mathbf{r-t}} $$
+
+Then the Hamiltonian in $k$-space will look like:
+
+$$ \mathcal{H} = \sum_{\mathbf{kR},\alpha\beta} t_{\alpha\beta,\mathbf{R}} e^{i\mathbf{k}\cdot
+    (\mathbf{q}_\alpha-\mathbf{q}_\beta-\mathbf{R})} a_{\alpha,\mathbf{k}}^\dagger 
+    a_{\beta,\mathbf{k}} $$
+where we have used that $\sum_\mathbf{r} e^{i(\mathbf{k-k'}) \cdot \mathbf{r}} = N 
+\delta_{\mathbf{k}\mathbf{k'}}$.
+
+Obviously this will be an infinite problem due to $\mathbf{R}$, so in order to obtain it
+numerically, we will need to impose a clever cutoff.
+
+### Our approach: Provide a list of translations $\mathbf{R}$ to consider
+
+ 
+
+## Example on 1D bipartite lattice with inversion
 
 Assume we have two sites in a one dimensional lattice of parameter $a=1$ where we place an
 inversion-even orbital at the origin denoted by (1a|A); and an inversion-odd orbital at $x=1/2$
@@ -194,7 +217,7 @@ denoted by (1b|B).
 Additionally, we will indicate with a subindex the unit cell it belongs to. For example, 
 $a_0$ will be placed at $x=0$, while $b_1$ will be placed at $x=3/2$ or $a_{-1}$ at $x=-1$.
 
-#### Deduction by inspection
+### Deduction by inspection
 
 This orbitals will transform under inversion symmetry in the following way:
 
@@ -212,15 +235,15 @@ then the Hamiltonian in $k$-space will look like:
 
 $$ \mathcal{H} = \sum_k 2it \sin(k/2) a_k^\dagger b_k + \text{c.c} $$
 
-#### Deduction from our method
+### Deduction from our method
 
 First, let me consider the translation $t=0$. Then, remember that $\Delta_{\alpha\to\beta+R} = 
 \mathbf{q}_\beta + \mathbf{R} - \mathbf{q}_\alpha$.
 
 - Possible $\Delta$'s: $\Delta_{a\to a} = \Delta_{b\to b} = 0; \quad \Delta_{a\to b} = 
-  -\Delta_{b\to a} = -1/2$.
-- Classes of $\Delta$'s: $\{\Delta_{a\to a}\} = \{\Delta_{b\to b}\} = \{0\}; \quad 
-  \{\Delta_{a\to b}\} = \{\Delta_{b\to a}\} = \{1/2,-1/2\}$.
+    -\Delta_{b\to a} = -1/2$.
+- Orbits of $\Delta$'s: $\{\Delta_{a\to a}\} = \{\Delta_{b\to b}\} = \{0\}; \quad 
+    \{\Delta_{a\to b}\} = \{\Delta_{b\to a}\} = \{1/2,-1/2\}$.
 
 <font color=red>**NOTE:**</font> be careful that we need to differentiate between clases of 
 hopping not only the class itself.
@@ -228,7 +251,7 @@ hopping not only the class itself.
 Then the non-symmetrized Hamiltonian for this translation will be:
 
 $$ H_{k,0} = \begin{pmatrix} t_{a\to a} & t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2} \\ 
-            t_{a\to b}^1e^{ik/2}+t_{a\to b}^2e^{-ik/2} & t_{b\to b} \end{pmatrix} $$
+    t_{a\to b}^1e^{ik/2}+t_{a\to b}^2e^{-ik/2} & t_{b\to b} \end{pmatrix} $$
 
 Let's proceed now to symmetrize this Hamiltonian. Since we only have inversion we only need 
 to check that: $H_{k,0} = \rho(\mathcal{I})H_{k,0}\rho^{-1}(\mathcal{I})$, where:
@@ -239,7 +262,7 @@ Then, that constraint impose that: $\left\{ \begin{matrix} t_{b\to a}^1 = -t_{b\
 t_{a\to b}^1 = -t_{a\to b}^2 \end{matrix} \right.$, so the Hamiltonian will look like:
 
 $$ H_{k,0} = \begin{pmatrix} t_{a\to a} & 2it_{b\to a} \sin(k/2) \\ 
-            2it_{a\to b} \sin(k/2) & t_{b\to b} \end{pmatrix} $$
+    2it_{a\to b} \sin(k/2) & t_{b\to b} \end{pmatrix} $$
 
 Which is exactly the Hamiltonian deduced with the previous method but with onsite terms and 
 without hermiticity imposed.

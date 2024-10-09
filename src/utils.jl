@@ -315,7 +315,6 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
 end
 
 # TODO: implement it to `CompositeBandRep`. Is this neccesary?
-# FIXME: is this correct? we will need also to separete the orbits in terms of the wps used
 function find_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     br1::NewBandRep{D},
