@@ -210,18 +210,36 @@ If we consider the following Fourier transform: $a_n = \frac{1}{\sqrt{N}} \sum_n
 and $b_n = \frac{1}{\sqrt{N}} \sum_n e^{-ik(n+1/2)} b_k$
 then the Hamiltonian in $k$-space will look like:
 
-$$ \mathcal{H} = \sum_k t (e^{-ik/2} a_k^\dagger b_k - e^{ik/2} a_k^\dagger b_k) + \text{c.c} $$
+$$ \mathcal{H} = \sum_k 2it \sin(k/2) a_k^\dagger b_k + \text{c.c} $$
 
 #### Deduction from our method
 
 First, let me consider the translation $t=0$. Then, remember that $\Delta_{\alpha\to\beta+R} = 
 \mathbf{q}_\beta + \mathbf{R} - \mathbf{q}_\alpha$.
 
-- Possible $\Delta$'s: $\Delta_{a\to a} = \Delta_{b\to b} = (0,0); \quad \Delta_{a\to b} = 
-  -\Delta_{b\to a} = (0,-1/2)$.
-- Classes of $\Delta$'s: $\{\Delta_{a\to a}\} = \{\Delta_{b\to b}\} = \{(0,0)\}; \quad 
-  \{\Delta_{a\to b}\} = \{\Delta_{b\to a}\} = \{(0,1/2),(0,-1/2)\}$.
+- Possible $\Delta$'s: $\Delta_{a\to a} = \Delta_{b\to b} = 0; \quad \Delta_{a\to b} = 
+  -\Delta_{b\to a} = -1/2$.
+- Classes of $\Delta$'s: $\{\Delta_{a\to a}\} = \{\Delta_{b\to b}\} = \{0\}; \quad 
+  \{\Delta_{a\to b}\} = \{\Delta_{b\to a}\} = \{1/2,-1/2\}$.
+
+<font color=red>**NOTE:**</font> be careful that we need to differentiate between clases of 
+hopping not only the class itself.
 
 Then the non-symmetrized Hamiltonian for this translation will be:
 
-$$ H_{k,0} = \begin{pmatrix} t_{a\to a} &  \\ 0 & t_{b\to b} \end{pmatrix}
+$$ H_{k,0} = \begin{pmatrix} t_{a\to a} & t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2} \\ 
+            t_{a\to b}^1e^{ik/2}+t_{a\to b}^2e^{-ik/2} & t_{b\to b} \end{pmatrix} $$
+
+Let's proceed now to symmetrize this Hamiltonian. Since we only have inversion we only need 
+to check that: $H_{k,0} = \rho(\mathcal{I})H_{k,0}\rho^{-1}(\mathcal{I})$, where:
+
+$$\rho(\mathcal{I}) = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}$$
+
+Then, that constraint impose that: $\left\{ \begin{matrix} t_{b\to a}^1 = -t_{b\to a}^2 \\
+t_{a\to b}^1 = -t_{a\to b}^2 \end{matrix} \right.$, so the Hamiltonian will look like:
+
+$$ H_{k,0} = \begin{pmatrix} t_{a\to a} & 2it_{b\to a} \sin(k/2) \\ 
+            2it_{a\to b} \sin(k/2) & t_{b\to b} \end{pmatrix} $$
+
+Which is exactly the Hamiltonian deduced with the previous method but with onsite terms and 
+without hermiticity imposed.

@@ -314,7 +314,8 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
     return gens .=> ρs
 end
 
-# TODO: implement it to `CompositeBandRep`
+# TODO: implement it to `CompositeBandRep`. Is this neccesary?
+# FIXME: is this correct? we will need also to separete the orbits in terms of the wps used
 function find_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     br1::NewBandRep{D},
@@ -338,11 +339,11 @@ function find_symmetry_related_hoppings(
     for R in Rs
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             δ = parent(qₐ) - parent(qᵦ) - R
-            if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, false), Δsv) #=modw=#
+            if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, false), Δsv)
                 Δs = RVec{D}[]
                 for g in ops
                     δ′ = ratation(g) * δ
-                    if !Crystalline.isapproxin(δ′, Δs, nothing, false) #=modw=#
+                    if !Crystalline.isapproxin(δ′, Δs, nothing, false)
                         push!(Δs, δ′)
                     end
                 end
