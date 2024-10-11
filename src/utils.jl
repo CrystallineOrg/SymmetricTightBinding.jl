@@ -314,7 +314,10 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
     return gens .=> ρs
 end
 
-# TODO: implement it to `CompositeBandRep`. Is this neccesary?
+"""
+Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
+displaced a set of primitive lattice vectors `Rs`.
+"""
 function find_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     br1::NewBandRep{D},
@@ -336,12 +339,12 @@ function find_symmetry_related_hoppings(
 
     Δsv = Vector{RVec{D}}[]
     for R in Rs
-        for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
+        for (qₐ, qᵦ) in zip(wps1, wps2) # Iterators.product(wps1, wps2) for forward and backwards hoopings
             δ = parent(qₐ) - parent(qᵦ) - R
             if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, false), Δsv)
                 Δs = RVec{D}[]
                 for g in ops
-                    R = rotation(g)
+                    R = SymOperation(rotation(g)) # type consitentency for the rotation 
                     δ′ = R * δ # for g = {R|τ}, this is conceptually `compose(R, δ) = R * δ`
                     if !Crystalline.isapproxin(δ′, Δs, nothing, false)
                         push!(Δs, δ′)
