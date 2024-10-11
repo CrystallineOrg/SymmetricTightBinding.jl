@@ -205,7 +205,29 @@ numerically, we will need to impose a clever cutoff.
 
 ### Our approach: Provide a list of translations $\mathbf{R}$ to consider
 
- 
+Our approach will be to give a set of lattice translations that we want to consider and try
+to compute all symmetry related hopping that involve such translation. To illustrate this 
+approach, let me consider on lattice translation that I will denote by $\mathbf{R}$. Then 
+given to points $\alpha$ and $\beta$, the hopping distance between those two points will be
+$\Delta_{\alpha\to \beta} = \mathbf{q}_\beta + \mathbf{R} - \mathbf{q}_\alpha$. Notice that 
+this distance is exactly the term in the exponential of the Hamiltonian written in $k$-space.
+
+Then if we want to obtain a symmetry preserving Hamiltonian, we need to include in our study 
+at least all other hopping terms related by symmetry. This could be easily obtained by 
+considering the symmetries of our system. Let us assume that $g=\{R|\tau\}$ is a symmetry of 
+the system. Then the symmetry related hopping terms will be given by $\Delta^\prime
+_{\alpha\to \beta} = g(\mathbf{q}_\beta + \mathbf{R}) - g\mathbf{q}_\alpha = R(
+\mathbf{q}_\beta + \mathbf{R}) - R\mathbf{q}_\alpha = R\Delta_{\alpha\to \beta}$. Then if we
+want to obtain a symmetry constrained Hamiltonian we will need to consider classes of hopping
+distances $\{\Delta_{\alpha\to \beta}\}$, which are invariant under the space group symmetries.
+
+Considering all this hopping terms our Hamiltonian will be closed to respect to the symmetry
+operations so we can be certain that after imposing the symmetry constraints using the 
+representations of the operations as:
+
+$$ \rho_G(g) H(\mathbf{k}) \rho^{-1}_G(g) = H(g\mathbf{k}) $$
+our Hamiltonian will be the most general symmetry constrained Hamiltonian up to hopping terms
+considering a set of lattice translations.
 
 ## Example on 1D bipartite lattice with inversion
 
@@ -266,3 +288,56 @@ $$ H_{k,0} = \begin{pmatrix} t_{a\to a} & 2it_{b\to a} \sin(k/2) \\
 
 Which is exactly the Hamiltonian deduced with the previous method but with onsite terms and 
 without hermiticity imposed.
+
+### Implementation of the free-parameter Hamiltonian into Julia code
+
+For a non-symbolic programming language as Julia we cannot implement this Hamiltonian directly
+with some free parameters. In order to do so, we will rewrite it in a clever way so we can 
+perform linear algebra with it.
+
+Let me start with our previous example. For this let me focus on only one hopping term. In 
+this case it will be $b \to a$. The Hamiltonian for this term will look like:
+
+$$ H_{k,0}^{b \to a} = t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2}  $$
+<font color=red>**NOTE:**</font> I know we discussed to take also the complex conjugate of it
+but I think it is not necessary. Let me explained it in the following.
+
+This term can be obtained by just knowing the class $\{\Delta_{a\to b}\}$. Knowing this we 
+can define two vectors such that:
+
+$$ \mathbf{v}^T = \begin{pmatrix}
+    e^{ik/2} & e^{-ik/2} \\
+\end{pmatrix}; \quad \mathbf{t} = \begin{pmatrix}
+    t_{b\to a}^1 \\
+    t_{b\to a}^2
+\end{pmatrix} $$
+
+Then $H_{k,0}^{b \to a}$ can be written as:
+
+$$ H_{k,0}^{b \to a} = \mathbf{v}^T \underbrace{\begin{pmatrix}
+    1 & 0 \\
+    0 & 1
+\end{pmatrix}}_{M^{b \to a}_0} \mathbf{t} $$
+
+In general, I think, this can be performed by creating an identity matrix of dimension 
+$\#\{\Delta_{b\to a}\} \times (\mu_a + \mu_b)$.
+
+<font color=red> **NOTE:** </font> I think this dimensions will depend on the internal degrees
+of freedom of the orbitals '$\mu$' under study in the way I have specified. Maybe wrong.
+
+How a symmetry transformation will look like if I apply the symmetries to $M$ instead of $H$.
+Then they will look as:
+
+$$ \rho_G(g)_{im} H^{mn}_{k} \rho_G^{-1}(g)_{mj} = v_\alpha \rho_G(g)_{im} M^{mn}_{\alpha\beta} 
+    \rho_G^{-1}(g)_{nj} t_\beta $$
+
+and
+
+$$ H_{gk}^{ij} = permuted(\mathbf{v}^T) M^{ij} \mathbf{t} = \mathbf{v}^T permuted(M^{ij}) 
+    \mathbf{t} $$
+
+#### How do we obtain such permutation?
+
+Since we have $\{\Delta_{b \to a}\}$, we can just do $R\{\Delta_{b\to a}\}$ with $g=\{R|
+\mathbf{v}\}$ and find the permutations. Those permutations will be exactly the ones we are 
+looking for.
