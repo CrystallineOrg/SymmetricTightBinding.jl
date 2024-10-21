@@ -24,17 +24,8 @@ sgrep = sgrep_induced_by_siteir_generators(cbr)
 
 Rs = [[0, 0]] # vector containing the translations we want to consider
 
-Δs = TETB.find_symmetry_related_hoppings(Rs, br1, br2)
+Δs = TETB.find_symmetry_related_distances(Rs, br1, br2)
 
 ##----------------------------------------------------------------------------------------##
 
-##- Obtain the numeric Hamiltonian in terms of a classes of hopping terms ----------------##
-
-function obtain_hamiltonian_term(
-    Δ::Vector{RVec{D}},
-    br1::NewBandRep{D},
-    br2::NewBandRep{D}) where {D}
-    return identity(length(Δ) * (Crystalline.irdim(br1) + Crystalline.irdim(br2)))
-end
-
-##----------------------------------------------------------------------------------------##
+Orb = TETB.obtain_symmetry_related_hoppings(Rs, br1, br2)

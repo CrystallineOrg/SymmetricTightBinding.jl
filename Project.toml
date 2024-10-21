@@ -13,7 +13,11 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [compat]
-Crystalline = "0.6.4"
+Crystalline = "0.6.5"
+MPBUtils = "0.1.12"
+PhotonicBandConnectivity = "0.4.0"
+Revise = "3.6.2"
+SymmetryBases = "0.4.2"
 julia = "1.9"
 
 [extras]

@@ -318,7 +318,7 @@ end
 Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
 """
-function find_symmetry_related_hoppings(
+function find_symmetry_related_distances(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     br1::NewBandRep{D},
     br2::NewBandRep{D}
@@ -339,13 +339,13 @@ function find_symmetry_related_hoppings(
 
     Δsv = Vector{RVec{D}}[]
     for R in Rs
-        for (qₐ, qᵦ) in zip(wps1, wps2) # Iterators.product(wps1, wps2) for forward and backwards hoopings
+        for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             δ = parent(qₐ) - parent(qᵦ) - R
             if !any(_Δs -> Crystalline.isapproxin(δ, _Δs, nothing, false), Δsv)
                 Δs = RVec{D}[]
                 for g in ops
-                    R = SymOperation(rotation(g)) # type consitentency for the rotation 
-                    δ′ = R * δ # for g = {R|τ}, this is conceptually `compose(R, δ) = R * δ`
+                    Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
+                    δ′ = Ρ * δ # for g = {Ρ|τ}, this is conceptually `compose(Ρ, δ) = Ρ * δ`
                     if !Crystalline.isapproxin(δ′, Δs, nothing, false)
                         push!(Δs, δ′)
                     end
@@ -356,4 +356,51 @@ function find_symmetry_related_hoppings(
     end
 
     return Δsv
+end
+
+function obtain_symmetry_related_hoppings(
+    Rs::AbstractVector{V}, # must be specified in the primitive basis
+    br1::NewBandRep{D},
+    br2::NewBandRep{D}
+) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
+
+    sgnum = num(br1)
+    num(br2) == sgnum || error("both band representations must be in the same space group")
+    # we only want to include the wyckoff positions in the primitive cell - but the default
+    # listings from `spacegroup` include operations that are "centering translations";
+    # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
+    # operations - but is still specified in a conventional basis. So, below, we remove
+    # redundant operations from the space group, and also change both the operations and the
+    # positions from a conventional to a primitive basis
+    cntr = centering(sgnum, D)
+    ops = primitivize(spacegroup(sgnum, D))
+    wps1 = primitivize.(orbit(group(br1)), cntr)
+    wps2 = primitivize.(orbit(group(br2)), cntr)
+
+
+    Orb = Dict{RVec{D},Vector{Tuple{WyckoffPosition{D},WyckoffPosition{D}}}}()
+    for R in Rs
+        for (qₐ, qᵦ) in zip(wps1, wps2)
+            δ = parent(qₐ) - parent(qᵦ) - R
+            if δ ∈ keys(Orb) && !in((qₐ, qᵦ), Orb[δ]) # consistency check just in case
+                push!(Orb[δ], (qₐ, qᵦ))
+            else
+                push!(Orb, δ => [(qₐ, qᵦ)])
+                for g in ops
+                    Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
+                    qₐ′ = Ρ * qₐ # for g = {Ρ|τ}, this is conceptually `compose(Ρ, q) = Ρ*q`
+                    qᵦ′ = Ρ * qᵦ
+                    R′ = Ρ * R
+                    δ′ = parent(qₐ′) - parent(qᵦ′) - R′
+                    δ′ == Ρ * δ || error("rotation is not applied properly")
+                    if δ′ ∈ keys(Orb) && !in((qₐ′, qᵦ′), Orb[δ′])
+                        push!(Orb[δ′], (qₐ′, qᵦ′))
+                    else
+                        push!(Orb, δ′ => [(qₐ′, qᵦ′)])
+                    end
+                end
+            end
+        end
+    end
+    return Orb
 end
