@@ -389,7 +389,7 @@ function obtain_symmetry_related_hoppings(
                     Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
                     qₐ′ = Ρ * qₐ # for g = {Ρ|τ}, this is conceptually `compose(Ρ, q) = Ρ*q`
                     qᵦ′ = Ρ * qᵦ
-                    R′ = Ρ * R # FIXME: Error in the type, try to change R type to RVec{D}
+                    R′ = rotation(g) * R # TODO: Error in the type, try to change R type to RVec{D} or don't do `SymOperation`
                     δ′ = parent(qₐ′) - parent(qᵦ′) - R′
                     δ′ == Ρ * δ || error("rotation is not applied properly")
                     if δ′ ∈ keys(Orb) && !in((qₐ′, qᵦ′), Orb[δ′])
