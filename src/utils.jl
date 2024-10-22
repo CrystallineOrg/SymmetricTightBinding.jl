@@ -377,29 +377,30 @@ function obtain_symmetry_related_hoppings(
     wps2 = primitivize.(orbit(group(br2)), cntr)
 
 
-    Orb = Dict{RVec{D},Vector{Tuple{WyckoffPosition{D},WyckoffPosition{D}}}}()
+    orbsd = Dict{RVec{D},Vector{Tuple{WyckoffPosition{D},WyckoffPosition{D},RVec{D}}}}() # TODO: include the "real" distance between WPs and let the key as a representative of the class
     for R in Rs
-        for (qₐ, qᵦ) in zip(wps1, wps2)
+        R = RVec{D}(R) # change the type of R to be type consistent
+        for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             δ = parent(qₐ) - parent(qᵦ) - R
-            if δ ∈ keys(Orb) && !in((qₐ, qᵦ), Orb[δ]) # consistency check just in case
-                push!(Orb[δ], (qₐ, qᵦ))
+            if δ ∈ keys(orbsd) && !in((qₐ, qᵦ), orbsd[δ]) # consistency check just in case
+                push!(orbsd[δ], (qₐ, qᵦ))
             else
-                push!(Orb, δ => [(qₐ, qᵦ)])
+                push!(orbsd, δ => [(qₐ, qᵦ)])
                 for g in ops
                     Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
                     qₐ′ = Ρ * qₐ # for g = {Ρ|τ}, this is conceptually `compose(Ρ, q) = Ρ*q`
                     qᵦ′ = Ρ * qᵦ
-                    R′ = rotation(g) * R # TODO: Error in the type, try to change R type to RVec{D} or don't do `SymOperation`
+                    R′ = Ρ * R # TODO: Error in the type, try to change R type to RVec{D} or don't do `SymOperation`
                     δ′ = parent(qₐ′) - parent(qᵦ′) - R′
                     δ′ == Ρ * δ || error("rotation is not applied properly")
-                    if δ′ ∈ keys(Orb) && !in((qₐ′, qᵦ′), Orb[δ′])
-                        push!(Orb[δ′], (qₐ′, qᵦ′))
+                    if δ′ ∈ keys(orbsd) && !in((qₐ′, qᵦ′), orbsd[δ′]) # TODO: 
+                        push!(orbsd[δ′], (qₐ′, qᵦ′))
                     else
-                        push!(Orb, δ′ => [(qₐ′, qᵦ′)])
+                        push!(orbsd, δ′ => [(qₐ′, qᵦ′)])
                     end
                 end
             end
         end
     end
-    return Orb
+    return orbsd
 end
