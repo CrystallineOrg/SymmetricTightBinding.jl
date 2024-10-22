@@ -377,28 +377,28 @@ function obtain_symmetry_related_hoppings(
     wps2 = primitivize.(orbit(group(br2)), cntr)
 
 
-    orbsd = Dict{RVec{D},Vector{Tuple{WyckoffPosition{D},WyckoffPosition{D},RVec{D}}}}() # TODO: include the "real" distance between WPs and let the key as a representative of the class
+    orbsd = Dict{RVec{D},Vector{Tuple{WyckoffPosition{D},WyckoffPosition{D},RVec{D}}}}()
     for R in Rs
-        R = RVec{D}(R) # change the type of R to be type consistent
+        R = RVec(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             δ = parent(qₐ) - parent(qᵦ) - R
-            if δ ∈ keys(orbsd) && !in((qₐ, qᵦ), orbsd[δ]) # consistency check just in case
-                push!(orbsd[δ], (qₐ, qᵦ))
-            else
-                push!(orbsd, δ => [(qₐ, qᵦ)])
+            if !in(δ, keys(orbsd)) && !in((qₐ, qᵦ, δ), values(orbsd)) # consistency check
+                push!(orbsd, δ => [(qₐ, qᵦ, δ)])
                 for g in ops
                     Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
                     qₐ′ = Ρ * qₐ # for g = {Ρ|τ}, this is conceptually `compose(Ρ, q) = Ρ*q`
                     qᵦ′ = Ρ * qᵦ
-                    R′ = Ρ * R # TODO: Error in the type, try to change R type to RVec{D} or don't do `SymOperation`
+                    R′ = Ρ * R
                     δ′ = parent(qₐ′) - parent(qᵦ′) - R′
                     δ′ == Ρ * δ || error("rotation is not applied properly")
-                    if δ′ ∈ keys(orbsd) && !in((qₐ′, qᵦ′), orbsd[δ′]) # TODO: 
-                        push!(orbsd[δ′], (qₐ′, qᵦ′))
+                    if !in(δ′, keys(orbsd)) && !in((qₐ′, qᵦ′, δ′), orbsd[δ])
+                        push!(orbsd[δ], (qₐ′, qᵦ′, δ′))
                     else
-                        push!(orbsd, δ′ => [(qₐ′, qᵦ′)])
+                        continue
                     end
                 end
+            else
+                continue
             end
         end
     end
