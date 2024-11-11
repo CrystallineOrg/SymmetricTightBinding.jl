@@ -341,3 +341,16 @@ $$ H_{gk}^{ij} = permuted(\mathbf{v}^T) M^{ij} \mathbf{t} = \mathbf{v}^T permute
 Since we have $\{\Delta_{b \to a}\}$, we can just do $R\{\Delta_{b\to a}\}$ with $g=\{R|
 \mathbf{v}\}$ and find the permutations. Those permutations will be exactly the ones we are 
 looking for.
+
+
+## Methodology on how to write a symbolic Hamiltonian in Julia
+
+Let us consider a term in a general Hamiltonian which describes the hopping term 
+between two EBRs. For the sake of simplicity let us call them $(\mathbf{q}_1|A)$ and 
+$(\mathbf{q}_2|B)$, where $\mathbf{q}_i$ represent a certain WP in the SG and $A$ and $B$ 
+are two site-symmetry irreps of any dimension.
+
+The first step we need to do is to find all the possible hopping distances that can be 
+found between this two EBRs. Obviously that set will be infinite so we need to impose a 
+particular cutoff. As explained above, we will impose it by constraining the hopping terms
+to a particular set of lattice translations (and obviously theirs symmetry partners). 
