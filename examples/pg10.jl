@@ -9,20 +9,22 @@ pg_num = 10
 brs = calc_bandreps(pg_num, Val(2))
 
 # needs to do that to find the WPs properly
-br = brs[end-3]
+br1 = brs[1]
+br2 = brs[5]
 
-ops = spacegroup(num(br), dim(br))
-wps = orbit(group(br))
+wp1 = orbit(group(br1))
+wp2 = orbit(group(br2))
 
-sgrep = sgrep_induced_by_siteir_generators(br)
+sgrep1 = sgrep_induced_by_siteir_generators(br1)
+sgrep2 = sgrep_induced_by_siteir_generators(br2)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 
-Rs = [[0, 0],[1,0]] # vector containing the translations we want to consider
+Rs = [[0, 0]] # vector containing the translations we want to consider
 
-Δs = TETB.obtain_symmetry_related_hoppings(Rs, br, br)
+δs = TETB.obtain_symmetry_related_hoppings(Rs, br1, br2)
 
-##----------------------------------------------------------------------------------------##
+##- Compute the matrix M that will enconde the Hamiltonian as a numerical matrix ---------##
 
 # EBRs: (q|A), (w|B)
 # Wyckoff positions: q, w
@@ -53,3 +55,25 @@ Rs = [[0, 0],[1,0]] # vector containing the translations we want to consider
 #   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
 #   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
+
+function construct_M_matrix(
+    δs::Dict{RVec{D},Dict{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
+    br1::NewBandRep{D},
+    br2::NewBandRep{D}
+) where {D}
+
+    Ms = Matrix[]
+    for Δ in keys(δs)
+        δ = δs[Δ]
+        M = Matrix{Float64}(undef, 0, 0)
+
+        ## Introduce code that assings a 1 to the correct position
+
+        ##
+
+        push!(Ms, M)
+    end
+    return Ms
+end
+
+##--------------------------------------------------------------------------------------.##

@@ -8,8 +8,3 @@ Base.size(tbc::TightBindingCandidateSet) = (length(tbc.apolarv),)
 longitudinal(tbc::TightBindingCandidateSet) = tbc.longitudinal
 Base.getindex(tbc::TightBindingCandidateSet, i::Int) = tbc.apolarv[i]
 Base.setindex!(::TightBindingCandidateSet, v, i::Int) = error("setindex! is not supported")
-
-struct HoppingClass <: AbstractVector{RVec{D}} where {D}
-    distance::RVec{D} # δ = wi + R - qj 
-    terms::Tuple{WyckoffPosition{D},WyckoffPosition{D}} # WPs concerning the hopping (with R included)
-end

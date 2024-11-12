@@ -337,23 +337,37 @@ function obtain_symmetry_related_hoppings(
     wps1 = primitivize.(orbit(group(br1)), cntr)
     wps2 = primitivize.(orbit(group(br2)), cntr)
 
+    # we are going to create a dictionary of dictionaries. The first set of keys will indicate
+    # the representative of the hopping distance and inside it, each dictionary will be 
+    # associated with a point in the "orbit" of that hopping distance. Addtionally, if you 
+    # look at the value of and specific point inside the "orbit" of one representative you 
+    # will obtain a set of tuples that will encode the points of the WPs involved in the 
+    # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
 
-    orbsd = Dict{RVec{D},Vector{Tuple{WyckoffPosition{D},WyckoffPosition{D},RVec{D}}}}()
+    orbsdd = Dict{RVec{D},Dict{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}()
     for R in Rs
         R = RVec(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
-            δ = parent(qₐ) - parent(qᵦ) - R
-            if !in(δ, keys(orbsd)) && !in(δ, Iterators.flatten(Iterators.flatten(values(orbsd)))) # consistency check
-                push!(orbsd, δ => [(qₐ, qᵦ, δ)])
+            qₐ = parent(qₐ) # to work with the RVec type directly
+            qᵦ = parent(qᵦ) # same as above
+            δ = qᵦ + R - qₐ
+            if !in(δ, keys(orbsdd)) && !in(δ, Iterators.flatten(keys.(values(orbsdd))))
+                push!(orbsdd, δ => Dict(δ => [(qₐ, qᵦ, R)]))
                 for g in ops
                     Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
-                    qₐ′ = Ρ * qₐ # for g = {Ρ|τ}, this is conceptually `compose(Ρ, q) = Ρ*q`
-                    qᵦ′ = Ρ * qᵦ
-                    R′ = Ρ * R
-                    δ′ = parent(qₐ′) - parent(qᵦ′) - R′
-                    δ′ == Ρ * δ || error("rotation is not applied properly")
-                    if !in(δ′, keys(orbsd)) && !in((qₐ′, qᵦ′, δ′), orbsd[δ])
-                        push!(orbsd[δ], (qₐ′, qᵦ′, δ′))
+                    # we want to keep the WPs inside the unit cell and put all the posible
+                    # translations into the RVec 'R', so we can keep the notation such that
+                    # q_i -> w_j + R. For that reason we make the following changes:
+                    qₐ′ = RVec(Crystalline.reduce_translation_to_unitrange(Crystalline.constant(Ρ * qₐ)))
+                    qᵦ′ = RVec(Crystalline.reduce_translation_to_unitrange(Crystalline.constant(Ρ * qᵦ)))
+                    dₐ = (Ρ * qₐ) - qₐ′
+                    dᵦ = (Ρ * qᵦ) - qᵦ′
+                    R′ = (Ρ * R) + dᵦ - dₐ
+                    δ′ = Ρ * δ
+                    if !in(δ′, keys(orbsdd)) && !in(δ′, keys(orbsdd[δ]))
+                        push!(orbsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
+                    elseif in(δ′, keys(orbsdd[δ])) && !in((qₐ′, qᵦ′, R′), orbsdd[δ][δ′])
+                        push!(orbsdd[δ][δ′], (qₐ′, qᵦ′, R′))
                     else
                         continue
                     end
@@ -363,5 +377,5 @@ function obtain_symmetry_related_hoppings(
             end
         end
     end
-    return orbsd
+    return orbsdd
 end
