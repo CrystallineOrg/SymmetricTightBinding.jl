@@ -410,9 +410,31 @@ end
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
 
 """
-Construct a matrix that encodes a Hamiltonian's term which resembles the hopping from EBR 
-`br1` to EBR `br2`. The hopping terms are enconded inside the vector `δs`, which structure
-is explained under the function `obtain_symmetry_related_hoppings`.
+Gives an order for the Hamiltonian's term concerning hopping between `br1` and `br2`. First 
+elements in `Pair` will indicate the rows and the last the columns. 
+"""
+function hamiltonian_term_order(
+    br1::NewBandRep{D},
+    br2::NewBandRep{D}
+) where {D}
+
+    wp1, wp2 = orbit(group(br1)), orbit(group(br2))
+    Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
+    order = Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}[]
+    for (q, w) in Iterators.product(wp1, wp2)
+        for i in 1:Q1
+            for j in 1:Q2
+                push!(order, (i, q) => (j, w))
+            end
+        end
+    end
+    return order
+end
+
+"""
+Construct a set of matrices that encodes a Hamiltonian's term which resembles the hopping
+from EBR `br1` to EBR `br2`. The Hamiltonian's order which is implicitly used is returned as 
+output.
 """
 function construct_M_matrix(
     δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
@@ -421,6 +443,8 @@ function construct_M_matrix(
 ) where {D}
 
     # constructing
+    Mv = Matrix{ComplexF64}[] # vector o matrices that will store the matrices for each
+    # Hamiltonian's term
     V = length(δs)
     E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
     foreach(δs) do (_, δ_r)
@@ -428,21 +452,27 @@ function construct_M_matrix(
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
-    M = zeros(ComplexF64, V, V * E * Q)
-    ## Introduce code that assings a 1 to the correct position
-    for (r, (_, δ_r)) in enumerate(δs)
-        offset0 = (r - 1) * E * Q
-        for i in eachindex(δ_r)
-            offset1 = (i - 1) * Q
-            for x in 1:Q1
-                offset2 = (x - 1) * Q1
-                for y in 1:Q2
-                    c = offset0 + offset1 + offset2 + y
+
+    # we need to declare an order that the Hamiltonian's term internally has
+    order = hamiltonian_term_order(br1, br2)
+
+    for ((i, q), (j, w)) in order
+        q = parent(q)
+        w = parent(w)
+        M = zeros(ComplexF64, V, V * E * Q)
+        ## Introduce code that assings a 1 to the correct position
+        for (r, (_, δ_r)) in enumerate(δs)
+            offset0 = (r - 1) * E * Q
+            for (x, hop) in enumerate(δ_r)
+                if hop[1] == q && hop[2] == w
+                    offset1 = (x - 1) * Q
+                    c = offset0 + offset1 + i + j - 1
                     M[r, c] = 1
                 end
             end
         end
+        push!(Mv, M)
     end
 
-    return M
+    return order, Mv
 end
