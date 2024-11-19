@@ -6,7 +6,8 @@ using Crystalline
 using MPBUtils
 using SymmetryBases
 using PhotonicBandConnectivity
-using Crystalline: AbstractSymmetryVector, irdim, constant, CompositeBandRep_from_indices
+using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices
+using Crystalline: reduce_translation_to_unitrange, constant, free
 using BlockArrays
 # ---------------------------------------------------------------------------------------- #
 

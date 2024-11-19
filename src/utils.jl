@@ -83,7 +83,7 @@ obtained from MPB vs the ones for the solutions:
 Then, symmetry vectors can be explitted in several ways depending of if the irreps belong to
 Γ or not and if the irreps belongs to higher frecuency bands or just ω=0:
 
-    m = mᵧ + m₋ᵧ =====> Diffrentiate from Γ and not Γ
+    m = mᵧ + m₋ᵧ =====> Differentiate from Γ and not Γ
     n = nᵧ + n₋ᵧ =====> Diffrentiate from Γ and not Γ
 
     mᵧ = mᵧ⁼⁰ + mᵧꜛ⁰ =====> Diffrentiate from ω=0 and ω>0
@@ -251,7 +251,7 @@ function find_bandrep_decompositions(
     end
 end
 
-# we do not include the (usually redundant) exponential (k-dependet) phases below
+# we do not include the (usually redundant) exponential (k-dependent) phases below
 """
 Induce a representation for the generators of the SG from a representation of the site-symmetry 
 group of a particular maximal WP.
@@ -344,38 +344,105 @@ function obtain_symmetry_related_hoppings(
     # will obtain a set of tuples that will encode the points of the WPs involved in the 
     # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
 
-    orbsdd = Dict{RVec{D},Dict{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}()
+    orbsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}}()
     for R in Rs
         R = RVec(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # to work with the RVec type directly
             qᵦ = parent(qᵦ) # same as above
             δ = qᵦ + R - qₐ
-            if !in(δ, keys(orbsdd)) && !in(δ, Iterators.flatten(keys.(values(orbsdd))))
-                push!(orbsdd, δ => Dict(δ => [(qₐ, qᵦ, R)]))
+            if !in(δ, keys(orbsdd)) && !in(δ, Iterators.flatten(first.(values(orbsdd))))
+                push!(orbsdd, δ => [δ => [(qₐ, qᵦ, R)]])
                 for g in ops
                     Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
                     # we want to keep the WPs inside the unit cell and put all the posible
                     # translations into the RVec 'R', so we can keep the notation such that
                     # q_i -> w_j + R. For that reason we make the following changes:
-                    qₐ′ = RVec(Crystalline.reduce_translation_to_unitrange(Crystalline.constant(Ρ * qₐ)))
-                    qᵦ′ = RVec(Crystalline.reduce_translation_to_unitrange(Crystalline.constant(Ρ * qᵦ)))
+                    _qₐ′ = Ρ * qₐ
+                    _qᵦ′ = Ρ * qᵦ
+                    qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
+                    qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
                     dₐ = (Ρ * qₐ) - qₐ′
                     dᵦ = (Ρ * qᵦ) - qᵦ′
                     R′ = (Ρ * R) + dᵦ - dₐ
                     δ′ = Ρ * δ
-                    if !in(δ′, keys(orbsdd)) && !in(δ′, keys(orbsdd[δ]))
+                    idx = findfirst(v -> first(v) == δ′, orbsdd[δ])
+                    if !in(δ′, keys(orbsdd)) && isnothing(idx)
                         push!(orbsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
-                    elseif in(δ′, keys(orbsdd[δ])) && !in((qₐ′, qᵦ′, R′), orbsdd[δ][δ′])
-                        push!(orbsdd[δ][δ′], (qₐ′, qᵦ′, R′))
-                    else
-                        continue
+                    elseif !isnothing(idx) && !in((qₐ′, qᵦ′, R′), last(orbsdd[δ][something(idx)]))
+                        push!(last(orbsdd[δ][something(idx)]), (qₐ′, qᵦ′, R′))
                     end
                 end
-            else
-                continue
             end
         end
     end
     return orbsdd
+end
+
+# EBRs: (q|A), (w|B)
+# Wyckoff positions: q, w
+#   q: q1, ..., qN
+#   w: w1, ..., wM
+# Site symmetry irreps: A, B
+#   A: A1, ..., AJ
+#   B: B1, ..., BK
+# δs = [δ1, δ2, ..., δn]
+#   δ1: qi₁¹ -> wj₁¹, qi₁² -> wj₁², ...
+#   δ2: qi₂¹ -> wj₂¹, qi₂² -> wj₂², ...
+# v = [exp(ik⋅δ1), exp(ik⋅δ2), ..., exp(ik⋅δn)]
+# t = [[t(δ1) ...], [t(δ2) ...], ..., [t(δn) ...]]
+#   t(δ1): [t(qi₁ᵅ -> wj₁ᵅ, A_f -> B_g) ...]
+
+# Current example: (1a|E), (2c|A)
+#   ___w2__
+#  |   x   |
+#  |q1 x   x w1
+#  |_______|
+#   δs = [1/2x, -1/2x, 1/2y, -1/2y]
+#      δ1: q1 -> w1 + G1
+#      δ2: q1 -> w1 + G2
+#      δ3: q1 -> w2 + G3
+#      δ4: q1 -> w2 + G4
+# t = [t(δ1)..., t(δ2)..., t(δ3)..., t(δ4)...]
+#   t(δ1): [t(q1 -> w1, G1, E1 -> A1), t(q1 -> w1, G1, E2 -> A1)]
+#   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
+#   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
+#   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
+
+"""
+Construct a matrix that encodes a Hamiltonian's term which resembles the hopping from EBR 
+`br1` to EBR `br2`. The hopping terms are enconded inside the vector `δs`, which structure
+is explained under the function `obtain_symmetry_related_hoppings`.
+"""
+function construct_M_matrix(
+    δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
+    br1::NewBandRep{D},
+    br2::NewBandRep{D},
+) where {D}
+
+    # constructing
+    V = length(δs)
+    E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
+    foreach(δs) do (_, δ_r)
+        length(δ_r) == E || error("unexpected had different counts of elements across δ_r")
+    end
+    Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
+    Q = Q1 * Q2
+    M = zeros(ComplexF64, V, V * E * Q)
+    ## Introduce code that assings a 1 to the correct position
+    for (r, (_, δ_r)) in enumerate(δs)
+        offset0 = (r - 1) * E * Q
+        for i in eachindex(δ_r)
+            offset1 = (i - 1) * Q
+            for x in 1:Q1
+                offset2 = (x - 1) * Q1
+                for y in 1:Q2
+                    c = offset0 + offset1 + offset2 + y
+                    M[r, c] = 1
+                end
+            end
+        end
+    end
+
+    return M
 end

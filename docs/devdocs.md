@@ -81,12 +81,12 @@ See the details in [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.
 Description of what a *physical* solutions means.
 
 Assume we have a solution provided by our code, which consist on a longitudinal part $n^L$ 
-and a trasverse+longitudinal one $n^{T+L}$. This is obtained by solving [Problem 1](#problem-1). 
+and a transverse+longitudinal one $n^{T+L}$. This is obtained by solving [Problem 1](#problem-1). 
 Given a symmetry vector $m$ from MPB, we are considering if our solution properly represents 
 the content at $\Gamma$, which has been in the computation of the solution. For this we 
 need to check two things:
 
-1. Whether our solution subduces properly to the $O(3)$ representation at $\Gamma$ and zero 
+1. Whether our solution sub-duces properly to the $O(3)$ representation at $\Gamma$ and zero 
    frequency. This can be checked easily using `PhotonicBandConnectivity.jl`. As explained 
    before in [Problem 2](#problem-2), this is fulfilled if there exists a $\mathbf{p}\in\mathbb{Z}$ 
    solving $A_{\Gamma} c^T - m_{\Gamma} = Q\mathbf{p}$.
@@ -267,9 +267,6 @@ First, let me consider the translation $t=0$. Then, remember that $\Delta_{\alph
 - Orbits of $\Delta$'s: $\{\Delta_{a\to a}\} = \{\Delta_{b\to b}\} = \{0\}; \quad 
     \{\Delta_{a\to b}\} = \{\Delta_{b\to a}\} = \{1/2,-1/2\}$.
 
-<font color=red>**NOTE:**</font> be careful that we need to differentiate between clases of 
-hopping not only the class itself.
-
 Then the non-symmetrized Hamiltonian for this translation will be:
 
 $$ H_{k,0} = \begin{pmatrix} t_{a\to a} & t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2} \\ 
@@ -299,8 +296,6 @@ Let me start with our previous example. For this let me focus on only one hoppin
 this case it will be $b \to a$. The Hamiltonian for this term will look like:
 
 $$ H_{k,0}^{b \to a} = t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2}  $$
-<font color=red>**NOTE:**</font> I know we discussed to take also the complex conjugate of it
-but I think it is not necessary. Let me explained it in the following.
 
 This term can be obtained by just knowing the class $\{\Delta_{a\to b}\}$. Knowing this we 
 can define two vectors such that:
@@ -320,10 +315,7 @@ $$ H_{k,0}^{b \to a} = \mathbf{v}^T \underbrace{\begin{pmatrix}
 \end{pmatrix}}_{M^{b \to a}_0} \mathbf{t} $$
 
 In general, I think, this can be performed by creating an identity matrix of dimension 
-$\#\{\Delta_{b\to a}\} \times (\mu_a + \mu_b)$.
-
-<font color=red> **NOTE:** </font> I think this dimensions will depend on the internal degrees
-of freedom of the orbitals '$\mu$' under study in the way I have specified. Maybe wrong.
+$\#\{\Delta_{b\to a}\} \times (\#\{\Delta_{b\to a}\} \times \mu_a \times \mu_b)$.
 
 How a symmetry transformation will look like if I apply the symmetries to $M$ instead of $H$.
 Then they will look as:
@@ -338,9 +330,10 @@ $$ H_{gk}^{ij} = permuted(\mathbf{v}^T) M^{ij} \mathbf{t} = \mathbf{v}^T permute
 
 #### How do we obtain such permutation?
 
-Since we have $\{\Delta_{b \to a}\}$, we can just do $R\{\Delta_{b\to a}\}$ with $g=\{R|
-\mathbf{v}\}$ and find the permutations. Those permutations will be exactly the ones we are 
-looking for.
+Since we have $\{\Delta_{b \to a}\}$, we can just do $R\{\Delta_{b\to a}\}$, with $g=\{R|
+\mathbf{v}\}$, and find the permutations made in $\{\Delta_{b \to a}\}$. Those permutations 
+will be exactly the ones we are looking for. If we apply those permutations to the rows of 
+$M$ then the operation will be performed.
 
 
 ## Methodology on how to write a symbolic Hamiltonian in Julia
