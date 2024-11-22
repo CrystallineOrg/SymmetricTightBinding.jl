@@ -410,8 +410,10 @@ end
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
 
 """
-Gives an order for the Hamiltonian's term concerning hopping between `br1` and `br2`. First 
-elements in `Pair` will indicate the rows and the last the columns. 
+Gives an order for the Hamiltonian's term concerning hopping between `br1` and `br2`.
+
+A matrix with the dimensions of the Hamiltonian is given back where each term indicates the 
+hopping term considered in the Hamiltonian at that position.
 """
 function hamiltonian_term_order(
     br1::NewBandRep{D},
@@ -430,12 +432,16 @@ function hamiltonian_term_order(
     wp1 = primitivize.(orbit(group(br1)), cntr)
     wp2 = primitivize.(orbit(group(br2)), cntr)
 
+    V1, V2, = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
-    order = Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}[]
-    for (q, w) in Iterators.product(wp1, wp2)
-        for i in 1:Q1
-            for j in 1:Q2
-                push!(order, (i, q) => (j, w))
+    order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
+        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
+    for i in 1:V1
+        for j in 1:V2
+            for k in 1:Q1
+                for l in 1:Q2
+                    order[i*k, j*l] = (k, wp1[i]) => (l, wp2[j])
+                end
             end
         end
     end
@@ -444,8 +450,11 @@ end
 
 """
 Construct a set of matrices that encodes a Hamiltonian's term which resembles the hopping
-from EBR `br1` to EBR `br2`. The Hamiltonian's order which is implicitly used is returned as 
-output.
+from EBR `br1` to EBR `br2`. 
+
+The Hamiltonian's order which is implicitly used is returned as output, and the matrices 
+are stored on a matrix of the same dimension of the Hamiltonian (and `order`) where each 
+position indicates the Hamiltonian term it is describing.
 """
 function construct_M_matrix(
     δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
@@ -453,9 +462,6 @@ function construct_M_matrix(
     br2::NewBandRep{D},
 ) where {D}
 
-    # constructing
-    Mv = Matrix{ComplexF64}[] # vector o matrices that will store the matrices for each
-    # Hamiltonian's term
     V = length(δs)
     E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
     foreach(δs) do (_, δ_r)
@@ -467,10 +473,15 @@ function construct_M_matrix(
     # we need to declare an order that the Hamiltonian's term internally has
     order = hamiltonian_term_order(br1, br2)
 
-    for ((i, q), (j, w)) in order
+    # matrix of matrices that will store the matrices for each
+    # Hamiltonian's term
+    Mm = Array{ComplexF64,4}(undef, V, V * E * Q, size(order)[1], size(order)[2])
+
+    for (α, β) in axes(order)
+        ((i, q), (j, w)) = order[α, β]
         q = parent(q)
         w = parent(w)
-        M = zeros(ComplexF64, V, V * E * Q)
+
         ## Introduce code that assings a 1 to the correct position
         for (r, (_, δ_r)) in enumerate(δs)
             offset0 = (r - 1) * E * Q
@@ -478,12 +489,11 @@ function construct_M_matrix(
                 if hop[1] == q && hop[2] == w
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + i + j - 1
-                    M[r, c] = 1
+                    Mm[r, c, α, β] = 1
                 end
             end
         end
-        push!(Mv, M)
     end
 
-    return order, Mv
+    return order, Mm
 end

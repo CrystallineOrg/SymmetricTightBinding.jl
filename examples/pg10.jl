@@ -26,6 +26,6 @@ Rs = [[0, 0]] # vector containing the translations we want to consider
 
 ##- Compute the matrix M that will encode the Hamiltonian as a numerical matrix ----------##
 
-or, Mv = TETB.construct_M_matrix(first(values(δss)), br1, br2)
+or, Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
 
 ##----------------------------------------------------------------------------------------##
