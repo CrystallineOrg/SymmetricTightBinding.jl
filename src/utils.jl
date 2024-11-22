@@ -475,9 +475,9 @@ function construct_M_matrix(
 
     # matrix of matrices that will store the matrices for each
     # Hamiltonian's term
-    Mm = Array{ComplexF64,4}(undef, V, V * E * Q, size(order)[1], size(order)[2])
+    Mm = zeros(ComplexF64, V, V * E * Q, size(order)[1], size(order)[2])
 
-    for (α, β) in axes(order)
+    for α in axes(order, 1), β in axes(order, 2)
         ((i, q), (j, w)) = order[α, β]
         q = parent(q)
         w = parent(w)
