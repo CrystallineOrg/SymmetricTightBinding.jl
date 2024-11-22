@@ -344,15 +344,15 @@ function obtain_symmetry_related_hoppings(
     # will obtain a set of tuples that will encode the points of the WPs involved in the 
     # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
 
-    orbsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}}()
+    δsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}}()
     for R in Rs
         R = RVec(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # to work with the RVec type directly
             qᵦ = parent(qᵦ) # same as above
             δ = qᵦ + R - qₐ
-            if !in(δ, keys(orbsdd)) && !in(δ, Iterators.flatten(first.(values(orbsdd))))
-                push!(orbsdd, δ => [δ => [(qₐ, qᵦ, R)]])
+            if !in(δ, keys(δsdd)) && !in(δ, Iterators.flatten(first.(values(δsdd))))
+                push!(δsdd, δ => [δ => [(qₐ, qᵦ, R)]])
                 for g in ops
                     Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
                     # we want to keep the WPs inside the unit cell and put all the posible
@@ -366,17 +366,17 @@ function obtain_symmetry_related_hoppings(
                     dᵦ = (Ρ * qᵦ) - qᵦ′
                     R′ = (Ρ * R) + dᵦ - dₐ
                     δ′ = Ρ * δ
-                    idx = findfirst(v -> first(v) == δ′, orbsdd[δ])
-                    if !in(δ′, keys(orbsdd)) && isnothing(idx)
-                        push!(orbsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
-                    elseif !isnothing(idx) && !in((qₐ′, qᵦ′, R′), last(orbsdd[δ][something(idx)]))
-                        push!(last(orbsdd[δ][something(idx)]), (qₐ′, qᵦ′, R′))
+                    idx = findfirst(v -> first(v) == δ′, δsdd[δ])
+                    if !in(δ′, keys(δsdd)) && isnothing(idx)
+                        push!(δsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
+                    elseif !isnothing(idx) && !in((qₐ′, qᵦ′, R′), last(δsdd[δ][something(idx)]))
+                        push!(last(δsdd[δ][something(idx)]), (qₐ′, qᵦ′, R′))
                     end
                 end
             end
         end
     end
-    return orbsdd
+    return δsdd
 end
 
 # EBRs: (q|A), (w|B)
@@ -415,10 +415,21 @@ elements in `Pair` will indicate the rows and the last the columns.
 """
 function hamiltonian_term_order(
     br1::NewBandRep{D},
-    br2::NewBandRep{D}
+    br2::NewBandRep{D},
 ) where {D}
 
-    wp1, wp2 = orbit(group(br1)), orbit(group(br2))
+    sgnum = num(br1)
+    num(br2) == sgnum || error("Both band representations must be in the same space group")
+    # we only want to include the wyckoff positions in the primitive cell - but the default
+    # listings from `spacegroup` include operations that are "centering translations";
+    # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
+    # operations - but is still specified in a conventional basis. So, below, we remove
+    # redundant operations from the space group, and also change both the operations and the
+    # positions from a conventional to a primitive basis
+    cntr = centering(sgnum, D)
+    wp1 = primitivize.(orbit(group(br1)), cntr)
+    wp2 = primitivize.(orbit(group(br2)), cntr)
+
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     order = Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}[]
     for (q, w) in Iterators.product(wp1, wp2)
@@ -448,7 +459,7 @@ function construct_M_matrix(
     V = length(δs)
     E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
     foreach(δs) do (_, δ_r)
-        length(δ_r) == E || error("unexpected had different counts of elements across δ_r")
+        length(δ_r) == E || error("Unexpected had different counts of elements across δ_r")
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
