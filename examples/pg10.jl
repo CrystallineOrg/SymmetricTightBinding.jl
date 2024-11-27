@@ -29,3 +29,8 @@ Rs = [[0, 0]] # vector containing the translations we want to consider
 or, Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
 
 ##----------------------------------------------------------------------------------------##
+
+# H_{i,j}(gk) = \rho(g)_i H_{kl}(k) \rho(g^{-1})_j
+# we need to find a permutation in `v` to mimic gk
+# we need to see how \rho(g) acts on M[:,:,i,j]
+

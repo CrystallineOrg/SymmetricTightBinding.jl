@@ -1,7 +1,7 @@
 module TETB
 
 # ---------------------------------------------------------------------------------------- #
-
+using LinearAlgebra
 using Crystalline
 using MPBUtils
 using SymmetryBases
@@ -39,9 +39,13 @@ include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 export find_apolar_modes
 export find_auxiliary_modes
+include("site-representations.jl")
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
 export sgrep_induced_by_siteir_generators
+include("tightbinding.jl")
+export obtain_symmetry_related_hoppings
+export construct_M_matrix
 
 # ---------------------------------------------------------------------------------------- #
 end # module
