@@ -9,6 +9,11 @@ using PhotonicBandConnectivity
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices
 using Crystalline: reduce_translation_to_unitrange, constant, free
 using BlockArrays
+using RowEchelon: rref, rref!           # for `poormans_sparsification`
+# ---------------------------------------------------------------------------------------- #
+const NULLSPACE_ATOL_DEFAULT = 1e-5
+const SPARSIFICATION_ATOL_DEFAULT = 1e-10
+const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
 # ---------------------------------------------------------------------------------------- #
 
 using PyCall

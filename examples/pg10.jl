@@ -30,7 +30,10 @@ or, Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
 
 ##----------------------------------------------------------------------------------------##
 
-# H_{i,j}(gk) = \rho(g)_i H_{kl}(k) \rho(g^{-1})_j
-# we need to find a permutation in `v` to mimic gk
-# we need to see how \rho(g) acts on M[:,:,i,j]
+or, Mm, t_αβ_basis = TETB.constraint_matrices(br1, br2, first(values(δss)))
 
+##- Try to debug the problem in constraint matrices --------------------------------------##
+
+
+
+##----------------------------------------------------------------------------------------##

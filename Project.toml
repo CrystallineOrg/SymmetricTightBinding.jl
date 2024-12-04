@@ -11,6 +11,7 @@ MPBUtils = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [compat]
@@ -19,6 +20,7 @@ LinearAlgebra = "1.11.0"
 MPBUtils = "0.1.12"
 PhotonicBandConnectivity = "0.4.0"
 Revise = "3.6.2"
+RowEchelon = "0.2.1"
 SymmetryBases = "0.4.2"
 julia = "1.9"
 

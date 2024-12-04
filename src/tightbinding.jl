@@ -169,7 +169,7 @@ function construct_M_matrix(
         q = parent(q)
         w = parent(w)
 
-        ## Introduce code that assings a 1 to the correct position
+        ## Introduce code that assigns a 1 to the correct position
         for (r, (_, δ_r)) in enumerate(δs)
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(δ_r)
@@ -195,9 +195,13 @@ function representation_constraint_matrices(
     ρ_αα::AbstractMatrix{<:Number},
     ρ_ββ::AbstractMatrix{<:Number}
 )
+
+    ρ_αα = Matrix(ρ_αα) # since `/` doesn't extend to BlockArrays currently
+    ρ_ββ = Matrix(ρ_ββ)
+
     Q = zeros(ComplexF64, size(Mm))
     for i in axes(Mm, 1), j in axes(Mm, 2)
-        Q[i, j, :, :] .= ρ_αα * (ρ_ββ \ Mm[i, j, :, :])
+        Q[i, j, :, :] .= ρ_αα * Mm[i, j, :, :] / ρ_ββ # = ρ_αα * Mm[i, j, :, :] * inv(ρ_ββ)
     end
     return Q
 end
@@ -211,11 +215,11 @@ function constraint_matrices(br_α::NewBandRep, br_β::NewBandRep, δs)
     or, Mm = construct_M_matrix(δs, br_α, br_β)
 
     # compute the Q tensor, encoding representation constraints on H_αβ
-    Qs = Vector{Array{ComplexF64,4}}(undef, length(gens_and_ρs_αα))
+    Qs = Vector{Array{Complex,4}}(undef, length(gens_and_ρs_αα))
     gens = Vector{SymOperation}(undef, length(gens_and_ρs_αα))
     for (i, (gen_and_ρ_αα, gen_and_ρ_ββ)) in enumerate(zip(gens_and_ρs_αα, gens_and_ρs_ββ))
         gen_α, gen_β = first(gen_and_ρ_αα), first(gen_and_ρ_ββ)
-        gen_α == gen_β || error("bandrep generators differ; they should not")
+        gen_α == gen_β || error(lazy"bandrep generators differ; they should not")
         gens[i] = gen_α
 
         ρ_αα, ρ_ββ = last(gen_and_ρ_αα), last(gen_and_ρ_ββ)
@@ -224,8 +228,6 @@ function constraint_matrices(br_α::NewBandRep, br_β::NewBandRep, δs)
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on H_αβ
     Zs = reciprocal_contraints_matrices(Mm, gens, δs)
-
-    return gens, Zs, Qs
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector t_αβ associated with δs
@@ -238,7 +240,14 @@ function constraint_matrices(br_α::NewBandRep, br_β::NewBandRep, δs)
         end
     end
     constraints = reduce(vcat, constraint_ms)
-    t_αβ_basis = nullspace(constraints; rtol=1e-3, atol=1e-4)
+    t_αβ_basis_matrix_form = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
+
+    # convert null-space to a sparse column form
+    t_αβ_basis_matrix_form′ = poormans_sparsification(t_αβ_basis_matrix_form)
+    t_αβ_basis = [collect(v) for v in eachcol(t_αβ_basis_matrix_form′)]
+
+    # prune near-zero elements of basis vectors
+    prune_at_threshold!(t_αβ_basis)
 
     return or, Mm, t_αβ_basis
 end
@@ -270,4 +279,36 @@ function permute_symmetry_related_hoppings_under_symmetry_operation(
         # P acts as g on v: g v = P v so (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
     end
     return P
+end
+
+"""
+Poor man's "matrix sparsification" via the reduced row echelon form.
+"""
+function poormans_sparsification(
+    A;
+    rref_tol::Union{Nothing,Float64}=SPARSIFICATION_ATOL_DEFAULT)
+    # following appendix E of the Qsymm paper (https://arxiv.org/abs/1806.08363) [copied
+    # over from Neumann.jl]
+    if !isnothing(rref_tol)
+        # use a relatively low tolerance in `rref` to avoid explosions of errors
+        # NB: this optional tolerance argument of `rref!` is undocumented :(
+        return transpose(rref!(copy(transpose(A)), rref_tol))
+    end
+    return transpose(rref(transpose(A)))
+end
+
+function prune_at_threshold!(
+    vs::AbstractVector{<:AbstractVector{T}};
+    atol::Real=PRUNE_ATOL_DEFAULT
+) where {T<:Complex}
+
+    for v in vs
+        for (j, vⱼ) in enumerate(v)
+            rⱼ, iⱼ = reim(vⱼ)
+            rⱼ′ = ifelse(abs(rⱼ) < atol, zero(real(T)), rⱼ)
+            iⱼ′ = ifelse(abs(iⱼ) < atol, zero(real(T)), iⱼ)
+            v[j] = T(rⱼ′, iⱼ′)
+        end
+    end
+    return vs
 end
