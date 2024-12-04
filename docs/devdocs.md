@@ -42,13 +42,18 @@ that $Ac^T=n^T$. In the code $A$ will be called `brs`. The notation explained fo
 vectors can also be applied to this matrix. We can divide this problem into two enabling us 
 to study the $\Gamma$-point separately:
 
-$$ \begin{bmatrix} A_\Gamma \\ A_{-\Gamma} \end{bmatrix} c^T = 
-    \begin{bmatrix} m_\Gamma \\ m_{-\Gamma} \end{bmatrix} $$
+$$
+\begin{bmatrix} A_\Gamma \\ A_{-\Gamma} \end{bmatrix} c^T = 
+\begin{bmatrix} m_\Gamma \\ m_{-\Gamma} \end{bmatrix}
+$$
 
 ### Problem 1
 
-$$ A_{-\Gamma} c^T = m_{-\Gamma} \Rightarrow A_{-\Gamma} c^{T+L} = m_{-\Gamma} + A_{-\Gamma}
-    c^L $$
+$$
+A_{-\Gamma} c^T = 
+m_{-\Gamma} \Rightarrow A_{-\Gamma} c^{T+L} = 
+m_{-\Gamma} + A_{-\Gamma} c^L
+$$
 
 In general $n^T$ could have some irreps with negative multiplicities, that why we separated 
 the problem into $n^{T+L}$ and $n^L$ so the problem will be strictly positive. For more details 
@@ -64,7 +69,11 @@ the function `find_apolar_modes`.
 
 ### Problem 2
 
-$$ A_{\Gamma} c^T = m_{\Gamma} = m_\Gamma^{=0} + m_\Gamma^{>0} $$
+$$
+A_{\Gamma} c^T = 
+m_{\Gamma} = 
+m_\Gamma^{=0} + m_\Gamma^{>0}
+$$
 
 `MPBUtils.jl` forces the content at zero frequency to be exactly that shown in Table 
 (S6-8) of [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066) which we are 
@@ -72,7 +81,10 @@ going to call `n_fixed`, but we have some freedom coming from $Q\mathbf{p}$ whic
 in our model. Then, the previous equality should be thought of as `n_fixed`$\mod Q$.
 More explicitly, a compatible solution must solve the following with some $\mathbf{p}\in\mathbb{Z}$:
 
-$$ A_{\Gamma} c^T - m_{\Gamma} = Q\mathbf{p}. $$
+$$
+A_{\Gamma} c^T - m_{\Gamma} =
+Q\mathbf{p}
+$$
 
 See the details in [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066).
 
@@ -97,8 +109,11 @@ need to check two things:
 
     Define the candidate-solution's zero-frequency content at $\Gamma$ by:
 
-    $$n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = n_{\Gamma}^{T+L} - n_{\Gamma}^L 
-    - m_{\Gamma}^{>0} = m_{\Gamma}^{=0} + Q\mathbf{p}.$$
+    $$
+    n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = 
+    n_{\Gamma}^{T+L} - n_{\Gamma}^L - m_{\Gamma}^{>0} = 
+    m_{\Gamma}^{=0} + Q\mathbf{p}
+    $$
   
     Consider the following two cases:
     - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ 
@@ -108,7 +123,9 @@ need to check two things:
 
     Thus, regardless of the sign of $n_{\Gamma,i}^{T,=0}$, we may require that:
 
-    $$ n_{\Gamma}^L \geq -n_\Gamma^{T,=0}$$
+    $$
+    n_{\Gamma}^L \geq -n_\Gamma^{T,=0}
+    $$
 
 These constraints are directly imposed in the function `find_apolar_modes` thanks to the
 functionalities of `find_all_admissible_expansions`.
@@ -148,26 +165,35 @@ a_{j1}(\mathbf{r})$, where we are assuming Einstein's summation rule.
 
 Considering the following Fourier transform we want to study how Bloch functions will transform:
 
-$$ a_{i\alpha}(\mathbf{k},\mathbf{r}) = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k} 
-    \cdot (\mathbf{t}+\mathbf{q}_\alpha)} a_{i\alpha}(\mathbf{r}-\mathbf{t}) $$
+$$
+a_{i\alpha}(\mathbf{k},\mathbf{r}) = 
+\frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot (\mathbf{t}+\mathbf{q}_\alpha)}
+a_{i\alpha}(\mathbf{r}-\mathbf{t})
+$$
 
 Then:
 
-$$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r}) = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} 
-    e^{i\mathbf{k} \cdot (\mathbf{t}+\mathbf{q}_\alpha)} \rho_G(g) 
-    a_{i\alpha}(\mathbf{r}-\mathbf{t}) = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k}
-    \cdot (\mathbf{t}+\mathbf{q}_\alpha)} [\rho(h)]_{ji} a_{j\beta}(\mathbf{r}-R\mathbf{t}-
-    \mathbf{t}_{\beta\alpha}) $$
+$$
+\rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r}) = 
+\frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot (\mathbf{t}+\mathbf{q}_\alpha)} 
+\rho_G(g) a_{i\alpha}(\mathbf{r}-\mathbf{t}) = 
+\\ 
+\frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k} \cdot (\mathbf{t}+\mathbf{q}_\alpha)}
+[\rho(h)]_{ji} a_{j\beta}(\mathbf{r}-R\mathbf{t}-\mathbf{t}_{\beta\alpha})
+$$
 
 If we now make the substitution: $\mathbf{t}^\prime = R\mathbf{t} + \mathbf{t}_{
 \beta\alpha} \Rightarrow \mathbf{t} = R^{-1}\mathbf{t}^\prime - \mathbf{q}_\alpha + R^{-1}
 \mathbf{q}_\beta - R^{-1}\mathbf{v}$, then:
 
-$$ \rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r})
-    = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}^\prime} e^{i\mathbf{k} \cdot 
-    R^{-1}(\mathbf{t}^\prime+\mathbf{q}_\beta - \mathbf{v})} [\rho(h)]_{ji} 
-    a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime) = e^{-i (R\mathbf{k})\cdot\mathbf{v}} 
-    [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r}) $$
+$$
+\rho_G(g) a_{i\alpha}(\mathbf{k},\mathbf{r})
+= \frac{1}{\sqrt{N}} \sum_{\mathbf{t}^\prime} e^{i\mathbf{k} \cdot 
+R^{-1}(\mathbf{t}^\prime+\mathbf{q}_\beta - \mathbf{v})} [\rho(h)]_{ji} 
+a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime) = 
+\\ 
+e^{-i (R\mathbf{k})\cdot\mathbf{v}} [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r})
+$$
 
 This functionality is implemented under the function `sgrep_induced_by_siteir_generators`.
 Take into consideration that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is 
@@ -183,20 +209,26 @@ $\mathbf{q}_\alpha$. At first, we aren't going to differentiate between atomic p
 belonging to different WPs or any integral degrees of freedom. Then the most general
 Hamiltonian of such Bravais lattice can be written as:
 
-$$ \mathcal{H} = \sum_{\mathbf{r}\mathbf{R},\alpha\beta} t_{\alpha\beta,\mathbf{R}} 
-    a_{\alpha,\mathbf{r}}^\dagger a_{\beta,\mathbf{r-R}} + \text{c.c.} $$
+$$
+\mathcal{H} = \sum_{\mathbf{r}\mathbf{R},\alpha\beta} t_{\alpha\beta,\mathbf{R}} 
+a_{\alpha,\mathbf{r}}^\dagger a_{\beta,\mathbf{r-R}} + \text{c.c.}
+$$
 
 We can consider on applying a Fourier transformation to this Hamiltonian, considering the 
 translational invariance of it. Let me consider the following Fourier transform of the fields:
 
-$$ a_{\alpha,\mathbf{k}} = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k}\cdot
-    (\mathbf{t}+\mathbf{q}_\alpha)} a_{\alpha,\mathbf{r-t}} $$
+$$
+a_{\alpha,\mathbf{k}} = \frac{1}{\sqrt{N}} \sum_{\mathbf{t}} e^{i\mathbf{k}\cdot
+(\mathbf{t}+\mathbf{q}_\alpha)} a_{\alpha,\mathbf{r-t}}
+$$
 
 Then the Hamiltonian in $k$-space will look like:
 
-$$ \mathcal{H} = \sum_{\mathbf{kR},\alpha\beta} t_{\alpha\beta,\mathbf{R}} e^{i\mathbf{k}\cdot
-    (\mathbf{q}_\alpha-\mathbf{q}_\beta-\mathbf{R})} a_{\alpha,\mathbf{k}}^\dagger 
-    a_{\beta,\mathbf{k}} $$
+$$
+\mathcal{H} = \sum_{\mathbf{kR},\alpha\beta} t_{\alpha\beta,\mathbf{R}} e^{i\mathbf{k}\cdot
+(\mathbf{q}_\alpha-\mathbf{q}_\beta-\mathbf{R})} a_{\alpha,\mathbf{k}}^\dagger 
+a_{\beta,\mathbf{k}}
+$$
 where we have used that $\sum_\mathbf{r} e^{i(\mathbf{k-k'}) \cdot \mathbf{r}} = N 
 \delta_{\mathbf{k}\mathbf{k'}}$.
 
@@ -243,11 +275,15 @@ $a_0$ will be placed at $x=0$, while $b_1$ will be placed at $x=3/2$ or $a_{-1}$
 
 This orbitals will transform under inversion symmetry in the following way:
 
-$$ \mathcal{I} a_n = a_{-n}; \quad \mathcal{I} b_n = -b_{-n-1} $$ 
+$$
+\mathcal{I} a_n = a_{-n}; \quad \mathcal{I} b_n = -b_{-n-1}
+$$ 
 
 Then the most general inversion-symmetric Hamiltonian for 1-st nearest neighbors will be:
 
-$$ \mathcal{H} = \sum_n t (a_n^\dagger b_n - a_n^\dagger b_{n-1}) + \text{c.c.} $$
+$$
+\mathcal{H} = \sum_n t (a_n^\dagger b_n - a_n^\dagger b_{n-1}) + \text{c.c.}
+$$
 
 It is easy to check that this Hamiltonian is inversion symmetric.
 
@@ -255,7 +291,9 @@ If we consider the following Fourier transform: $a_n = \frac{1}{\sqrt{N}} \sum_n
 and $b_n = \frac{1}{\sqrt{N}} \sum_n e^{-ik(n+1/2)} b_k$
 then the Hamiltonian in $k$-space will look like:
 
-$$ \mathcal{H} = \sum_k 2it \sin(k/2) a_k^\dagger b_k + \text{c.c} $$
+$$
+\mathcal{H} = \sum_k 2it \sin(k/2) a_k^\dagger b_k + \text{c.c}
+$$
 
 ### Deduction from our method
 
@@ -269,19 +307,25 @@ First, let me consider the translation $t=0$. Then, remember that $\Delta_{\alph
 
 Then the non-symmetrized Hamiltonian for this translation will be:
 
-$$ H_{k,0} = \begin{pmatrix} t_{a\to a} & t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2} \\ 
-    t_{a\to b}^1e^{ik/2}+t_{a\to b}^2e^{-ik/2} & t_{b\to b} \end{pmatrix} $$
+$$
+H_{k,0} = \begin{pmatrix} t_{a\to a} & t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2} \\ 
+t_{a\to b}^1e^{ik/2}+t_{a\to b}^2e^{-ik/2} & t_{b\to b} \end{pmatrix}
+$$
 
 Let's proceed now to symmetrize this Hamiltonian. Since we only have inversion we only need 
 to check that: $H_{k,0} = \rho(\mathcal{I})H_{k,0}\rho^{-1}(\mathcal{I})$, where:
 
-$$\rho(\mathcal{I}) = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}$$
+$$
+\rho(\mathcal{I}) = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}
+$$
 
 Then, that constraint impose that: $\left\{ \begin{matrix} t_{b\to a}^1 = -t_{b\to a}^2 \\
 t_{a\to b}^1 = -t_{a\to b}^2 \end{matrix} \right.$, so the Hamiltonian will look like:
 
-$$ H_{k,0} = \begin{pmatrix} t_{a\to a} & 2it_{b\to a} \sin(k/2) \\ 
-    2it_{a\to b} \sin(k/2) & t_{b\to b} \end{pmatrix} $$
+$$
+H_{k,0} = \begin{pmatrix} t_{a\to a} & 2it_{b\to a} \sin(k/2) \\ 
+2it_{a\to b} \sin(k/2) & t_{b\to b} \end{pmatrix}
+$$
 
 Which is exactly the Hamiltonian deduced with the previous method but with onsite terms and 
 without hermiticity imposed.
@@ -295,38 +339,49 @@ perform linear algebra with it.
 Let me start with our previous example. For this let me focus on only one hopping term. In 
 this case it will be $b \to a$. The Hamiltonian for this term will look like:
 
-$$ H_{k,0}^{b \to a} = t_{b\to a}^1e^{ik/2}+t_{b\to a}^2e^{-ik/2}  $$
+$$
+H_{k,0}^{b \to a} = t_{b\to a}^{1/2} e^{ik/2} + t_{b\to a}^{-1/2} e^{-ik/2}
+$$
 
 This term can be obtained by just knowing the class $\{\Delta_{a\to b}\}$. Knowing this we 
 can define two vectors such that:
 
-$$ \mathbf{v}^T = \begin{pmatrix}
+$$
+\mathbf{v}^T = \begin{pmatrix}
     e^{ik/2} & e^{-ik/2} \\
 \end{pmatrix}; \quad \mathbf{t} = \begin{pmatrix}
-    t_{b\to a}^1 \\
-    t_{b\to a}^2
-\end{pmatrix} $$
+    t_{b\to a}^{1/2} \\
+    t_{b\to a}^{-1/2}
+\end{pmatrix}
+$$
 
 Then $H_{k,0}^{b \to a}$ can be written as:
 
-$$ H_{k,0}^{b \to a} = \mathbf{v}^T \underbrace{\begin{pmatrix}
+$$
+H_{k,0}^{b \to a} = \mathbf{v}^T \underbrace{\begin{pmatrix}
     1 & 0 \\
     0 & 1
-\end{pmatrix}}_{M^{b \to a}_0} \mathbf{t} $$
+\end{pmatrix}}_{M^{b \to a}_0} \mathbf{t}
+$$
 
 In general, I think, this can be performed by creating an identity matrix of dimension 
-$\#\{\Delta_{b\to a}\} \times (\#\{\Delta_{b\to a}\} \times \mu_a \times \mu_b)$.
+$\#\{\Delta_{b\to a}\} \times (\#\{\Delta_{b\to a}\} \times \#\Delta_{b\to a} \times \mu_a 
+\times \mu_b)$.
 
 How a symmetry transformation will look like if I apply the symmetries to $M$ instead of $H$.
 Then they will look as:
 
-$$ \rho_G(g)_{im} H^{mn}_{k} \rho_G^{-1}(g)_{mj} = v_\alpha \rho_G(g)_{im} M^{mn}_{\alpha\beta} 
-    \rho_G^{-1}(g)_{nj} t_\beta $$
+$$
+\rho_G(g)_{im} H^{mn}_{k} \rho_G^{-1}(g)_{mj} = v_\alpha \rho_G(g)_{im} M^{mn}_{\alpha\beta} 
+\rho_G^{-1}(g)_{nj} t_\beta
+$$
 
 and
 
-$$ H_{gk}^{ij} = permuted(\mathbf{v}^T) M^{ij} \mathbf{t} = \mathbf{v}^T permuted(M^{ij}) 
-    \mathbf{t} $$
+$$
+H_{gk}^{ij} = permuted(\mathbf{v}^T) M^{ij} \mathbf{t} = \mathbf{v}^T permuted(M^{ij}) 
+\mathbf{t}
+$$
 
 #### How do we obtain such permutation?
 
@@ -338,12 +393,77 @@ $M$ then the operation will be performed.
 
 ## Methodology on how to write a symbolic Hamiltonian in Julia
 
-Let us consider a term in a general Hamiltonian which describes the hopping term 
-between two EBRs. For the sake of simplicity let us call them $(\mathbf{q}_1|A)$ and 
-$(\mathbf{q}_2|B)$, where $\mathbf{q}_i$ represent a certain WP in the SG and $A$ and $B$ 
+Let us know explain in a formal way the strategy followed before.
+
+For that purpose, let us consider a term in a general Hamiltonian which describes the hopping 
+term between two EBRs. For the sake of simplicity let us call them $(\mathbf{q}|A)$ and 
+$(\mathbf{w}|B)$, where $\mathbf{q}_i$ represent a certain WP in the SG and $A$ and $B$ 
 are two site-symmetry irreps of any dimension.
+
+For the sake of notation, we will denote each point in the WPs and each term in the 
+site-symmetry irreps in a similar fashion:
+
+$$
+\mathbf{q}: q_1, q_2, \dots, q_N \\
+\mathbf{w}: w_1, w_2, \dots, w_M \\
+A: A_1, A_2, \dots, A_J \\
+B: B_1, B_2, \dots, B_K
+$$
+
+As we have discussed previously, in reciprocal space the Hamiltonian can be written as a 
+matrix where each row denote an orbital from the "arriving" EBR and the column an orbital 
+from the "departing" EBR. Because of this the Hamiltonian can be described by a 
+$(\#\mathbf{q},\text{dim}(A)) \times (\#\mathbf{w},\text{dim}(B))$. Each of its components 
+will be a complex number which depend on the vector $\mathbf{k}$ and on some free-parameters 
+that later on we will adjust to obtain the band structure.
+
+In order to obtain such Hamiltonian in `Julia`, we will need to do some previous steps so
+we can code such a symbolic structure into our numeric language.
 
 The first step we need to do is to find all the possible hopping distances that can be 
 found between this two EBRs. Obviously that set will be infinite so we need to impose a 
 particular cutoff. As explained above, we will impose it by constraining the hopping terms
-to a particular set of lattice translations (and obviously theirs symmetry partners). 
+to a particular set of lattice translations (and obviously theirs symmetry partners). This 
+complex structure is computed in the function `obtain_symmetry_related_hoppings`, where we
+provide a set of representatives of hopping distances which which is associated to a set of
+hopping terms that are symmetry related.
+
+Inside of one of this representatives we will find different hopping distances $\delta s = 
+[\delta_1, \delta_2, \dots, \delta_n]$, which will be associated to different hopping terms:
+
+$$
+\delta_1: q_i \to w_j + G_k, q_l \to w_l + G_n, \dots \\
+\delta_2: q_o \to w_p + G_r, q_s \to w_t + G_z, \dots \\
+\vdots
+$$
+
+where $G_k$ are some particular lattice translations.
+
+With this information we are able to numerically codify the Hamiltonian by terms as we will 
+show in the following.
+
+First, as we know that all the symmetry related hopping distances, for the cutoff assumed, 
+are stored in the output of `obtain_symmetry_related_hoppings`, we can use them to create an 
+abstract vector $\mathbf{v}$ which will store the phases that will appear in the 
+Hamiltonian's term in reciprocal space. Being specific, this vector would like:
+
+$$
+\mathbf{v}^T = [e^{i\mathbf{k}\cdot\delta_1}, e^{i\mathbf{k}\cdot\delta_2}, \dots, 
+e^{i\mathbf{k}\cdot\delta_n}]
+$$
+
+Note that we are going to use here the order provided by the function 
+`obtain_symmetry_related_hoppings` to store this phases.
+
+Additionally, we will need to assign a free-parameter to each orbital hopping term in the 
+Hamiltonian (the ones that afterwards we will tune to replicate the band structure). This 
+vector then will have a length of $\text{len}(\delta s) \times \# \mathbf{q} \times \# 
+\mathbf{w} \times \text{dim}(A) \times \text{dim}(B)$. In particular this vector will look 
+like this:
+
+$$
+t = [t(\delta_1), \dots, t(\delta_2), \dots, t(\delta_n)]
+$$
+
+where each $t(\delta_i)$ represent a collection of free-parameter. One per hopping term 
+inside the hopping distance $\delta_i$.
