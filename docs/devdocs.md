@@ -371,16 +371,44 @@ $\#\{\Delta_{b\to a}\} \times (\#\{\Delta_{b\to a}\} \times \#\Delta_{b\to a} \t
 How a symmetry transformation will look like if I apply the symmetries to $M$ instead of $H$.
 Then they will look as:
 
-$$
-\rho_G(g)_{im} H^{mn}_{k} \rho_G^{-1}(g)_{mj} = v_\alpha \rho_G(g)_{im} M^{mn}_{\alpha\beta} 
-\rho_G^{-1}(g)_{nj} t_\beta
-$$
+$$ \rho_G(g)_{im} H^{mn}_{k} \rho_G^{-1}(g)_{mj} = v_\alpha \rho_G(g)_{im} M^{mn}_{\alpha\beta} 
+    \rho_G^{-1}(g)_{nj} t_\beta $$
 
-and
+So, we can represent the action of $\rho_G(g)H_k\rho_G(g)^{-1}$ as:
 
 $$
-H_{gk}^{ij} = permuted(\mathbf{v}^T) M^{ij} \mathbf{t} = \mathbf{v}^T permuted(M^{ij}) 
-\mathbf{t}
+    (\rho_G(g)H_k\rho_G(g)^{-1})_{ij}
+    =
+    v_\alpha R_{ij,\alpha\beta}(g) t_\beta
+    \text{ with }
+    R_{ij,\alpha\beta}(g) = \rho_G(g)_{im}M_{\alpha\beta}^{mn}\rho_G^{-1}(g)_{nj}
+$$
+
+or, in matrix notation,
+
+$$
+    \rho_G(g)H_k\rho_G(g)^{-1}
+    =
+    v_\alpha \mathbf{R}_{\alpha\beta}(g) t_\beta
+    \text{ with }
+    \mathbf{R}_{\alpha\beta}(g) = \bm{\rho}_G(g)\mathbf{M}_{\alpha\beta}\bm{\rho}_G^{-1}(g)
+$$
+
+Or, defining $\mathbf{R}$ as a block-matrix with elements $\mathbf{R}_{\alpha\beta}$, we have:
+
+$$
+    \rho_G(g)H_k\rho_G(g)^{-1} = \mathbf{v}^T \mathbf{R} \mathbf{t}
+$$
+
+The transformation $H(gk)$, on the other hand, becomes:
+
+$$ H(gk)_{ij} = \text{permuted}(\mathbf{v})^T \mathbf{M}^{ij} \mathbf{t} = \mathbf{v}^T \text{permuted}(\mathbf{M})^{ij}
+    \mathbf{t} $$
+
+The permutation of $\mathbf{v}$ can be realized by a permutation matrix $\mathbf{P}(g)$, s.t. $\text{permuted}(\mathbf{v}^T) = \mathbf{P}(g)\mathbf{v}$, s.t.:
+
+$$
+    \text{permuted}(M)^{ij} = \mathbf{P}(g)^T \mathbf{M}^{ij}
 $$
 
 #### How do we obtain such permutation?
