@@ -339,7 +339,6 @@ function tb_hamiltonian(
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
             δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
-            #tbs[block_i, block_j] = TightBindingBlock{D}[]#(undef, length(δss))
             δss_vals = collect(values(δss)) # TODO: this is not great...
             for (n, δs) in enumerate(δss_vals)
                 or, Mm, t_αβ_basis = constraint_matrices(br1, br2, δs)
@@ -359,6 +358,7 @@ end
 Base.show(io::IO, tbe_str::TightBindingElementString) = print(io, tbe_str.s)
 
 struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
+    # TODO: figure out how much of this is needed, then refactor and "type" everything
     block_ij :: Tuple{Int, Int}
     global_ij :: Tuple{Int, Int}
     br1 :: NewBandRep{D}
@@ -373,7 +373,6 @@ Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
     exp_strs = Vector{String}(undef, length(tbb.δs))
     for (n, δ) in enumerate(tbb.δs)
-        # encode 1,2,3 components of k as α,β,γ of k
         io_kr = IOBuffer()
         first_nonzero = true
         for (l, δₗ) in enumerate(δ[1].cnst)
