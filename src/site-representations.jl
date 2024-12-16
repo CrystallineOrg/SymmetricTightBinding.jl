@@ -93,6 +93,7 @@ end
 
 
 function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
+    # TODO: primitivize the generators of the space group
     gens = generators(num(brs), SpaceGroup{D})
     ρs = [Matrix{Complex}(undef, 0, 0) for _ in eachindex(gens)]
 

@@ -46,6 +46,8 @@ function obtain_symmetry_related_hoppings(
                     # q_i -> w_j + R. For that reason we make the following changes:
                     _qₐ′ = Ρ * qₐ
                     _qᵦ′ = Ρ * qᵦ
+                    # TODO: possible problem with the reduce_translation_to_unitrange.
+                    # Results different for the ones in wps1 and wps2 in SG 42.
                     qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
                     qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
                     dₐ = (Ρ * qₐ) - qₐ′
@@ -121,7 +123,7 @@ function hamiltonian_term_order(
     V1, V2, = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
-                        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
+        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
     for i in 1:V1
         for j in 1:V2
             for k in 1:Q1
@@ -174,7 +176,7 @@ function construct_M_matrix(
             for (x, hop) in enumerate(δ_r)
                 if hop[1] ≈ q && hop[2] ≈ w
                     offset1 = (x - 1) * Q
-                    c = offset0 + offset1 + (j-1)*Q1 + i
+                    c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
                 end
             end
@@ -255,6 +257,8 @@ function symmetry_constraint_solution(
     t_αβ_basis_matrix_form′ = poormans_sparsification(t_αβ_basis_matrix_form)
     t_αβ_basis = [collect(v) for v in eachcol(t_αβ_basis_matrix_form′)]
 
+    # NOTE: why do we not keep the matrix notation?
+
     # prune near-zero elements of basis vectors
     prune_at_threshold!(t_αβ_basis)
 
@@ -263,6 +267,7 @@ end
 
 """
 Build the Z matrix for a particular symmetry operation acting on k-space over the M matrix.
+WARNING: the generators should be given in the primitive basis.
 """
 function reciprocal_contraints_matrices(
     Mm::AbstractArray{<:Number,4},
@@ -285,13 +290,14 @@ end
 
 """
 Build the P matrix for a particular symmetry operation acting on k-space, which permutes 
-the rows of the M matrix. 
+the rows of the M matrix. WARNING: we assume that the operation is primitive.
 """
 function permute_symmetry_related_hoppings_under_symmetry_operation(
     δ_hops::Vector{RVec{D}}, op::SymOperation
 ) where {D}
     P = zeros(Int, length(δ_hops), length(δ_hops))
     for (i, δ) in enumerate(δ_hops)
+        # TODO: we didn't primitive the operation. Possible source of error.
         δ′ = compose(op, δ)
         j = findfirst(==(δ′), δ_hops)
         isnothing(j) && error(lazy"hopping element $δ not closed under $op in $δ_hops")
@@ -339,10 +345,10 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 function tb_hamiltonian(
-    cbr :: CompositeBandRep{D},
-    Rs :: AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to consider
-) where D
-    if any(c->!isinteger(c) || c<0, cbr.coefs)
+    cbr::CompositeBandRep{D},
+    Rs::AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to consider
+) where {D}
+    if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("provided composite bandrep is not Wannierizable: contains negative or noninteger coefficients")
     end
     coefs = round.(Int, cbr.coefs)
@@ -351,24 +357,25 @@ function tb_hamiltonian(
     idx = 0
     for (i, c) in enumerate(coefs)
         for _ in 1:c
-            brs[idx += 1] = cbr.brs[i]
+            brs[idx+=1] = cbr.brs[i]
         end
     end
     Norbs = count_bandrep_orbitals.(brs)
-    tbs = [BlockMatrix{TightBindingElementString, Matrix{TightBindingBlock{D}}}(
-                                            undef_blocks, Norbs, Norbs) for _ in values(Rs)]
+    tbs = [BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}(
+        undef_blocks, Norbs, Norbs) for _ in values(Rs)]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
-        # TODO: maybe only need to go over upper triangular part of loop cf. hermicity
+        # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
             δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
-            δss_vals = collect(values(δss)) # TODO: this is not great...
+            δss_vals = collect(values(δss)) # TODO: this is not great... 
+            # Maybe: Iterators.flatten(values(δss))
             for (n, δs) in enumerate(δss_vals)
-                or, Mm, t_αβ_basis = constraint_matrices(br1, br2, δs)
+                or, Mm, t_αβ_basis = symmetry_constraint_solution(br1, br2, δs)
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
-                        (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                        or, Mm, t_αβ_basis, δs, c_idx_start:c_idx_start+length(t_αβ_basis))
+                    (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
+                    or, Mm, t_αβ_basis, δs, c_idx_start:c_idx_start+length(t_αβ_basis))
                 c_idx_start += length(t_αβ_basis)
             end
         end
@@ -377,21 +384,21 @@ function tb_hamiltonian(
 end
 
 struct TightBindingElementString
-    s :: String
+    s::String
 end
 Base.show(io::IO, tbe_str::TightBindingElementString) = print(io, tbe_str.s)
 
 struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     # TODO: figure out how much of this is needed, then refactor and "type" everything
-    block_ij :: Tuple{Int, Int}
-    global_ij :: Tuple{Int, Int}
-    br1 :: NewBandRep{D}
-    br2 :: NewBandRep{D}
+    block_ij::Tuple{Int,Int}
+    global_ij::Tuple{Int,Int}
+    br1::NewBandRep{D}
+    br2::NewBandRep{D}
     or
-    Mm :: Array{Int, 4}
-    t_αβ_basis :: Vector{Vector{ComplexF64}}
+    Mm::Array{Int,4}
+    t_αβ_basis::Vector{Vector{ComplexF64}}
     δs
-    c_idxs :: UnitRange{Int}
+    c_idxs::UnitRange{Int}
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
@@ -402,12 +409,12 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         for (l, δₗ) in enumerate(δ[1].cnst)
             abs2δₗ = 2abs(δₗ)
             abs2δₗ < SPARSIFICATION_ATOL_DEFAULT && continue
-            if δₗ<0 || !first_nonzero
+            if δₗ < 0 || !first_nonzero
                 print(io_kr, Crystalline.signaschar(δₗ))
             end
             first_nonzero = false
             str_enum, v_r, v_str = _stringify_characters(abs2δₗ)
-            str_enum == REAL_STR || error("unexpected imaginary component in exponential argument $abs2δₗ")
+            str_enum == REAL_STR || error(lazy"unexpected imaginary component in exponential argument $abs2δₗ")
             isone(v_r) || print(io_kr, v_str)
             print(io_kr, "k", Crystalline.subscriptify(string(l)))
         end
@@ -425,8 +432,8 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
     io = IOBuffer()
     first_t_αβ_basis_vec = true
     for k in eachindex(tbb.t_αβ_basis)
-        Mⁱʲtᵏ = Mm[:,:,i,j] * tbb.t_αβ_basis[k]
-        nnz_els = count(v -> abs(v)>SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
+        Mⁱʲtᵏ = Mm[:, :, i, j] * tbb.t_αβ_basis[k]
+        nnz_els = count(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
         nnz_els == 0 && continue
         first_t_αβ_basis_vec || (first_t_αβ_basis_vec = false; print(io, " + "))
         print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
@@ -478,12 +485,12 @@ function _stringify_characters(c::Number; digits::Int=3)
         return (REAL_STR, cr, string(cr))
 
     elseif iszero(cr) # imaginary
-        isinteger(ci) && return (IMAG_STR, ci, string(Int(ci))*"i")
-        return (IMAG_STR, ci, string(ci)*"i")
+        isinteger(ci) && return (IMAG_STR, ci, string(Int(ci)) * "i")
+        return (IMAG_STR, ci, string(ci) * "i")
 
     else              # complex
         if isinteger(cr) && isinteger(ci)
-            return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr,ci))
+            return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr, ci))
         else
             return COMPLEX_STR, zero(cr), _complex_as_compact_string(c′)
         end
