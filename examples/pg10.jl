@@ -15,8 +15,8 @@ br2 = brs[5]
 wp1 = orbit(group(br1))
 wp2 = orbit(group(br2))
 
-sgrep1 = sgrep_induced_by_siteir_generators(br1)
-sgrep2 = sgrep_induced_by_siteir_generators(br2)
+gens, sgrep1 = sgrep_induced_by_siteir_generators(br1)
+gens, sgrep2 = sgrep_induced_by_siteir_generators(br2)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 

@@ -1,5 +1,5 @@
 using LinearAlgebra: nullspace
-
+using Crystalline: isapproxin
 """
 Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
@@ -52,10 +52,18 @@ function obtain_symmetry_related_hoppings(
                     dᵦ = (Ρ * qᵦ) - qᵦ′
                     R′ = (Ρ * R) + dᵦ - dₐ
                     δ′ = Ρ * δ
-                    idx = findfirst(v -> first(v) == δ′, δsdd[δ])
-                    if !in(δ′, keys(δsdd)) && isnothing(idx)
+                    idx = findfirst(v -> first(v) ≈ δ′, δsdd[δ])
+                    if !isapproxin(δ′, keys(δsdd)) && isnothing(idx)
                         push!(δsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
-                    elseif !isnothing(idx) && !in((qₐ′, qᵦ′, R′), last(δsdd[δ][something(idx)]))
+                    end
+
+                    isnothing(idx) && continue
+                    # check whether (qₐ′, qᵦ′, R′) ∈ last(δsdd[δ][something(idx)]), with
+                    # approximate equality
+                    bool = any(last(δsdd[δ][something(idx)])) do (qₐ′′, qᵦ′′, R′′)
+                        isapprox(qₐ′, qₐ′′) && isapprox(qᵦ′, qᵦ′′) && isapprox(R′, R′′)
+                    end
+                    if !bool
                         push!(last(δsdd[δ][something(idx)]), (qₐ′, qᵦ′, R′))
                     end
                 end
@@ -205,23 +213,22 @@ function representation_constraint_matrices(
     return Q
 end
 
-function constraint_matrices(br_α::NewBandRep, br_β::NewBandRep, δs)
+function constraint_matrices(br_α::NewBandRep{D}, br_β::NewBandRep{D}, δs) where D
     # We obtain the needed representations over the generators of each bandrep
-    gens_and_ρs_αα = sgrep_induced_by_siteir_generators(br_α)
-    gens_and_ρs_ββ = sgrep_induced_by_siteir_generators(br_β)
+    gens_α, ρs_αα = sgrep_induced_by_siteir_generators(br_α)
+    gens_β, ρs_ββ = sgrep_induced_by_siteir_generators(br_β)
+    @assert gens_α == gens_β # must be from same space group and in same sorting
+
+    # cast generators to primitive basis
+    cntr = centering(num(br_α), D)
+    gens = cntr ∈ ('P', 'p') ? gens_α : primitivize.(gens_α, cntr)
 
     # compute the tensor M that encodes the Hamiltonian as a numerical matrix
     or, Mm = construct_M_matrix(δs, br_α, br_β)
 
     # compute the Q tensor, encoding representation constraints on H_αβ
-    Qs = Vector{Array{Complex,4}}(undef, length(gens_and_ρs_αα))
-    gens = Vector{SymOperation}(undef, length(gens_and_ρs_αα))
-    for (i, (gen_and_ρ_αα, gen_and_ρ_ββ)) in enumerate(zip(gens_and_ρs_αα, gens_and_ρs_ββ))
-        gen_α, gen_β = first(gen_and_ρ_αα), first(gen_and_ρ_ββ)
-        gen_α == gen_β || error(lazy"bandrep generators differ; they should not")
-        gens[i] = gen_α
-
-        ρ_αα, ρ_ββ = last(gen_and_ρ_αα), last(gen_and_ρ_ββ)
+    Qs = Vector{Array{Complex,4}}(undef, length(gens))
+    for (i, (ρ_αα, ρ_ββ)) in enumerate(zip(ρs_αα, ρs_ββ))
         Qs[i] = representation_constraint_matrices(Mm, ρ_αα, ρ_ββ)
     end
 
@@ -272,7 +279,11 @@ function permute_symmetry_related_hoppings_under_symmetry_operation(
     P = zeros(Int, length(δ_hops), length(δ_hops))
     for (i, δ) in enumerate(δ_hops)
         δ′ = compose(op, δ)
-        j = findfirst(==(δ′), δ_hops)
+        j = findfirst(≈(δ′), δ_hops)
+        @show δ
+        @show xyzt(op)
+        @show δ′
+        @show δ_hops
         isnothing(j) && error(lazy"hopping element $δ not closed under $op in $δ_hops")
         P[i, j] = 1
         # P acts as g on v: g v = P v so (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
@@ -330,21 +341,36 @@ function tb_hamiltonian(
             brs[idx += 1] = cbr.brs[i]
         end
     end
+    # find all families of hoppings between involved band representations
+    representative_δs = RVec{D}[]
+    for br1 in brs
+        for br2 in brs
+            δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            for δ in keys(δss)
+                if !isapproxin(δ, representative_δs)
+                    push!(representative_δs, δ)
+                end
+            end
+        end
+    end
+
     Norbs = count_bandrep_orbitals.(brs)
     tbs = [BlockMatrix{TightBindingElementString, Matrix{TightBindingBlock{D}}}(
-                                            undef_blocks, Norbs, Norbs) for _ in values(Rs)]
+                                    undef_blocks, Norbs, Norbs) for _ in representative_δs]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
         # TODO: maybe only need to go over upper triangular part of loop cf. hermicity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
             δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
-            δss_vals = collect(values(δss)) # TODO: this is not great...
-            for (n, δs) in enumerate(δss_vals)
-                or, Mm, t_αβ_basis = constraint_matrices(br1, br2, δs)
-                tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
-                        (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                        or, Mm, t_αβ_basis, δs, c_idx_start:c_idx_start+length(t_αβ_basis))
+            for (δ, δhops) in δss
+                n = something(findfirst(≈(δ), representative_δs))
+                or, Mm, t_αβ_basis = constraint_matrices(br1, br2, δhops)
+
+                A = TightBindingBlock{D}(
+                    (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
+                    or, Mm, t_αβ_basis, δhops, c_idx_start:c_idx_start+length(t_αβ_basis))
+                tbs[n][Block(block_i), Block(block_j)] = A
                 c_idx_start += length(t_αβ_basis)
             end
         end
@@ -436,7 +462,16 @@ end
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
 
 
-count_bandrep_orbitals(br) = multiplicity(position(br)) * irdim(br.siteir)
+function count_bandrep_orbitals(br::NewBandRep{D}) where D
+    mult = multiplicity(position(br)) # multiplicity in conventional setting
+    # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
+    # divide by the the number of centering-translations
+    cntr = centering(num(br), D)
+    denom = centering_volume_fraction(cntr, Val(D), Val(D))
+    mult = div(mult, denom)
+
+    return mult * irdim(br.siteir)
+end
 
 # ---------------------------------------------------------------------------------------- #
 # pretty-printing of scalars
