@@ -32,7 +32,7 @@ function obtain_symmetry_related_hoppings(
 
     δsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}}()
     for R in Rs
-        R = RVec(R) # change the type of R to be type consistent
+        R = RVec{D}(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # to work with the RVec type directly
             qᵦ = parent(qᵦ) # same as above
@@ -121,7 +121,7 @@ function hamiltonian_term_order(
     V1, V2, = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
-        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
+                        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
     for i in 1:V1
         for j in 1:V2
             for k in 1:Q1
@@ -148,11 +148,10 @@ function construct_M_matrix(
     br1::NewBandRep{D},
     br2::NewBandRep{D},
 ) where {D}
-
     V = length(δs)
     E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
     foreach(δs) do (_, δ_r)
-        length(δ_r) == E || error("Unexpected had different counts of elements across δ_r")
+        length(δ_r) == E || error("Unexpectedly had different counts of elements across δ_r")
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
@@ -165,17 +164,17 @@ function construct_M_matrix(
     Mm = zeros(Int, V, V * E * Q, size(order)[1], size(order)[2])
 
     for α in axes(order, 1), β in axes(order, 2)
-        ((i, q), (j, w)) = order[α, β]
+        (i, q), (j, w) = order[α, β]
         q = parent(q)
         w = parent(w)
 
-        ## Introduce code that assigns a 1 to the correct position
+        # assign a 1 to the correct position
         for (r, (_, δ_r)) in enumerate(δs)
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(δ_r)
-                if hop[1] == q && hop[2] == w
+                if hop[1] ≈ q && hop[2] ≈ w
                     offset1 = (x - 1) * Q
-                    c = offset0 + offset1 + i + j - 1
+                    c = offset0 + offset1 + (j-1)*Q1 + i
                     Mm[r, c, α, β] = 1
                 end
             end
@@ -311,4 +310,163 @@ function prune_at_threshold!(
         end
     end
     return vs
+end
+
+# ---------------------------------------------------------------------------------------- #
+
+function tb_hamiltonian(
+    cbr :: CompositeBandRep{D},
+    Rs :: AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to consider
+) where D
+    if any(c->!isinteger(c) || c<0, cbr.coefs)
+        error("provided composite bandrep is not Wannierizable: contains negative or noninteger coefficients")
+    end
+    coefs = round.(Int, cbr.coefs)
+
+    brs = Vector{NewBandRep{D}}(undef, sum(coefs))
+    idx = 0
+    for (i, c) in enumerate(coefs)
+        for _ in 1:c
+            brs[idx += 1] = cbr.brs[i]
+        end
+    end
+    Norbs = count_bandrep_orbitals.(brs)
+    tbs = [BlockMatrix{TightBindingElementString, Matrix{TightBindingBlock{D}}}(
+                                            undef_blocks, Norbs, Norbs) for _ in values(Rs)]
+    c_idx_start = 1
+    for (block_i, br1) in enumerate(brs)
+        # TODO: maybe only need to go over upper triangular part of loop cf. hermicity
+        #       (br1 vs br2 ~ br2 vs. br1)?
+        for (block_j, br2) in enumerate(brs)
+            δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            δss_vals = collect(values(δss)) # TODO: this is not great...
+            for (n, δs) in enumerate(δss_vals)
+                or, Mm, t_αβ_basis = constraint_matrices(br1, br2, δs)
+                tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
+                        (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
+                        or, Mm, t_αβ_basis, δs, c_idx_start:c_idx_start+length(t_αβ_basis))
+                c_idx_start += length(t_αβ_basis)
+            end
+        end
+    end
+    return tbs
+end
+
+struct TightBindingElementString
+    s :: String
+end
+Base.show(io::IO, tbe_str::TightBindingElementString) = print(io, tbe_str.s)
+
+struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
+    # TODO: figure out how much of this is needed, then refactor and "type" everything
+    block_ij :: Tuple{Int, Int}
+    global_ij :: Tuple{Int, Int}
+    br1 :: NewBandRep{D}
+    br2 :: NewBandRep{D}
+    or
+    Mm :: Array{Int, 4}
+    t_αβ_basis :: Vector{Vector{ComplexF64}}
+    δs
+    c_idxs :: UnitRange{Int}
+end
+Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
+function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
+    exp_strs = Vector{String}(undef, length(tbb.δs))
+    for (n, δ) in enumerate(tbb.δs)
+        io_kr = IOBuffer()
+        first_nonzero = true
+        for (l, δₗ) in enumerate(δ[1].cnst)
+            abs2δₗ = 2abs(δₗ)
+            abs2δₗ < SPARSIFICATION_ATOL_DEFAULT && continue
+            if δₗ<0 || !first_nonzero
+                print(io_kr, Crystalline.signaschar(δₗ))
+            end
+            first_nonzero = false
+            str_enum, v_r, v_str = _stringify_characters(abs2δₗ)
+            str_enum == REAL_STR || error("unexpected imaginary component in exponential argument $abs2δₗ")
+            isone(v_r) || print(io_kr, v_str)
+            print(io_kr, "k", Crystalline.subscriptify(string(l)))
+        end
+        exp_arg = String(take!(io_kr))
+        if !isempty(exp_arg)
+            exp_strs[n] = "𝕖(" * exp_arg * ")" # short-hand: 𝕖(x) = exp(iπx)
+        else
+            exp_strs[n] = "" # = 1, but omit for compactness
+        end
+    end
+    exp_strs
+
+    Mm = tbb.Mm
+
+    io = IOBuffer()
+    first_t_αβ_basis_vec = true
+    for k in eachindex(tbb.t_αβ_basis)
+        Mⁱʲtᵏ = Mm[:,:,i,j] * tbb.t_αβ_basis[k]
+        nnz_els = count(v -> abs(v)>SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
+        nnz_els == 0 && continue
+        first_t_αβ_basis_vec || (first_t_αβ_basis_vec = false; print(io, " + "))
+        print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
+        nnz_els > 1 && print(io, "[")
+        first = true
+        for (n, v) in enumerate(Mⁱʲtᵏ)
+            abs(v) < SPARSIFICATION_ATOL_DEFAULT && continue
+            str_enum, v_r, v_str = _stringify_characters(v)
+            if str_enum == REAL_STR || str_enum == IMAG_STR
+                if isone(abs(v_r))
+                    v_str = ""
+                else
+                    v_str = lstrip(v_str, ('-', '+'))
+                end
+                if first
+                    v_str = (v_r < 0 ? "-" : "") * v_str
+                else
+                    v_str = (v_r < 0 ? " - " : " + ") * v_str
+                end
+            else
+                v_str = (first ? "" : " + ") * "(" * v_str * ")"
+            end
+            print(io, v_str, exp_strs[n])
+            first = false
+        end
+        nnz_els > 1 && print(io, "]")
+    end
+    s = String(take!(io))
+    return TightBindingElementString(s)
+end
+Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
+
+
+count_bandrep_orbitals(br) = multiplicity(position(br)) * irdim(br.siteir)
+
+# ---------------------------------------------------------------------------------------- #
+# pretty-printing of scalars
+
+@enum StrPrintAs begin
+    REAL_STR
+    IMAG_STR
+    COMPLEX_STR
+end
+function _stringify_characters(c::Number; digits::Int=3)
+    c′ = round(c; digits)
+    cr, ci = reim(c′)
+    if iszero(ci)     # real
+        isinteger(cr) && return (REAL_STR, cr, string(Int(cr)))
+        return (REAL_STR, cr, string(cr))
+
+    elseif iszero(cr) # imaginary
+        isinteger(ci) && return (IMAG_STR, ci, string(Int(ci))*"i")
+        return (IMAG_STR, ci, string(ci)*"i")
+
+    else              # complex
+        if isinteger(cr) && isinteger(ci)
+            return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr,ci))
+        else
+            return COMPLEX_STR, zero(cr), _complex_as_compact_string(c′)
+        end
+    end
+end
+function _complex_as_compact_string(c::Complex) # usual string(::Complex) has spaces; avoid that
+    io = IOBuffer()
+    print(io, real(c), Crystalline.signaschar(imag(c)), abs(imag(c)), "i")
+    return String(take!(io))
 end
