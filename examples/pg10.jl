@@ -30,10 +30,8 @@ or, Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
 
 ##----------------------------------------------------------------------------------------##
 
-or, Mm, t_αβ_basis = TETB.constraint_matrices(br1, br2, first(values(δss)))
+or, Mm, t_αβ_basis = TETB.symmetry_constraint_solution(br1, br2, first(values(δss)))
 
-##- Try to debug the problem in constraint matrices --------------------------------------##
-
-
-
-##----------------------------------------------------------------------------------------##
+#TODO: make and structure that encodes everything necessary to define the Hamiltonian and 
+# define a pretty printing of it so it is user friendly. Also if you can introduce all of 
+# the steps into `devdocs.md`.

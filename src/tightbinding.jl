@@ -187,11 +187,13 @@ end
 
 # H_{s,t} = v_i M_{i,j,s,t} t_j
 
-# build the Q matrix for a particular symmetry operation (or, equivalently, a particular
-# matrix from the site-symmetry representation), acting on the M matrix. Relative to our
-# white-board notes, Q has swapped indices, in the sense we below give Q[i,j,r,f].
+"""
+Build the Q matrix for a particular symmetry operation (or, equivalently, a particular
+matrix from the site-symmetry representation), acting on the M matrix. Relative to our
+white-board notes, Q has swapped indices, in the sense we below give Q[i,j,r,f].
+"""
 function representation_constraint_matrices(
-    Mm::Array{Int,4},
+    Mm::AbstractArray{<:Number,4},
     ρ_αα::AbstractMatrix{<:Number},
     ρ_ββ::AbstractMatrix{<:Number}
 )
@@ -206,7 +208,15 @@ function representation_constraint_matrices(
     return Q
 end
 
-function constraint_matrices(br_α::NewBandRep, br_β::NewBandRep, δs)
+"""
+Find the null-space of the constraints impose by symmetries on the Hamiltonian, which 
+translate to Zs = Qs, and returns a basis for the null-space.
+"""
+function symmetry_constraint_solution(
+    br_α::NewBandRep,
+    br_β::NewBandRep,
+    δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
+) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gens_and_ρs_αα = sgrep_induced_by_siteir_generators(br_α)
     gens_and_ρs_ββ = sgrep_induced_by_siteir_generators(br_β)
@@ -252,7 +262,14 @@ function constraint_matrices(br_α::NewBandRep, br_β::NewBandRep, δs)
     return or, Mm, t_αβ_basis
 end
 
-function reciprocal_contraints_matrices(Mm, gens, δs)
+"""
+Build the Z matrix for a particular symmetry operation acting on k-space over the M matrix.
+"""
+function reciprocal_contraints_matrices(
+    Mm::AbstractArray{<:Number,4},
+    gens::Vector{SymOperation},
+    δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}
+) where {D}
     Zs = Vector{Array{Int,4}}(undef, length(gens))
     δ_hops = first.(δs)
     for (i, op) in enumerate(gens)
@@ -267,6 +284,10 @@ function reciprocal_contraints_matrices(Mm, gens, δs)
     return Zs
 end
 
+"""
+Build the P matrix for a particular symmetry operation acting on k-space, which permutes 
+the rows of the M matrix. 
+"""
 function permute_symmetry_related_hoppings_under_symmetry_operation(
     δ_hops::Vector{RVec{D}}, op::SymOperation
 ) where {D}
@@ -285,7 +306,7 @@ end
 Poor man's "matrix sparsification" via the reduced row echelon form.
 """
 function poormans_sparsification(
-    A;
+    A::AbstractMatrix{<:Number};
     rref_tol::Union{Nothing,Float64}=SPARSIFICATION_ATOL_DEFAULT)
     # following appendix E of the Qsymm paper (https://arxiv.org/abs/1806.08363) [copied
     # over from Neumann.jl]
@@ -297,6 +318,9 @@ function poormans_sparsification(
     return transpose(rref(transpose(A)))
 end
 
+"""
+Prune near-zero elements of vectors in `vs`.
+"""
 function prune_at_threshold!(
     vs::AbstractVector{<:AbstractVector{T}};
     atol::Real=PRUNE_ATOL_DEFAULT
