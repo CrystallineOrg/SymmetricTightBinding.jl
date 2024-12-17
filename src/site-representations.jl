@@ -51,13 +51,16 @@ end
 Induce a representation for the generators of the SG from a representation of the site-symmetry 
 group of a particular maximal WP.
 """
-function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
+function sgrep_induced_by_siteir_generators(
+    br::NewBandRep{D},
+    gens::AbstractVector{SymOperation{D}} = generators(num(br), SpaceGroup{D})
+) where {D}
     siteir = br.siteir
     siteir_dim = irdim(siteir)
     siteg = group(siteir)
     wps = orbit(siteg)
     mult = length(wps)
-    gens = generators(num(siteg), SpaceGroup{D})
+    
 
     ρs = [BlockArray{ComplexF64}(
         zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
@@ -80,8 +83,8 @@ function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
             check || error("failed to find any nonzero block")
         end
     end
-
-    return gens .=> ρs
+    
+    return gens, ρs
 end
 
 """
@@ -98,7 +101,7 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
     ρs = [Matrix{Complex}(undef, 0, 0) for _ in eachindex(gens)]
 
     for (idxc, c) in enumerate(brs.coefs)
-        sgrep = sgrep_induced_by_siteir_generators(brs.brs[idxc])
+        sgrep = sgrep_induced_by_siteir_generators(brs.brs[idxc], gens)
         for idxg in eachindex(gens)
             iszero(c) && continue
             ρ_idxg = sgrep[idxg][2]
@@ -107,5 +110,6 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
             end
         end
     end
-    return gens .=> ρs
+
+    return gens, ρs
 end

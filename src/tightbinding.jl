@@ -1,5 +1,5 @@
 using LinearAlgebra: nullspace
-
+using Crystalline: isapproxin
 """
 Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
@@ -30,17 +30,18 @@ function obtain_symmetry_related_hoppings(
     # will obtain a set of tuples that will encode the points of the WPs involved in the 
     # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
 
-    δsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}}()
+    δsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}}()
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
-            qₐ = parent(qₐ) # to work with the RVec type directly
-            qᵦ = parent(qᵦ) # same as above
+            qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
+            qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ
-            if !in(δ, keys(δsdd)) && !in(δ, Iterators.flatten(first.(values(δsdd))))
+            if (!isapproxin(δ, keys(δsdd)) &&
+                !isapproxin(δ, Iterators.map(first, Iterators.flatten(values(δsdd)))))
                 push!(δsdd, δ => [δ => [(qₐ, qᵦ, R)]])
                 for g in ops
-                    Ρ = SymOperation(rotation(g)) # type consitentency for the rotation 
+                    Ρ = SymOperation(rotation(g)) # type consistency for the rotation 
                     # we want to keep the WPs inside the unit cell and put all the posible
                     # translations into the RVec 'R', so we can keep the notation such that
                     # q_i -> w_j + R. For that reason we make the following changes:
@@ -54,11 +55,20 @@ function obtain_symmetry_related_hoppings(
                     dᵦ = (Ρ * qᵦ) - qᵦ′
                     R′ = (Ρ * R) + dᵦ - dₐ
                     δ′ = Ρ * δ
-                    idx = findfirst(v -> first(v) == δ′, δsdd[δ])
-                    if !in(δ′, keys(δsdd)) && isnothing(idx)
+                    idx = findfirst(v -> first(v) ≈ δ′, δsdd[δ])
+                    if !isapproxin(δ′, keys(δsdd)) && isnothing(idx)
                         push!(δsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
-                    elseif !isnothing(idx) && !in((qₐ′, qᵦ′, R′), last(δsdd[δ][something(idx)]))
-                        push!(last(δsdd[δ][something(idx)]), (qₐ′, qᵦ′, R′))
+                    end
+
+                    isnothing(idx) && continue
+                    idx = something(idx)
+                    # evaluate `bool = (qₐ′, qᵦ′, R′) ∈ last(δsdd[δ][idx])`, w/ approximate
+                    # equality comparison
+                    bool = any(last(δsdd[δ][idx])) do (qₐ′′, qᵦ′′, R′′)
+                        isapprox(qₐ′, qₐ′′) && isapprox(qᵦ′, qᵦ′′) && isapprox(R′, R′′)
+                    end
+                    if !bool
+                        push!(last(δsdd[δ][idx]), (qₐ′, qᵦ′, R′))
                     end
                 end
             end
@@ -146,9 +156,10 @@ describing and the first axis refer to the vector `δs` and the second axis to t
 See `devdocs.md` for details.
 """
 function construct_M_matrix(
-    δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
+    δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}},
     br1::NewBandRep{D},
     br2::NewBandRep{D},
+    order=hamiltonian_term_order(br1, br2) # an internal order for the Hamiltonian's terms
 ) where {D}
     V = length(δs)
     E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
@@ -158,13 +169,11 @@ function construct_M_matrix(
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
 
-    # we need to declare an order that the Hamiltonian's term internally has
-    order = hamiltonian_term_order(br1, br2)
-
     # matrix of matrices that will store the matrices for each
     # Hamiltonian's term
-    Mm = zeros(Int, V, V * E * Q, size(order)[1], size(order)[2])
+    Mm = zeros(Int, V, V * E * Q, size(order, 1), size(order, 2))
 
+    # fill in the unit-elements of `Mm`
     for α in axes(order, 1), β in axes(order, 2)
         (i, q), (j, w) = order[α, β]
         q = parent(q)
@@ -183,7 +192,7 @@ function construct_M_matrix(
         end
     end
 
-    return order, Mm
+    return Mm
 end
 
 # H_{s,t} = v_i M_{i,j,s,t} t_j
@@ -209,31 +218,27 @@ function representation_constraint_matrices(
     return Q
 end
 
-"""
-Find the null-space of the constraints impose by symmetries on the Hamiltonian, which 
-translate to Zs = Qs, and returns a basis for the null-space.
-"""
-function symmetry_constraint_solution(
-    br_α::NewBandRep,
-    br_β::NewBandRep,
-    δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}},
+function constraint_matrices(
+    br_α::NewBandRep{D},
+    br_β::NewBandRep{D},
+    δs,
+    order=hamiltonian_term_order(br1, br2)
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
-    gens_and_ρs_αα = sgrep_induced_by_siteir_generators(br_α)
-    gens_and_ρs_ββ = sgrep_induced_by_siteir_generators(br_β)
+    gens_α, ρs_αα = sgrep_induced_by_siteir_generators(br_α)
+    gens_β, ρs_ββ = sgrep_induced_by_siteir_generators(br_β)
+    @assert gens_α == gens_β # must be from same space group and in same sorting
+
+    # cast generators to primitive basis
+    cntr = centering(num(br_α), D)
+    gens = cntr ∈ ('P', 'p') ? gens_α : primitivize.(gens_α, cntr)
 
     # compute the tensor M that encodes the Hamiltonian as a numerical matrix
-    or, Mm = construct_M_matrix(δs, br_α, br_β)
+    Mm = construct_M_matrix(δs, br_α, br_β, order)
 
     # compute the Q tensor, encoding representation constraints on H_αβ
-    Qs = Vector{Array{Complex,4}}(undef, length(gens_and_ρs_αα))
-    gens = Vector{SymOperation}(undef, length(gens_and_ρs_αα))
-    for (i, (gen_and_ρ_αα, gen_and_ρ_ββ)) in enumerate(zip(gens_and_ρs_αα, gens_and_ρs_ββ))
-        gen_α, gen_β = first(gen_and_ρ_αα), first(gen_and_ρ_ββ)
-        gen_α == gen_β || error(lazy"bandrep generators differ; they should not")
-        gens[i] = gen_α
-
-        ρ_αα, ρ_ββ = last(gen_and_ρ_αα), last(gen_and_ρ_ββ)
+    Qs = Vector{Array{Complex,4}}(undef, length(gens))
+    for (i, (ρ_αα, ρ_ββ)) in enumerate(zip(ρs_αα, ρs_ββ))
         Qs[i] = representation_constraint_matrices(Mm, ρ_αα, ρ_ββ)
     end
 
@@ -262,18 +267,14 @@ function symmetry_constraint_solution(
     # prune near-zero elements of basis vectors
     prune_at_threshold!(t_αβ_basis)
 
-    return or, Mm, t_αβ_basis
+    return Mm, t_αβ_basis, order
 end
 
-"""
-Build the Z matrix for a particular symmetry operation acting on k-space over the M matrix.
-WARNING: the generators should be given in the primitive basis.
-"""
 function reciprocal_contraints_matrices(
-    Mm::AbstractArray{<:Number,4},
-    gens::Vector{SymOperation},
-    δs::Vector{Pair{RVec{D},Vector{Tuple{RVec{D},RVec{D},RVec{D}}}}}
-) where {D}
+    Mm::Array{Int,4},
+    gens::AbstractVector{<:SymOperation},
+    δs
+)
     Zs = Vector{Array{Int,4}}(undef, length(gens))
     δ_hops = first.(δs)
     for (i, op) in enumerate(gens)
@@ -293,13 +294,14 @@ Build the P matrix for a particular symmetry operation acting on k-space, which 
 the rows of the M matrix. WARNING: we assume that the operation is primitive.
 """
 function permute_symmetry_related_hoppings_under_symmetry_operation(
-    δ_hops::Vector{RVec{D}}, op::SymOperation
+    δ_hops::Vector{RVec{D}},
+    op::SymOperation
 ) where {D}
     P = zeros(Int, length(δ_hops), length(δ_hops))
     for (i, δ) in enumerate(δ_hops)
         # TODO: we didn't primitive the operation. Possible source of error.
         δ′ = compose(op, δ)
-        j = findfirst(==(δ′), δ_hops)
+        j = findfirst(≈(δ′), δ_hops)
         isnothing(j) && error(lazy"hopping element $δ not closed under $op in $δ_hops")
         P[i, j] = 1
         # P acts as g on v: g v = P v so (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
@@ -360,23 +362,52 @@ function tb_hamiltonian(
             brs[idx+=1] = cbr.brs[i]
         end
     end
+    # find all families of hoppings between involved band representations
+    representative_δs = RVec{D}[]
+    for br1 in brs
+        for br2 in brs
+            δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            for δ in keys(δss)
+                if !isapproxin(δ, representative_δs)
+                    push!(representative_δs, δ)
+                end
+            end
+        end
+    end
+
     Norbs = count_bandrep_orbitals.(brs)
     tbs = [BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}(
-        undef_blocks, Norbs, Norbs) for _ in values(Rs)]
+        undef_blocks, Norbs, Norbs) for _ in representative_δs]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
         # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
             δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
-            δss_vals = collect(values(δss)) # TODO: this is not great... 
-            # Maybe: Iterators.flatten(values(δss))
-            for (n, δs) in enumerate(δss_vals)
-                or, Mm, t_αβ_basis = symmetry_constraint_solution(br1, br2, δs)
+            seen_n = Set{Int}()
+            order = hamiltonian_term_order(br1, br2)
+            for (δ, δhops) in δss
+                n = something(findfirst(≈(δ), representative_δs))
+                push!(seen_n, n)
+                Mm, t_αβ_basis, _ = constraint_matrices(br1, br2, δhops, order)
+
+                A = TightBindingBlock{D}(
+                    (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
+                    order, Mm, t_αβ_basis, δhops, c_idx_start:c_idx_start+length(t_αβ_basis))
+                tbs[n][Block(block_i), Block(block_j)] = A
+                c_idx_start += length(t_αβ_basis)
+            end
+            # blocks for other values of `n` are not featured in `δss` - i.e., vanish, so we
+            # put in manually construct zero blocks for those spots:
+            for n in eachindex(representative_δs)
+                n ∈ seen_n && continue
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                    or, Mm, t_αβ_basis, δs, c_idx_start:c_idx_start+length(t_αβ_basis))
-                c_idx_start += length(t_αβ_basis)
+                    order,
+                    zeros(Int, 0, 0, size(order, 1), size(order, 2)),    # Mm
+                    Vector{Vector{ComplexF64}}(),                        # t_αβ_basis
+                    Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}(), # δs
+                    1:0)                                                 # c_idxs (empty)
             end
         end
     end
@@ -389,16 +420,19 @@ end
 Base.show(io::IO, tbe_str::TightBindingElementString) = print(io, tbe_str.s)
 
 struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
-    # TODO: figure out how much of this is needed, then refactor and "type" everything
     block_ij::Tuple{Int,Int}
     global_ij::Tuple{Int,Int}
     br1::NewBandRep{D}
     br2::NewBandRep{D}
-    or
+    order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
     Mm::Array{Int,4}
     t_αβ_basis::Vector{Vector{ComplexF64}}
-    δs
+    δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}
     c_idxs::UnitRange{Int}
+    # TODO: figure out how much of this is needed, e.g.:
+    # TODO: is it redundant to have both `order` and `δs`? Not completely I guess
+    # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
+    # TODO: do we need the indexing information in `block_ij` and `global_ij`? Probably not
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
@@ -467,7 +501,16 @@ end
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
 
 
-count_bandrep_orbitals(br) = multiplicity(position(br)) * irdim(br.siteir)
+function count_bandrep_orbitals(br::NewBandRep{D}) where {D}
+    mult = multiplicity(position(br)) # multiplicity in conventional setting
+    # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
+    # divide by the the number of centering-translations
+    cntr = centering(num(br), D)
+    denom = centering_volume_fraction(cntr, Val(D), Val(D))
+    mult = div(mult, denom)
+
+    return mult * irdim(br.siteir)
+end
 
 # ---------------------------------------------------------------------------------------- #
 # pretty-printing of scalars

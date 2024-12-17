@@ -18,7 +18,7 @@ gen = generators(num(cbr))
 wps1 = orbit(group(br1))
 wps2 = orbit(group(br2))
 
-sgrep = sgrep_induced_by_siteir_generators(cbr)
+gens, sgrep = sgrep_induced_by_siteir_generators(cbr)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 

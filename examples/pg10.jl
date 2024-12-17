@@ -15,8 +15,8 @@ br2 = brs[5]
 wp1 = orbit(group(br1))
 wp2 = orbit(group(br2))
 
-sgrep1 = sgrep_induced_by_siteir_generators(br1)
-sgrep2 = sgrep_induced_by_siteir_generators(br2)
+gens, sgrep1 = sgrep_induced_by_siteir_generators(br1)
+gens, sgrep2 = sgrep_induced_by_siteir_generators(br2)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 
@@ -26,11 +26,11 @@ Rs = [[0, 0]] # vector containing the translations we want to consider
 
 ##- Compute the matrix M that will encode the Hamiltonian as a numerical matrix ----------##
 
-or, Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
+Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
 
 ##----------------------------------------------------------------------------------------##
 
-or, Mm, t_αβ_basis = TETB.symmetry_constraint_solution(br1, br2, first(values(δss)))
+Mm, t_αβ_basis, order = TETB.constraint_matrices(br1, br2, first(values(δss)))
 
 #TODO: make and structure that encodes everything necessary to define the Hamiltonian and 
 # define a pretty printing of it so it is user friendly. Also if you can introduce all of 
