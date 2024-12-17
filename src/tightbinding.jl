@@ -435,7 +435,15 @@ end
 struct TightBindingElementString
     s::String
 end
-Base.show(io::IO, tbe_str::TightBindingElementString) = print(io, tbe_str.s)
+function Base.show(io::IO, tbe_str::TightBindingElementString)
+    if tbe_str.s == "0"
+        # TODO: change to `printstyled(io, "0"; color=:light_black)` if/when
+        #       https://github.com/JuliaArrays/BlockArrays.jl/pull/443 is merged    
+        print(io, "0")
+    else
+        print(io, tbe_str.s)
+    end
+end
 
 struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     block_ij::Tuple{Int,Int}
@@ -514,6 +522,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         nnz_els > 1 && print(io, "]")
     end
     s = String(take!(io))
+    isempty(s) && (s = "0")
     return TightBindingElementString(s)
 end
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
