@@ -26,11 +26,11 @@ Rs = [[0, 0]] # vector containing the translations we want to consider
 
 ##- Compute the matrix M that will encode the Hamiltonian as a numerical matrix ----------##
 
-or, Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
+Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
 
 ##----------------------------------------------------------------------------------------##
 
-or, Mm, t_αβ_basis = TETB.constraint_matrices(br1, br2, first(values(δss)))
+Mm, t_αβ_basis, order = TETB.constraint_matrices(br1, br2, first(values(δss)))
 
 ##- Try to debug the problem in constraint matrices --------------------------------------##
 
