@@ -1,8 +1,11 @@
 using LinearAlgebra: nullspace
 using Crystalline: isapproxin
 """
-Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
+Compute the symmetry related hopping terms from the points in WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
+
+The vectors provided in `Rs` are just representatives. Because of symmetry operations, 
+bigger primitive lattice vectors could be found.
 
 How it works: 
 1. Take a point `a` in the WP of `br1` and a point `b` in the WP of `br2`. We compute the 
@@ -11,7 +14,7 @@ How it works:
     representative and continue. If not then, we search inside of all the representatives
     for the one that `δ => (a, b, R)` in the list of hoppings. If not found, then we add `δ`
     as a new representative and add `δ =>(a, b, R)` to its list of hoppings.
-3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a,g b, g R)`, and 
+3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, and 
     repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `br1` and `br2`.
 """
@@ -31,61 +34,58 @@ function obtain_symmetry_related_hoppings(
     # positions from a conventional to a primitive basis
     cntr = centering(sgnum, D)
     ops = primitivize(spacegroup(sgnum, D))
-    wps1 = primitivize.(orbit(group(br1)), cntr)
-    wps2 = primitivize.(orbit(group(br2)), cntr)
+    wps1 = primitivize.(Crystalline.orbit(group(br1)), cntr)
+    wps2 = primitivize.(Crystalline.orbit(group(br2)), cntr)
 
     # we are going to create a dictionary of dictionaries. The first set of keys will indicate
     # the representative of the hopping distance and inside it, each dictionary will be 
-    # associated with a point in the "orbit" of that hopping distance. Addtionally, if you 
+    # associated with a point in the "orbit" of that hopping distance. Additionally, if you 
     # look at the value of and specific point inside the "orbit" of one representative you 
     # will obtain a set of tuples that will encode the points of the WPs involved in the 
     # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
 
-    δsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}}()
+    sym_hops = SymmetricHopping[]
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ
-            if (!isapproxin(δ, keys(δsdd)) &&
-                !isapproxin(δ, Iterators.map(first, Iterators.flatten(values(δsdd)))))
-                push!(δsdd, δ => [δ => [(qₐ, qᵦ, R)]])
+            if (!isapproxin(δ, representatives.(sym_hops)) &&
+                any(v -> !isapproxin(δ, v), orbit.(sym_hops)))
+                push!(sym_hops, SymmetricHopping(δ, [δ], [[(qₐ, qᵦ, R)]]))
+
+                sym_hop = sym_hops[end]
                 for g in ops
-                    Ρ = SymOperation(rotation(g)) # type consistency for the rotation 
-                    # we want to keep the WPs inside the unit cell and put all the posible
+                    # Ρ = SymOperation(rotation(g)) # type consistency for the rotation 
+                    # we want to keep the WPs inside the unit cell and put all the possible
                     # translations into the RVec 'R', so we can keep the notation such that
                     # q_i -> w_j + R. For that reason we make the following changes:
-                    _qₐ′ = Ρ * qₐ
-                    _qᵦ′ = Ρ * qᵦ
-                    # TODO: possible problem with the reduce_translation_to_unitrange.
-                    # Results different for the ones in wps1 and wps2 in SG 42.
+
+                    # TODO: possible mistake in here using only the rotation instead of the 
+                    #       whole SymOperation
+                    _qₐ′ = g * qₐ
+                    _qᵦ′ = g * qᵦ
                     qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
                     qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
-                    dₐ = (Ρ * qₐ) - qₐ′
-                    dᵦ = (Ρ * qᵦ) - qᵦ′
-                    R′ = (Ρ * R) + dᵦ - dₐ
-                    δ′ = Ρ * δ
-                    idx = findfirst(v -> first(v) ≈ δ′, δsdd[δ])
-                    if !isapproxin(δ′, keys(δsdd)) && isnothing(idx)
-                        push!(δsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
-                    end
-
-                    isnothing(idx) && continue
-                    idx = something(idx)
-                    # evaluate `bool = (qₐ′, qᵦ′, R′) ∈ last(δsdd[δ][idx])`, w/ approximate
-                    # equality comparison
-                    bool = any(last(δsdd[δ][idx])) do (qₐ′′, qᵦ′′, R′′)
-                        isapprox(qₐ′, qₐ′′) && isapprox(qᵦ′, qᵦ′′) && isapprox(R′, R′′)
-                    end
-                    if !bool
-                        push!(last(δsdd[δ][idx]), (qₐ′, qᵦ′, R′))
+                    dₐ = _qₐ′ - qₐ′
+                    dᵦ = _qᵦ′ - qᵦ′
+                    R′ = (g * R) + dᵦ - dₐ
+                    δ′ = g * δ
+                    δ′ ≈ (qᵦ′ + R′ - qₐ′) || error("δ′ != (qᵦ′ + R′ - qₐ′)")
+                    display(δ′)
+                    if !isapproxin(δ′, sym_hop.orbit)
+                        push!(sym_hop.orbit, δ′)
+                        push!(sym_hop.hop_terms, [(qₐ′, qᵦ′, R′)])
+                    elseif !isapproxin((qₐ′, qᵦ′, R′), sym_hop.hop_terms[findfirst(δ′, sym_hop.orbit)])
+                        push!(sym_hop.hop_terms[findfirst(δ′, sym_hop.orbit)], (qₐ′, qᵦ′, R′))
+                        # TODO: try to avoid calling `findfirst` twice
                     end
                 end
             end
         end
     end
-    return δsdd
+    return sym_hops
 end
 
 # EBRs: (q|A), (w|B)
