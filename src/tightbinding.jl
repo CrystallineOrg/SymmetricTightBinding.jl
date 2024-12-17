@@ -3,6 +3,17 @@ using Crystalline: isapproxin
 """
 Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
+
+How it works: 
+1. Take a point `a` in the WP of `br1` and a point `b` in the WP of `br2`. We compute the 
+    displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings of that 
+    representative and continue. If not then, we search inside of all the representatives
+    for the one that `δ => (a, b, R)` in the list of hoppings. If not found, then we add `δ`
+    as a new representative and add `δ =>(a, b, R)` to its list of hoppings.
+3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a,g b, g R)`, and 
+    repeat step 2.
+4. 
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -30,7 +41,7 @@ function obtain_symmetry_related_hoppings(
     # will obtain a set of tuples that will encode the points of the WPs involved in the 
     # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
 
-    δsdd = Dict{RVec{D}, Vector{Pair{RVec{D}, Vector{NTuple{3, RVec{D}}}}}}()
+    δsdd = Dict{RVec{D},Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}}()
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
@@ -131,7 +142,7 @@ function hamiltonian_term_order(
     V1, V2, = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
-                        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
+        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
     for i in 1:V1
         for j in 1:V2
             for k in 1:Q1
@@ -154,10 +165,10 @@ describing and the first axis refer to the vector `δs` and the second axis to t
 See `devdocs.md` for details.
 """
 function construct_M_matrix(
-    δs::Vector{Pair{RVec{D},Vector{NTuple{3, RVec{D}}}}},
+    δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}},
     br1::NewBandRep{D},
-    br2::NewBandRep{D},
-    order = hamiltonian_term_order(br1, br2) # an internal order for the Hamiltonian's terms
+    br2::NewBandRep{D};
+    order=hamiltonian_term_order(br1, br2) # an internal order for the Hamiltonian's terms
 ) where {D}
     V = length(δs)
     E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
@@ -183,7 +194,7 @@ function construct_M_matrix(
             for (x, hop) in enumerate(δ_r)
                 if hop[1] ≈ q && hop[2] ≈ w
                     offset1 = (x - 1) * Q
-                    c = offset0 + offset1 + (j-1)*Q1 + i
+                    c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
                 end
             end
@@ -219,7 +230,7 @@ function constraint_matrices(
     br_β::NewBandRep{D},
     δs,
     order=hamiltonian_term_order(br1, br2)
-) where D
+) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gens_α, ρs_αα = sgrep_induced_by_siteir_generators(br_α)
     gens_β, ρs_ββ = sgrep_induced_by_siteir_generators(br_β)
@@ -286,7 +297,7 @@ end
 function permute_symmetry_related_hoppings_under_symmetry_operation(
     δ_hops::Vector{RVec{D}},
     op::SymOperation
-) where D
+) where {D}
     P = zeros(Int, length(δ_hops), length(δ_hops))
     for (i, δ) in enumerate(δ_hops)
         δ′ = compose(op, δ)
@@ -333,10 +344,10 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 function tb_hamiltonian(
-    cbr :: CompositeBandRep{D},
-    Rs :: AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to consider
-) where D
-    if any(c->!isinteger(c) || c<0, cbr.coefs)
+    cbr::CompositeBandRep{D},
+    Rs::AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to consider
+) where {D}
+    if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("provided composite bandrep is not Wannierizable: contains negative or noninteger coefficients")
     end
     coefs = round.(Int, cbr.coefs)
@@ -345,7 +356,7 @@ function tb_hamiltonian(
     idx = 0
     for (i, c) in enumerate(coefs)
         for _ in 1:c
-            brs[idx += 1] = cbr.brs[i]
+            brs[idx+=1] = cbr.brs[i]
         end
     end
     # find all families of hoppings between involved band representations
@@ -362,8 +373,8 @@ function tb_hamiltonian(
     end
 
     Norbs = count_bandrep_orbitals.(brs)
-    tbs = [BlockMatrix{TightBindingElementString, Matrix{TightBindingBlock{D}}}(
-                                    undef_blocks, Norbs, Norbs) for _ in representative_δs]
+    tbs = [BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}(
+        undef_blocks, Norbs, Norbs) for _ in representative_δs]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
         # TODO: maybe only need to go over upper triangular part of loop cf. hermicity
@@ -389,10 +400,10 @@ function tb_hamiltonian(
                 n ∈ seen_n && continue
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                    order, 
+                    order,
                     zeros(Int, 0, 0, size(order, 1), size(order, 2)),    # Mm
                     Vector{Vector{ComplexF64}}(),                        # t_αβ_basis
-                    Vector{Pair{RVec{D}, Vector{NTuple{3, RVec{D}}}}}(), # δs
+                    Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}(), # δs
                     1:0)                                                 # c_idxs (empty)
             end
         end
@@ -401,20 +412,20 @@ function tb_hamiltonian(
 end
 
 struct TightBindingElementString
-    s :: String
+    s::String
 end
 Base.show(io::IO, tbe_str::TightBindingElementString) = print(io, tbe_str.s)
 
 struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
-    block_ij :: Tuple{Int, Int}
-    global_ij :: Tuple{Int, Int}
-    br1 :: NewBandRep{D}
-    br2 :: NewBandRep{D}
-    order :: Matrix{Pair{Tuple{Int64, WyckoffPosition{D}}, Tuple{Int64, WyckoffPosition{D}}}}
-    Mm :: Array{Int, 4}
-    t_αβ_basis :: Vector{Vector{ComplexF64}}
-    δs :: Vector{Pair{RVec{D}, Vector{NTuple{3, RVec{D}}}}}
-    c_idxs :: UnitRange{Int}
+    block_ij::Tuple{Int,Int}
+    global_ij::Tuple{Int,Int}
+    br1::NewBandRep{D}
+    br2::NewBandRep{D}
+    order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
+    Mm::Array{Int,4}
+    t_αβ_basis::Vector{Vector{ComplexF64}}
+    δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}
+    c_idxs::UnitRange{Int}
     # TODO: figure out how much of this is needed, e.g.:
     # TODO: is it redundant to have both `order` and `δs`? Not completely I guess
     # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
@@ -429,7 +440,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         for (l, δₗ) in enumerate(δ[1].cnst)
             abs2δₗ = 2abs(δₗ)
             abs2δₗ < SPARSIFICATION_ATOL_DEFAULT && continue
-            if δₗ<0 || !first_nonzero
+            if δₗ < 0 || !first_nonzero
                 print(io_kr, Crystalline.signaschar(δₗ))
             end
             first_nonzero = false
@@ -452,8 +463,8 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
     io = IOBuffer()
     first_t_αβ_basis_vec = true
     for k in eachindex(tbb.t_αβ_basis)
-        Mⁱʲtᵏ = Mm[:,:,i,j] * tbb.t_αβ_basis[k]
-        nnz_els = count(v -> abs(v)>SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
+        Mⁱʲtᵏ = Mm[:, :, i, j] * tbb.t_αβ_basis[k]
+        nnz_els = count(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
         nnz_els == 0 && continue
         first_t_αβ_basis_vec || (first_t_αβ_basis_vec = false; print(io, " + "))
         print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
@@ -487,7 +498,7 @@ end
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
 
 
-function count_bandrep_orbitals(br::NewBandRep{D}) where D
+function count_bandrep_orbitals(br::NewBandRep{D}) where {D}
     mult = multiplicity(position(br)) # multiplicity in conventional setting
     # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
     # divide by the the number of centering-translations
@@ -514,12 +525,12 @@ function _stringify_characters(c::Number; digits::Int=3)
         return (REAL_STR, cr, string(cr))
 
     elseif iszero(cr) # imaginary
-        isinteger(ci) && return (IMAG_STR, ci, string(Int(ci))*"i")
-        return (IMAG_STR, ci, string(ci)*"i")
+        isinteger(ci) && return (IMAG_STR, ci, string(Int(ci)) * "i")
+        return (IMAG_STR, ci, string(ci) * "i")
 
     else              # complex
         if isinteger(cr) && isinteger(ci)
-            return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr,ci))
+            return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr, ci))
         else
             return COMPLEX_STR, zero(cr), _complex_as_compact_string(c′)
         end
