@@ -13,7 +13,7 @@ How it works:
     as a new representative and add `δ =>(a, b, R)` to its list of hoppings.
 3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a,g b, g R)`, and 
     repeat step 2.
-4. 
+4. Repeat all steps 1 to 3 for all pair of points in the WPs of `br1` and `br2`.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
