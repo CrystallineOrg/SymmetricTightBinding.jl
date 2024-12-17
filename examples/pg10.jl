@@ -9,29 +9,14 @@ pg_num = 10
 brs = calc_bandreps(pg_num, Val(2))
 
 # needs to do that to find the WPs properly
-br1 = brs[1]
-br2 = brs[5]
+coefs = zeros(Int, length(brs))
+coefs[1] = 1
+coefs[5] = 1
 
-wp1 = orbit(group(br1))
-wp2 = orbit(group(br2))
+cbr = CompositeBandRep(coefs, brs)
 
-gens, sgrep1 = sgrep_induced_by_siteir_generators(br1)
-gens, sgrep2 = sgrep_induced_by_siteir_generators(br2)
+Rs = [[0, 0]]
 
-##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
+## -------------------------------------------------------------------------------------- ##
 
-Rs = [[0, 0]] # vector containing the translations we want to consider
-
-δss = TETB.obtain_symmetry_related_hoppings(Rs, br1, br2)
-
-##- Compute the matrix M that will encode the Hamiltonian as a numerical matrix ----------##
-
-Mm = TETB.construct_M_matrix(first(values(δss)), br1, br2)
-
-##----------------------------------------------------------------------------------------##
-
-Mm, t_αβ_basis, order = TETB.constraint_matrices(br1, br2, first(values(δss)))
-
-#TODO: make and structure that encodes everything necessary to define the Hamiltonian and 
-# define a pretty printing of it so it is user friendly. Also if you can introduce all of 
-# the steps into `devdocs.md`.
+tbs = TETB.tb_hamiltonian(cbr, Rs)
