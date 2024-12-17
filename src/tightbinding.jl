@@ -3,6 +3,17 @@ using Crystalline: isapproxin
 """
 Compute the symmetry related hoppings relative vectors from the WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
+
+How it works: 
+1. Take a point `a` in the WP of `br1` and a point `b` in the WP of `br2`. We compute the 
+    displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings of that 
+    representative and continue. If not then, we search inside of all the representatives
+    for the one that `δ => (a, b, R)` in the list of hoppings. If not found, then we add `δ`
+    as a new representative and add `δ =>(a, b, R)` to its list of hoppings.
+3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a,g b, g R)`, and 
+    repeat step 2.
+4. 
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -158,7 +169,7 @@ See `devdocs.md` for details.
 function construct_M_matrix(
     δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}},
     br1::NewBandRep{D},
-    br2::NewBandRep{D},
+    br2::NewBandRep{D};
     order=hamiltonian_term_order(br1, br2) # an internal order for the Hamiltonian's terms
 ) where {D}
     V = length(δs)

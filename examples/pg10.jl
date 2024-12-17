@@ -3,8 +3,6 @@ Pkg.activate(@__DIR__)
 
 using Crystalline, TETB
 
-##- Compute the necessary things for obtaining the hoppings
-
 pg_num = 10
 brs = calc_bandreps(pg_num, Val(2))
 

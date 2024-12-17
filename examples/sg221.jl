@@ -1,29 +1,25 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-### necessary packages
-using Crystalline
-using SymmetryBases, MPBUtils
-using PhotonicBandConnectivity
-using TETB
+using Crystalline, TETB
 
 sg_num = 221
 brs = calc_bandreps(sg_num)
-lgirsv = irreps(brs)
 
-#------------------------------------------------------------------------------------------#
-# First minimal solutions in SG #221
+coefs = zeros(Int, length(brs))
+coefs[6] = 1
+cbr = CompositeBandRep(coefs, brs)
 
-s1 = "[-Γ₁⁺+Γ₄⁻, R₃⁻, M₂⁻+M₃⁺, X₅⁺]"
-m1 = parse(SymmetryVector, s1, lgirsv)
+Rs = [[0, 0, 0], [2, 0, 0]]
 
-s2 = "[-Γ₁⁺+Γ₄⁻, R₃⁺, M₂⁺+M₃⁻, X₅⁻]"
-m2 = parse(SymmetryVector, s2, lgirsv)
+tbs = TETB.tb_hamiltonian(cbr, Rs)
+tbs[1]
 
-#------------------------------------------------------------------------------------------#
+# it only obtains (or at least prints) the onsite terms. Does it only print for the first 
+# term in Rs?
 
-μᴸ = 1
-idxsᴸs = find_auxiliary_modes(μᴸ, brs)
+δss = TETB.obtain_symmetry_related_hoppings(Rs, cbr.brs[6], cbr.brs[6])
 
-### compute all possible decomposition into EBRs of m using the additional modes computed
-candidatesv = find_apolar_modes(m2, idxsᴸs, brs)
+δs = last(first(δss))
+
+Mm = construct_M_matrix(δs, cbr.brs[6], cbr.brs[6])
