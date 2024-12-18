@@ -17,6 +17,6 @@ Rs = [[0, 0]]
 
 ## -------------------------------------------------------------------------------------- ##
 
-sym_hop = TETB.obtain_symmetry_related_hoppings(Rs, cbr.brs[1], cbr.brs[5])
+sym_hops = TETB.obtain_symmetry_related_hoppings(Rs, cbr.brs[1], cbr.brs[5])
 
 ## -------------------------------------------------------------------------------------- ##

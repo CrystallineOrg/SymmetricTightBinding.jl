@@ -9,10 +9,12 @@ Base.getindex(tbc::TightBindingCandidateSet, i::Int) = tbc.apolarv[i]
 Base.setindex!(::TightBindingCandidateSet, v, i::Int) = error("setindex! is not supported")
 
 struct SymmetricHopping
-    representatives::RVec # the representative of the hopping distance
-    orbit::Vector{RVec} # the orbit of the hopping distance
+    representatives::RVec # the representative of the hopping distance: {δ}
+    orbit::Vector{RVec} # the orbit of the hopping distance: `[δᵢ]`
     hop_terms::Vector{Vector{NTuple{3,RVec}}} # the hopping terms `(a,b,R)` associated to 
-    #                                           each hopping distance
+    #                                           each hopping distance: `δ=b+R-a`
+    #                                           NOTE: several `(a,b,R)` can be associated 
+    #                                           to the same hopping distance `δ`
 end
 Base.size(s::SymmetricHopping) = (length(s.orbit),)
 representatives(s::SymmetricHopping) = s.representatives

@@ -37,12 +37,15 @@ function obtain_symmetry_related_hoppings(
     wps1 = primitivize.(Crystalline.orbit(group(br1)), cntr)
     wps2 = primitivize.(Crystalline.orbit(group(br2)), cntr)
 
-    # we are going to create a dictionary of dictionaries. The first set of keys will indicate
-    # the representative of the hopping distance and inside it, each dictionary will be 
-    # associated with a point in the "orbit" of that hopping distance. Additionally, if you 
-    # look at the value of and specific point inside the "orbit" of one representative you 
-    # will obtain a set of tuples that will encode the points of the WPs involved in the 
-    # hopping and the displacement vector R. (q_i, w_j , R) => q_i -> w_j + R
+    # we have defined a structure `SymmetricHopping` to gather the information. It is 
+    # structured as:
+    # 1. `SymmetricHopping.representatives` will store a representative of the orbit of 
+    #   symmetry related hopping distances `{δ}`
+    # 2. `SymmetricHopping.orbit` will store the full orbit of symmetry related hopping 
+    #   distances `[δᵢ]`
+    # 3. `SymmetricHopping.hop_terms` will store the real coordinates `(a,b,R)` of each 
+    #   hopping term associated to each `δᵢ`. Note that maybe several `(a,b,R)` could be 
+    #   associated to the same `δᵢ`
 
     sym_hops = SymmetricHopping[]
     for R in Rs
@@ -50,20 +53,15 @@ function obtain_symmetry_related_hoppings(
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
             qᵦ = parent(qᵦ)
-            δ = qᵦ + R - qₐ
+            δ = qᵦ + R - qₐ # potential hopping term to be stored in `sym_hops`
             if (!isapproxin(δ, representatives.(sym_hops)) &&
-                any(v -> !isapproxin(δ, v), orbit.(sym_hops)))
+                !any(v -> isapproxin(δ, v), orbit.(sym_hops)))
                 push!(sym_hops, SymmetricHopping(δ, [δ], [[(qₐ, qᵦ, R)]]))
 
-                sym_hop = sym_hops[end]
+                sym_hop = sym_hops[end] # if it wasn't already in `sym_hops`, we will need 
+                #                         to also add all its symmetry related partner
+                #return sym_hop
                 for g in ops
-                    # Ρ = SymOperation(rotation(g)) # type consistency for the rotation 
-                    # we want to keep the WPs inside the unit cell and put all the possible
-                    # translations into the RVec 'R', so we can keep the notation such that
-                    # q_i -> w_j + R. For that reason we make the following changes:
-
-                    # TODO: possible mistake in here using only the rotation instead of the 
-                    #       whole SymOperation
                     _qₐ′ = g * qₐ
                     _qᵦ′ = g * qᵦ
                     qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
@@ -71,15 +69,15 @@ function obtain_symmetry_related_hoppings(
                     dₐ = _qₐ′ - qₐ′
                     dᵦ = _qᵦ′ - qᵦ′
                     R′ = (g * R) + dᵦ - dₐ
-                    δ′ = g * δ
+                    δ′ = g * δ # potential symmetry related partner of `δ` to add to its 
+                    #            `sym_hop`
                     δ′ ≈ (qᵦ′ + R′ - qₐ′) || error("δ′ != (qᵦ′ + R′ - qₐ′)")
-                    display(δ′)
                     if !isapproxin(δ′, sym_hop.orbit)
                         push!(sym_hop.orbit, δ′)
                         push!(sym_hop.hop_terms, [(qₐ′, qᵦ′, R′)])
-                    elseif !isapproxin((qₐ′, qᵦ′, R′), sym_hop.hop_terms[findfirst(δ′, sym_hop.orbit)])
-                        push!(sym_hop.hop_terms[findfirst(δ′, sym_hop.orbit)], (qₐ′, qᵦ′, R′))
-                        # TODO: try to avoid calling `findfirst` twice
+                    elseif !isapproxin((qₐ′, qᵦ′, R′), sym_hop[findfirst(≈(δ′), sym_hop.orbit)])
+                        push!(sym_hop[findfirst(≈(δ′), sym_hop.orbit)], (qₐ′, qᵦ′, R′))
+                        # TODO: try to avoid calling `findfirst` so many times
                     end
                 end
             end
