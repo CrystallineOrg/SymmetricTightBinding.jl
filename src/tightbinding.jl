@@ -37,8 +37,8 @@ function obtain_symmetry_related_hoppings(
             qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ
-            if (!isapproxin(δ, keys(δsdd)) &&
-                !isapproxin(δ, Iterators.map(first, Iterators.flatten(values(δsdd)))))
+            if (!isapproxin(δ, keys(δsdd), #=cntr=# nothing, #=modw=# false) &&
+                !isapproxin(δ, Iterators.map(first, Iterators.flatten(values(δsdd))), #=cntr=# nothing, #=modw=# false))
                 push!(δsdd, δ => [δ => [(qₐ, qᵦ, R)]])
                 for g in ops
                     Ρ = SymOperation(rotation(g)) # type consistency for the rotation 
@@ -53,8 +53,8 @@ function obtain_symmetry_related_hoppings(
                     dᵦ = (Ρ * qᵦ) - qᵦ′
                     R′ = (Ρ * R) + dᵦ - dₐ
                     δ′ = Ρ * δ
-                    idx = findfirst(v -> first(v) ≈ δ′, δsdd[δ])
-                    if !isapproxin(δ′, keys(δsdd)) && isnothing(idx)
+                    idx = findfirst(v -> isapprox(first(v), δ′,#=cntr=# nothing, #=modw=# false), δsdd[δ])
+                    if !isapproxin(δ′, keys(δsdd), #=cntr=# nothing, #=modw=# false) && isnothing(idx)
                         push!(δsdd[δ], δ′ => [(qₐ′, qᵦ′, R′)])
                     end
 
@@ -63,7 +63,7 @@ function obtain_symmetry_related_hoppings(
                     # evaluate `bool = (qₐ′, qᵦ′, R′) ∈ last(δsdd[δ][idx])`, w/ approximate
                     # equality comparison
                     bool = any(last(δsdd[δ][idx])) do (qₐ′′, qᵦ′′, R′′)
-                        isapprox(qₐ′, qₐ′′) && isapprox(qᵦ′, qᵦ′′) && isapprox(R′, R′′)
+                        isapprox(qₐ′, qₐ′′, #=cntr=# nothing, #=modw=# false) && isapprox(qᵦ′, qᵦ′′, #=cntr=# nothing, #=modw=# false) && isapprox(R′, R′′, #=cntr=# nothing, #=modw=# false)
                     end
                     if !bool
                         push!(last(δsdd[δ][idx]), (qₐ′, qᵦ′, R′))
@@ -181,7 +181,8 @@ function construct_M_matrix(
         for (r, (_, δ_r)) in enumerate(δs)
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(δ_r)
-                if hop[1] ≈ q && hop[2] ≈ w
+                if (isapprox(hop[1], q, #=cntr=# nothing, #=modw=# false) && 
+                    isapprox(hop[2], w, #=cntr=# nothing, #=modw=# false))
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j-1)*Q1 + i
                     Mm[r, c, α, β] = 1
@@ -290,7 +291,7 @@ function permute_symmetry_related_hoppings_under_symmetry_operation(
     P = zeros(Int, length(δ_hops), length(δ_hops))
     for (i, δ) in enumerate(δ_hops)
         δ′ = compose(op, δ)
-        j = findfirst(≈(δ′), δ_hops)
+        j = findfirst(δ′′ -> isapprox(δ′, δ′′, #=cntr=# nothing, #=modw=# false), δ_hops)
         isnothing(j) && error(lazy"hopping element $δ not closed under $op in $δ_hops")
         P[i, j] = 1
         # P acts as g on v: g v = P v so (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
@@ -354,7 +355,7 @@ function tb_hamiltonian(
         for br2 in brs
             δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
             for δ in keys(δss)
-                if !isapproxin(δ, representative_δs)
+                if !isapproxin(δ, representative_δs, #=cntr=# nothing, #=modw=# false)
                     push!(representative_δs, δ)
                 end
             end
@@ -373,7 +374,7 @@ function tb_hamiltonian(
             seen_n = Set{Int}()
             order = hamiltonian_term_order(br1, br2)
             for (δ, δhops) in δss
-                n = something(findfirst(≈(δ), representative_δs))
+                n = something(findfirst(δ′ -> isapprox(δ, δ′, #=cntr=# nothing, #=modw=# false), representative_δs))
                 push!(seen_n, n)
                 Mm, t_αβ_basis, _ = constraint_matrices(br1, br2, δhops, order)
 
@@ -463,7 +464,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         Mⁱʲtᵏ = Mm[:,:,i,j] * tbb.t_αβ_basis[k]
         nnz_els = count(v -> abs(v)>SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
         nnz_els == 0 && continue
-        first_t_αβ_basis_vec || (first_t_αβ_basis_vec = false; print(io, " + "))
+        first_t_αβ_basis_vec ? (first_t_αβ_basis_vec=false) : (print(io, " + "))
         print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
         nnz_els > 1 && print(io, "[")
         first = true
@@ -479,7 +480,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
                 if first
                     v_str = (v_r < 0 ? "-" : "") * v_str
                 else
-                    v_str = (v_r < 0 ? " - " : " + ") * v_str
+                    v_str = (v_r < 0 ? "-" : "+") * v_str
                 end
             else
                 v_str = (first ? "" : " + ") * "(" * v_str * ")"
