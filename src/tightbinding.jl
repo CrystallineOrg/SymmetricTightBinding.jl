@@ -337,7 +337,12 @@ function poormans_sparsification(
     # over from Neumann.jl]
     if !isnothing(rref_tol)
         # use a relatively low tolerance in `rref` to avoid explosions of errors
-        # NB: this optional tolerance argument of `r{D} <: AbstractVector{Vector{NTuple{3,RVec{D}}}}
+        # NB: this optional tolerance argument of `rref!` is undocumented :(
+        return transpose(rref!(copy(transpose(A)), rref_tol))
+    end
+    return transpose(rref(transpose(A)))
+end
+
 """
 Prune near-zero elements of vectors in `vs`.
 """
