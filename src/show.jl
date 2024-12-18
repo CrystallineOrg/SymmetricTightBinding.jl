@@ -39,14 +39,36 @@ function Base.show(io::IO, ::MIME"text/plain", candidates::TightBindingCandidate
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ho::HoppingOrbit)
-    println(io, typeof(ho), ":")
+    # before getting started, determine maximum length of δᵢ entries, to align:
+    aligns = map(enumerate(ho.orbit)) do (i, δᵢ)
+        s = sprint(print, Crystalline.subscriptify(string(i)), δᵢ)
+        textwidth(s)
+    end
+    max_align = maximum(aligns)
+    # now print info about each orbit element and its hopping terms
+    print(io, typeof(ho), " (")
+    printstyled(io, "a"; color=:green)
+    print(io, " + δ = ")
+    printstyled(io, "b"; color=:red)
+    print(io, " + ")
+    printstyled(io, "R"; color=:blue)
+    println(io, "):")
     for (i, (δᵢ, abRs)) in enumerate(zip(ho.orbit, ho.hoppings))
-        printstyled(io, " δ", Crystalline.subscriptify(string(i)), " = ", δᵢ; bold=i == 1)
-        print(io, ": [")
+        print(io, " ")
+        printstyled(io, "δ", Crystalline.subscriptify(string(i)), " = ", δᵢ; underline=i==1)
+        print(io, )
+        print(io, ": ", " "^(max_align-aligns[i]), "[")
         for (j, (a, b, R)) in enumerate(abRs)
-            print(io, "$a → $b + $R")
+            printstyled(io, "("; color=:light_black)
+            printstyled(io, a; color=:green)
+            print(io, " → ")
+            printstyled(io, b; color=:red)
+            print(io, " + ")
+            printstyled(io, R; color=:blue)
+            printstyled(io, ")"; color=:light_black)
             j ≠ length(abRs) && print(io, ", ")
         end
-        println(io, "]")
+        print(io, "]")
+        i ≠ length(ho.orbit) && println(io)
     end
 end
