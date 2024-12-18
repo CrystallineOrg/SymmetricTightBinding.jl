@@ -37,3 +37,16 @@ function Base.show(io::IO, ::MIME"text/plain", candidates::TightBindingCandidate
         j ≠ length(candidates) && println(io)
     end
 end
+
+function Base.show(io::IO, ::MIME"text/plain", ho::HoppingOrbit)
+    println(io, typeof(ho), ":")
+    for (i, (δᵢ, abRs)) in enumerate(zip(ho.orbit, ho.hoppings))
+        printstyled(io, " δ", Crystalline.subscriptify(string(i)), " = ", δᵢ; bold=i == 1)
+        print(io, ": [")
+        for (j, (a, b, R)) in enumerate(abRs)
+            print(io, "$a → $b + $R")
+            j ≠ length(abRs) && print(io, ", ")
+        end
+        println(io, "]")
+    end
+end

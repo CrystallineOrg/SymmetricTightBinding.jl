@@ -47,20 +47,19 @@ function obtain_symmetry_related_hoppings(
     #   hopping term associated to each `δᵢ`. Note that maybe several `(a,b,R)` could be 
     #   associated to the same `δᵢ`
 
-    sym_hops = SymmetricHopping[]
+    h_orbits = HoppingOrbit{D}[]
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ # potential hopping term to be stored in `sym_hops`
-            if (!isapproxin(δ, representatives.(sym_hops)) &&
-                !any(v -> isapproxin(δ, v), orbit.(sym_hops)))
-                push!(sym_hops, SymmetricHopping(δ, [δ], [[(qₐ, qᵦ, R)]]))
+            if (!isapproxin(δ, Iterators.map(representative, h_orbits)) &&
+                !any(v -> isapproxin(δ, v), Iterators.map(orbit, h_orbits)))
 
-                sym_hop = sym_hops[end] # if it wasn't already in `sym_hops`, we will need 
-                #                         to also add all its symmetry related partner
-                #return sym_hop
+                # if it wasn't already in `h_orbits`, we need to add its symmetry-related
+                # partners
+                h_orbit = HoppingOrbit{D}(δ, [δ], [[(qₐ, qᵦ, R)]])
                 for g in ops
                     _qₐ′ = g * qₐ
                     _qᵦ′ = g * qᵦ
@@ -69,21 +68,31 @@ function obtain_symmetry_related_hoppings(
                     dₐ = _qₐ′ - qₐ′
                     dᵦ = _qᵦ′ - qᵦ′
                     R′ = (g * R) + dᵦ - dₐ
-                    δ′ = g * δ # potential symmetry related partner of `δ` to add to its 
-                    #            `sym_hop`
+                    δ′ = g * δ # potential symmetry related partner of `δ` to add to `h_orbit`
                     δ′ ≈ (qᵦ′ + R′ - qₐ′) || error("δ′ != (qᵦ′ + R′ - qₐ′)")
-                    if !isapproxin(δ′, sym_hop.orbit)
-                        push!(sym_hop.orbit, δ′)
-                        push!(sym_hop.hop_terms, [(qₐ′, qᵦ′, R′)])
-                    elseif !isapproxin((qₐ′, qᵦ′, R′), sym_hop[findfirst(≈(δ′), sym_hop.orbit)])
-                        push!(sym_hop[findfirst(≈(δ′), sym_hop.orbit)], (qₐ′, qᵦ′, R′))
-                        # TODO: try to avoid calling `findfirst` so many times
+
+                    idx_in_orbit = findfirst(≈(δ′), orbit(h_orbit))
+                    if isnothing(idx_in_orbit)
+                        # δ′ is not already included in `orbit(h_orbit)`
+                        push!(orbit(h_orbit), δ′)
+                        push!(h_orbit.hoppings, [(qₐ′, qᵦ′, R′)])
+                    else
+                        # δ′ already in `orbit(h_orbit)` but hopping term might not be:
+                        # evaluate `(qₐ′, qᵦ′, R′) ∉ h_orbit.hoppings[idx_in_orbit]`, w/
+                        # approximate equality comparison
+                        bool = !any(h_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+                            isapprox(qₐ′, qₐ′′) && isapprox(qᵦ′, qᵦ′′) && isapprox(R′, R′′)
+                        end
+                        if bool
+                            push!(h_orbit.hoppings[idx_in_orbit], (qₐ′, qᵦ′, R′))
+                        end
                     end
                 end
+                push!(h_orbits, h_orbit)
             end
         end
     end
-    return sym_hops
+    return h_orbits
 end
 
 # EBRs: (q|A), (w|B)
@@ -328,12 +337,7 @@ function poormans_sparsification(
     # over from Neumann.jl]
     if !isnothing(rref_tol)
         # use a relatively low tolerance in `rref` to avoid explosions of errors
-        # NB: this optional tolerance argument of `rref!` is undocumented :(
-        return transpose(rref!(copy(transpose(A)), rref_tol))
-    end
-    return transpose(rref(transpose(A)))
-end
-
+        # NB: this optional tolerance argument of `r{D} <: AbstractVector{Vector{NTuple{3,RVec{D}}}}
 """
 Prune near-zero elements of vectors in `vs`.
 """

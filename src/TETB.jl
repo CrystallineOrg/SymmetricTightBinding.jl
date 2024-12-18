@@ -37,7 +37,7 @@ export mp, mpb
 
 include("types.jl")
 export TightBindingCandidateSet
-export SymmetricHopping
+export HoppingOrbit
 include("conversion.jl")
 include("show.jl")
 include("constrained_nonnegative_expansions.jl")
