@@ -30,13 +30,10 @@ For each element of the orbit δᵢ there may be multiple hopping terms, from si
   may correspond to each element of the orbit. 
   For `(a, b, R) = hoppings[i][j]`, we have `orbit[i] = δᵢ = b + R - a`
 """
-struct HoppingOrbit{D} <: AbstractVector{Vector{NTuple{3,RVec{D}}}}
-    representative::RVec{D} # representative hopping vector δ
-    orbit::Vector{RVec{D}}  # orbit of the hopping vector {δᵢ …}
-    hoppings::Vector{Vector{NTuple{3,RVec{D}}}} # hopping terms `[(a,b,R), ...]` for every `orbit[i]`
+struct HoppingOrbit{D}
+    representative :: RVec{D} # representative hopping vector δ
+    orbit :: Vector{RVec{D}}  # orbit of the hopping vector {δᵢ …}
+    hoppings :: Vector{Vector{NTuple{3,RVec{D}}}} # `[(a,b,R), ...]` for every `orbit[i]`
 end
-Base.size(s::HoppingOrbit) = (length(s.orbit),)
 representative(s::HoppingOrbit) = s.representative
-orbit(s::HoppingOrbit) = s.orbit
-Base.getindex(s::HoppingOrbit, i::Int) = s.hoppings[i]
-Base.setindex(s::HoppingOrbit, v, i::Int) = error("setindex! is not supported")
+Crystalline.orbit(s::HoppingOrbit) = s.orbit # extend to avoid clash w/ Crystalline's `orbit`

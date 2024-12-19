@@ -33,9 +33,10 @@ function obtain_symmetry_related_hoppings(
     # redundant operations from the space group, and also change both the operations and the
     # positions from a conventional to a primitive basis
     cntr = centering(sgnum, D)
-    ops = primitivize(spacegroup(sgnum, D))
+    ops = primitivize(spacegroup(sgnum, Val{D}()))
     wps1 = primitivize.(Crystalline.orbit(group(br1)), cntr)
     wps2 = primitivize.(Crystalline.orbit(group(br2)), cntr)
+
 
     # we have defined a structure `SymmetricHopping` to gather the information. It is 
     # structured as:
@@ -50,54 +51,67 @@ function obtain_symmetry_related_hoppings(
     # TODO: isapprox related RVEcs with different lattice constants, for example [0,0,0] ≈
     # [1,1,1]. We should take care of this, in here! add modw as false in isapproxin to fix 
     # it. Thomas says to do : isapproxin(δ, δ', nothing, #=modw=#false)
+
     h_orbits = HoppingOrbit{D}[]
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
         for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
             qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
             qᵦ = parent(qᵦ)
-            δ = qᵦ + R - qₐ # potential hopping term to be stored in `sym_hops`
-            if (!isapproxin(δ, Iterators.map(representative, h_orbits)) &&
-                !any(v -> isapproxin(δ, v), Iterators.map(orbit, h_orbits)))
-
-                # if it wasn't already in `h_orbits`, we need to add its symmetry-related
-                # partners
-                h_orbit = HoppingOrbit{D}(δ, [δ], [[(qₐ, qᵦ, R)]])
-                for g in ops
-                    _qₐ′ = g * qₐ
-                    _qᵦ′ = g * qᵦ
-                    qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
-                    qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
-                    dₐ = _qₐ′ - qₐ′
-                    dᵦ = _qᵦ′ - qᵦ′
-                    R′ = (g * R) + dᵦ - dₐ
-                    δ′ = g * δ # potential symmetry related partner of `δ` to add to `h_orbit`
-                    δ′ ≈ (qᵦ′ + R′ - qₐ′) || error("δ′ != (qᵦ′ + R′ - qₐ′)")
-
-                    idx_in_orbit = findfirst(≈(δ′), orbit(h_orbit))
-                    if isnothing(idx_in_orbit)
-                        # δ′ is not already included in `orbit(h_orbit)`
-                        push!(orbit(h_orbit), δ′)
-                        push!(h_orbit.hoppings, [(qₐ′, qᵦ′, R′)])
-                    else
-                        # δ′ already in `orbit(h_orbit)` but hopping term might not be:
-                        # evaluate `(qₐ′, qᵦ′, R′) ∉ h_orbit.hoppings[idx_in_orbit]`, w/
-                        # approximate equality comparison
-                        bool = !any(h_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
-                            isapprox(qₐ′, qₐ′′) && isapprox(qᵦ′, qᵦ′′) && isapprox(R′, R′′)
-                        end
-                        if bool
-                            push!(h_orbit.hoppings[idx_in_orbit], (qₐ′, qᵦ′, R′))
-                        end
-                    end
-                end
-                push!(h_orbits, h_orbit)
-            end
+            δ = qᵦ + R - qₐ # potential representative in next element of `h_orbits`
+            maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops)
+            maybe_add_hoppings!(h_orbits, -δ, qᵦ, qₐ, -R, ops)
         end
     end
     return h_orbits
 end
 
+function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where D
+    δ_idx = findfirst(h_orbits) do h_orbit
+        isapproxin(δ, orbit(h_orbit), nothing, false)
+    end
+    if isnothing(δ_idx)
+        # if it wasn't already in `h_orbits`, we add its symmetry-related partners
+        δ_orbit = HoppingOrbit{D}(δ, [δ], [[(qₐ, qᵦ, R)]])
+        _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops)
+        push!(h_orbits, δ_orbit)
+    else
+        δ_orbit = h_orbits[δ_idx]
+        _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops)
+    end
+end
+
+function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where D
+    for g in ops
+        _qₐ′ = g * qₐ
+        _qᵦ′ = g * qᵦ
+        qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
+        qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
+        dₐ = _qₐ′ - qₐ′
+        dᵦ = _qᵦ′ - qᵦ′
+        R′ = g * R + dᵦ - dₐ
+        δ′ = g * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
+        isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
+
+        idx_in_orbit = findfirst(δ′′ -> isapprox(δ′, δ′′, nothing, false), orbit(δ_orbit))
+        if isnothing(idx_in_orbit)
+            # δ′ is not already included in `orbit(δ_orbit)`
+            push!(orbit(δ_orbit), δ′)
+            push!(δ_orbit.hoppings, [(qₐ′, qᵦ′, R′)])
+        else
+            # δ′ already in `orbit(δ_orbit)` but hopping term might not be:
+            # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
+            # approximate equality comparison
+            bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+                isapprox(qₐ′, qₐ′′, nothing, false) && isapprox(qᵦ′, qᵦ′′, nothing, false) && isapprox(R′, R′′, nothing, false)
+            end
+            if bool
+                push!(δ_orbit.hoppings[idx_in_orbit], (qₐ′, qᵦ′, R′))
+            end
+        end
+    end
+    return δ_orbit
+end
 # EBRs: (q|A), (w|B)
 # Wyckoff positions: q, w
 #   q: q1, ..., qN
@@ -173,19 +187,20 @@ from EBR `br1` to EBR `br2`.
 
 The Hamiltonian's order which is implicitly used is returned as output, and the matrices 
 are stored on a 4D matrix which last two axes indicate the Hamiltonian term position it is 
-describing and the first axis refer to the vector `δs` and the second axis to the vector `t`. 
+describing and the first axis refer to the `orbit(h_orbit)` and the second axis to the
+vector `t`.
 See `devdocs.md` for details.
 """
 function construct_M_matrix(
-    δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}},
+    h_orbit::HoppingOrbit{D},
     br1::NewBandRep{D},
-    br2::NewBandRep{D};
+    br2::NewBandRep{D},
     order=hamiltonian_term_order(br1, br2) # an internal order for the Hamiltonian's terms
 ) where {D}
-    V = length(δs)
-    E = length(last(first(δs))) # number of elements in each δ_r (constant for all r)
-    foreach(δs) do (_, δ_r)
-        length(δ_r) == E || error("Unexpectedly had different counts of elements across δ_r")
+    V = length(orbit(h_orbit))
+    E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (constant for all i)
+    foreach(h_orbit.hoppings) do hops
+        length(hops) == E || error("Unexpectedly had different counts of hoppings across orbit elements")
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
@@ -201,10 +216,10 @@ function construct_M_matrix(
         w = parent(w)
 
         # assign a 1 to the correct position
-        for (r, (_, δ_r)) in enumerate(δs)
+        for (r, hops) in enumerate(h_orbit.hoppings)
             offset0 = (r - 1) * E * Q
-            for (x, hop) in enumerate(δ_r)
-                if hop[1] ≈ q && hop[2] ≈ w
+            for (x, hop) in enumerate(hops)
+                if isapprox(hop[1], q, nothing, false) && isapprox(hop[2], w, nothing, false)
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
@@ -242,7 +257,7 @@ end
 function constraint_matrices(
     br_α::NewBandRep{D},
     br_β::NewBandRep{D},
-    δs,
+    h_orbit::HoppingOrbit{D},
     order=hamiltonian_term_order(br1, br2)
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
@@ -255,7 +270,7 @@ function constraint_matrices(
     gens = cntr ∈ ('P', 'p') ? gens_α : primitivize.(gens_α, cntr)
 
     # compute the tensor M that encodes the Hamiltonian as a numerical matrix
-    Mm = construct_M_matrix(δs, br_α, br_β, order)
+    Mm = construct_M_matrix(h_orbit, br_α, br_β, order)
 
     # compute the Q tensor, encoding representation constraints on H_αβ
     Qs = Vector{Array{Complex,4}}(undef, length(gens))
@@ -264,10 +279,10 @@ function constraint_matrices(
     end
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on H_αβ
-    Zs = reciprocal_contraints_matrices(Mm, gens, δs)
+    Zs = reciprocal_contraints_matrices(Mm, gens, h_orbit)
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
-    # coefficient vector t_αβ associated with δs
+    # coefficient vector t_αβ associated with h_orbit
     constraint_ms = Vector{Matrix{ComplexF64}}()
     for (Q, Z) in zip(Qs, Zs)
         for s in axes(Q, 3), t in axes(Q, 4)
@@ -293,14 +308,13 @@ end
 
 function reciprocal_contraints_matrices(
     Mm::Array{Int,4},
-    gens::AbstractVector{<:SymOperation},
-    δs
-)
+    gens::AbstractVector{SymOperation{D}},
+    h_orbit::HoppingOrbit{D}
+) where D
     Zs = Vector{Array{Int,4}}(undef, length(gens))
-    δ_hops = first.(δs)
     for (i, op) in enumerate(gens)
         Z = zeros(ComplexF64, size(Mm))
-        P = permute_symmetry_related_hoppings_under_symmetry_operation(δ_hops, op)
+        P = permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
         Pᵀ = transpose(P)
         for l in axes(P, 1), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
             Z[l, j, s, t] = sum(Pᵀ[l, i] * Mm[i, j, s, t] for i in axes(P, 2))
@@ -315,15 +329,15 @@ Build the P matrix for a particular symmetry operation acting on k-space, which 
 the rows of the M matrix. WARNING: we assume that the operation is primitive.
 """
 function permute_symmetry_related_hoppings_under_symmetry_operation(
-    δ_hops::Vector{RVec{D}},
-    op::SymOperation
+    h_orbit::HoppingOrbit{D},
+    op::SymOperation{D}
 ) where {D}
-    P = zeros(Int, length(δ_hops), length(δ_hops))
-    for (i, δ) in enumerate(δ_hops)
+    P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
+    for (i, δᵢ) in enumerate(orbit(h_orbit))
         # TODO: we didn't primitive the operation. Possible source of error.
-        δ′ = compose(op, δ)
-        j = findfirst(≈(δ′), δ_hops)
-        isnothing(j) && error(lazy"hopping element $δ not closed under $op in $δ_hops")
+        δᵢ′ = compose(op, δᵢ)
+        j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
+        isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
         P[i, j] = 1
         # P acts as g on v: g v = P v so (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
     end
@@ -384,13 +398,13 @@ function tb_hamiltonian(
         end
     end
     # find all families of hoppings between involved band representations
-    representative_δs = RVec{D}[]
+    orbit_representatives = RVec{D}[]
     for br1 in brs
         for br2 in brs
-            δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
-            for δ in keys(δss)
-                if !isapproxin(δ, representative_δs)
-                    push!(representative_δs, δ)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            for δ in Iterators.map(representative, h_orbits)
+                if !isapproxin(δ, orbit_representatives, nothing, false)
+                    push!(orbit_representatives, δ)
                 end
             end
         end
@@ -398,37 +412,39 @@ function tb_hamiltonian(
 
     Norbs = count_bandrep_orbitals.(brs)
     tbs = [BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}(
-        undef_blocks, Norbs, Norbs) for _ in representative_δs]
+        undef_blocks, Norbs, Norbs) for _ in orbit_representatives]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
         # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
-            δss = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
             seen_n = Set{Int}()
             order = hamiltonian_term_order(br1, br2)
-            for (δ, δhops) in δss
-                n = something(findfirst(≈(δ), representative_δs))
+            for h_orbit in h_orbits
+                δ = representative(h_orbit)
+                n = something(findfirst(δ′ -> isapprox(δ, δ′, nothing, false), orbit_representatives))
                 push!(seen_n, n)
-                Mm, t_αβ_basis, _ = constraint_matrices(br1, br2, δhops, order)
+                Mm, t_αβ_basis, _ = constraint_matrices(br1, br2, h_orbit, order)
 
                 A = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                    order, Mm, t_αβ_basis, δhops, c_idx_start:c_idx_start+length(t_αβ_basis))
+                    order, Mm, t_αβ_basis, h_orbit,
+                    c_idx_start:c_idx_start+length(t_αβ_basis))
                 tbs[n][Block(block_i), Block(block_j)] = A
                 c_idx_start += length(t_αβ_basis)
             end
-            # blocks for other values of `n` are not featured in `δss` - i.e., vanish, so we
-            # put in manually construct zero blocks for those spots:
-            for n in eachindex(representative_δs)
+            # blocks for other values of `n` are not featured in `h_orbits` - i.e., vanish,
+            # so we manually construct zero blocks for those spots:
+            for n in eachindex(orbit_representatives)
                 n ∈ seen_n && continue
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
                     order,
-                    zeros(Int, 0, 0, size(order, 1), size(order, 2)),    # Mm
-                    Vector{Vector{ComplexF64}}(),                        # t_αβ_basis
-                    Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}(), # δs
-                    1:0)                                                 # c_idxs (empty)
+                    zeros(Int, 0, 0, size(order, 1), size(order, 2)), # Mm
+                    Vector{Vector{ComplexF64}}(),                     # t_αβ_basis
+                    nothing,                                          # h_orbit
+                    1:0)                                              # c_idxs (empty)
             end
         end
     end
@@ -456,28 +472,30 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
     Mm::Array{Int,4}
     t_αβ_basis::Vector{Vector{ComplexF64}}
-    δs::Vector{Pair{RVec{D},Vector{NTuple{3,RVec{D}}}}}
+    h_orbit::Union{Nothing, HoppingOrbit{D}}
     c_idxs::UnitRange{Int}
     # TODO: figure out how much of this is needed, e.g.:
-    # TODO: is it redundant to have both `order` and `δs`? Not completely I guess
     # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
     # TODO: do we need the indexing information in `block_ij` and `global_ij`? Probably not
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
-    exp_strs = Vector{String}(undef, length(tbb.δs))
-    for (n, δ) in enumerate(tbb.δs)
+    h_orbit = tbb.h_orbit
+    isnothing(h_orbit) && return TightBindingElementString("0")
+    h_orbit = something(h_orbit)
+    exp_strs = Vector{String}(undef, length(orbit(h_orbit)))
+    for (n, δₙ) in enumerate(orbit(h_orbit))
         io_kr = IOBuffer()
         first_nonzero = true
-        for (l, δₗ) in enumerate(δ[1].cnst)
-            abs2δₗ = 2abs(δₗ)
-            abs2δₗ < SPARSIFICATION_ATOL_DEFAULT && continue
-            if δₗ < 0 || !first_nonzero
-                print(io_kr, Crystalline.signaschar(δₗ))
+        for (l, δₙₗ) in enumerate(δₙ.cnst)
+            abs2δₙₗ = 2abs(δₙₗ)
+            abs2δₙₗ < SPARSIFICATION_ATOL_DEFAULT && continue
+            if δₙₗ < 0 || !first_nonzero
+                print(io_kr, Crystalline.signaschar(δₙₗ))
             end
             first_nonzero = false
-            str_enum, v_r, v_str = _stringify_characters(abs2δₗ)
-            str_enum == REAL_STR || error(lazy"unexpected imaginary component in exponential argument $abs2δₗ")
+            str_enum, v_r, v_str = _stringify_characters(abs2δₙₗ)
+            str_enum == REAL_STR || error(lazy"unexpected imaginary component in exponential argument $abs2δₙₗ")
             isone(v_r) || print(io_kr, v_str)
             print(io_kr, "k", Crystalline.subscriptify(string(l)))
         end
@@ -498,7 +516,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         Mⁱʲtᵏ = Mm[:, :, i, j] * tbb.t_αβ_basis[k]
         nnz_els = count(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
         nnz_els == 0 && continue
-        first_t_αβ_basis_vec || (first_t_αβ_basis_vec = false; print(io, " + "))
+        first_t_αβ_basis_vec ? (first_t_αβ_basis_vec=false) : (print(io, " + "))
         print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
         nnz_els > 1 && print(io, "[")
         first = true
@@ -514,7 +532,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
                 if first
                     v_str = (v_r < 0 ? "-" : "") * v_str
                 else
-                    v_str = (v_r < 0 ? " - " : " + ") * v_str
+                    v_str = (v_r < 0 ? "-" : "+") * v_str
                 end
             else
                 v_str = (first ? "" : " + ") * "(" * v_str * ")"
