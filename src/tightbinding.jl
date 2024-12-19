@@ -37,6 +37,21 @@ function obtain_symmetry_related_hoppings(
     wps1 = primitivize.(Crystalline.orbit(group(br1)), cntr)
     wps2 = primitivize.(Crystalline.orbit(group(br2)), cntr)
 
+
+    # we have defined a structure `SymmetricHopping` to gather the information. It is 
+    # structured as:
+    # 1. `SymmetricHopping.representatives` will store a representative of the orbit of 
+    #   symmetry related hopping distances `{δ}`
+    # 2. `SymmetricHopping.orbit` will store the full orbit of symmetry related hopping 
+    #   distances `[δᵢ]`
+    # 3. `SymmetricHopping.hop_terms` will store the real coordinates `(a,b,R)` of each 
+    #   hopping term associated to each `δᵢ`. Note that maybe several `(a,b,R)` could be 
+    #   associated to the same `δᵢ`
+
+    # TODO: isapprox related RVEcs with different lattice constants, for example [0,0,0] ≈
+    # [1,1,1]. We should take care of this, in here! add modw as false in isapproxin to fix 
+    # it. Thomas says to do : isapproxin(δ, δ', nothing, #=modw=#false)
+
     h_orbits = HoppingOrbit{D}[]
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
