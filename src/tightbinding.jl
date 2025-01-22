@@ -66,7 +66,7 @@ function obtain_symmetry_related_hoppings(
     return h_orbits
 end
 
-function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where D
+function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
     δ_idx = findfirst(h_orbits) do h_orbit
         isapproxin(δ, orbit(h_orbit), nothing, false)
     end
@@ -81,7 +81,7 @@ function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{Sy
     end
 end
 
-function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where D
+function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
     for g in ops
         _qₐ′ = g * qₐ
         _qᵦ′ = g * qᵦ
@@ -103,7 +103,8 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
             # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
             # approximate equality comparison
             bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
-                isapprox(qₐ′, qₐ′′, nothing, false) && isapprox(qᵦ′, qᵦ′′, nothing, false) && isapprox(R′, R′′, nothing, false)
+                (isapprox(qₐ′, qₐ′′, nothing, false) && isapprox(qᵦ′, qᵦ′′, nothing, false)
+                 && isapprox(R′, R′′, nothing, false))
             end
             if bool
                 push!(δ_orbit.hoppings[idx_in_orbit], (qₐ′, qᵦ′, R′))
@@ -310,7 +311,7 @@ function reciprocal_contraints_matrices(
     Mm::Array{Int,4},
     gens::AbstractVector{SymOperation{D}},
     h_orbit::HoppingOrbit{D}
-) where D
+) where {D}
     Zs = Vector{Array{Int,4}}(undef, length(gens))
     for (i, op) in enumerate(gens)
         Z = zeros(ComplexF64, size(Mm))
@@ -383,10 +384,12 @@ end
 
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
-    Rs::AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to consider
+    Rs::AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to
+    # consider
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
-        error("provided composite bandrep is not Wannierizable: contains negative or noninteger coefficients")
+        error("provided composite bandrep is not Wannierizable: contains negative or 
+                noninteger coefficients")
     end
     coefs = round.(Int, cbr.coefs)
 
@@ -423,7 +426,8 @@ function tb_hamiltonian(
             order = hamiltonian_term_order(br1, br2)
             for h_orbit in h_orbits
                 δ = representative(h_orbit)
-                n = something(findfirst(δ′ -> isapprox(δ, δ′, nothing, false), orbit_representatives))
+                n = something(findfirst(δ′ -> isapprox(δ, δ′, nothing, false),
+                    orbit_representatives))
                 push!(seen_n, n)
                 Mm, t_αβ_basis, _ = constraint_matrices(br1, br2, h_orbit, order)
 
@@ -472,11 +476,12 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
     Mm::Array{Int,4}
     t_αβ_basis::Vector{Vector{ComplexF64}}
-    h_orbit::Union{Nothing, HoppingOrbit{D}}
+    h_orbit::Union{Nothing,HoppingOrbit{D}}
     c_idxs::UnitRange{Int}
     # TODO: figure out how much of this is needed, e.g.:
     # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
     # TODO: do we need the indexing information in `block_ij` and `global_ij`? Probably not
+    # -> global_ij isn't even used in the code, not even block_ij, br1, br2, order...
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
@@ -488,14 +493,15 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         io_kr = IOBuffer()
         first_nonzero = true
         for (l, δₙₗ) in enumerate(δₙ.cnst)
-            abs2δₙₗ = 2abs(δₙₗ)
+            abs2δₙₗ = 2abs(δₙₗ) # WARNING: why do we multiply by 2?
             abs2δₙₗ < SPARSIFICATION_ATOL_DEFAULT && continue
             if δₙₗ < 0 || !first_nonzero
                 print(io_kr, Crystalline.signaschar(δₙₗ))
             end
             first_nonzero = false
             str_enum, v_r, v_str = _stringify_characters(abs2δₙₗ)
-            str_enum == REAL_STR || error(lazy"unexpected imaginary component in exponential argument $abs2δₙₗ")
+            str_enum == REAL_STR || error(lazy"unexpected imaginary component in 
+                                            exponential argument $abs2δₙₗ")
             isone(v_r) || print(io_kr, v_str)
             print(io_kr, "k", Crystalline.subscriptify(string(l)))
         end
@@ -516,7 +522,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         Mⁱʲtᵏ = Mm[:, :, i, j] * tbb.t_αβ_basis[k]
         nnz_els = count(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
         nnz_els == 0 && continue
-        first_t_αβ_basis_vec ? (first_t_αβ_basis_vec=false) : (print(io, " + "))
+        first_t_αβ_basis_vec ? (first_t_αβ_basis_vec = false) : (print(io, " + "))
         print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
         nnz_els > 1 && print(io, "[")
         first = true
@@ -587,8 +593,18 @@ function _stringify_characters(c::Number; digits::Int=3)
         end
     end
 end
-function _complex_as_compact_string(c::Complex) # usual string(::Complex) has spaces; avoid that
+function _complex_as_compact_string(c::Complex) # usual string(::Complex) has spaces; 
+    # avoid that
     io = IOBuffer()
     print(io, real(c), Crystalline.signaschar(imag(c)), abs(imag(c)), "i")
     return String(take!(io))
+end
+
+# ---------------------------------------------------------------------------------------- #
+
+# cartesianize the vectors for the printing of the Hamiltonian
+
+function _cartesianize(v::RVec{D}, sg_num::Int) where {D}
+    basis = directbasis(sg_num, Val(D))
+    return cartesianize(v, basis)
 end
