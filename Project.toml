@@ -14,10 +14,10 @@ RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [compat]
-Crystalline = "0.6.5"
+Crystalline = "0.6.8"
 LinearAlgebra = "1.10, 1.11"
 MPBUtils = "0.1.12"
-PhotonicBandConnectivity = "0.5"
+PhotonicBandConnectivity = "0.5.0"
 RowEchelon = "0.2.1"
 SymmetryBases = "0.4.2"
 julia = "1.9"

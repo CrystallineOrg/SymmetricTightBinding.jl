@@ -20,3 +20,5 @@ Rs = [[0, 0]]
 sym_hops = TETB.obtain_symmetry_related_hoppings(Rs, cbr.brs[1], cbr.brs[5])
 
 ## -------------------------------------------------------------------------------------- ##
+
+tb = TETB.tb_hamiltonian(cbr, Rs)

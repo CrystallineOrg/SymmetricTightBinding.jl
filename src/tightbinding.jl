@@ -493,7 +493,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         io_kr = IOBuffer()
         first_nonzero = true
         for (l, δₙₗ) in enumerate(δₙ.cnst)
-            abs2δₙₗ = 2abs(δₙₗ) # WARNING: why do we multiply by 2?
+            abs2δₙₗ = 2abs(δₙₗ)# WARNING: why do we multiply by 2?
             abs2δₙₗ < SPARSIFICATION_ATOL_DEFAULT && continue
             if δₙₗ < 0 || !first_nonzero
                 print(io_kr, Crystalline.signaschar(δₙₗ))
@@ -507,7 +507,8 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
         end
         exp_arg = String(take!(io_kr))
         if !isempty(exp_arg)
-            exp_strs[n] = "𝕖(" * exp_arg * ")" # short-hand: 𝕖(x) = exp(iπx)
+            exp_strs[n] = "𝕖(" * exp_arg * ")" # short-hand: 𝕖(x) = exp(iπx); x = k⋅2δ
+        # 𝕖(x) = exp(iπ2δ)
         else
             exp_strs[n] = "" # = 1, but omit for compactness
         end
@@ -604,7 +605,6 @@ end
 
 # cartesianize the vectors for the printing of the Hamiltonian
 
-function _cartesianize(v::RVec{D}, sg_num::Int) where {D}
-    basis = directbasis(sg_num, Val(D))
+function _cartesianize(v::RVec{D}, basis::DirectBasis{D}) where {D}
     return cartesianize(v, basis)
 end
