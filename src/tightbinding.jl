@@ -48,10 +48,6 @@ function obtain_symmetry_related_hoppings(
     #   hopping term associated to each `δᵢ`. Note that maybe several `(a,b,R)` could be 
     #   associated to the same `δᵢ`
 
-    # TODO: isapprox related RVEcs with different lattice constants, for example [0,0,0] ≈
-    # [1,1,1]. We should take care of this, in here! add modw as false in isapproxin to fix 
-    # it. Thomas says to do : isapproxin(δ, δ', nothing, #=modw=#false)
-
     h_orbits = HoppingOrbit{D}[]
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
@@ -89,8 +85,13 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
         qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
         dₐ = _qₐ′ - qₐ′
         dᵦ = _qᵦ′ - qᵦ′
-        R′ = g * R + dᵦ - dₐ
-        δ′ = g * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
+
+        g_rotation = SymOperation(rotation(g)) # rotation-only parts of `g`
+        R′ = g_rotation * R + dᵦ - dₐ
+        δ′ = g_rotation * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
+
+        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer lattice translation R′: should be impossible")
+        isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible")
         isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
 
         idx_in_orbit = findfirst(δ′′ -> isapprox(δ′, δ′′, nothing, false), orbit(δ_orbit))
@@ -259,7 +260,7 @@ function constraint_matrices(
     br_α::NewBandRep{D},
     br_β::NewBandRep{D},
     h_orbit::HoppingOrbit{D},
-    order=hamiltonian_term_order(br1, br2)
+    order=hamiltonian_term_order(br_α, br_β)
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gens_α, ρs_αα = sgrep_induced_by_siteir_generators(br_α)
@@ -280,7 +281,7 @@ function constraint_matrices(
     end
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on H_αβ
-    Zs = reciprocal_contraints_matrices(Mm, gens, h_orbit)
+    Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector t_αβ associated with h_orbit
@@ -299,15 +300,13 @@ function constraint_matrices(
     t_αβ_basis_matrix_form′ = poormans_sparsification(t_αβ_basis_matrix_form)
     t_αβ_basis = [collect(v) for v in eachcol(t_αβ_basis_matrix_form′)]
 
-    # NOTE: why do we not keep the matrix notation?
-
     # prune near-zero elements of basis vectors
     prune_at_threshold!(t_αβ_basis)
 
     return Mm, t_αβ_basis, order
 end
 
-function reciprocal_contraints_matrices(
+function reciprocal_constraints_matrices(
     Mm::Array{Int,4},
     gens::AbstractVector{SymOperation{D}},
     h_orbit::HoppingOrbit{D}
@@ -335,8 +334,8 @@ function permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
     for (i, δᵢ) in enumerate(orbit(h_orbit))
-        # TODO: we didn't primitive the operation. Possible source of error.
-        δᵢ′ = compose(op, δᵢ)
+        op_rotation = SymOperation(rotation(op)) # rotation-only parts of `op`
+        δᵢ′ = compose(op_rotation, δᵢ)
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
         isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
         P[i, j] = 1
@@ -418,9 +417,11 @@ function tb_hamiltonian(
         undef_blocks, Norbs, Norbs) for _ in orbit_representatives]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
+        println()
         # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
+            println("   ", br2)
             h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
             seen_n = Set{Int}()
             order = hamiltonian_term_order(br1, br2)
@@ -442,6 +443,7 @@ function tb_hamiltonian(
             # so we manually construct zero blocks for those spots:
             for n in eachindex(orbit_representatives)
                 n ∈ seen_n && continue
+                println("      ", n)
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
                     order,
