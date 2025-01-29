@@ -18,7 +18,7 @@ br = brs[1]
 ops = spacegroup(num(br), dim(br))
 wps = orbit(group(br))
 
-sgrep = sgrep_induced_by_siteir_generators(br)
+gens, sgrep = sgrep_induced_by_siteir_generators(br)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 

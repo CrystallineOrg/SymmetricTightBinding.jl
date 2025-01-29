@@ -424,9 +424,9 @@ $M$ then the operation will be performed.
 Let us know explain in a formal way the strategy followed before.
 
 For that purpose, let us consider a term in a general Hamiltonian which describes the hopping 
-term between two EBRs. For the sake of simplicity let us call them $(\mathbf{q}|A)$ and 
-$(\mathbf{w}|B)$, where $\mathbf{q}_i$ represent a certain WP in the SG and $A$ and $B$ 
-are two site-symmetry irreps of any dimension.
+term between two EBRs. For the sake of simplicity let us call them $\alpha: (\mathbf{q}|A)$ 
+and $\beta: (\mathbf{w}|B)$, where $\mathbf{q}_i$ represent a certain WP in the SG and $A$ 
+and $B$ are two site-symmetry irreps of any dimension.
 
 For the sake of notation, we will denote each point in the WPs and each term in the 
 site-symmetry irreps in a similar fashion:
@@ -438,15 +438,16 @@ A: A_1, A_2, \dots, A_J \\
 B: B_1, B_2, \dots, B_K
 $$
 
-As we have discussed previously, in reciprocal space the Hamiltonian can be written as a 
-matrix where each row denote an orbital from the "arriving" EBR and the column an orbital 
-from the "departing" EBR. Because of this the Hamiltonian can be described by a 
-$(\#\mathbf{q},\text{dim}(A)) \times (\#\mathbf{w},\text{dim}(B))$. Each of its components 
-will be a complex number which depend on the vector $\mathbf{k}$ and on some free-parameters 
-that later on we will adjust to obtain the band structure.
+As we have discussed previously, in reciprocal space the Hamiltonian term involving those 
+EBRs, $H_{\alpha\beta}$ can be written as a matrix where each row denote an orbital from the 
+"arriving" EBR and the column an orbital from the "departing" EBR. Because of this the 
+Hamiltonian term can be described by a $(\#\mathbf{q},\text{dim}(A)) \times 
+(\#\mathbf{w},\text{dim}(B))$. Each of its components will be a complex number which depend 
+on the vector $\mathbf{k}$ and on some free-parameters that later on we will adjust to obtain 
+the band structure.
 
-In order to obtain such Hamiltonian in `Julia`, we will need to do some previous steps so
-we can code such a symbolic structure into our numeric language.
+In order to obtain such Hamiltonian term in `Julia`, we will need to do some previous steps 
+so we can code such a symbolic structure into our numeric language.
 
 The first step we need to do is to find all the possible hopping distances that can be 
 found between this two EBRs. Obviously that set will be infinite so we need to impose a 
@@ -467,8 +468,8 @@ $$
 
 where $G_k$ are some particular lattice translations.
 
-With this information we are able to numerically codify the Hamiltonian by terms as we will 
-show in the following.
+With this information we are able to numerically codify the Hamiltonian matrix by terms as 
+we will show in the following.
 
 First, as we know that all the symmetry related hopping distances, for the cutoff assumed, 
 are stored in the output of `obtain_symmetry_related_hoppings`, we can use them to create an 
@@ -484,14 +485,34 @@ Note that we are going to use here the order provided by the function
 `obtain_symmetry_related_hoppings` to store this phases.
 
 Additionally, we will need to assign a free-parameter to each orbital hopping term in the 
-Hamiltonian (the ones that afterwards we will tune to replicate the band structure). This 
-vector then will have a length of $\text{len}(\delta s) \times \# \mathbf{q} \times \# 
+Hamiltonian matrix (the ones that afterwards we will tune to replicate the band structure). ç
+This vector then will have a length of $\text{len}(\delta s) \times \# \mathbf{q} \times \# 
 \mathbf{w} \times \text{dim}(A) \times \text{dim}(B)$. In particular this vector will look 
 like this:
 
 $$
-t = [t(\delta_1), \dots, t(\delta_2), \dots, t(\delta_n)]
+\mathbf{t}^T = [t(\delta_1), \dots, t(\delta_2), \dots, t(\delta_n)]
 $$
 
 where each $t(\delta_i)$ represent a collection of free-parameter. One per hopping term 
 inside the hopping distance $\delta_i$.
+
+Then each term of the Hamiltonian matrix can be written as:
+
+$$
+H_{\alpha\beta,ij} = \mathbf{v}^T \mathbf{M}_{\alpha\beta,ij} \mathbf{t}
+$$
+
+where $\mathbf{M}_{\alpha\beta,ij}$ is a numerical matrix that will relate a phase with a 
+free-parameter present on the Hamiltonian matrix term. At the end what we are doing is the 
+encoding the bilinear form of the Hamiltonian matrix term so we can operate with it in 
+Julia.
+
+We will, then, work with a set of matrices {$\mathbf{M}_{\alpha\beta}$} that will encode the 
+full Hamiltonian term and will allow us to operate with it.
+
+Allow us now to show how symmetry operations acts on this set of matrices and how to obtain 
+the constraints they impose on the Hamiltonian term.
+
+### Action of symmetries on the $\mathbf{M}$ matrices
+

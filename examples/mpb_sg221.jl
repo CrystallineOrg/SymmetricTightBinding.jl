@@ -45,7 +45,7 @@ candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
 # generators
 nᵀ⁺ᴸ = candidatesv[1][1]
 
-sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the SG generators in the
+gens, sgrep = sgrep_induced_by_siteir_generators(nᵀ⁺ᴸ) # representation of the SG generators in the
 # basis defined by nᵀ⁺ᴸ
 
 ##-----------------------------------------------------------------------------------------#
