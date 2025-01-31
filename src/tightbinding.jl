@@ -90,8 +90,7 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
         R′ = g_rotation * R + dᵦ - dₐ
         δ′ = g_rotation * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
 
-        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer 
-        lattice translation R′: should be impossible")
+        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer lattice translation R′: should be impossible")
         isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice 
         translation R′: should be impossible")
         isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
