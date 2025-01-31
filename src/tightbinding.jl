@@ -91,8 +91,7 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
         δ′ = g_rotation * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
 
         all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer lattice translation R′: should be impossible")
-        isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice 
-        translation R′: should be impossible")
+        isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible")
         isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
 
         idx_in_orbit = findfirst(δ′′ -> isapprox(δ′, δ′′, nothing, false), orbit(δ_orbit))
@@ -388,8 +387,7 @@ function tb_hamiltonian(
     # consider
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
-        error("provided composite bandrep is not Wannierizable: contains negative or 
-                noninteger coefficients")
+        error("provided composite bandrep is not Wannierizable: contains negative or noninteger coefficients")
     end
     coefs = round.(Int, cbr.coefs)
 
@@ -500,8 +498,7 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
             end
             first_nonzero = false
             str_enum, v_r, v_str = _stringify_characters(abs2δₙₗ)
-            str_enum == REAL_STR || error(lazy"unexpected imaginary component in 
-                                            exponential argument $abs2δₙₗ")
+            str_enum == REAL_STR || error(lazy"unexpected imaginary component in exponential argument $abs2δₙₗ")
             isone(v_r) || print(io_kr, v_str)
             print(io_kr, "k", Crystalline.subscriptify(string(l)))
         end
