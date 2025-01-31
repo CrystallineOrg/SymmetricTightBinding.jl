@@ -204,8 +204,7 @@ function construct_M_matrix(
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (constant for all i)
     foreach(h_orbit.hoppings) do hops
-        length(hops) == E || error("Unexpectedly had different counts of hoppings across orbit 
-        elements")
+        length(hops) == E || error("Unexpectedly had different counts of hoppings across orbit elements")
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
