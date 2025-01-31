@@ -341,7 +341,7 @@ function permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
     for (i, δᵢ) in enumerate(orbit(h_orbit))
-        op_rotation = SymOperation(transpose(rotation(op))) # rotation-only parts of `op`
+        op_rotation = SymOperation(inv(rotation(op))) # rotation-only parts of `op`
         δᵢ′ = compose(op_rotation, δᵢ)
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
         isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
