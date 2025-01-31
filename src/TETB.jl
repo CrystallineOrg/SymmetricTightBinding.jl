@@ -10,6 +10,7 @@ using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices
 using Crystalline: reduce_translation_to_unitrange, constant, free
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
+using GLMakie
 # ---------------------------------------------------------------------------------------- #
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
@@ -50,7 +51,9 @@ export obtain_symmetry_vectors
 export sgrep_induced_by_siteir_generators
 include("tightbinding.jl")
 export obtain_symmetry_related_hoppings
-export construct_M_matrix
+export tb_hamiltonian
+include("plotting_utils.jl")
+export hopplot
 
 # ---------------------------------------------------------------------------------------- #
 end # module

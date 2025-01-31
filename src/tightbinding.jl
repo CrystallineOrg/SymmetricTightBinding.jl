@@ -20,12 +20,12 @@ How it works:
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
-    br1::NewBandRep{D},
-    br2::NewBandRep{D}
+    brₐ::NewBandRep{D},
+    brᵦ::NewBandRep{D}
 ) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
 
-    sgnum = num(br1)
-    num(br2) == sgnum || error("both band representations must be in the same space group")
+    sgnum = num(brₐ)
+    num(brᵦ) == sgnum || error("both band representations must be in the same space group")
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
@@ -34,8 +34,8 @@ function obtain_symmetry_related_hoppings(
     # positions from a conventional to a primitive basis
     cntr = centering(sgnum, D)
     ops = primitivize(spacegroup(sgnum, Val{D}()))
-    wps1 = primitivize.(Crystalline.orbit(group(br1)), cntr)
-    wps2 = primitivize.(Crystalline.orbit(group(br2)), cntr)
+    wps1 = primitivize.(Crystalline.orbit(group(brₐ)), cntr)
+    wps2 = primitivize.(Crystalline.orbit(group(brᵦ)), cntr)
 
 
     # we have defined a structure `SymmetricHopping` to gather the information. It is 
@@ -90,8 +90,10 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
         R′ = g_rotation * R + dᵦ - dₐ
         δ′ = g_rotation * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
 
-        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer lattice translation R′: should be impossible")
-        isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible")
+        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer 
+        lattice translation R′: should be impossible")
+        isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice 
+        translation R′: should be impossible")
         isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
 
         idx_in_orbit = findfirst(δ′′ -> isapprox(δ′, δ′′, nothing, false), orbit(δ_orbit))
@@ -202,7 +204,8 @@ function construct_M_matrix(
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (constant for all i)
     foreach(h_orbit.hoppings) do hops
-        length(hops) == E || error("Unexpectedly had different counts of hoppings across orbit elements")
+        length(hops) == E || error("Unexpectedly had different counts of hoppings across orbit 
+        elements")
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
@@ -417,11 +420,9 @@ function tb_hamiltonian(
         undef_blocks, Norbs, Norbs) for _ in orbit_representatives]
     c_idx_start = 1
     for (block_i, br1) in enumerate(brs)
-        println()
         # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
-            println("   ", br2)
             h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
             seen_n = Set{Int}()
             order = hamiltonian_term_order(br1, br2)
@@ -443,7 +444,6 @@ function tb_hamiltonian(
             # so we manually construct zero blocks for those spots:
             for n in eachindex(orbit_representatives)
                 n ∈ seen_n && continue
-                println("      ", n)
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
                     order,

@@ -12,9 +12,11 @@ cbr = CompositeBandRep(coefs, brs)
 
 Rs = [[0, 0, 0]]
 
-tbs = TETB.tb_hamiltonian(cbr, Rs)
+tbs = tb_hamiltonian(cbr, Rs)
 
 # it only obtains (or at least prints) the onsite terms. Does it only print for the first 
 # term in Rs?
 
-hops = TETB.obtain_symmetry_related_hoppings([[0, 0, 0]], cbr.brs[6], cbr.brs[6])
+hops = obtain_symmetry_related_hoppings(Rs, cbr.brs[6], cbr.brs[6])
+
+hopplot(hops[2])
