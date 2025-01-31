@@ -418,6 +418,8 @@ Since we have $\{\Delta_{b \to a}\}$, we can just do $R\{\Delta_{b\to a}\}$, wit
 will be exactly the ones we are looking for. If we apply those permutations to the rows of 
 $M$ then the operation will be performed.
 
+**NOTE**: this is not fully true since $(g\mathbf{k})\cdot \delta = \mathbf{k}\cdot(R\delta)$, where $g=\{R|\mathbf{v}\}$. Then, we need to use the transpose of the operation not the actual operation for this trick to work.
+
 
 ## Methodology on how to write a symbolic Hamiltonian in Julia
 

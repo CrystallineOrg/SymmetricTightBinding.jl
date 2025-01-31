@@ -2,8 +2,8 @@ using GLMakie
 
 function hopplot(hop::HoppingOrbit{D}) where {D}
     P, V = Point{D,Float32}, Vec{D,Float32}
-    starting_atoms = reduce(vcat, [[P(TETB.constant(h[1])) for h in hs] for hs in hop.hoppings])
-    ending_atoms = reduce(vcat, [[P(TETB.constant(h[2] + h[3])) for h in hs] for hs in hop.hoppings])
+    starting_atoms = reduce(vcat, [[P(constant(h[1])) for h in hs] for hs in hop.hoppings])
+    ending_atoms = reduce(vcat, [[P(constant(h[2] + h[3])) for h in hs] for hs in hop.hoppings])
 
     # figure / axis setup
     f = Figure()

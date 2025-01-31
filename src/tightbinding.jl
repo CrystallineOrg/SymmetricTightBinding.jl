@@ -1,5 +1,5 @@
 using LinearAlgebra: nullspace
-using Crystalline: isapproxin
+using Crystalline: isapproxin, orbit
 """
 Compute the symmetry related hopping terms from the points in WP of `br1` to the WP of `br2`
 displaced a set of primitive lattice vectors `Rs`.
@@ -34,8 +34,8 @@ function obtain_symmetry_related_hoppings(
     # positions from a conventional to a primitive basis
     cntr = centering(sgnum, D)
     ops = primitivize(spacegroup(sgnum, Val{D}()))
-    wps1 = primitivize.(Crystalline.orbit(group(brₐ)), cntr)
-    wps2 = primitivize.(Crystalline.orbit(group(brᵦ)), cntr)
+    wpsₐ = primitivize.(orbit(group(brₐ)), cntr)
+    wpsᵦ = primitivize.(orbit(group(brᵦ)), cntr)
 
 
     # we have defined a structure `SymmetricHopping` to gather the information. It is 
@@ -51,7 +51,7 @@ function obtain_symmetry_related_hoppings(
     h_orbits = HoppingOrbit{D}[]
     for R in Rs
         R = RVec{D}(R) # change the type of R to be type consistent
-        for (qₐ, qᵦ) in Iterators.product(wps1, wps2)
+        for (qₐ, qᵦ) in Iterators.product(wpsₐ, wpsᵦ)
             qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ # potential representative in next element of `h_orbits`
@@ -62,6 +62,10 @@ function obtain_symmetry_related_hoppings(
     return h_orbits
 end
 
+"""
+Checks if a hopping term `δ` is already in the list of representatives. If not, it adds it
+and its symmetry related partners. If it is, it only adds the symmetry related partners.
+"""
 function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
     δ_idx = findfirst(h_orbits) do h_orbit
         isapproxin(δ, orbit(h_orbit), nothing, false)
@@ -80,14 +84,14 @@ end
 function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
     for g in ops
         _qₐ′ = g * qₐ
-        _qᵦ′ = g * qᵦ
+        _qᵦ′ = g * (qᵦ + R)
         qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
         qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
         dₐ = _qₐ′ - qₐ′
         dᵦ = _qᵦ′ - qᵦ′
 
-        g_rotation = SymOperation(rotation(g)) # rotation-only parts of `g`
-        R′ = g_rotation * R + dᵦ - dₐ
+        R′ = dᵦ - dₐ
+        g_rotation = SymOperation(rotation(g)) # rotation-only part of `g`
         δ′ = g_rotation * δ # potential symmetry related partner of `δ` to add to `δ_orbit`
 
         all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer lattice translation R′: should be impossible")
@@ -238,7 +242,7 @@ end
 """
 Build the Q matrix for a particular symmetry operation (or, equivalently, a particular
 matrix from the site-symmetry representation), acting on the M matrix. Relative to our
-white-board notes, Q has swapped indices, in the sense we below give Q[i,j,r,f].
+white-board notes, Q has swapped indices, in the sense we below give `Q[i,j,r,f]`.
 """
 function representation_constraint_matrices(
     Mm::AbstractArray{<:Number,4},
@@ -326,7 +330,10 @@ end
 
 """
 Build the P matrix for a particular symmetry operation acting on k-space, which permutes 
-the rows of the M matrix. WARNING: we assume that the operation is primitive.
+the rows of the M matrix. Take into account that the permutation is computed using δ not k, 
+so the transpose of the operations is used.
+
+WARNING: we assume that the operation is primitive.
 """
 function permute_symmetry_related_hoppings_under_symmetry_operation(
     h_orbit::HoppingOrbit{D},
@@ -334,7 +341,7 @@ function permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
     for (i, δᵢ) in enumerate(orbit(h_orbit))
-        op_rotation = SymOperation(rotation(op)) # rotation-only parts of `op`
+        op_rotation = SymOperation(transpose(rotation(op))) # rotation-only parts of `op`
         δᵢ′ = compose(op_rotation, δᵢ)
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
         isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
