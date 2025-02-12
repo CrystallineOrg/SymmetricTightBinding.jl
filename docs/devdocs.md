@@ -402,10 +402,11 @@ $$
 
 The transformation $H(gk)$, on the other hand, becomes:
 
-$$ H(gk)_{ij} = \text{permuted}(\mathbf{v})^T \mathbf{M}^{ij} \mathbf{t} = \mathbf{v}^T \text{permuted}(\mathbf{M})^{ij}
-    \mathbf{t} $$
+$$ H(gk)_{ij} = \text{permuted}(\mathbf{v})^T \mathbf{M}^{ij} \mathbf{t} = \mathbf{v}^T 
+\text{permuted}(\mathbf{M})^{ij} \mathbf{t} $$
 
-The permutation of $\mathbf{v}$ can be realized by a permutation matrix $\mathbf{P}(g)$, s.t. $\text{permuted}(\mathbf{v}^T) = \mathbf{P}(g)\mathbf{v}$, s.t.:
+The permutation of $\mathbf{v}$ can be realized by a permutation matrix $\mathbf{P}(g)$, s.t.
+$\text{permuted}(\mathbf{v}^T) = \mathbf{P}(g)\mathbf{v}$, s.t.:
 
 $$
     \text{permuted}(M)^{ij} = \mathbf{P}(g)^T \mathbf{M}^{ij}
@@ -413,10 +414,14 @@ $$
 
 #### How do we obtain such permutation?
 
-Since we have $\{\Delta_{b \to a}\}$, we can just do $R\{\Delta_{b\to a}\}$, with $g=\{R|
+Since we have $\{\Delta_{b \to a}\}$, we can just do $R^{-1}\{\Delta_{b\to a}\}$, with $g=\{R|
 \mathbf{v}\}$, and find the permutations made in $\{\Delta_{b \to a}\}$. Those permutations 
 will be exactly the ones we are looking for. If we apply those permutations to the rows of 
 $M$ then the operation will be performed.
+
+**NOTE**: this is done with $R^{-1}$ since $(g\mathbf{k})\cdot \delta = [(R^{-1})^T\mathbf{k}]
+\cdot\delta = \mathbf{k}\cdot(R^{-1}\delta)$, where $g=\{R|\mathbf{v}\}$. Then, we need to use 
+the transpose of the operation not the actual operation for this trick to ork.
 
 
 ## Methodology on how to write a symbolic Hamiltonian in Julia
@@ -485,7 +490,7 @@ Note that we are going to use here the order provided by the function
 `obtain_symmetry_related_hoppings` to store this phases.
 
 Additionally, we will need to assign a free-parameter to each orbital hopping term in the 
-Hamiltonian matrix (the ones that afterwards we will tune to replicate the band structure). ç
+Hamiltonian matrix (the ones that afterwards we will tune to replicate the band structure).
 This vector then will have a length of $\text{len}(\delta s) \times \# \mathbf{q} \times \# 
 \mathbf{w} \times \text{dim}(A) \times \text{dim}(B)$. In particular this vector will look 
 like this:

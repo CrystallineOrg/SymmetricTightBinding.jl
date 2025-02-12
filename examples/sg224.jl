@@ -1,17 +1,15 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-### necessary packages
 using Crystalline, TETB
 
-sg_num = 224
-brs = calc_bandreps(sg_num, Val(3))
+sg_num, D = 224, 3
+brs = calc_bandreps(sg_num, Val(D))
 c = zeros(Int, length(brs))
-c[13] = 1
-c[19] = 1
+c[13], c[19] = 1, 1
 cbr = CompositeBandRep(c, brs)
+Rs = [[0, 0, 0]]
 
-tb_model = TETB.tb_hamiltonian(cbr, [[0, 0, 0]]) # WARNING: we obtain different number of 
-# hoppings across orbits. Let me check that.
+tb_model = tb_hamiltonian(cbr, Rs)
 
-hops = TETB.obtain_symmetry_related_hoppings([[0, 0, 0]], brs[13], brs[19])
+hops = TETB.obtain_symmetry_related_hoppings(Rs, brs[13], brs[19])

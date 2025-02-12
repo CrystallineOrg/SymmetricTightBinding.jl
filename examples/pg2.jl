@@ -5,25 +5,12 @@ using Crystalline, TETB
 
 ##- Compute the necessary things for obtaining the hoppings
 
-pg_num = 2
-brs = calc_bandreps(pg_num, Val(2))
-c = [0, 0, 0, 0, 1, 0, 0, 1]
-cbr = CompositeBandRep(c, brs)
+pg_num, D = 2, 1
+brs = calc_bandreps(2, Val(D))
+coefs = zeros(Int, length(brs))
+coefs[[1, 3]] .= 1
+cbr = CompositeBandRep(coefs, brs)
 
-# needs to do that to find the WPs properly
-br1 = brs[end]
-br2 = brs[end-3]
+Rs = [[0,]]
 
-gen = generators(num(cbr))
-wps1 = orbit(group(br1))
-wps2 = orbit(group(br2))
-
-gens, sgrep = sgrep_induced_by_siteir_generators(cbr)
-
-##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
-
-Rs = [[0, 0]] # vector containing the translations we want to consider
-
-δs = TETB.obtain_symmetry_related_hoppings(Rs, br1, br2)
-
-##----------------------------------------------------------------------------------------##
+tbs = tb_hamiltonian(cbr, Rs)
