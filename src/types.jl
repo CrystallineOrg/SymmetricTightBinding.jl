@@ -1,7 +1,13 @@
+"""
+    TightBindingCandidateSet
+
+A structure for storing information about a set of tight-binding candidates for the photonic
+crystal.
+"""
 struct TightBindingCandidateSet <: AbstractVector{CompositeBandRep{3}}
-    longitudinal::CompositeBandRep{3}    # `nᴸ`
-    apolarv::Vector{CompositeBandRep{3}} # `nᵀ⁺ᴸ[i]` over `i ∈ eachindex(apolarv)`    
-    ps::Vector{Vector{Float64}}          # `ps[i]` associates to `nᵀ⁺ᴸ[i]`; w/ nᵀ(ω=0) = n_fixed + Q*p
+  longitudinal::CompositeBandRep{3}    # `nᴸ`
+  apolarv::Vector{CompositeBandRep{3}} # `nᵀ⁺ᴸ[i]` over `i ∈ eachindex(apolarv)`    
+  ps::Vector{Vector{Float64}}          # `ps[i]` associates to `nᵀ⁺ᴸ[i]`; w/ nᵀ(ω=0) = n_fixed + Q*p
 end
 Base.size(tbc::TightBindingCandidateSet) = (length(tbc.apolarv),)
 longitudinal(tbc::TightBindingCandidateSet) = tbc.longitudinal
@@ -31,9 +37,170 @@ For each element of the orbit δᵢ there may be multiple hopping terms, from si
   For `(a, b, R) = hoppings[i][j]`, we have `orbit[i] = δᵢ = b + R - a`
 """
 struct HoppingOrbit{D}
-    representative :: RVec{D} # representative hopping vector δ
-    orbit :: Vector{RVec{D}}  # orbit of the hopping vector {δᵢ …}
-    hoppings :: Vector{Vector{NTuple{3,RVec{D}}}} # `[(a,b,R), ...]` for every `orbit[i]`
+  representative::RVec{D} # representative hopping vector δ
+  orbit::Vector{RVec{D}}  # orbit of the hopping vector {δᵢ …}
+  hoppings::Vector{Vector{NTuple{3,RVec{D}}}} # `[(a,b,R), ...]` for every `orbit[i]`
 end
 representative(s::HoppingOrbit) = s.representative
 Crystalline.orbit(s::HoppingOrbit) = s.orbit # extend to avoid clash w/ Crystalline's `orbit`
+
+"""
+    TightBindingElementString
+
+A structure for pretty-printing tight-binding matrix elements.
+
+## Fields
+- `s :: String`: the string representing the tight-binding matrix element
+"""
+struct TightBindingElementString
+  s::String
+end
+function Base.show(io::IO, tbe_str::TightBindingElementString)
+  if tbe_str.s == "0"
+    # TODO: change to `printstyled(io, "0"; color=:light_black)` if/when
+    #       https://github.com/JuliaArrays/BlockArrays.jl/pull/443 is merged    
+    print(io, "0")
+  else
+    print(io, tbe_str.s)
+  end
+end
+
+"""
+    TightBindingBlock{D}
+
+A structure for storing information about a particular tight-binding matrix block.
+
+A block will represent the hopping terms between two band representations `br1` and `br2`. 
+For this hopping we store the order of the hopping terms, the matrix codifying the Hamiltonian
+`Mm` and the basis vectors `t_αβ_basis` which indicates the symmetry related free-coefficients.
+
+## Fields
+- `block_ij :: Tuple{Int,Int}`: the indices of the block in the full tight-binding matrix
+- `global_ij :: Tuple{Int,Int}`: the indices of the particular block 
+- `br1 :: NewBandRep{D}`: the first band representation
+- `br2 :: NewBandRep{D}`: the second band representation
+- `order :: Matrix{Pair{Tuple{Int,WyckoffPosition{D}},Tuple{Int,WyckoffPosition{D}}}}`:
+  the order of the hopping terms considered
+- `Mm :: Array{Int,4}`: the matrix codifying the Hamiltonian
+- `t_αβ_basis :: Vector{Vector{ComplexF64}}`: the basis vectors for the free coefficients
+- `h_orbit :: Union{Nothing,HoppingOrbit{D}}`: the hopping orbit associated to the block
+- `c_idxs :: UnitRange{Int}`: the indices of the free coefficients
+"""
+struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
+  block_ij::Tuple{Int,Int}
+  global_ij::Tuple{Int,Int}
+  br1::NewBandRep{D}
+  br2::NewBandRep{D}
+  order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
+  Mm::Array{Int,4}
+  t_αβ_basis::Vector{Vector{ComplexF64}}
+  h_orbit::Union{Nothing,HoppingOrbit{D}}
+  c_idxs::UnitRange{Int}
+  # TODO: figure out how much of this is needed, e.g.:
+  # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
+  # TODO: do we need the indexing information in `block_ij` and `global_ij`? Probably not
+  # -> global_ij isn't even used in the code, not even block_ij, br1, br2, order...
+end
+Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
+function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
+  h_orbit = tbb.h_orbit
+  isnothing(h_orbit) && return TightBindingElementString("0") # no hopping term
+  h_orbit = something(h_orbit)
+  exp_strs = Vector{String}(undef, length(orbit(h_orbit)))
+  for (n, δₙ) in enumerate(orbit(h_orbit))
+    io_kr = IOBuffer()
+    first_nonzero = true
+    for (l, δₙₗ) in enumerate(δₙ.cnst)
+      abs2δₙₗ = 2abs(δₙₗ) # multiplied by 2 due to the 2π factor in the exponential, but absolute value?
+      abs2δₙₗ < SPARSIFICATION_ATOL_DEFAULT && continue
+      if δₙₗ < 0 || !first_nonzero
+        print(io_kr, Crystalline.signaschar(δₙₗ))
+      end
+      first_nonzero = false
+      str_enum, v_r, v_str = _stringify_characters(abs2δₙₗ)
+      str_enum == REAL_STR || error(lazy"unexpected imaginary component in exponential argument $abs2δₙₗ")
+      isone(v_r) || print(io_kr, v_str)
+      print(io_kr, "k", Crystalline.subscriptify(string(l)))
+    end
+    exp_arg = String(take!(io_kr))
+    if !isempty(exp_arg)
+      exp_strs[n] = "𝕖(" * exp_arg * ")" # short-hand: 𝕖(x) = exp(iπx); x = k⋅2δ
+    #                                      𝕖(x) = exp(iπ2δ)
+    else
+      exp_strs[n] = "" # = 1, but omit for compactness
+    end
+  end
+  exp_strs
+
+  Mm = tbb.Mm
+
+  io = IOBuffer()
+  first_t_αβ_basis_vec = true
+  for k in eachindex(tbb.t_αβ_basis)
+    Mⁱʲtᵏ = Mm[:, :, i, j] * tbb.t_αβ_basis[k] # symmetry related Hamiltonian terms
+    nnz_els = count(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲtᵏ)
+    nnz_els == 0 && continue
+    first_t_αβ_basis_vec ? (first_t_αβ_basis_vec = false) : (print(io, " + "))
+    print(io, "c", Crystalline.subscriptify(string(tbb.c_idxs[k])))
+    nnz_els > 1 && print(io, "[")
+    first = true
+    for (n, v) in enumerate(Mⁱʲtᵏ)
+      abs(v) < SPARSIFICATION_ATOL_DEFAULT && continue
+      str_enum, v_r, v_str = _stringify_characters(v)
+      if str_enum == REAL_STR || str_enum == IMAG_STR
+        if isone(abs(v_r))
+          v_str = ""
+        else
+          v_str = lstrip(v_str, ('-', '+'))
+        end
+        if first
+          v_str = (v_r < 0 ? "-" : "") * v_str
+        else
+          v_str = (v_r < 0 ? "-" : "+") * v_str
+        end
+      else
+        v_str = (first ? "" : " + ") * "(" * v_str * ")"
+      end
+      print(io, v_str, exp_strs[n])
+      first = false
+    end
+    nnz_els > 1 && print(io, "]")
+  end
+  s = String(take!(io))
+  isempty(s) && (s = "0")
+  return TightBindingElementString(s)
+end
+Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
+
+# pretty-printing of scalars
+
+@enum StrPrintAs begin
+  REAL_STR
+  IMAG_STR
+  COMPLEX_STR
+end
+function _stringify_characters(c::Number; digits::Int=3)
+  c′ = round(c; digits)
+  cr, ci = reim(c′)
+  if iszero(ci)     # real
+    isinteger(cr) && return (REAL_STR, cr, string(Int(cr)))
+    return (REAL_STR, cr, string(cr))
+
+  elseif iszero(cr) # imaginary
+    isinteger(ci) && return (IMAG_STR, ci, string(Int(ci)) * "i")
+    return (IMAG_STR, ci, string(ci) * "i")
+
+  else              # complex
+    if isinteger(cr) && isinteger(ci)
+      return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr, ci))
+    else
+      return COMPLEX_STR, zero(cr), _complex_as_compact_string(c′)
+    end
+  end
+end
+function _complex_as_compact_string(c::Complex) # usual string(::Complex) has spaces; 
+  # avoid that
+  io = IOBuffer()
+  print(io, real(c), Crystalline.signaschar(imag(c)), abs(imag(c)), "i")
+  return String(take!(io))
+end

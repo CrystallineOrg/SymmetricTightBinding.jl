@@ -1,17 +1,17 @@
 module TETB
 
-# ---------------------------------------------------------------------------------------- #
-using LinearAlgebra
+# -------------------- Necessary modules for the package ---------------------------------- #
+using LinearAlgebra: nullspace
 using Crystalline
 using MPBUtils
 using SymmetryBases
 using PhotonicBandConnectivity
-using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices
-using Crystalline: reduce_translation_to_unitrange, constant, free
+using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
+using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
 using GLMakie
-# ---------------------------------------------------------------------------------------- #
+# -------------------- Predefined constant used ------------------------------------------ #
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
@@ -39,6 +39,7 @@ export mp, mpb
 include("types.jl")
 export TightBindingCandidateSet
 export HoppingOrbit
+export TightBindingElementString, TightBindingBlock
 include("conversion.jl")
 include("show.jl")
 include("constrained_nonnegative_expansions.jl")
@@ -53,7 +54,7 @@ include("tightbinding.jl")
 export obtain_symmetry_related_hoppings
 export tb_hamiltonian
 include("plotting_utils.jl")
-export hopplot
+export hop_plot
 
 # ---------------------------------------------------------------------------------------- #
 end # module

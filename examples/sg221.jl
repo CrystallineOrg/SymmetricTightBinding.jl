@@ -14,9 +14,8 @@ Rs = [[0, 0, 0]]
 
 tbs = tb_hamiltonian(cbr, Rs)
 
-# it only obtains (or at least prints) the onsite terms. Does it only print for the first 
-# term in Rs?
+# show the hopping orbitals that we are using to build the model
 
 hops = obtain_symmetry_related_hoppings(Rs, cbr.brs[6], cbr.brs[6])
 
-hopplot(hops[2])
+hop_plot(hops[2])

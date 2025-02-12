@@ -1,6 +1,10 @@
-using GLMakie
+"""
+    hop_plot(hop::HoppingOrbit{D}) where {D} --> Figure
 
-function hopplot(hop::HoppingOrbit{D}) where {D}
+Plots the hopping orbit `hop` in 2D or 3D. Also indicates the starting and ending atoms of the
+hoppings and the bonds between them.
+"""
+function hop_plot(hop::HoppingOrbit{D}) where {D}
     P, V = Point{D,Float32}, Vec{D,Float32}
     starting_atoms = reduce(vcat, [[P(constant(h[1])) for h in hs] for hs in hop.hoppings])
     ending_atoms = reduce(vcat, [[P(constant(h[2] + h[3])) for h in hs] for hs in hop.hoppings])
@@ -26,7 +30,7 @@ function hopplot(hop::HoppingOrbit{D}) where {D}
         arrowsize=D == 3 ? V(0.075, 0.075, 0.1) : V(0.075, 0.1), label="Bonds")
 
     # plot atoms
-    meshscatter!(ax, unique(ending_atoms), markersize=0.05, color=:red, label="Endind atoms")
+    meshscatter!(ax, unique(ending_atoms), markersize=0.05, color=:red, label="Ending atoms")
     meshscatter!(ax, unique(starting_atoms), markersize=0.05, color=:blue, label="Starting atoms")
 
     xmax = maximum(r -> abs(r[1]), ending_atoms)
