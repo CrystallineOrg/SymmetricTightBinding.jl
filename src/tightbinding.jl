@@ -56,13 +56,16 @@ function obtain_symmetry_related_hoppings(
     for R in Rs
         R = RVec{D}(R) # change the type of R for type consistency
         for (qₐ, qᵦ) in Iterators.product(wpsₐ, wpsᵦ)
-            qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition (type consistent)
+            qₐ = parent(qₐ) # work with RVec directly rather than Wyckoff Position
+            #                 (type consistent)
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ # potential representative in next element of `h_orbits`
             maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops)
             maybe_add_hoppings!(h_orbits, -δ, qᵦ, qₐ, -R, ops)
             # TODO (future): check if adding `δ` and `-δ` at the same time is a good idea
-            # or it is better to consider it afterwards at hermiticity
+            # or it is better to consider it afterwards at hermiticity. Is this 
+            # valid for any space group? Well yes, but they might be different if
+            # nor inversion nor TRS are present
         end
     end
     return h_orbits
@@ -347,6 +350,8 @@ function obtain_basis_free_parameters(
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
+    
+    # TODO: add an if statement if time-reversal is applied or not
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector tₐᵦ associated with h_orbit
