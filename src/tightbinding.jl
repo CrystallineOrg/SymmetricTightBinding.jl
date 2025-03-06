@@ -203,13 +203,13 @@ function hamiltonian_term_order(
 
     V1, V2 = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
-    order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
-        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
+    T_pair_eltype = Tuple{Int64, WyckoffPosition{D}}
+    order = Matrix{Pair{T_pair_eltype, T_pair_eltype}}(undef, V1 * Q1, V2 * Q2)
     for i in 1:V1
         for j in 1:V2
             for k in 1:Q1
                 for l in 1:Q2
-                    order[i*k, j*l] = (k, wp1[i]) => (l, wp2[j])
+                    order[(i-1)*Q1 + k, (j-1)*Q2 + l] = (k, wp1[i]) => (l, wp2[j])
                 end
             end
         end
@@ -355,15 +355,18 @@ function obtain_basis_free_parameters(
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector tₐᵦ associated with h_orbit
-    constraint_ms = Vector{Matrix{ComplexF64}}()
+    constraint_vs = Vector{Vector{ComplexF64}}()
     for (Q, Z) in zip(Qs, Zs)
         for s in axes(Q, 3), t in axes(Q, 4)
-            q = Q[:, :, s, t]
-            z = Z[:, :, s, t]
-            push!(constraint_ms, q - z)
+            q = @view Q[:, :, s, t]
+            z = @view Z[:, :, s, t]
+            c = q - z
+            filtered_rows = filter(r->norm(r)>1e-10, eachrow(c))
+            isempty(filtered_rows) && continue # don't add empty constraints
+            append!(constraint_vs, filtered_rows)
         end
     end
-    constraints = reduce(vcat, constraint_ms)
+    constraints = stack(constraint_vs, dims=1)
     tₐᵦ_basis_matrix_form = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
 
     # convert null-space to a sparse column form
@@ -394,7 +397,7 @@ function reciprocal_constraints_matrices(
 ) where {D}
     Zs = Vector{Array{Int,4}}(undef, length(gens))
     for (i, op) in enumerate(gens)
-        Z = zeros(ComplexF64, size(Mm))
+        Z = zeros(Int, size(Mm))
         P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
         Pᵀ = transpose(P)
         for l in axes(P, 1), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
