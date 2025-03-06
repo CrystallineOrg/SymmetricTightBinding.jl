@@ -4,8 +4,8 @@
 # we are going to assume for now that the transform as real irreps of the site-symmetry 
 # group. TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
 # D(𝒯)H(k)D(𝒯)⁻¹ = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)⁻¹ = H(-k), where D is the whole 
-# representation and Γ is only the unitary part.
-# If the site-symmetry irrep is real, Γ(𝒯)=I -> H*(k)=H(-k).
+# operator and Γ is only the unitary part, so D(𝒯) = Γ(𝒯)𝒯
+# If the site-symmetry irrep is real, Γ(𝒯) = I -> H*(k) = H(-k).
 
 
 """
@@ -40,7 +40,7 @@ function obtain_basis_free_parameters_TRS(
 
     # compute the tensor M that encodes the Hamiltonian as a numerical matrix
     Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, order)
-    
+
     #compute the Q tensor, encoding representation constraints on Hₐᵦ
     Qs = representation_constraint_matrices(Mm, brₐ, brᵦ)
 
@@ -48,29 +48,30 @@ function obtain_basis_free_parameters_TRS(
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
 
     # now we need to add time-reversal constraints. For this we first duplicate 
-    # the M matrix since H = vᵢ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ|tᴵⱼ)ᵀ
-    # TODO : we assume that we have ±δ in v. Is this true? why? it is ok physically
-    #        and in here we will see if they are equal or not.
-    
-    brₐ.siteir.iscorep == brᵦ.siteir.iscorep == false || error("No implemented for COMPLEX or PSEUDOREAL irreps")
+    # the M matrix since H = vᵢᵀ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
+    # WARNING : we assume that we have ±δ in v. Is this true? why? it is ok physically
+    #           and in here we will see if they are equal or not.
+
+    brₐ.siteir.iscorep == brᵦ.siteir.iscorep == false || error("Not implemented for COMPLEX or PSEUDOREAL irreps")
 
     # compute the Z tensor, encoding time-reversal constraints on H for the k-space
-    # part. This is done by H(-k) = (Ρv)ᵢ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ|tᴵⱼ)ᵀ
+    # part. This is done by H(-k) = (Ρv)ᵢᵀ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ,tᴵⱼ) = vᵢᵀ Ρᵀ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
+    # vᵢᵀ (Ρᵀ Mᵢⱼ|Ρᵀ Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
 
     Z_trs = reciprocal_constraints_trs(Mm, h_orbit)
 
     # compute the Q tensor, encoding time-reversal constraints on H for the free-
-    # parameter part. This is done by H*(k) = vᵢ* (Mᵢⱼ|-Mᵢⱼ) (tᴿⱼ|tᴵⱼ) = 
-    # (Pvᵢ)ᵀ (Mᵢⱼ|-Mᵢⱼ) (tᴿⱼ|tᴵⱼ) = vᵢᵀ Pᵀ (Mᵢⱼ|-Mᵢⱼ) (tᴿⱼ|tᴵⱼ)
+    # parameter part. This is done by H*(k) = vᵢᵀ* (Mᵢⱼ|-Mᵢⱼ) (tᴿⱼ,tᴵⱼ) = 
+    # (Pvᵢ)ᵀ (Mᵢⱼ|-Mᵢⱼ) (tᴿⱼ,tᴵⱼ) = vᵢᵀ (Pᵀ Mᵢⱼ|-Pᵀ Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
 
     Q_trs = representation_constraint_trs(Mm, h_orbit)
 
-    Zs_trs = Vector{Array{ComplexF64,8}}(undef, length(Zs)+1)
-    Qs_trs = Vector{Array{ComplexF64,8}}(undef, length(Qs)+1)
+    Zs_trs = Vector{Array{ComplexF64,8}}(undef, length(Zs) + 1)
+    Qs_trs = Vector{Array{ComplexF64,8}}(undef, length(Qs) + 1)
 
     for i in axes(Zs, 2)
-        Zs_trs[i] = Zs[i]
-        Qs_trs[i] = Qs[i]
+        Zs_trs[i] = [Zs[i] Zs[i]]
+        Qs_trs[i] = [Qs[i] Qs[i]]
     end
 
     Zs_trs[end] = Z_trs
@@ -112,7 +113,7 @@ function reciprocal_constraints_trs(
     P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
     Pᵀ = transpose(P)
     for l in axes(P, 1), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
-            Z_trs[l, j, s, t] = sum(Pᵀ[l, i] * Mm[i, j, s, t] for i in axes(P, 2))
+        Z_trs[l, j, s, t] = sum(Pᵀ[l, i] * Mm[i, j, s, t] for i in axes(P, 2))
     end
     return [Z_trs Z_trs]
 end
@@ -131,7 +132,7 @@ function representation_constraint_trs(
     P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
     Pᵀ = transpose(P)
     for l in axes(P, 1), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
-            Q_trs[l, j, s, t] = sum(Pᵀ[l, i] * Mm[i, j, s, t] for i in axes(P, 2))
+        Q_trs[l, j, s, t] = sum(Pᵀ[l, i] * Mm[i, j, s, t] for i in axes(P, 2))
     end
     return [Q_trs -Q_trs]
 end

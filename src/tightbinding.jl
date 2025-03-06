@@ -201,7 +201,7 @@ function hamiltonian_term_order(
     wp1 = primitivize.(orbit(group(br1)), cntr)
     wp2 = primitivize.(orbit(group(br2)), cntr)
 
-    V1, V2, = length(wp1), length(wp2)
+    V1, V2 = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
         Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
@@ -350,7 +350,7 @@ function obtain_basis_free_parameters(
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
-    
+
     # TODO: add an if statement if time-reversal is applied or not
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping

@@ -53,14 +53,14 @@ group of a particular maximal WP.
 """
 function sgrep_induced_by_siteir_generators(
     br::NewBandRep{D},
-    gens::AbstractVector{SymOperation{D}} = generators(num(br), SpaceGroup{D})
+    gens::AbstractVector{SymOperation{D}}=generators(num(br), SpaceGroup{D})
 ) where {D}
     siteir = br.siteir
     siteir_dim = irdim(siteir)
     siteg = group(siteir)
     wps = orbit(siteg)
     mult = length(wps)
-    
+
 
     ρs = [BlockArray{ComplexF64}(
         zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
@@ -83,7 +83,7 @@ function sgrep_induced_by_siteir_generators(
             check || error("failed to find any nonzero block")
         end
     end
-    
+
     return gens, ρs
 end
 
@@ -104,7 +104,7 @@ function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
         sgrep = sgrep_induced_by_siteir_generators(brs.brs[idxc], gens)
         for idxg in eachindex(gens)
             iszero(c) && continue
-            ρ_idxg = sgrep[idxg][2]
+            ρ_idxg = sgrep[2][idxg]
             for _ in 1:Int(c)
                 ρs[idxg] = ρs[idxg] ⊕ ρ_idxg
             end
