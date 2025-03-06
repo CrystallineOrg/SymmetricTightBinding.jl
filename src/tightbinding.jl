@@ -200,13 +200,13 @@ function hamiltonian_term_order(
 
     V1, V2, = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
-    order = Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},
-        Tuple{Int64,WyckoffPosition{D}}}}(undef, V1 * Q1, V2 * Q2)
+    T_pair_eltype = Tuple{Int64, WyckoffPosition{D}}
+    order = Matrix{Pair{T_pair_eltype, T_pair_eltype}}(undef, V1 * Q1, V2 * Q2)
     for i in 1:V1
         for j in 1:V2
             for k in 1:Q1
                 for l in 1:Q2
-                    order[i*k, j*l] = (k, wp1[i]) => (l, wp2[j])
+                    order[(i-1)*Q1 + k, (j-1)*Q2 + l] = (k, wp1[i]) => (l, wp2[j])
                 end
             end
         end
