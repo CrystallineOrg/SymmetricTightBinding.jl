@@ -46,7 +46,53 @@ function find_bandrep_decompositions(
     end
 end
 
-# we do not include the (usually redundant) exponential (k-dependent) phases below
+function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where D
+
+    siteir = br.siteir
+    siteir_dim = irdim(siteir)
+    siteg = group(siteir)
+    wps = orbit(siteg)
+    mult = length(wps)
+    g = op
+
+    ρ = BlockArray{ComplexF64}(zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
+                               fill(siteir_dim, mult), fill(siteir_dim, mult))
+
+    for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
+        check = false
+        for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
+            tᵦₐ = constant(g * parent(qₐ) - parent(qᵦ)) # ignore free parts of the WP
+            # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
+            h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
+            idx_h = findfirst(==(h), siteg)
+            if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
+                ρ[Block(β, α)] .= siteir.matrices[idx_h]
+                check = true
+                break
+            end
+        end
+        check || error("failed to find any nonzero block")
+    end
+
+    return ρ
+end
+
+function sgrep_induced_by_siteir(cbr::CompositeBandRep{D}, op::SymOperation{D}) where D
+    ρ = Matrix{Complex}(undef, 0, 0)
+    for (idxc, c) in enumerate(cbr.coefs)
+        iszero(c) && continue
+        ρ_idxc = sgrep_induced_by_siteir(cbr.brs[idxc], op)
+        for _ in 1:Int(c)
+            ρ = ρ ⊕ ρ_idxc
+        end
+    end
+    return ρ
+end
+
+# NB: we do not include the (usually redundant) exponential (k-dependent) phases below.
+#     Note that these phases are NOT REDUNDANT if we are intending to use the sgrep as 
+#     the group action on eigenstates, e.g., for determining the irreps of a tightbinding
+#     Hamiltonian
 """
 Induce a representation for the generators of the SG from a representation of the site-symmetry 
 group of a particular maximal WP.
@@ -54,37 +100,8 @@ group of a particular maximal WP.
 function sgrep_induced_by_siteir_generators(
     br::NewBandRep{D},
     gens::AbstractVector{SymOperation{D}} = generators(num(br), SpaceGroup{D})
-) where {D}
-    siteir = br.siteir
-    siteir_dim = irdim(siteir)
-    siteg = group(siteir)
-    wps = orbit(siteg)
-    mult = length(wps)
-    
-
-    ρs = [BlockArray{ComplexF64}(
-        zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
-        fill(siteir_dim, mult), fill(siteir_dim, mult)) for _ in eachindex(gens)]
-    for (n, g) in enumerate(gens)
-        ρ = ρs[n]
-        for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
-            check = false
-            for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
-                tᵦₐ = constant(g * parent(qₐ) - parent(qᵦ)) # ignore free parts of the WP
-                # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
-                h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
-                idx_h = findfirst(==(h), siteg)
-                if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by g
-                    ρ[Block(β, α)] .= siteir.matrices[idx_h]
-                    check = true
-                    break
-                end
-            end
-            check || error("failed to find any nonzero block")
-        end
-    end
-    
-    return gens, ρs
+) where {D} 
+    return gens, sgrep_induced_by_siteir.(Ref(br), gens)
 end
 
 """
@@ -95,21 +112,11 @@ function ⊕(As::AbstractMatrix...)
 end
 
 
-function sgrep_induced_by_siteir_generators(brs::CompositeBandRep{D}) where {D}
+function sgrep_induced_by_siteir_generators(
+    cbr::CompositeBandRep{D},
+    gens = generators(num(cbr), SpaceGroup{D})
+    ) where {D}
     # TODO: primitivize the generators of the space group
-    gens = generators(num(brs), SpaceGroup{D})
-    ρs = [Matrix{Complex}(undef, 0, 0) for _ in eachindex(gens)]
+    return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
 
-    for (idxc, c) in enumerate(brs.coefs)
-        sgrep = sgrep_induced_by_siteir_generators(brs.brs[idxc], gens)
-        for idxg in eachindex(gens)
-            iszero(c) && continue
-            ρ_idxg = sgrep[idxg][2]
-            for _ in 1:Int(c)
-                ρs[idxg] = ρs[idxg] ⊕ ρ_idxg
-            end
-        end
-    end
-
-    return gens, ρs
 end
