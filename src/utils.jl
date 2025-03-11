@@ -222,3 +222,12 @@ function find_apolar_modes(
     return candidatesv
 end
 
+"""
+    split_complex(t::Vector{<:Number}) --> Vector{<:Number}
+
+Split a complex vector into its real and imaginary components and return them as
+a vector.
+"""
+function split_complex(t::Vector{<:Number})
+    return [real(t); imag(t)]
+end

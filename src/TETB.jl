@@ -1,7 +1,7 @@
 module TETB
 
 # -------------------- Necessary modules for the package ---------------------------------- #
-using LinearAlgebra: nullspace
+using LinearAlgebra: nullspace, norm
 using Crystalline
 using MPBUtils
 using SymmetryBases
@@ -15,6 +15,7 @@ using GLMakie
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
+const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 # ---------------------------------------------------------------------------------------- #
 
 using PyCall
@@ -55,6 +56,9 @@ export obtain_symmetry_related_hoppings
 export tb_hamiltonian
 include("plotting_utils.jl")
 export hop_plot
+include("zassenhaus.jl")
+include("time_reversal.jl")
+include("hermiticity.jl")
 
 # ---------------------------------------------------------------------------------------- #
 end # module

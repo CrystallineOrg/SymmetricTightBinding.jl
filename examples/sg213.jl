@@ -15,6 +15,23 @@ Rs = [[0, 0, 0]]
 
 tb_model = tb_hamiltonian(cbr, Rs)
 
-# show the hopping orbitals that we are using to build the model
+# let me check how the basis vectors look like
 
 hops = obtain_symmetry_related_hoppings(Rs, cbr.brs[end], cbr.brs[end])
+
+Mm, tₐᵦ_basis, or = TETB.obtain_basis_free_parameters(cbr.brs[end], cbr.brs[end], hops[2])
+
+# checks
+
+c = Int[]
+for i in eachindex(tₐᵦ_basis)
+    if !isreal(tₐᵦ_basis[i])
+        append!(c, i)
+    end
+end
+println(c)
+
+# tₐᵦ_basis[c] will give back the basis vectors with complex entries. Let me
+# focus on tₐᵦ_basis[2]
+
+println(tₐᵦ_basis[2])
