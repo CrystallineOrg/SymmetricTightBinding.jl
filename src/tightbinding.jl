@@ -1,25 +1,25 @@
 """
-    obtain_symmetry_related_hoppings(
-                                    Rs::AbstractVector{V}, 
-                                    brₐ::NewBandRep{D}, 
-                                    brᵦ::NewBandRep{D}
-                                    ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
-                                    --> Vector{HoppingOrbit{D}}
+        obtain_symmetry_related_hoppings(
+                                        Rs::AbstractVector{V}, 
+                                        brₐ::NewBandRep{D}, 
+                                        brᵦ::NewBandRep{D}
+                                        ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
+                                        --> Vector{HoppingOrbit{D}}
 
-Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
-WP of `brᵦ`displaced a set of primitive lattice vectors `Rs`.
+    Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
+    WP of `brᵦ`displaced a set of primitive lattice vectors `Rs`.
 
-The vectors provided in `Rs` are just representatives. Because of symmetry 
-operations, bigger primitive lattice vectors could be found.
+    The vectors provided in `Rs` are just representatives. Because of symmetry 
+    operations, bigger primitive lattice vectors could be found.
 
-How it works: 
-1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
-compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
-2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
-    of that representative and continue. If not then, we search inside of all the 
-    representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
-    If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
-    to its list of hoppings.
+    How it works: 
+    1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
+    compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+    2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
+        of that representative and continue. If not then, we search inside of all the 
+        representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
+        If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
+        to its list of hoppings.
 3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
     and repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
@@ -339,7 +339,7 @@ function obtain_basis_free_parameters(
     brᵦ::NewBandRep{D},
     h_orbit::HoppingOrbit{D},
     order=hamiltonian_term_order(brₐ, brᵦ);
-    time_reversal=false;
+    time_reversal=false,
     hermiticity=false
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
@@ -359,8 +359,6 @@ function obtain_basis_free_parameters(
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
-
-    # TODO: add an if statement if time-reversal is applied or not
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector tₐᵦ associated with h_orbit
@@ -387,39 +385,50 @@ function obtain_basis_free_parameters(
 
     Mm_final = Mm
 
-    if time_reversal && hermiticity
-        # rewrite `tₐᵦ_basis` in the desired form t = tᴿ + i tᴵ = (tᴿ; tᴵ) and 
-        # store it as columns in a matrix
+    if time_reversal
+        # rewrite `tₐᵦ_basis` in the desired form t -> [real(t) real(im*t); imag(t) imag(im*t)] 
+        # and store it as columns in a matrix. Read `split_complex` docstring for details.
         tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
         tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
+
+        # this works the following way:
+        # julia> t₁ = [im,0]
+        # 2-element Vector{Complex{Int64}}:
+        # 0 + 1im
+        # 0 + 0im
+
+        # julia> t₂ = [1,im]
+        # 2-element Vector{Complex{Int64}}:
+        # 1 + 0im
+        # 0 + 1im
+
+        # julia> t_basis = [t₁,t₂]
+        # 2-element Vector{Vector{Complex{Int64}}}:
+        # [0 + 1im, 0 + 0im]
+        # [1 + 0im, 0 + 1im]
+
+        # julia> t_basis_split = TETB.split_complex.(t_basis)
+        # 2-element Vector{Matrix{Int64}}:
+        # [0 -1; 0 0; 1 0; 0 0]
+        # [1 0; 0 -1; 0 1; 1 0]
+        # julia> TETB.split_complex(t)
+        # 4×2 Matrix{Int64}:
+        # 1   0
+        # 0  -1
+        # 0   1
+        # 1   0
+
+        # julia> tₐᵦ_basis_split_matrix = reduce(hcat, t_basis_split)
+        # 4×4 Matrix{Int64}:
+        # 0  -1  1   0
+        # 0   0  0  -1
+        # 1   0  0   1
+        # 0   0  1   0
+
+        # julia>
 
         # obtain the TRS basis and intersect
         Mm_final, tₐᵦ_extra, _ = obtain_basis_free_parameters_TRS(brₐ, brᵦ, h_orbit, order)
-        _, tₐᵦ_hermiticity, _ = obtain_basis_free_parameters_hermiticity(brₐ, brᵦ, h_orbit, order)
-        append!(tₐᵦ_extra, tₐᵦ_hermiticity)
-
-        tₐᵦ_extra_matrix = reduce(hcat, tₐᵦ_extra)
-        tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_extra_matrix)
-
-    elseif time_reversal
-        # rewrite `tₐᵦ_basis` in the desired form t = tᴿ + i tᴵ = (tᴿ; tᴵ) and 
-        # store it as columns in a matrix
-        tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-        tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
-
-        # obtain the TRS basis and intersect
-        Mm_final, tₐᵦ_extra, _ = obtain_basis_free_parameters_TRS(brₐ, brᵦ, h_orbit, order)
-        tₐᵦ_extra_matrix = reduce(hcat, tₐᵦ_extra)
-        tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_extra_matrix)
-
-    elseif hermiticity
-        # rewrite `tₐᵦ_basis` in the desired form t = tᴿ + i tᴵ = (tᴿ; tᴵ) and 
-        # store it as columns in a matrix
-        tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-        tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
-
-        # obtain the TRS basis and intersect
-        Mm_final, tₐᵦ_extra, _ = obtain_basis_free_parameters_hermiticity(brₐ, brᵦ, h_orbit, order)
         tₐᵦ_extra_matrix = reduce(hcat, tₐᵦ_extra)
         tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_extra_matrix)
     end
@@ -451,7 +460,7 @@ function reciprocal_constraints_matrices(
         for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
             Z[l, j, s, t] = sum(P[i, l] * Mm[i, j, s, t] for i in axes(P, 1))
             # ERROR: l and i was running over the rows and columns of Ρ not Ρᵀ
-            # vᵀ Ρᵀ Mₛₜ t => vᵢ Ρᵀᵢⱼ Mⱼᵣₛₜ tᵣ = vᵢ Pⱼᵢ Mⱼᵣₛₜ tᵣ
+            # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
         end
         Zs[i] = Z
     end

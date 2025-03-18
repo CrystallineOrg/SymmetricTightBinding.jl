@@ -1,7 +1,6 @@
 # implementation of the Zassenhaus algorithm.
-# TODO: maybe use rref from `AbstractAlgebra.jl` better (?)
 
-using RowEchelon: rref # TODO: check how much this is sensitive to numerical imprecision
+using RowEchelon: rref
 
 # my idea is to have U and W as the matrices {aᵢⱼ} and {bᵢⱼ} from the Zassenhaus algorithm
 # U is a matrix of n×m and W is a matrix of k×m.
@@ -33,7 +32,7 @@ function zassenhaus_intersection(
 
     inter_basis = Vector{Vector{T}}()
     for v in eachrow(R)
-        if all(vᵢ -> abs(vᵢ) < ZASSENHAUS_ATOL_DEFAULT, v[1:size(U, 2)])
+        if all(vᵢ -> abs(vᵢ) < ZASSENHAUS_ATOL_DEFAULT, @view v[1:size(U, 2)])
             append!(inter_basis, [v[size(U, 2)+1:end]])
         end
     end

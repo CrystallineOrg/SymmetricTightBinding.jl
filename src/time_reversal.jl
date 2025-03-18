@@ -1,27 +1,43 @@
 # TODO: improve the code so it works for COMPLEX and PSEUDOREAL irreps
 
+# Now we need to take care of what is real or complex to properly apply TRS.
+
+# the vector `t` could be multiplied by a complex number. We want now to make 
+# everything real. For this, we do the following extra step to the one above:
+# αt = (a + im*b)t = at + b (im*t) = [a; b] [t im*t]
+# where α∈ℂ and a,b∈ℝ. This way we duplicate the dimensionality of the problem,
+# but we keep everything real. 
+
+# but in that way, t∈ℂ. If we want it to be real also, we can separated it into 
+# its real and imaginary part in the following way: t -> [real(t); imag(t)] =
+# [tᴿ; tᴵ].
+
+# so joining everything together, we have: αt -> [a; b] [t im*t] -> 
+# [a; b] [real(t) real(im*t); imag(t) imag(im*t)]
+
+# now, what happens with the irreps assuming this notation?
+
 # we are going to assume for now that the transform as real irreps of the site-symmetry 
 # group. TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
 # D(𝒯)H(k)D(𝒯)⁻¹ = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)⁻¹ = H(-k), where D is the whole 
 # operator and Γ is only the unitary part, so D(𝒯) = Γ(𝒯)𝒯
 # If the site-symmetry irrep is real, Γ(𝒯) = I -> H*(k) = H(-k).
 
-# below i have assumed that the unitary part Γ doesn't have any complex entry.
-# if a complex entry is present, we need to perform an extra permutation on 
-# (Mᵢⱼ| -Mᵢⱼ). Imagine we have an operation: 
-# (ΓH*(k)Γ⁻¹)ₛₜ = vᵀ Pᵀ [Γₛₙ (Mₙᵣ| -Mₙᵣ) Γᵣₜ⁻¹] (tᴿ,tᴵ)
-#
-# for simplicity i am going to pick Γ = [0 i; -i 0] (complex entries in the 
-# representation). Then, i can build an auxiliary matrix 𝒢 such that 
-# 𝒢(Γ₁₂) = [0 1; -1 0] = -𝒢(Γ₂₁⁻¹) and the other being zero. Then, we have that 
-# the permutation is given by 
-# vᵀ Pᵀ [Γ₁₂ (Mₙᵣ| -Mₙᵣ) Γ₁₂⁻¹] (tᴿ,tᴵ) = vᵀ Pᵀ [(Mₙᵣ| -Mₙᵣ)𝒢(Γ₁₂)𝒢(Γ₁₂⁻¹)] (tᴿ,tᴵ)
-# This is based on the fact that matrices acting on the right can permute columns.
-# TODO: is it better to expand by rows instead of columns? 
-#       (Mₙᵣ|Mₙᵣ)(tᴿ,tᴵ) -> (Mₙᵣ,Mₙᵣ)(tᴿ|tᴵ)
-# WARNING: does something similar apply also to crystalline symmetries?
-#          check example SG213 EBR (4a|E) -> yes I included function `split_complex`
-#          (maybe unnecessary as standalone function)
+# we have made the following decomposition: t -> [real(t) real(im*t); imag(t) imag(im*t)].
+# how does this affect the Hamiltonian representation?
+
+# we have that Hᵢⱼ(k) = vᵀ(k) Mᵢⱼ t. Then, we need to make the following change:
+# Hᵢⱼ(k) = [vᵀ(k) vᵀ(k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+
+# Then applying TRS will be:
+
+# 1. H(-k) = [vᵀ(-k) vᵀ(-k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+# = [(Pv)ᵀ(k) (Pv)ᵀ(k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+# = [vᵀ(k) vᵀ(k)] [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+
+# 2. H*(k) = [(v*)ᵀ(k) (v*)ᵀ(k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); -imag(t) -imag(im*t)]
+# = [(Pv)ᵀ(k) (Pv)ᵀ(k)] [Mᵢⱼ -Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+# = [vᵀ(k) vᵀ(k)] [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
 
 """
     obtain_basis_free_parameters_TRS(
@@ -55,14 +71,16 @@ function obtain_basis_free_parameters_TRS(
     brₐ.siteir.iscorep == brᵦ.siteir.iscorep == false || error("Not implemented for COMPLEX or PSEUDOREAL irreps")
 
     # compute the Z tensor, encoding time-reversal constraints on H for the k-space
-    # part. This is done by H(-k) = (Ρv)ᵢᵀ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ,tᴵⱼ) = vᵢᵀ Ρᵀ (Mᵢⱼ|Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
-    # vᵢᵀ (Ρᵀ Mᵢⱼ|Ρᵀ Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
+    # part. This is done by H(-k) = [vᵀ(-k) vᵀ(-k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+    # = [(Pv)ᵀ(k) (Pv)ᵀ(k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+    # = [vᵀ(k) vᵀ(k)] [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
 
     Z_trs = reciprocal_constraints_trs(Mm, h_orbit)
 
     # compute the Q tensor, encoding time-reversal constraints on H for the free-
-    # parameter part. This is done by H*(k) = vᵢᵀ* (Mᵢⱼ| -Mᵢⱼ) (tᴿⱼ,tᴵⱼ) = 
-    # (Pvᵢ)ᵀ (Mᵢⱼ| -Mᵢⱼ) (tᴿⱼ,tᴵⱼ) = vᵢᵀ (Pᵀ Mᵢⱼ| -Pᵀ Mᵢⱼ) (tᴿⱼ,tᴵⱼ)
+    # parameter part. This is done by H*(k) = [(v*)ᵀ(k) (v*)ᵀ(k)] [Mᵢⱼ Mᵢⱼ] [real(t) real(im*t); -imag(t) -imag(im*t)]
+    # = [(Pv)ᵀ(k) (Pv)ᵀ(k)] [Mᵢⱼ -Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
+    # = [vᵀ(k) vᵀ(k)] [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [real(t) real(im*t); imag(t) imag(im*t)]
 
     Q_trs = representation_constraint_trs(Mm, h_orbit)
 
@@ -84,7 +102,8 @@ function obtain_basis_free_parameters_TRS(
     # convert null-space to a sparse column form
     tₐᵦ_basis_matrix_form′ = _poormans_sparsification(tₐᵦ_basis_matrix_form)
     tₐᵦ_basis = [collect(v) for v in eachcol(tₐᵦ_basis_matrix_form′)]
-    # TODO: maybe we can keep it as matrix
+    # TODO: are this vectors real? -> I think so but let's check it for now
+    all(isreal.(tₐᵦ_basis)) || error("TRS constraint returns COMPLEX basis. Case not considered.")
 
     # prune near-zero elements of basis vectors
     _prune_at_threshold!(tₐᵦ_basis)
@@ -97,7 +116,7 @@ end
     --> Array{ComplexF64,4}
 
 If time reversal symmetry is present, we need to add the constraint. It is given
-by the association k -> -k.
+by the association k -> -k. H(k) -> H(-k).
 """
 function reciprocal_constraints_trs(
     Mm::Array{Int,4},
@@ -118,7 +137,7 @@ end
 
 If time reversal symmetry is present, we need to add the constraint. It is given
 by the association δ -> -δ and the complex conjugation in the free-parameter part
-tⱼ -> tⱼ* = (tⱼᴿ|tⱼᴵ) -> (tⱼᴿ| -tⱼᴵ).
+tⱼ -> tⱼ* = (tⱼᴿ|tⱼᴵ) -> (tⱼᴿ| -tⱼᴵ). H(k) -> H*(k).
 """
 function representation_constraint_trs(
     Mm::AbstractArray{<:Number,4},
