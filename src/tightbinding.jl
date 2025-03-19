@@ -1,26 +1,27 @@
 """
-    obtain_symmetry_related_hoppings(
-                                    Rs::AbstractVector{V}, 
-                                    brₐ::NewBandRep{D}, 
-                                    brᵦ::NewBandRep{D}
-                                    ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
-                                    --> Vector{HoppingOrbit{D}}
+        obtain_symmetry_related_hoppings(
+                                        Rs::AbstractVector{V}, 
+                                        brₐ::NewBandRep{D}, 
+                                        brᵦ::NewBandRep{D}
+                                        ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
+                                        --> Vector{HoppingOrbit{D}}
 
-Compute the symmetry related hopping terms from the points in WP of `brₐ` to the WP of `brᵦ`
-displaced a set of primitive lattice vectors `Rs`.
+    Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
+    WP of `brᵦ`displaced a set of primitive lattice vectors `Rs`.
 
-The vectors provided in `Rs` are just representatives. Because of symmetry operations, 
-bigger primitive lattice vectors could be found.
+    The vectors provided in `Rs` are just representatives. Because of symmetry 
+    operations, bigger primitive lattice vectors could be found.
 
-How it works: 
-1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We compute the 
-    displacement vector `δ = b + R - a`, where `R ∈ Rs`.
-2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings of that 
-    representative and continue. If not then, we search inside of all the representatives
-    for the one that `δ => (a, b, R)` in the list of hoppings. If not found, then we add `δ`
-    as a new representative and add `δ => (a, b, R)` to its list of hoppings.
-3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, and 
-    repeat step 2.
+    How it works: 
+    1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
+    compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+    2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
+        of that representative and continue. If not then, we search inside of all the 
+        representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
+        If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
+        to its list of hoppings.
+3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
+    and repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 """
 function obtain_symmetry_related_hoppings(
@@ -56,13 +57,16 @@ function obtain_symmetry_related_hoppings(
     for R in Rs
         R = RVec{D}(R) # change the type of R for type consistency
         for (qₐ, qᵦ) in Iterators.product(wpsₐ, wpsᵦ)
-            qₐ = parent(qₐ) # work with RVec directly rather than WyckoffPosition (type consistent)
+            qₐ = parent(qₐ) # work with RVec directly rather than Wyckoff Position
+            #                 (type consistent)
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ # potential representative in next element of `h_orbits`
             maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops)
             maybe_add_hoppings!(h_orbits, -δ, qᵦ, qₐ, -R, ops)
             # TODO (future): check if adding `δ` and `-δ` at the same time is a good idea
-            # or it is better to consider it afterwards at hermiticity
+            # or it is better to consider it afterwards at hermiticity. Is this 
+            # valid for any space group? Well yes, but they might be different if
+            # nor inversion nor TRS are present
         end
     end
     return h_orbits
@@ -71,8 +75,9 @@ end
 """
     maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops) --> Vector{HoppingOrbit{D}}
 
-Checks if a hopping term `δ` is already in the list of representatives. If not, it adds it
-and its symmetry related partners. If it is, it only adds the symmetry related partners.
+Checks if a hopping term `δ` is already in the list of representatives. If not, 
+it adds it and its symmetry related partners. If it is, it only adds the symmetry 
+related partners.
 """
 function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
     δ_idx = findfirst(h_orbits) do h_orbit
@@ -90,10 +95,11 @@ function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{Sy
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper function for
-`maybe_add_hoppings!`.
+WARNING: This function is not intended to be called directly. It is a helper 
+function for `maybe_add_hoppings!`.
 
-Computes and adds the symmetry related partners of a hopping term `δ` to the `δ_orbit`.
+Computes and adds the symmetry related partners of a hopping term `δ` to the 
+`δ_orbit`.
 """
 function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
     for g in ops
@@ -139,7 +145,7 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
     return δ_orbit
 end
 
-# ---------------------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 # EBRs: (q|A), (w|B)
 # Wyckoff positions: q, w
 #   q: q1, ..., qN
@@ -169,17 +175,18 @@ end
 #   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
 #   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
-# ---------------------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 
 """
     hamiltonian_term_order(br1::NewBandRep{D}, br2::NewBandRep{D}) 
         --> Matrix{Pair{Tuple{Int64,WyckoffPosition{D}}, Tuple{Int64,WyckoffPosition{D}}}}
 
-Gives an order for the Hamiltonian's term concerning hopping between `br1` and `br2`. This is 
-the default order used for building the TB Hamiltonian in `tb_hamiltonian`.
+Gives an order for the Hamiltonian's term concerning hopping between `br1` and 
+`br2`. This is the default order used for building the TB Hamiltonian in 
+`tb_hamiltonian`.
 
-A matrix with the dimensions of the Hamiltonian is given back where each term indicates the 
-hopping term considered in the Hamiltonian at that position.
+A matrix with the dimensions of the Hamiltonian is given back where each term 
+indicates the hopping term considered in the Hamiltonian at that position.
 """
 function hamiltonian_term_order(
     br1::NewBandRep{D},
@@ -198,15 +205,15 @@ function hamiltonian_term_order(
     wp1 = primitivize.(orbit(group(br1)), cntr)
     wp2 = primitivize.(orbit(group(br2)), cntr)
 
-    V1, V2, = length(wp1), length(wp2)
+    V1, V2 = length(wp1), length(wp2)
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
-    T_pair_eltype = Tuple{Int64, WyckoffPosition{D}}
-    order = Matrix{Pair{T_pair_eltype, T_pair_eltype}}(undef, V1 * Q1, V2 * Q2)
+    T_pair_eltype = Tuple{Int64,WyckoffPosition{D}}
+    order = Matrix{Pair{T_pair_eltype,T_pair_eltype}}(undef, V1 * Q1, V2 * Q2)
     for i in 1:V1
         for j in 1:V2
             for k in 1:Q1
                 for l in 1:Q2
-                    order[(i-1)*Q1 + k, (j-1)*Q2 + l] = (k, wp1[i]) => (l, wp2[j])
+                    order[(i-1)*Q1+k, (j-1)*Q2+l] = (k, wp1[i]) => (l, wp2[j])
                 end
             end
         end
@@ -218,13 +225,13 @@ end
     construct_M_matrix(h_orbit::HoppingOrbit{D}, br1::NewBandRep{D}, br2::NewBandRep{D}, order) 
         --> Array{Int,4}
 
-Construct a set of matrices that encodes a Hamiltonian's term which resembles the hopping
-from EBR `br1` to EBR `br2`.
+Construct a set of matrices that encodes a Hamiltonian's term which resembles the 
+hopping from EBR `br1` to EBR `br2`.
 
-The Hamiltonian's order which is implicitly used is returned as output, and the matrices 
-are stored on a 4D matrix which last two axes indicate the Hamiltonian term position it is 
-describing and the first axis refer to the `orbit(h_orbit)` and the second axis to the
-vector `t`. The idea is:
+The Hamiltonian's order which is implicitly used is returned as output, and the 
+matrices are stored on a 4D matrix which last two axes indicate the Hamiltonian 
+term position it is describing and the first axis refer to the `orbit(h_orbit)` 
+and the second axis to the vector `t`. The idea is:
 
 Hₛₜ = vᵢ Mᵢⱼₛₜ tⱼ
 
@@ -279,11 +286,13 @@ end
                                     h_orbit::HoppingOrbit{D}
                                     ) --> Vector{Array{Complex,4}}
 
-Build the Q matrix for a particular symmetry operation (or, equivalently, a particular
-matrix from the site-symmetry representation), acting on the M matrix. Relative to our
-white-board notes, Q has swapped indices, in the sense we below give `Q[i,j,r,l]`.
+Build the Q matrix for a particular symmetry operation (or, equivalently, a 
+particular matrix from the site-symmetry representation), acting on the M matrix. 
+Relative to our white-board notes, Q has swapped indices, in the sense we below 
+give `Q[i,j,r,l]`.
 
-(ρₐₐ)ᵣₛ Hₛₜ / (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ / (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / (ρᵦᵦ⁻¹)ₜₗ tⱼ,
+(ρₐₐ)ᵣₛ Hₛₜ / (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ / (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / 
+(ρᵦᵦ⁻¹)ₜₗ tⱼ,
 
 then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / (ρᵦᵦ⁻¹)ₜₗ
 """
@@ -321,14 +330,17 @@ end
                                             Matrix{Pair{Tuple{Int,WyckoffPosition{D}},
                                                         Tuple{Int,WyckoffPosition{D}}}}
 
-Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` associated
-with the hopping orbit `h_orbit`. The Hamiltonian's default order is given by `order`.
+Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
+associated with the hopping orbit `h_orbit`. The Hamiltonian's default order is 
+given by `order`.
 """
 function obtain_basis_free_parameters(
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
     h_orbit::HoppingOrbit{D},
-    order=hamiltonian_term_order(brₐ, brᵦ)
+    order=hamiltonian_term_order(brₐ, brᵦ);
+    time_reversal=false,
+    hermiticity=false
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -356,7 +368,7 @@ function obtain_basis_free_parameters(
             q = @view Q[:, :, s, t]
             z = @view Z[:, :, s, t]
             c = q - z
-            filtered_rows = filter(r->norm(r)>1e-10, eachrow(c))
+            filtered_rows = filter(r -> norm(r) > 1e-10, eachrow(c))
             isempty(filtered_rows) && continue # don't add empty constraints
             append!(constraint_vs, filtered_rows)
         end
@@ -371,7 +383,59 @@ function obtain_basis_free_parameters(
     # prune near-zero elements of basis vectors
     _prune_at_threshold!(tₐᵦ_basis)
 
-    return Mm, tₐᵦ_basis, order
+    Mm_final = Mm
+
+    if time_reversal
+        # rewrite `tₐᵦ_basis` in the desired form t -> [real(t) real(im*t); imag(t) imag(im*t)] 
+        # and store it as columns in a matrix. Read `split_complex` docstring for details.
+        tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
+        tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
+
+        # this works the following way:
+        # julia> t₁ = [im,0]
+        # 2-element Vector{Complex{Int64}}:
+        # 0 + 1im
+        # 0 + 0im
+
+        # julia> t₂ = [1,im]
+        # 2-element Vector{Complex{Int64}}:
+        # 1 + 0im
+        # 0 + 1im
+
+        # julia> t_basis = [t₁,t₂]
+        # 2-element Vector{Vector{Complex{Int64}}}:
+        # [0 + 1im, 0 + 0im]
+        # [1 + 0im, 0 + 1im]
+
+        # julia> t_basis_split = TETB.split_complex.(t_basis)
+        # 2-element Vector{Matrix{Int64}}:
+        # [0 -1; 0 0; 1 0; 0 0]
+        # [1 0; 0 -1; 0 1; 1 0]
+        # julia> TETB.split_complex(t)
+        # 4×2 Matrix{Int64}:
+        # 1   0
+        # 0  -1
+        # 0   1
+        # 1   0
+
+        # julia> tₐᵦ_basis_split_matrix = reduce(hcat, t_basis_split)
+        # 4×4 Matrix{Int64}:
+        # 0  -1  1   0
+        # 0   0  0  -1
+        # 1   0  0   1
+        # 0   0  1   0
+
+        # julia>
+
+        # obtain the TRS basis and intersect
+        Mm_final, tₐᵦ_extra, _ = obtain_basis_free_parameters_TRS(brₐ, brᵦ, h_orbit, order)
+        # WARNING: we are assuming that the returned `tₐᵦ_extra` is real, so no need to split
+
+        tₐᵦ_extra_matrix = reduce(hcat, tₐᵦ_extra)
+        tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_extra_matrix)
+    end
+
+    return Mm_final, tₐᵦ_basis, order
 end
 
 """
@@ -381,9 +445,10 @@ end
                                     h_orbit::HoppingOrbit{D}
                                     ) --> Vector{Array{Int,4}}
 
-Compute the reciprocal constraints matrices for the generators of the SG. This is done by 
-permuting the rows of the M matrix according to the symmetry operation acting on k-space.
-See more details in `permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
+Compute the reciprocal constraints matrices for the generators of the SG. This is
+done by permuting the rows of the M matrix according to the symmetry operation 
+acting on k-space. See more details in
+`permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
 """
 function reciprocal_constraints_matrices(
     Mm::Array{Int,4},
@@ -394,9 +459,9 @@ function reciprocal_constraints_matrices(
     for (i, op) in enumerate(gens)
         Z = zeros(Int, size(Mm))
         P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
-        Pᵀ = transpose(P)
-        for l in axes(P, 1), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
-            Z[l, j, s, t] = sum(Pᵀ[l, i] * Mm[i, j, s, t] for i in axes(P, 2))
+        for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
+            Z[l, j, s, t] = sum(P[i, l] * Mm[i, j, s, t] for i in axes(P, 1))
+            # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
         end
         Zs[i] = Z
     end
@@ -404,18 +469,19 @@ function reciprocal_constraints_matrices(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper function for
-         `reciprocal_constraints_matrices`.
+WARNING: This function is not intended to be called directly. It is a helper 
+         function for `reciprocal_constraints_matrices`.
 
-Build the P matrix for a particular symmetry operation acting on k-space, which permutes 
-the rows of the M matrix.
+Build the P matrix for a particular symmetry operation acting on k-space, which
+permutes the rows of the M matrix.
 
-For obtaining the P matrix, we make use that the action is on exponential of the type: 𝐞(2πk⋅δ),
-to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a symbolic variable. Because of 
-that, we need to use the inverse of the rotation part of the symmetry operation. 
-Sketch of the proof:
+For obtaining the P matrix, we make use that the action is on exponential of the
+type: 𝐞(2πk⋅δ), to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a
+symbolic variable. Because of that, we need to use the inverse of the rotation
+part of the symmetry operation. Sketch of the proof:
 
-Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then (gk)⋅δ = ((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
+Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then (gk)⋅δ = 
+((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
 
 WARNING: we assume that the operation is primitive.
 """
@@ -438,8 +504,8 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper function for
-         `obtain_basis_free_parameters`.
+WARNING: This function is not intended to be called directly. It is a helper 
+function for `obtain_basis_free_parameters`.
 
 Poor man's "matrix sparsification" via the reduced row echelon form.
 """
@@ -457,8 +523,8 @@ function _poormans_sparsification(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper function for
-         `obtain_basis_free_parameters`.
+WARNING: This function is not intended to be called directly. It is a helper 
+function for `obtain_basis_free_parameters`.
 
 Prune near-zero elements of vectors in `vs`.
 """
@@ -478,16 +544,17 @@ function _prune_at_threshold!(
     return vs
 end
 
-# ---------------------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 
 """
     tb_hamiltonian(cbr::CompositeBandRep{D}, Rs::AbstractVector{Vector{Int}}) 
         --> Vector{BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}}
 
-Construct the TB Hamiltonian matrix from a given composite band representation `cbr` and a set
-of global translation-representatives `Rs`. The Hamiltonian is constructed block by block
-according to the symmetry-related hoppings between the band representations in `cbr`. Several 
-model are given back, one of closed in the symmetry operations.
+Construct the TB Hamiltonian matrix from a given composite band representation 
+`cbr` and a set of global translation-representatives `Rs`. The Hamiltonian is 
+constructed block by block according to the symmetry-related hoppings between the 
+band representations in `cbr`. Several model are given back, one of closed in the 
+symmetry operations.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
@@ -573,10 +640,10 @@ end
 """
     count_bandrep_orbitals(br::NewBandRep{D}) --> Int
 
-Counts the number of orbitals in a band representation `br`. This is done by taking the 
-multiplicity of the Wyckoff position associated to `br`, dividing it by the centering volume 
-fraction (excluding copies due to conventional setting) and multiplying it by the dimension 
-of the site irrep.
+Counts the number of orbitals in a band representation `br`. This is done by taking 
+the multiplicity of the Wyckoff position associated to `br`, dividing it by the 
+centering volume fraction (excluding copies due to conventional setting) and 
+multiplying it by the dimension of the site irrep.
 """
 function count_bandrep_orbitals(br::NewBandRep{D}) where {D}
     mult = multiplicity(position(br)) # multiplicity in conventional setting
@@ -589,4 +656,4 @@ function count_bandrep_orbitals(br::NewBandRep{D}) where {D}
     return mult * irdim(br.siteir)
 end
 
-# ---------------------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #

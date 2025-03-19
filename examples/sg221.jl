@@ -10,6 +10,8 @@ coefs = zeros(Int, length(brs))
 coefs[6] = 1
 cbr = CompositeBandRep(coefs, brs)
 
+or = TETB.hamiltonian_term_order(cbr.brs[6], cbr.brs[6])
+
 Rs = [[0, 0, 0]]
 
 tbs = tb_hamiltonian(cbr, Rs)

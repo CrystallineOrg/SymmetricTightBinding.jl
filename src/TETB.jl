@@ -1,7 +1,7 @@
 module TETB
 
 # -------------------- Necessary modules for the package ---------------------------------- #
-using LinearAlgebra: nullspace
+using LinearAlgebra: nullspace, norm
 using Crystalline
 using MPBUtils
 using SymmetryBases
@@ -15,6 +15,7 @@ using GLMakie
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
+const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 # ---------------------------------------------------------------------------------------- #
 
 using PyCall
@@ -46,7 +47,7 @@ include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 export find_apolar_modes
 export find_auxiliary_modes
-include("site-representations.jl")
+include("site_representations.jl")
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
 export sgrep_induced_by_siteir_generators
@@ -55,6 +56,8 @@ export obtain_symmetry_related_hoppings
 export tb_hamiltonian
 include("plotting_utils.jl")
 export hop_plot
+include("zassenhaus.jl")
+include("time_reversal.jl")
 
 # ---------------------------------------------------------------------------------------- #
 end # module

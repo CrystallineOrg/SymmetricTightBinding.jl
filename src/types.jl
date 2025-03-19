@@ -96,6 +96,7 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
   t_αβ_basis::Vector{Vector{ComplexF64}}
   h_orbit::Union{Nothing,HoppingOrbit{D}}
   c_idxs::UnitRange{Int}
+  #  hermiticity::Bool
   # TODO: figure out how much of this is needed, e.g.:
   # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
   # TODO: do we need the indexing information in `block_ij` and `global_ij`? Probably not
@@ -203,4 +204,13 @@ function _complex_as_compact_string(c::Complex) # usual string(::Complex) has sp
   io = IOBuffer()
   print(io, real(c), Crystalline.signaschar(imag(c)), abs(imag(c)), "i")
   return String(take!(io))
+end
+
+struct NewTightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
+  br1::NewBandRep{D}
+  br2::NewBandRep{D}
+  order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
+  Mm::Array{ComplexF64,3}
+  t_αβ_basis::Vector{Array{ComplexF64,3}}
+  c_idxs::Vector{Int}
 end

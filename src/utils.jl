@@ -222,3 +222,48 @@ function find_apolar_modes(
     return candidatesv
 end
 
+"""
+    split_complex(t::Vector{<:Number}) -> Matrix{Real}
+
+Consider `αt` where `α∈ℂ` and `t∈ℂⁿ` and split it into real and imaginary parts. This
+is done by the following transformation: `αt = (a + im*b)t = [a;b] [t im*t] ->
+[a; b] [real(t) real(im*t); imag(t) imag(im*t)]`. This is done to avoid complex
+variables in the code.
+
+# Examples:
+
+```julia
+julia> t=[im,0]
+2-element Vector{Complex{Int64}}:
+ 0 + 1im
+ 0 + 0im
+
+julia> TETB.split_complex(t)
+4×2 Matrix{Int64}:
+ 0  -1
+ 0   0
+ 1   0
+ 0   0
+
+julia> 
+```
+
+```julia
+julia> t=[1,im]
+2-element Vector{Complex{Int64}}:
+ 1 + 0im
+ 0 + 1im
+
+julia> TETB.split_complex(t)
+4×2 Matrix{Int64}:
+ 1   0
+ 0  -1
+ 0   1
+ 1   0
+
+julia> 
+```
+"""
+function split_complex(t::Vector{<:Number})
+    return [real(t) real(im * t); imag(t) imag(im * t)]
+end

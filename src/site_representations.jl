@@ -46,7 +46,7 @@ function find_bandrep_decompositions(
     end
 end
 
-function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where D
+function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {D}
 
     siteir = br.siteir
     siteir_dim = irdim(siteir)
@@ -56,7 +56,7 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where D
     g = op
 
     ρ = BlockArray{ComplexF64}(zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
-                               fill(siteir_dim, mult), fill(siteir_dim, mult))
+        fill(siteir_dim, mult), fill(siteir_dim, mult))
 
     for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
         check = false
@@ -77,7 +77,7 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where D
     return ρ
 end
 
-function sgrep_induced_by_siteir(cbr::CompositeBandRep{D}, op::SymOperation{D}) where D
+function sgrep_induced_by_siteir(cbr::CompositeBandRep{D}, op::SymOperation{D}) where {D}
     ρ = Matrix{Complex}(undef, 0, 0)
     for (idxc, c) in enumerate(cbr.coefs)
         iszero(c) && continue
@@ -99,8 +99,8 @@ group of a particular maximal WP.
 """
 function sgrep_induced_by_siteir_generators(
     br::NewBandRep{D},
-    gens::AbstractVector{SymOperation{D}} = generators(num(br), SpaceGroup{D})
-) where {D} 
+    gens::AbstractVector{SymOperation{D}}=generators(num(br), SpaceGroup{D})
+) where {D}
     return gens, sgrep_induced_by_siteir.(Ref(br), gens)
 end
 
@@ -114,8 +114,8 @@ end
 
 function sgrep_induced_by_siteir_generators(
     cbr::CompositeBandRep{D},
-    gens = generators(num(cbr), SpaceGroup{D})
-    ) where {D}
+    gens=generators(num(cbr), SpaceGroup{D})
+) where {D}
     # TODO: primitivize the generators of the space group
     return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
 
