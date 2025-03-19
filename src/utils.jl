@@ -225,9 +225,9 @@ end
 """
     split_complex(t::Vector{<:Number}) -> Matrix{Real}
 
-Consider αt where α∈ℂ and t∈ℂⁿ and split it into real and imaginary parts. This
-is done by the following transformation: αt = (a + im*b)t = [a;b] [t im*t] ->
-[a; b] [real(t) real(im*t); imag(t) imag(im*t)]. This is done to avoid complex
+Consider `αt` where `α∈ℂ` and `t∈ℂⁿ` and split it into real and imaginary parts. This
+is done by the following transformation: `αt = (a + im*b)t = [a;b] [t im*t] ->
+[a; b] [real(t) real(im*t); imag(t) imag(im*t)]`. This is done to avoid complex
 variables in the code.
 
 # Examples:

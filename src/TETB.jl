@@ -58,7 +58,6 @@ include("plotting_utils.jl")
 export hop_plot
 include("zassenhaus.jl")
 include("time_reversal.jl")
-include("hermiticity.jl")
 
 # ---------------------------------------------------------------------------------------- #
 end # module

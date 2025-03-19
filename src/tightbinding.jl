@@ -429,6 +429,8 @@ function obtain_basis_free_parameters(
 
         # obtain the TRS basis and intersect
         Mm_final, tₐᵦ_extra, _ = obtain_basis_free_parameters_TRS(brₐ, brᵦ, h_orbit, order)
+        # WARNING: we are assuming that the returned `tₐᵦ_extra` is real, so no need to split
+
         tₐᵦ_extra_matrix = reduce(hcat, tₐᵦ_extra)
         tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_extra_matrix)
     end
@@ -459,7 +461,6 @@ function reciprocal_constraints_matrices(
         P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
         for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
             Z[l, j, s, t] = sum(P[i, l] * Mm[i, j, s, t] for i in axes(P, 1))
-            # ERROR: l and i was running over the rows and columns of Ρ not Ρᵀ
             # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
         end
         Zs[i] = Z

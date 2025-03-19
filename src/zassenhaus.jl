@@ -2,8 +2,8 @@
 
 using RowEchelon: rref
 
-# my idea is to have U and W as the matrices {aᵢⱼ} and {bᵢⱼ} from the Zassenhaus algorithm
-# U is a matrix of n×m and W is a matrix of k×m.
+# my idea is to have U and W as the matrices `{aᵢⱼ}` and `{bᵢⱼ}` from the Zassenhaus algorithm
+# `U` is a matrix of `n×m` and `W` is a matrix of `k×m`.
 
 """
     zassenhaus_intersection(
