@@ -2,10 +2,8 @@ using Pkg
 Pkg.activate(@__DIR__)
 
 ### necessary packages
-using Crystalline
-using SymmetryBases, MPBUtils
-using PhotonicBandConnectivity
 using TETB
+using Crystalline
 
 ### construct the structure under study
 

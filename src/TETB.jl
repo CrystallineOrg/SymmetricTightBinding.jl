@@ -11,7 +11,7 @@ using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, 
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
 using GLMakie
-# -------------------- Predefined constant used ------------------------------------------ #
+# -------------------- Predefined constant used ------------------------------ #
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
@@ -35,7 +35,7 @@ end
 
 export mp, mpb
 
-# ---------------------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 
 include("types.jl")
 export TightBindingCandidateSet
@@ -59,5 +59,5 @@ export hop_plot
 include("zassenhaus.jl")
 include("time_reversal.jl")
 
-# ---------------------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 end # module
