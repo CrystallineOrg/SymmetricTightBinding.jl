@@ -1,5 +1,3 @@
-# TODO: improve the code so it works for COMPLEX and PSEUDOREAL irreps
-
 # Now we need to take care of what is real or complex to properly apply TRS.
 
 # the vector `t` could be multiplied by a complex number. We want now to make 
@@ -8,21 +6,23 @@
 # where `α∈ℂ` and `a,b∈ℝ`. This way we duplicate the dimensionality of the problem,
 # but we keep everything real.
 
-# NOTE: this is implemented in the code just by expanding the basis of the nullspace from
-# `{tᵢ}ᵢ -> {tᵢ, im*tᵢ}ᵢ`, so for each complex variable `α` we now have two real variables
-# `a` and `b`.
+# NOTE: this is implemented in the code just by expanding the basis of the nullspace 
+# from `{tᵢ}ᵢ -> {tᵢ, im*tᵢ}ᵢ`, so for each complex variable `α` we now have two 
+# real variables `a` and `b`.
 
 # but in that way, `t∈ℂ`. If we want it to be real also, we can separated it into 
-# its real and imaginary part in the following way: `t -> [real(t); imag(t)] = [tᴿ; tᴵ].`
+# its real and imaginary part in the following way: `t -> [real(t); imag(t)] = 
+# [tᴿ; tᴵ].`
 
 # so joining everything together, we have: αt -> [a; b] [t im*t] -> 
 # [a; b] [real(t) real(im*t); imag(t) imag(im*t)]
 
-# again note that we are just expanding the basis of the nullspace in the following way
-# `{tᵢ}ᵢ -> {tᵢ, im*tᵢ}ᵢ`, so for each complex variable `α` we now have two real variables
-# `a` and `b`.
+# again note that we are just expanding the basis of the nullspace in the following 
+# way `{tᵢ}ᵢ -> {tᵢ, im*tᵢ}ᵢ`, so for each complex variable `α` we now have two 
+# real variables `a` and `b`.
 
-# now, what happens with the irreps assuming that we are working with real numbers only?
+# now, what happens with the irreps assuming that we are working with real numbers 
+# only?
 
 # we are going to assume for now that the transform as real irreps of the site-symmetry 
 # group. TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
@@ -38,11 +38,11 @@
 
 # Then applying TRS will be:
 
-# 1. `H(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)] = (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)]
-# = vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [real(t); imag(t)]`
+# 1. `H(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)] = (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] 
+# [real(t); imag(t)] = vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [real(t); imag(t)]`
 
-# 2. `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); -imag(t) -imag(im*t)] = (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)]
-# = vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [real(t); imag(t)]`
+# 2. `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); -imag(t) -imag(im*t)] = (Pv)ᵀ(k) 
+# [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)] = vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [real(t); imag(t)]`
 
 """
     obtain_basis_free_parameters_TRS(
@@ -75,7 +75,8 @@ function obtain_basis_free_parameters_TRS(
     # WARNING : we assume that we have ±δ in v. Is this true? why? it is ok physically
     #           and in here we will see if they are equal or not.
 
-    brₐ.siteir.iscorep == brᵦ.siteir.iscorep == false || error("Not implemented for COMPLEX or PSEUDOREAL irreps")
+    # removed since now this should work if first we physically-realify the site-symmetry
+    # group irreps.
 
     # compute the Z tensor, encoding time-reversal constraints on H for the k-space
     # part. This is done by `Hᵢⱼ(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)]`

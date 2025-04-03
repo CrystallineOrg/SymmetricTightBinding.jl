@@ -110,7 +110,7 @@ Next, we define the generalized time reversed set $\Phi \equiv \{\phi_\mu\} =
 \{\mathcal{A} \psi_\mu\}$ such that
 
 $$
-R \Phi = \Phi ^\mathcal{A}\Delta(R),
+R \Phi = \Phi\quad {}^\mathcal{A}\Delta(R),
 $$
 but, since $\Theta R = R \Theta$, we have
 
@@ -190,7 +190,7 @@ If you construct the Rep $\Gamma$ for a transformation $R \in \mathcal{G}$, you
 obtain
 
 $$
-\boxed{R \mathbf{F} = \mathbf{F} \Gamma(R) = [\Psi \Theta \Psi] 
+\boxed{R \mathbf{F} = \mathbf{F} \Gamma(R) = [\Psi \quad \Theta \Psi] 
 \begin{pmatrix}
     \Delta(R) & \mathbf{0} \\
     \mathbf{0} & \Delta^*(R)
@@ -234,18 +234,177 @@ $$
 > Since we are interested only on a generator set of $\mathcal{M}$, I think we are 
 > good with only considering $\Theta$.
 
-## "Realification" of Irrep and basis
+## Finding an explicitly real form of irrep matrices
 
-What happens if we "realify" the irreps? In fact, in Crystalline.jl there is a 
-function implemented called `realify` which seems as what we are looking for - 
-better discuss this with @thchr.
+An explicit real, or physically real, form of a set of irrep matrices is one 
+where the associated matrices $D(g)$ have the following property:
 
-The idea focus on the fact that if $\Psi = \Theta \Psi$ and $\Delta = \Delta^*$,
-the action of TRS in the system is trivial - as we implemented already for real 
-Irreps. Of course for the case of complex and pseudoreal Irreps, it is not so 
-simple but we can make some adaptations to make it simpler.
+$$
+D(g) = D^*(g),
+$$
 
-If we manage to realify every point group Irrep and compute using them a Rep for 
-the space group in a given (now real) basis, then the application of TRS will be
-as simple as the one showed above for a non-unitary operation $\mathcal{B} = 
-\Theta T$, but taking $T = \mathbb{I}$.
+for all operations $g$ in the considered group $G$.
+
+The standard listings of irreps is not explicitly real. However, if an irrep is 
+either intrinsically real - or has been made into a corep in the complex or 
+pseudoreal case - it is always equivalent to an intrinsically real form. That is,
+there exists a unitary transform $S$ such that:
+
+$$
+S D(g) S^{-1} = S D(g) S^\dagger = D^*(g).
+$$
+
+Suppose we can find this unitary transformation $S$ by some means. What we are 
+interested in, is finding a related transform $W$, defining an explicitly real 
+form of the irrep:
+
+$$
+\tilde{D}(g) = W D(g) W^{-1} = W D(g) W^\dagger,
+$$
+
+where $W$ is some other unitary transformation and where $\tilde{D}(g)$ is an 
+intrinsically real form of $D(g)$, i.e., where
+
+$$
+\tilde{D}(g) = \tilde{D}^*(g) \quad \forall g\in G.
+$$
+
+Our aim is to find $W$, assuming we know $S$. For brevity, we will often write 
+$D_g$ in place of $D(g)$.
+First, note that $S$ is not merely a unitary matrix: rather, since, by assumption 
+$D(g)$ is a "real" matrix, what we really mean is that $S$ is also a _symmetric_ 
+unitary matrix, i.e., $S = S^{\mathrm{T}}$ and $S^{-1} = S^\dagger$ (implifying, 
+jointly, $S^* = S^\dagger = S^{-1}$); this is e.g., derived in Inui p. 74 (bottom) 
+to 75 (top). Accordingly $S$ is also normal, i.e., $S S^* = S^* S$.
+
+This property in turn implies that we can express $S$ as the square of another 
+symmetric unitary matrix, say $W$, in the sense that $S = W^2$. This follows from 
+the following manipulations (Inui, p. 75 bottom), involving the eigendecomposition 
+$S = V Λ V^{-1}$ where $\Lambda$ is a diagonal matrix with unit-modulus values 
+and $V$ are a set of real eigenvectors (real because $S$ is symmetric unitary) 
+and $V^{-1} = V^\dagger = V^{\mathrm{T}}$ (since $S$ is normal).
+
+$$
+S = VΛV^{-1} = VΛ^{1/2}Λ^{1/2}V^{\mathrm{T}} = (VΛ^{1/2}V^{\mathrm{T}})
+(VΛ^{1/2}V^{\mathrm{T}}),
+$$
+
+so we can pick $W = VΛ^{1/2}V^{\mathrm{T}}$ (note also that the square root of 
+$\Lambda$ must exist and is well-defined since $S$ is invertible, i.e., has full 
+rank).
+Hence $W^* = V(Λ^{1/2})^*V^{\mathrm{T}} = VΛ^{-1/2}V^{\mathrm{T}} = W^{-1}$ and 
+$W^{\mathrm{T}} = (VΛ^{1/2}V^{\mathrm{T}})^{\mathrm{T}} = 
+(V^{\mathrm{T}})^{\mathrm{T}}(Λ^{1/2})^{\mathrm{T}} V^{\mathrm{T}} = 
+VΛ^{1/2}V^{\mathrm{T}} = W$. I.e., $W$ is also unitary symmetric and normal.
+
+Now, let us rewrite $S D(g) S^{-1} = D^*(g)$ in terms of $W$:
+
+$$
+WW D_g W^{-1}W^{-1} = D_g^* \\
+$$
+
+Multiply from LHS by $W^*$ and from RHS by $W$:
+
+$$
+W^*WW D_g W^{-1}W^{-1} W = W^*D_g^* W \\
+\Leftrightarrow W D_g W^{-1} = W^*D_g^* W \\
+\Leftrightarrow W D_g W^{-1} = W^* D_g^* (W^{-1})^*
+$$
+where we have used the properties of $W$ to reduce the expressions. 
+
+Identifying $\tilde{D}(g) = W D(g) W^{-1}$ we clearly obtain the desired 
+invariance under complex conjugation since $\tilde{D}^*(g) = (W D_g W^{-1})^* = 
+W^* D_g^* (W^{-1})^* = W D_g W^{-1} = \tilde{D}(g)$.
+
+## Representation of the Hamiltonian using a real basis
+
+Here I am going to explain how to present a general Hamiltonian using a real basis
+and what is the behavior of this representation under TRS.
+
+First of all, let me start with a general Hamiltonian $H$. If we assume that the 
+system is periodic, we can apply Bloch theorem and decompose the Hamiltonian as:
+
+$$
+H = \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k},
+$$
+where $Ψ_\mathbf{k}$ is a column operator whose components are single particle
+operators.
+
+In our language, this operators will correspond to a set of orbitals that we know
+how they transform under the space group operations.
+
+> [!NOTE]
+> In the case of interest, $Ψ_\mathbf{k}$ are explicitly real operators. In 
+> other words, $Θ Ψ_\mathbf{k} = Ψ_\mathbf{k}$. This also implies that 
+> $Ψ_\mathbf{k}^\dagger = Ψ_\mathbf{k}^T$.
+
+> [!WARNING]
+> I am assuming that an explicitly real representation $\Leftrightarrow$ an 
+> explicitly real basis. I think this is the only possible way but we might
+> dedicate some time to prove it.
+
+Since we have a real basis (and a real representation), we can easily study how 
+TRS symmetry will interact with another crystalline symmetry $g \in G$. 
+
+### Real space symmetries
+
+Let me first start with the action of an spatial symmetry on the Hamiltonian:
+
+$$
+g H =  g \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} = 
+\sum_\mathbf{k} (g Ψ_\mathbf{k}^\dagger) H_{g\mathbf{k}} (g Ψ_\mathbf{k}) g = \\
+\sum_\mathbf{k} Ψ_{g\mathbf{k}}^\dagger D_\mathbf{k}^\dagger(g) H_{g\mathbf{k}} 
+D_\mathbf{k}(g) Ψ_{g\mathbf{k}} g
+$$
+
+If we want our Hamiltonian to be invariant, the we must impose that:
+
+$$
+H g = \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} g = g H =
+\sum_\mathbf{k} Ψ_{g\mathbf{k}}^\dagger D_\mathbf{k}^\dagger(g) H_{g\mathbf{k}} 
+D_\mathbf{k}(g) Ψ_{g\mathbf{k}} g \\
+\Rightarrow H_\mathbf{k} = D_\mathbf{k}^\dagger(g) H_{g\mathbf{k}} 
+D_\mathbf{k}(g) \Rightarrow H_{g\mathbf{k}} = D_\mathbf{k}(g) H_\mathbf{k} 
+D_\mathbf{k}^\dagger(g)
+$$
+
+> [!NOTE]
+> Notice that the representations of spatial operations are unitary so 
+> $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹$. Additionally, in this case they are 
+> real so $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹ = D_\mathbf{k}^T$.
+
+### Time reversal symmetry
+
+For TRS a similar computation can be performed:
+
+$$
+Θ H =  Θ \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} = 
+\sum_\mathbf{k} (Θ Ψ_\mathbf{k}^\dagger) H_{-\mathbf{k}}^* (Θ Ψ_\mathbf{k}) Θ
+$$
+
+Assuming that $Ψ_\mathbf{k}$ is a real basis, we should have that $Θ Ψ_\mathbf{k} 
+= Ψ_\mathbf{k}$. Then, the invariance with TRS is simply reduced to:
+
+$$
+H Θ = \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} Θ = Θ H = 
+\sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_{-\mathbf{k}}^* Ψ_\mathbf{k} Θ \\
+\Rightarrow H_\mathbf{k} = H_\mathbf{-k}^*
+$$
+
+> [!CAUTION]
+> The pull request made with the update of this file assumes everything here is 
+> right, so the code will proceed under the previous assumptions.
+
+## Proof that physically real representations need a real basis
+
+If the representation is real then $D = D^*$. On one side we have that: $g Ψ = 
+D(g) Ψ$. On the other hand, since $Θ g = g Θ$:
+
+$$
+g Θ Ψ = Θ (g Ψ) = Θ (D(g) Ψ) = D^*(g) (Θ Ψ) = D(g) (Θ Ψ).
+$$
+
+Then $Θ Ψ$ yields the same representation as $Ψ$ so they can be consider equal (?)
+
+> [!WARNING]
+> Maybe this is too much of an assumption…
