@@ -66,7 +66,9 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {
             h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
             idx_h = findfirst(==(h), siteg)
             if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
-                ρ[Block(β, α)] .= siteir.matrices[idx_h]
+                ρ[Block(β, α)] .= transpose(siteir.matrices[idx_h])
+                # TODO: check with Thomas if it is necessary to transpose the matrix
+                # previous: ρ[Block(α, β)] .= siteir.matrices[idx_h]
                 check = true
                 break
             end

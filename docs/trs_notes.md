@@ -273,7 +273,7 @@ Our aim is to find $W$, assuming we know $S$. For brevity, we will often write
 $D_g$ in place of $D(g)$.
 First, note that $S$ is not merely a unitary matrix: rather, since, by assumption 
 $D(g)$ is a "real" matrix, what we really mean is that $S$ is also a _symmetric_ 
-unitary matrix, i.e., $S = S^{\mathrm{T}}$ and $S^{-1} = S^\dagger$ (implifying, 
+unitary matrix, i.e., $S = S^{\mathrm{T}}$ and $S^{-1} = S^\dagger$ (implying, 
 jointly, $S^* = S^\dagger = S^{-1}$); this is e.g., derived in Inui p. 74 (bottom) 
 to 75 (top). Accordingly $S$ is also normal, i.e., $S S^* = S^* S$.
 
@@ -316,55 +316,178 @@ Identifying $\tilde{D}(g) = W D(g) W^{-1}$ we clearly obtain the desired
 invariance under complex conjugation since $\tilde{D}^*(g) = (W D_g W^{-1})^* = 
 W^* D_g^* (W^{-1})^* = W D_g W^{-1} = \tilde{D}(g)$.
 
-## Representation of the Hamiltonian using a real basis
+## Theory of representations in crystalline systems
 
-Here I am going to explain how to present a general Hamiltonian using a real basis
-and what is the behavior of this representation under TRS.
+Here I am going to explain how to present a general Hamiltonian using a basis
+and what is the behavior of this representation under symmetries. First of all, 
+we will study the action of a symmetry transformation over a basis set in 
+$k$-space, and, secondly, the constraints the Hamiltonian matrix, written using
+such basis set, will fullfil due to symmetry.
 
-First of all, let me start with a general Hamiltonian $H$. If we assume that the 
-system is periodic, we can apply Bloch theorem and decompose the Hamiltonian as:
+### Representation of symmetry operators
+
+Following the deductions made by Barry in Ref. [1].
+
+Let us start with a basis set in real space $\{ψ_{iα}
+(\mathbf{r})\}$, where $i$ indicates the internal degrees of freedom of 
+the orbital, $α$ indicates the site $\mathbf{q}_α$ inside the Wyckoff
+position. Notice that by construction we assume each function $ψ_{iα}
+(\mathbf{r})$ is localized on $\mathbf{q}_α$. Intuitively, you can think of 
+them as Wannier functions.
+
+We are going to focus our attention to a particular orbital $ψ_{i1}(\mathbf{r})$
+localized in the site $\mathbf{q}_1 \equiv \mathbf{q}$. This orbital will 
+transform under the representation $ρ$ of the site-symmetry group $G_\mathbf{q}$,
+associated to $\mathbf{q}$. Then, for each $h \in G_\mathbf{q}$:
 
 $$
-H = \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k},
+h ψ_{i1}(\mathbf{r}) = [ρ(h)]_{ji} ψ_{j1}(\mathbf{r})
 $$
-where $Ψ_\mathbf{k}$ is a column operator whose components are single particle
-operators.
 
-In our language, this operators will correspond to a set of orbitals that we know
-how they transform under the space group operations.
+Within the primitive unit cell, an orbital localized on each $\mathbf{q}_α$
+can be defined as:
+
+$$
+ψ_{iα}(\mathbf{r}) = g_α ψ_{i1}(\mathbf{r}) = ψ_{i1}(g_α^{-1}),
+$$
+where $g_α$, with translations, generates the coset decomposition of 
+$G_\mathbf{q}$ in $G$. In other words, we can assign for each $\mathbf{q}_α$
+a space group element $g \in G$, such that $\mathbf{q}_α = g_α\mathbf{q}$
+and:
+
+$$
+G = \bigcup_{α=1}^n g_α (G_\mathbf{q} \ltimes T).
+$$
+
+By extension, translated counterparts in other unit cells can be defined by:
+
+$$
+\{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = ψ_{iα}(\mathbf{r-t}),
+$$
+where $\mathbf{t}$ is a lattice translation. The set of $n \times \text{dim}(ρ)
+\times \mathcal{N}$ functions $ψ_{iα}(\mathbf{r-t})$, where $\mathcal{N}$ is
+the number of unit cells of the system, will be the basis set on which the induced 
+representation $D$ will act.
+
+Specifically, given $g = \{R|\mathbf{v}\} \in G$, the coset decomposition implies 
+that for each $g_α$, there is an unique operation $g_β$ such that:
+
+$$
+g g_α = \{E|\mathbf{t}_{αβ}\} g_β h,
+$$
+where $h \in G_\mathbf{q}$ and $t_{αβ} \equiv g\mathbf{q}_α - 
+\mathbf{q}_β$.
 
 > [!NOTE]
-> In the case of interest, $Ψ_\mathbf{k}$ are explicitly real operators. In 
-> other words, $Θ Ψ_\mathbf{k} = Ψ_\mathbf{k}$. This also implies that 
-> $Ψ_\mathbf{k}^\dagger = Ψ_\mathbf{k}^T$.
+> Maybe I can prove this in an appendix just for completeness.
 
-> [!WARNING]
-> I am assuming that an explicitly real representation $\Leftrightarrow$ an 
-> explicitly real basis. I think this is the only possible way but we might
-> dedicate some time to prove it.
-
-Since we have a real basis (and a real representation), we can easily study how 
-TRS symmetry will interact with another crystalline symmetry $g \in G$. 
-
-### Real space symmetries
-
-Let me first start with the action of an spatial symmetry on the Hamiltonian:
+Taking all of this into consideration, we can deduce how our basis set will 
+transform under the action of every $g \in G$:
 
 $$
-g H =  g \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} = 
-\sum_\mathbf{k} (g Ψ_\mathbf{k}^\dagger) H_{g\mathbf{k}} (g Ψ_\mathbf{k}) g = \\
-\sum_\mathbf{k} Ψ_{g\mathbf{k}}^\dagger D_\mathbf{k}^\dagger(g) H_{g\mathbf{k}} 
-D_\mathbf{k}(g) Ψ_{g\mathbf{k}} g
+g ψ_{iα}(\mathbf{r-t}) = g \{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = \\
+\{E|R\mathbf{t}\} g ψ_{iα}(\mathbf{r}) = \\
+\{E|R\mathbf{t}\} \{E|\mathbf{t}_{αβ}\} g_β h ψ_{i1}(\mathbf{r}) = \\
+\{E|R\mathbf{t}\} \{E|\mathbf{t}_{αβ}\} g_β [ρ(h)]_{ji} 
+ψ_{j1}(\mathbf{r}) = \\
+\{E|R\mathbf{t}\} \{E|\mathbf{t}_{αβ}\} [ρ(h)]_{ji} 
+ψ_{jβ}(\mathbf{r}) = \\
+\{E|R\mathbf{t}\} [ρ(h)]_{ji} ψ_{jβ}(\mathbf{r-\mathbf{t}_{αβ}}) = \\
+[ρ(h)]_{ji} ψ_{jβ}(\mathbf{r}-R\mathbf{\mathbf{t}-\mathbf{t}_{αβ}})
+$$
+
+While it is natural to define the representation in real space, it will more 
+useful to view it in reciprocal space. This is more evident when $\mathcal{N} 
+\to \infty$. To this end, we define the Fourier transform of our basis:
+
+$$
+φ_{iα}(\mathbf{k,r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} 
+ψ_{iα}(\mathbf{r-t}),
+$$
+where the sum is over all lattice vectors $\mathbf{t} \in T$.
+
+> [!NOTE]
+> Notice that this is just convention but for building a tight-binding Hamiltonian
+> this choice is better since we will eliminate all local phases.
+
+The Fourier transform amounts to a unitary transformation that exchanges 
+$\mathcal{N}$ unit cells for $\mathcal{N}$ distinct $\mathbf{k}$ points. The 
+action of $g \in G$ in reciprocal space becomes:
+
+$$
+g φ_{iα}(\mathbf{k,r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} g
+ψ_{iα}(\mathbf{r-t}) = \\
+\sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} [ρ(h)]_{ji} 
+ψ_{jβ}(\mathbf{r}-R\mathbf{\mathbf{t}-\mathbf{t}_{αβ}}) = \\
+\sum_\mathbf{t'} e^{i\mathbf{k}\cdot R^{-1}\mathbf{(t'+q_β-v)}} [ρ(h)]_{ji} 
+ψ_{jβ}(\mathbf{r-t'}) = \\
+e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji} \sum_\mathbf{t'} 
+e^{i(R\mathbf{k) \cdot (t'+q_β)}} ψ_{jβ}(\mathbf{r-t'}) = \\
+e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji} φ_{jβ}(R\mathbf{k,r}),
+$$
+where we have made the substitution: $\mathbf{t}' = R\mathbf{t} + \mathbf{t}_{αβ}
+= R\mathbf{t} + g\mathbf{q_α - q_β} = R\mathbf{t} + R\mathbf{q_α + v - q_β} =
+R(\mathbf{t+q_α}) + \mathbf{v - q_β} \Rightarrow (\mathbf{t+q_α}) = R^{-1}
+(\mathbf{t'+q_β-v})$.
+
+In reciprocal space, the matrix representation can be interpreted as a $\mathcal{N}
+\times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
+be labeled by $\mathbf{k,k'}$. Most of the blocks are zero: given $g = \{R|
+\mathbf{v}\} \in G$, there is only one non-zero block in each row and column, 
+corresponding to $\mathbf{k'} = R\mathbf{k}$. We will denote this block
+by $D_\mathbf{k}(g)$. Then we can write the vectorize the previous equation as:
+
+$$
+g Φ(\mathbf{k,r}) = D_\mathbf{k}(g) Φ(R\mathbf{k,r}),
+$$
+where $D_\mathbf{k}(g)$ is a $n \times n$ matrix of $\dim(ρ) \times \dim(ρ)$
+blocks, each of them can be labelled by $α,β$. Most of the blocks are zero: given
+$g \in G$, there is only one non-zero block in each row and column, corresponding
+to $g q_α - q_β$ being a lattice vector, and it is going to be equal to:
+
+$$
+[D_\mathbf{k}(g)]_{ji,βα} = e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji}
+$$
+
+> [!CAUTION]
+> Check this carefully, it is vital in the function `sgrep_induced_by_siteir`.
+
+### Representation of the Hamiltonian using a real basis
+
+As we have hinted before, in crystalline systems working in reciprocal space is
+more convenient as $\mathcal{N} \to \infty$. For that reason, the Hamiltonian is
+usually represented in reciprocal space as:
+
+$$
+H = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}),
+$$
+where $Φ(\mathbf{k})$ is a column operator whose components are 
+$φ_{iα}(\mathbf{k})$.
+
+> [!NOTE]
+> Here I took the vectorial notation since it is less crowded and also dropped 
+> the spatial dependence of Bloch states.
+>
+> Maybe I should include why the Hamiltonian can be represented in this way, no
+> off-diagonal terms in $\mathbf{k}$. 
+
+Let's study the action of $g = \{R|\mathbf{v}\} \in G$ in the Hamiltonian:
+
+$$
+g H =  g \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
+\sum_\mathbf{k} [g Φ^\dagger(\mathbf{k})] H(g\mathbf{k}) (g Φ(\mathbf{k})) g = \\
+\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D_\mathbf{k}^\dagger(g) H(R\mathbf{k}) 
+D_\mathbf{k}(g) Φ(R\mathbf{k}) g
 $$
 
 If we want our Hamiltonian to be invariant, the we must impose that:
 
 $$
-H g = \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} g = g H =
-\sum_\mathbf{k} Ψ_{g\mathbf{k}}^\dagger D_\mathbf{k}^\dagger(g) H_{g\mathbf{k}} 
-D_\mathbf{k}(g) Ψ_{g\mathbf{k}} g \\
-\Rightarrow H_\mathbf{k} = D_\mathbf{k}^\dagger(g) H_{g\mathbf{k}} 
-D_\mathbf{k}(g) \Rightarrow H_{g\mathbf{k}} = D_\mathbf{k}(g) H_\mathbf{k} 
+H g = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) g = g H =
+\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D_\mathbf{k}^\dagger(g) H(R\mathbf{k}) 
+D_\mathbf{k}(g) Φ(R\mathbf{k}) g \\
+\Rightarrow H(\mathbf{k}) = D_\mathbf{k}^\dagger(g) H(R\mathbf{k}) 
+D_\mathbf{k}(g) \Rightarrow H(R\mathbf{k}) = D_\mathbf{k}(g) H(\mathbf{k}) 
 D_\mathbf{k}^\dagger(g)
 $$
 
@@ -378,17 +501,18 @@ $$
 For TRS a similar computation can be performed:
 
 $$
-Θ H =  Θ \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} = 
-\sum_\mathbf{k} (Θ Ψ_\mathbf{k}^\dagger) H_{-\mathbf{k}}^* (Θ Ψ_\mathbf{k}) Θ
+Θ H =  Θ \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
+\sum_\mathbf{k} (Θ Φ^\dagger(\mathbf{k})) H^*(-\mathbf{k}) (Θ Φ(\mathbf{k})) Θ
 $$
 
-Assuming that $Ψ_\mathbf{k}$ is a real basis, we should have that $Θ Ψ_\mathbf{k} 
-= Ψ_\mathbf{k}$. Then, the invariance with TRS is simply reduced to:
+Assuming that $Φ(\mathbf{k})$ is a real basis, we should have that $Θ \
+Φ(\mathbf{k}) = Φ(\mathbf{-k})$. Then, the invariance with TRS is simply reduced 
+to:
 
 $$
-H Θ = \sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_\mathbf{k} Ψ_\mathbf{k} Θ = Θ H = 
-\sum_\mathbf{k} Ψ_\mathbf{k}^\dagger H_{-\mathbf{k}}^* Ψ_\mathbf{k} Θ \\
-\Rightarrow H_\mathbf{k} = H_\mathbf{-k}^*
+H Θ = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H_\mathbf{k} Φ(\mathbf{k}) Θ = Θ H = 
+\sum_\mathbf{k} Φ^\dagger(\mathbf{-k}) H^*(-\mathbf{k}) Φ(\mathbf{-k}) Θ \\
+\Rightarrow H(\mathbf{k}) = H^*(\mathbf{-k})
 $$
 
 > [!CAUTION]
@@ -408,3 +532,8 @@ Then $Θ Ψ$ yields the same representation as $Ψ$ so they can be consider equa
 
 > [!WARNING]
 > Maybe this is too much of an assumption…
+
+## References
+
+[1] Band Representations and Topological Quantum Chemistry by Bradlyn *et al.*
+(2021) https://doi.org/10.1146/annurev-conmatphys-041720-124134 

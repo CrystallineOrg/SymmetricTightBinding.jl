@@ -351,6 +351,8 @@ function obtain_basis_free_parameters(
     cntr = centering(num(brₐ), D)
     gens = cntr ∈ ('P', 'p') ? gensₐ : primitivize.(gensₐ, cntr)
 
+    # TODO: 
+
     # compute the tensor M that encodes the Hamiltonian as a numerical matrix
     Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, order)
 
