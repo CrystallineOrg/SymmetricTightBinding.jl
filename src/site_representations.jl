@@ -66,9 +66,9 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {
             h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
             idx_h = findfirst(==(h), siteg)
             if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
-                ρ[Block(β, α)] .= transpose(siteir.matrices[idx_h])
+                ρ[Block(β, α)] .= siteir.matrices[idx_h]
                 # TODO: check with Thomas if it is necessary to transpose the matrix
-                # previous: ρ[Block(α, β)] .= siteir.matrices[idx_h]
+                # possible corrections: ρ[Block(α, β)] .= transpose(siteir.matrices[idx_h])
                 check = true
                 break
             end
@@ -93,7 +93,7 @@ end
 
 # NB: we do not include the (usually redundant) exponential (k-dependent) phases below.
 #     Note that these phases are NOT REDUNDANT if we are intending to use the sgrep as 
-#     the group action on eigenstates, e.g., for determining the irreps of a tightbinding
+#     the group action on eigenstates, e.g., for determining the irreps of a tight-binding
 #     Hamiltonian
 """
 Induce a representation for the generators of the SG from a representation of the site-symmetry 

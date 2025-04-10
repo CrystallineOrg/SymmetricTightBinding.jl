@@ -435,22 +435,73 @@ In reciprocal space, the matrix representation can be interpreted as a $\mathcal
 be labeled by $\mathbf{k,k'}$. Most of the blocks are zero: given $g = \{R|
 \mathbf{v}\} \in G$, there is only one non-zero block in each row and column, 
 corresponding to $\mathbf{k'} = R\mathbf{k}$. We will denote this block
-by $D_\mathbf{k}(g)$. Then we can write the vectorize the previous equation as:
+by $D_\mathbf{k}(g)$. There are two possible ways to vectorize this equation.
+
+#### Option 1: "To the right"
+
+We can vectorize the previous equation as:
 
 $$
-g Φ(\mathbf{k,r}) = D_\mathbf{k}(g) Φ(R\mathbf{k,r}),
+g Φ(\mathbf{k,r}) = D^1_\mathbf{k}(g) Φ(R\mathbf{k,r}),
 $$
-where $D_\mathbf{k}(g)$ is a $n \times n$ matrix of $\dim(ρ) \times \dim(ρ)$
+where $Φ(\mathbf{k,r})$ is a column vector formed by $\{φ_{iα}(\mathbf{k,r})\}$,
+and, $D_\mathbf{k}(g)$ is a $n \times n$ matrix of $\dim(ρ) \times \dim(ρ)$
 blocks, each of them can be labelled by $α,β$. Most of the blocks are zero: given
 $g \in G$, there is only one non-zero block in each row and column, corresponding
 to $g q_α - q_β$ being a lattice vector, and it is going to be equal to:
 
 $$
-[D_\mathbf{k}(g)]_{ji,βα} = e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji}
+[D^1_\mathbf{k}(g)]_{ji,βα} = e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji}
 $$
+
+If we pick this vectorization, we don't have good composition of transformations:
+
+$$
+g₁ g₂ Φ(\mathbf{k,r}) = g₁ D^1_\mathbf{k}(g₂) Φ(R\mathbf{k,r}) = D^1_\mathbf{k}(g₂)
+D^1_\mathbf{k}(g₁) Φ(R\mathbf{k,r}) \\
+\Rightarrow D^1_\mathbf{k}(g₁g₂) = D^1_\mathbf{k}(g₂) D^1_\mathbf{k}(g₁)
+$$
+
+#### Option 2: "To the left"
+
+We can write the vectorized form as:
+
+$$
+g Φ(\mathbf{k,r}) = Φ^T(R\mathbf{k,r}) D^2_\mathbf{k}(g),
+$$
+where $Φ(\mathbf{k,r})$ is, again, a column vector formed by 
+$\{φ_{iα}(\mathbf{k,r})\}$, and $D_\mathbf{k}(g)$ is, again, a $n \times n$ matrix
+of $\dim(ρ) \times \dim(ρ)$ blocks, each of them can be labelled by $α,β$. Most 
+of the blocks are zero: given $g \in G$, there is only one non-zero block in each
+row and column, corresponding to $g q_α - q_β$ being a lattice vector, and it is
+going to be equal to:
+
+$$
+[D^2_\mathbf{k}(g)]_{ij,αβ} = e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji}
+$$
+
+If we pick this vectorization, we have good composition of transformations:
+
+$$
+g₁ g₂ Φ(\mathbf{k,r}) = g₁ Φ^T(R\mathbf{k,r}) D^2_\mathbf{k}(g₂) = Φ(R\mathbf{k,r})
+D^2_\mathbf{k}(g₁) D^2_\mathbf{k}(g₂) \\
+\Rightarrow D^2_\mathbf{k}(g₁g₂) = D^2_\mathbf{k}(g₁) D^2_\mathbf{k}(g₂)
+$$
+
+> [!WARNING]
+> The expression just change on the fact that $D^2_\mathbf{k}(g) = 
+> (D^1_\mathbf{k}(g))^T$. This is consistent with our discussion but we will 
+> need to change `sgrep_induced_by_siteir` if this option is chosen.
 
 > [!CAUTION]
 > Check this carefully, it is vital in the function `sgrep_induced_by_siteir`.
+> For me it is how I usually build matrices using a basis set but maybe we need 
+> to do it differently here.
+> However, for me, this way it is consistent with how we want to act on the 
+> Hamiltonian...
+
+As we will se bellow, the "good" option to take for our purpose is option 1 since
+the Hamiltonian in $k$-space will transform as we wish.
 
 ### Representation of the Hamiltonian using a real basis
 
@@ -462,12 +513,14 @@ $$
 H = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}),
 $$
 where $Φ(\mathbf{k})$ is a column operator whose components are 
-$φ_{iα}(\mathbf{k})$.
+$\{φ_{iα}(\mathbf{k})\}$.
 
 > [!NOTE]
 > Here I took the vectorial notation since it is less crowded and also dropped 
-> the spatial dependence of Bloch states.
->
+> the spatial dependence of Bloch states. For now, I will use option 1, so I will
+> use that $D_\mathbf{k}(g) \equiv D^1_\mathbf{k}(g)$
+
+> [!NOTE]
 > Maybe I should include why the Hamiltonian can be represented in this way, no
 > off-diagonal terms in $\mathbf{k}$. 
 
@@ -495,6 +548,21 @@ $$
 > Notice that the representations of spatial operations are unitary so 
 > $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹$. Additionally, in this case they are 
 > real so $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹ = D_\mathbf{k}^T$.
+
+#### Vectorization with option 2
+
+Let's study the action of $g = \{R|\mathbf{v}\} \in G$ in the Hamiltonian:
+
+$$
+g H =  g \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
+\sum_\mathbf{k} [g Φ^\dagger(\mathbf{k})] H(g\mathbf{k}) (g Φ(\mathbf{k})) g = \\
+\sum_\mathbf{k} (D^2_\mathbf{k}(g))^\dagger Φ^*(R\mathbf{k}) H(R\mathbf{k}) 
+Φ^T(R\mathbf{k}) D^2_\mathbf{k}(g) g
+$$
+
+As you can see we obtain a really strange transformation on the Hamiltonian that,
+in my opinion, don't make any sense. Maybe I am doing something wrong in all of 
+this.
 
 ### Time reversal symmetry
 
