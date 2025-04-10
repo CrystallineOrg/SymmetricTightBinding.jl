@@ -291,10 +291,9 @@ particular matrix from the site-symmetry representation), acting on the M matrix
 Relative to our white-board notes, Q has swapped indices, in the sense we below 
 give `Q[i,j,r,l]`.
 
-(ρₐₐ)ᵣₛ Hₛₜ / (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ / (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / 
-(ρᵦᵦ⁻¹)ₜₗ tⱼ,
+(ρₐₐ)ᵣₛ Hₛₜ (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ tⱼ,
 
-then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / (ρᵦᵦ⁻¹)ₜₗ
+then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ
 """
 function representation_constraint_matrices(
     Mm::AbstractArray{<:Number,4},
