@@ -430,6 +430,16 @@ where we have made the substitution: $\mathbf{t}' = R\mathbf{t} + \mathbf{t}_{α
 R(\mathbf{t+q_α}) + \mathbf{v - q_β} \Rightarrow (\mathbf{t+q_α}) = R^{-1}
 (\mathbf{t'+q_β-v})$.
 
+> [!NOTE]
+> Important note, we have used here an interesting trick that has been a source 
+> of confusion. Here, we made the substitution $\mathbf{k}·(R⁻¹\mathbf{r}) \equiv
+> (R\mathbf{k)·r}$. Let me prove that:
+> $$
+> \mathbf{k}·(R⁻¹\mathbf{r}) = \sum_{ij} k_i (R⁻¹_{ij} r_j) = \sum_{ij} (R⁻¹_{ij} k_i)
+> r_j = ([R^T]⁻¹ \mathbf{k}) · \mathbf{r} = (R \mathbf{k}) · \mathbf{r},
+> $$
+> where we have used that $R⁻¹ = R^T$, since rotations are real and unitary.
+
 In reciprocal space, the matrix representation can be interpreted as a $\mathcal{N}
 \times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
 be labeled by $\mathbf{k,k'}$. Most of the blocks are zero: given $g = \{R|
