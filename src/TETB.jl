@@ -1,7 +1,7 @@
 module TETB
 
 # -------------------- Necessary modules for the package ---------------------------------- #
-using LinearAlgebra: nullspace, norm
+using LinearAlgebra
 using Crystalline
 using MPBUtils
 using SymmetryBases

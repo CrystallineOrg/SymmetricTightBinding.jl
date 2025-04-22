@@ -94,7 +94,7 @@ function obtain_basis_free_parameters_TRS(
 
     # build an constraint matrix acting on the hopping coefficient vector `tₐᵦ` 
     # associated with h_orbit
-    constraint_vs = Vector{Matrix{ComplexF64}}()
+    constraint_vs = Vector{Vector{Float64}}()
     for s in axes(Q_trs, 3), t in axes(Q_trs, 4)
         q = @view Q_trs[:, :, s, t]
         z = @view Z_trs[:, :, s, t]
@@ -115,6 +115,8 @@ function obtain_basis_free_parameters_TRS(
 
     # prune near-zero elements of basis vectors
     _prune_at_threshold!(tₐᵦ_basis)
+    # TODO: problem with type T<:Complex, made everything Complex so we skip this
+    # problem
 
     return [Mm Mm], tₐᵦ_basis, order
 end

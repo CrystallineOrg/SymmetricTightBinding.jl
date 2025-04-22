@@ -434,74 +434,55 @@ In reciprocal space, the matrix representation can be interpreted as a $\mathcal
 \times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
 be labeled by $\mathbf{k,k'}$. Most of the blocks are zero: given $g = \{R|
 \mathbf{v}\} \in G$, there is only one non-zero block in each row and column, 
-corresponding to $\mathbf{k'} = R\mathbf{k}$. We will denote this block
-by $D_\mathbf{k}(g)$. There are two possible ways to vectorize this equation.
+corresponding to $\mathbf{k'} = R\mathbf{k}$. Mathematically, we can express this
+as:
 
-#### Option 1: "To the right"
+$$
+g φ_{iα}(\mathbf{k,r}) = \sum_{jβ\mathbf{k'}} D_{jβ\mathbf{k'},iα\mathbf{k}}(g)
+φ_{jβ}(\mathbf{k'}),
+$$
+where we have that:
+
+$$
+D_{jβ\mathbf{k'},iα\mathbf{k}}(g) = e^{-i(R\mathbf{k) \cdot v}} ρ_{ji}(h)
+\delta_{R\mathbf{k,k'}} \delta_{g\mathbf{q_α - q_β} \mod \tau},
+$$
+where $\tau \in T$.
+
+We will use the following notation:
+
+$$
+D_{jβ,iα}^\mathbf{k}(g) = e^{-i(R\mathbf{k) \cdot v}} ρ_{ji}(h) 
+\delta_{g\mathbf{q_α - q_β} \mod \tau},
+$$
+where we skip the dependence on $\mathbf{k}$ which will be unnecessary in the 
+following.
 
 We can vectorize the previous equation as:
 
 $$
-g Φ(\mathbf{k,r}) = D^1_\mathbf{k}(g) Φ(R\mathbf{k,r}),
+g Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g) Φ(R\mathbf{k,r}),
 $$
 where $Φ(\mathbf{k,r})$ is a column vector formed by $\{φ_{iα}(\mathbf{k,r})\}$,
 and, $D_\mathbf{k}(g)$ is a $n \times n$ matrix of $\dim(ρ) \times \dim(ρ)$
 blocks, each of them can be labelled by $α,β$. Most of the blocks are zero: given
 $g \in G$, there is only one non-zero block in each row and column, corresponding
-to $g q_α - q_β$ being a lattice vector, and it is going to be equal to:
+to $g q_α - q_β = 0 \mod \tau$ with $\tau \in T$, and it is going to be equal to:
 
 $$
-[D^1_\mathbf{k}(g)]_{ji,βα} = e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji}
+D^\mathbf{k}_{jβ,iα}(g)= e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji} 
+\delta_{g\mathbf{q_α - q_β} \mod \tau}
 $$
 
-If we pick this vectorization, we don't have good composition of transformations:
-
-$$
-g₁ g₂ Φ(\mathbf{k,r}) = g₁ D^1_\mathbf{k}(g₂) Φ(R\mathbf{k,r}) = D^1_\mathbf{k}(g₂)
-D^1_\mathbf{k}(g₁) Φ(R\mathbf{k,r}) \\
-\Rightarrow D^1_\mathbf{k}(g₁g₂) = D^1_\mathbf{k}(g₂) D^1_\mathbf{k}(g₁)
-$$
-
-#### Option 2: "To the left"
-
-We can write the vectorized form as:
-
-$$
-g Φ(\mathbf{k,r}) = Φ^T(R\mathbf{k,r}) D^2_\mathbf{k}(g),
-$$
-where $Φ(\mathbf{k,r})$ is, again, a column vector formed by 
-$\{φ_{iα}(\mathbf{k,r})\}$, and $D_\mathbf{k}(g)$ is, again, a $n \times n$ matrix
-of $\dim(ρ) \times \dim(ρ)$ blocks, each of them can be labelled by $α,β$. Most 
-of the blocks are zero: given $g \in G$, there is only one non-zero block in each
-row and column, corresponding to $g q_α - q_β$ being a lattice vector, and it is
-going to be equal to:
-
-$$
-[D^2_\mathbf{k}(g)]_{ij,αβ} = e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji}
-$$
-
-If we pick this vectorization, we have good composition of transformations:
-
-$$
-g₁ g₂ Φ(\mathbf{k,r}) = g₁ Φ^T(R\mathbf{k,r}) D^2_\mathbf{k}(g₂) = Φ(R\mathbf{k,r})
-D^2_\mathbf{k}(g₁) D^2_\mathbf{k}(g₂) \\
-\Rightarrow D^2_\mathbf{k}(g₁g₂) = D^2_\mathbf{k}(g₁) D^2_\mathbf{k}(g₂)
-$$
-
-> [!WARNING]
-> The expression just change on the fact that $D^2_\mathbf{k}(g) = 
-> (D^1_\mathbf{k}(g))^T$. This is consistent with our discussion but we will 
-> need to change `sgrep_induced_by_siteir` if this option is chosen.
-
-> [!CAUTION]
-> Check this carefully, it is vital in the function `sgrep_induced_by_siteir`.
-> For me it is how I usually build matrices using a basis set but maybe we need 
-> to do it differently here.
-> However, for me, this way it is consistent with how we want to act on the 
-> Hamiltonian...
-
-As we will se bellow, the "good" option to take for our purpose is option 1 since
-the Hamiltonian in $k$-space will transform as we wish.
+> [!NOTE]
+> We pick the previous definition of the matrix in order to have good properties
+> of composition. This is due to the fact that:
+> $$
+> g₁ g₂ Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g₁g₂) Φ(R₁R₂\mathbf{k,r}) \\
+> = g₁ D^T_\mathbf{k}(g₂) Φ(R₂\mathbf{k,r}) = 
+> D^T_\mathbf{k}(g₂) D^T_\mathbf{k}(g₁) Φ(R₁R₂\mathbf{k,r}) \\
+> \Rightarrow \boxed{D_\mathbf{k}(g₁g₂) = D_\mathbf{k}(g₁) D_\mathbf{k}(g₂)}
+> $$
 
 ### Representation of the Hamiltonian using a real basis
 
@@ -517,10 +498,9 @@ $\{φ_{iα}(\mathbf{k})\}$.
 
 > [!NOTE]
 > Here I took the vectorial notation since it is less crowded and also dropped 
-> the spatial dependence of Bloch states. For now, I will use option 1, so I will
-> use that $D_\mathbf{k}(g) \equiv D^1_\mathbf{k}(g)$
+> the spatial dependence of Bloch states.
 
-> [!NOTE]
+> [!WARNING]
 > Maybe I should include why the Hamiltonian can be represented in this way, no
 > off-diagonal terms in $\mathbf{k}$. 
 
@@ -528,41 +508,54 @@ Let's study the action of $g = \{R|\mathbf{v}\} \in G$ in the Hamiltonian:
 
 $$
 g H =  g \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
-\sum_\mathbf{k} [g Φ^\dagger(\mathbf{k})] H(g\mathbf{k}) (g Φ(\mathbf{k})) g = \\
-\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D_\mathbf{k}^\dagger(g) H(R\mathbf{k}) 
-D_\mathbf{k}(g) Φ(R\mathbf{k}) g
+\sum_\mathbf{k} [g Φ(\mathbf{k})]^\dagger H(g\mathbf{k}) [g Φ(\mathbf{k})] g = \\
+\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D^*_\mathbf{k}(g) H(R\mathbf{k}) 
+D^T_\mathbf{k}(g) Φ(R\mathbf{k}) g
 $$
 
 If we want our Hamiltonian to be invariant, the we must impose that:
 
 $$
 H g = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) g = g H =
-\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D_\mathbf{k}^\dagger(g) H(R\mathbf{k}) 
-D_\mathbf{k}(g) Φ(R\mathbf{k}) g \\
-\Rightarrow H(\mathbf{k}) = D_\mathbf{k}^\dagger(g) H(R\mathbf{k}) 
-D_\mathbf{k}(g) \Rightarrow H(R\mathbf{k}) = D_\mathbf{k}(g) H(\mathbf{k}) 
-D_\mathbf{k}^\dagger(g)
+\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D^*_\mathbf{k}(g) H(R\mathbf{k}) 
+D^T_\mathbf{k}(g) Φ(R\mathbf{k}) g \\
+\Rightarrow H(\mathbf{k}) = D^*_\mathbf{k}(g) H(R\mathbf{k}) D^T_\mathbf{k}(g) \Rightarrow \boxed{H(R\mathbf{k}) = D^T_\mathbf{k}(g) H(\mathbf{k}) 
+D^*_\mathbf{k}(g)},
+$$
+where we have used that: $(D^T)^{-1} = (D^T)^\dagger = D^*$ and $(D^*)^{-1} = 
+(D^*)^\dagger = D^T$, for any unitary representation $D$.
+
+#### Small proof of the previous statement
+
+$$
+D^\dagger D = I = D D^\dagger \Rightarrow (D^\dagger D)^* = (D^*)^\dagger D^* =
+I = D^* (D^*)^\dagger \\
+\Rightarrow (D^\dagger D)^T = (D^T)^\dagger D^T = I = D^T (D^T)^\dagger
+$$
+where we have used that:
+
+$$
+(D^\dagger)^* = ([D^*]^T)^* = (D^*)^\dagger \\
+(D^\dagger)^T = ([D^T]^*)^T = (D^T)^\dagger
 $$
 
 > [!NOTE]
 > Notice that the representations of spatial operations are unitary so 
-> $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹$. Additionally, in this case they are 
-> real so $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹ = D_\mathbf{k}^T$.
+> $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹$. Additionally, if they are explicitly 
+> real we have the following relation: $D^T = (D^*)^T = D^\dagger = D^{-1}$. So
+> we end up with:
+> 
+> $$
+> \boxed{H(R\mathbf{k}) = D^{-1}_\mathbf{k}(g) H(\mathbf{k}) 
+> D_\mathbf{k}(g)},
+> $$
+> which is the most usual way to write it.
 
-#### Vectorization with option 2
-
-Let's study the action of $g = \{R|\mathbf{v}\} \in G$ in the Hamiltonian:
-
-$$
-g H =  g \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
-\sum_\mathbf{k} [g Φ^\dagger(\mathbf{k})] H(g\mathbf{k}) (g Φ(\mathbf{k})) g = \\
-\sum_\mathbf{k} (D^2_\mathbf{k}(g))^\dagger Φ^*(R\mathbf{k}) H(R\mathbf{k}) 
-Φ^T(R\mathbf{k}) D^2_\mathbf{k}(g) g
-$$
-
-As you can see we obtain a really strange transformation on the Hamiltonian that,
-in my opinion, don't make any sense. Maybe I am doing something wrong in all of 
-this.
+> [!WARNING]
+> Notice that this expression derives from the one we had at the beginning. This 
+> is due to the transpose we took in our "new" definition. It kinds of reverse the
+> intuitive ordering. We should recheck this but it seems consistent with our 
+> choices.
 
 ### Time reversal symmetry
 
@@ -583,10 +576,6 @@ H Θ = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H_\mathbf{k} Φ(\mathbf{k}) Θ = �
 \Rightarrow H(\mathbf{k}) = H^*(\mathbf{-k})
 $$
 
-> [!CAUTION]
-> The pull request made with the update of this file assumes everything here is 
-> right, so the code will proceed under the previous assumptions.
-
 ## Proof that physically real representations need a real basis
 
 If the representation is real then $D = D^*$. On one side we have that: $g Ψ = 
@@ -598,7 +587,7 @@ $$
 
 Then $Θ Ψ$ yields the same representation as $Ψ$ so they can be consider equal (?)
 
-> [!WARNING]
+> [!CAUTION]
 > Maybe this is too much of an assumption…
 
 ## References
