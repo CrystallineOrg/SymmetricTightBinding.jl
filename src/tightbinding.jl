@@ -318,7 +318,7 @@ function representation_constraint_matrices(
 
         Q = zeros(ComplexF64, size(Mm))
         for i in axes(Mm, 1), j in axes(Mm, 2)
-            Q[i, j, :, :] .= transpose(ρₐₐ) * Mm[i, j, :, :] * conj(ρᵦᵦ)
+            Q[i, j, :, :] .= conj(ρₐₐ) * Mm[i, j, :, :] * transpose(ρᵦᵦ)
         end
         Qs[n] = Q
     end
@@ -498,13 +498,11 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit))) # square matrix acting on the rows of M (formally v)
     for (i, δᵢ) in enumerate(orbit(h_orbit))
-        # crystalline implements gk = Rᵀk. However, since we don't have access to k,
+        # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
         # being a symbolic variable, we will translate its action into δ. For this,
-        # we implement a simple trick: (Rᵀ k)·r = Rᵢⱼ kᵢ rⱼ = k·(R r)
-        # TODO: check if this is correct because before it was the other way around.
-        # We need to make sure how this should be implemented.
-        R = SymOperation(rotation(op)) # rotation-only part of `op`
-        δᵢ′ = compose(R, δᵢ)
+        # we implement a simple trick: ([R⁻¹]ᵀ k)·r = R⁻¹ᵢⱼ kᵢ rⱼ = k·(R⁻¹ r)
+        R⁻¹ = SymOperation(inv(rotation(op))) # rotation-only part of `op`
+        δᵢ′ = compose(R⁻¹, δᵢ)
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
         isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
         P[i, j] = 1

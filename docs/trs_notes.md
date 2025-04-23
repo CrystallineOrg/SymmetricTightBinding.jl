@@ -421,9 +421,9 @@ g φ_{iα}(\mathbf{k,r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} g
 ψ_{jβ}(\mathbf{r}-R\mathbf{\mathbf{t}-\mathbf{t}_{αβ}}) = \\
 \sum_\mathbf{t'} e^{i\mathbf{k}\cdot R^{-1}\mathbf{(t'+q_β-v)}} [ρ(h)]_{ji} 
 ψ_{jβ}(\mathbf{r-t'}) = \\
-e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji} \sum_\mathbf{t'} 
-e^{i(R\mathbf{k) \cdot (t'+q_β)}} ψ_{jβ}(\mathbf{r-t'}) = \\
-e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji} φ_{jβ}(R\mathbf{k,r}),
+e^{-i([R⁻¹]ᵀ \mathbf{k) \cdot v}} [ρ(h)]_{ji} \sum_\mathbf{t'} 
+e^{i([R⁻¹]ᵀ \mathbf{k) \cdot (t'+q_β)}} ψ_{jβ}(\mathbf{r-t'}) = \\
+e^{-i([R⁻¹]ᵀ \mathbf{k) \cdot v}} [ρ(h)]_{ji} φ_{jβ}([R⁻¹]ᵀ \mathbf{k,r}),
 $$
 where we have made the substitution: $\mathbf{t}' = R\mathbf{t} + \mathbf{t}_{αβ}
 = R\mathbf{t} + g\mathbf{q_α - q_β} = R\mathbf{t} + R\mathbf{q_α + v - q_β} =
@@ -433,12 +433,11 @@ R(\mathbf{t+q_α}) + \mathbf{v - q_β} \Rightarrow (\mathbf{t+q_α}) = R^{-1}
 > [!NOTE]
 > Important note, we have used here an interesting trick that has been a source 
 > of confusion. Here, we made the substitution $\mathbf{k}·(R⁻¹\mathbf{r}) \equiv
-> (R\mathbf{k)·r}$. Let me prove that:
+> (g \mathbf{k)·r}$. Let me prove that:
 > $$
 > \mathbf{k}·(R⁻¹\mathbf{r}) = \sum_{ij} k_i (R⁻¹_{ij} r_j) = \sum_{ij} (R⁻¹_{ij} k_i)
-> r_j = ([R^T]⁻¹ \mathbf{k}) · \mathbf{r} = (R \mathbf{k}) · \mathbf{r},
+> r_j = ([R⁻¹]ᵀ \mathbf{k}) · \mathbf{r} \equiv (g \mathbf{k}) · \mathbf{r},
 > $$
-> where we have used that $R⁻¹ = R^T$, since rotations are real and unitary.
 
 In reciprocal space, the matrix representation can be interpreted as a $\mathcal{N}
 \times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
@@ -454,7 +453,7 @@ $$
 where we have that:
 
 $$
-D_{jβ\mathbf{k'},iα\mathbf{k}}(g) = e^{-i(R\mathbf{k) \cdot v}} ρ_{ji}(h)
+D_{jβ\mathbf{k'},iα\mathbf{k}}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h)
 \delta_{R\mathbf{k,k'}} \delta_{g\mathbf{q_α - q_β} \mod \tau},
 $$
 where $\tau \in T$.
@@ -462,7 +461,7 @@ where $\tau \in T$.
 We will use the following notation:
 
 $$
-D_{jβ,iα}^\mathbf{k}(g) = e^{-i(R\mathbf{k) \cdot v}} ρ_{ji}(h) 
+D_{jβ,iα}^\mathbf{k}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h) 
 \delta_{g\mathbf{q_α - q_β} \mod \tau},
 $$
 where we skip the dependence on $\mathbf{k}$ which will be unnecessary in the 
@@ -471,7 +470,7 @@ following.
 We can vectorize the previous equation as:
 
 $$
-g Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g) Φ(R\mathbf{k,r}),
+g Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g) Φ(g\mathbf{k,r}),
 $$
 where $Φ(\mathbf{k,r})$ is a column vector formed by $\{φ_{iα}(\mathbf{k,r})\}$,
 and, $D_\mathbf{k}(g)$ is a $n \times n$ matrix of $\dim(ρ) \times \dim(ρ)$
@@ -480,7 +479,7 @@ $g \in G$, there is only one non-zero block in each row and column, correspondin
 to $g q_α - q_β = 0 \mod \tau$ with $\tau \in T$, and it is going to be equal to:
 
 $$
-D^\mathbf{k}_{jβ,iα}(g)= e^{-i(R\mathbf{k) \cdot v}} [ρ(h)]_{ji} 
+D^\mathbf{k}_{jβ,iα}(g)= e^{-i(g\mathbf{k) \cdot v}} [ρ(h)]_{ji} 
 \delta_{g\mathbf{q_α - q_β} \mod \tau}
 $$
 
@@ -488,9 +487,9 @@ $$
 > We pick the previous definition of the matrix in order to have good properties
 > of composition. This is due to the fact that:
 > $$
-> g₁ g₂ Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g₁g₂) Φ(R₁R₂\mathbf{k,r}) \\
-> = g₁ D^T_\mathbf{k}(g₂) Φ(R₂\mathbf{k,r}) = 
-> D^T_\mathbf{k}(g₂) D^T_\mathbf{k}(g₁) Φ(R₁R₂\mathbf{k,r}) \\
+> g₁ g₂ Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g₁g₂) Φ(g₁g₂\mathbf{k,r}) \\
+> = g₁ D^T_\mathbf{k}(g₂) Φ(g₂\mathbf{k,r}) = 
+> D^T_\mathbf{k}(g₂) D^T_\mathbf{k}(g₁) Φ(g₁g₂\mathbf{k,r}) \\
 > \Rightarrow \boxed{D_\mathbf{k}(g₁g₂) = D_\mathbf{k}(g₁) D_\mathbf{k}(g₂)}
 > $$
 
@@ -518,35 +517,18 @@ Let's study the action of $g = \{R|\mathbf{v}\} \in G$ in the Hamiltonian:
 
 $$
 g H =  g \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
-\sum_\mathbf{k} [g Φ(\mathbf{k})]^\dagger H(g\mathbf{k}) [g Φ(\mathbf{k})] g = \\
-\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D^*_\mathbf{k}(g) H(R\mathbf{k}) 
-D^T_\mathbf{k}(g) Φ(R\mathbf{k}) g
+\sum_\mathbf{k} [g Φ(\mathbf{k})]^\dagger H(\mathbf{k}) [g Φ(\mathbf{k})] g = \\
+\sum_\mathbf{k} Φ^\dagger(g\mathbf{k}) D^*_\mathbf{k}(g) H(\mathbf{k}) 
+D^T_\mathbf{k}(g) Φ(g\mathbf{k}) g
 $$
 
 If we want our Hamiltonian to be invariant, the we must impose that:
 
 $$
 H g = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) g = g H =
-\sum_\mathbf{k} Φ^\dagger(R\mathbf{k}) D^*_\mathbf{k}(g) H(R\mathbf{k}) 
-D^T_\mathbf{k}(g) Φ(R\mathbf{k}) g \\
-\Rightarrow H(\mathbf{k}) = D^*_\mathbf{k}(g) H(R\mathbf{k}) D^T_\mathbf{k}(g) \Rightarrow \boxed{H(R\mathbf{k}) = D^T_\mathbf{k}(g) H(\mathbf{k}) 
-D^*_\mathbf{k}(g)},
-$$
-where we have used that: $(D^T)^{-1} = (D^T)^\dagger = D^*$ and $(D^*)^{-1} = 
-(D^*)^\dagger = D^T$, for any unitary representation $D$.
-
-#### Small proof of the previous statement
-
-$$
-D^\dagger D = I = D D^\dagger \Rightarrow (D^\dagger D)^* = (D^*)^\dagger D^* =
-I = D^* (D^*)^\dagger \\
-\Rightarrow (D^\dagger D)^T = (D^T)^\dagger D^T = I = D^T (D^T)^\dagger
-$$
-where we have used that:
-
-$$
-(D^\dagger)^* = ([D^*]^T)^* = (D^*)^\dagger \\
-(D^\dagger)^T = ([D^T]^*)^T = (D^T)^\dagger
+\sum_\mathbf{k} Φ^\dagger(g\mathbf{k}) D^*_\mathbf{k}(g) H(\mathbf{k}) 
+D^T_\mathbf{k}(g) Φ(g\mathbf{k}) g \\
+\Rightarrow \boxed{H(g\mathbf{k}) = D^*_\mathbf{k}(g) H(\mathbf{k}) D^T_\mathbf{k}(g)}
 $$
 
 > [!NOTE]
@@ -556,16 +538,18 @@ $$
 > we end up with:
 > 
 > $$
-> \boxed{H(R\mathbf{k}) = D^{-1}_\mathbf{k}(g) H(\mathbf{k}) 
-> D_\mathbf{k}(g)},
+> \boxed{H(g\mathbf{k}) = D_\mathbf{k}(g) H(\mathbf{k}) D⁻¹_\mathbf{k}(g)},
 > $$
 > which is the most usual way to write it.
 
-> [!WARNING]
-> Notice that this expression derives from the one we had at the beginning. This 
-> is due to the transpose we took in our "new" definition. It kinds of reverse the
-> intuitive ordering. We should recheck this but it seems consistent with our 
-> choices.
+#### How a symmetry operation g ∈ G acts on $\mathbf{k}$
+
+Conceptually, we want $k \cdot r = (g\circ k) \cdot (g\circ r)$ for $g = (W|0)$. 
+If we let $g$ act on $k$ (specified in a reciprocal lattice basis) as $(W^{-1})^T$
+we can achieve this since:
+
+$$(g\circ k) \cdot (g\circ r) = [(W^{-1})^T k] \cdot (Wr) = k^T W^{-1} W r = 
+k^T r = k\cdot r$$
 
 ### Time reversal symmetry
 
