@@ -1,10 +1,8 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-## necesary packages
+# necessary packages
 using Crystalline
-using SymmetryBases, MPBUtils
-using PhotonicBandConnectivity
 using TETB
 
 sg_num = 2
@@ -34,5 +32,5 @@ m5 = parse(SymmetryVector, s5, lgirsv)
 μᴸ = 1
 idxsᴸs = find_auxiliary_modes(μᴸ, brs)
 
-### compute all possible decomposition into EBRs of m using the additional modes computed
+# compute all possible decomposition into EBRs of m using the additional modes computed
 candidatesv = find_apolar_modes(m5, idxsᴸs, brs)

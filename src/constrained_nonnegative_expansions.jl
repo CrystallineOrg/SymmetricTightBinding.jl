@@ -42,49 +42,49 @@ to the inclusion of at most `maxdepth` basis vectors (this limits the maximum me
 value of `maxdepth` to `div(μ, minimum(μⱼ), RoundDown)`; its default value). 
 """
 function find_all_admissible_expansions(
-        basis::AbstractVector{<:AbstractVector{<:Integer}},
-        basis_occupations::AbstractVector{<:Integer},
-        occupation::Integer,
-        constraints::AbstractVector{<:Integer},
-        idxs::AbstractVector{<:Integer};
-        basis_idxs = eachindex(basis),
-        maxdepth = div(occupation, minimum(basis_occupations), RoundDown)
-    )
+    basis::AbstractVector{<:AbstractVector{<:Integer}},
+    basis_occupations::AbstractVector{<:Integer},
+    occupation::Integer,
+    constraints::AbstractVector{<:Integer},
+    idxs::AbstractVector{<:Integer};
+    basis_idxs=eachindex(basis),
+    maxdepth=div(occupation, minimum(basis_occupations), RoundDown)
+)
 
     occupation > 0 || throw(DomainError(occupation, "must be positive"))
 
     cⁱs = Vector{Int}[] # solution vector storage
     constraints′ = similar(constraints) # buffer
     _constrained_expansions!(
-        cⁱs, constraints′, (), occupation, constraints, basis_occupations, basis, idxs, 
+        cⁱs, constraints′, (), occupation, constraints, basis_occupations, basis, idxs,
         1, length(basis_idxs), 1, maxdepth, basis_idxs)
 end
 function _constrained_expansions!(
-            cⁱs, constraints′, ijks, occupation, constraints, basis_occupations, basis,
-            idxs, startidx, stopidx, depth, maxdepth, basis_idxs)
+    cⁱs, constraints′, ijks, occupation, constraints, basis_occupations, basis,
+    idxs, startidx, stopidx, depth, maxdepth, basis_idxs)
     depth > maxdepth && return cⁱs
     for idxᵢ in startidx:stopidx
         i = basis_idxs[idxᵢ]
-        μ = test_expansion_add_if_valid!(cⁱs, constraints′, (ijks...,i), occupation, 
-                constraints, basis_occupations, basis, idxs)
+        μ = test_expansion_add_if_valid!(cⁱs, constraints′, (ijks..., i), occupation,
+            constraints, basis_occupations, basis, idxs)
         μ ≥ occupation && continue # matched/overflowed occupation-constraint; no more to add
 
         # did not yet match/overflow filling constraint: add more Hilbert basis vectors
         _constrained_expansions!(
-            cⁱs, constraints′, (ijks...,i), occupation, constraints, basis_occupations,
-            basis, idxs, idxᵢ, stopidx, depth+1, maxdepth, basis_idxs)
+            cⁱs, constraints′, (ijks..., i), occupation, constraints, basis_occupations,
+            basis, idxs, idxᵢ, stopidx, depth + 1, maxdepth, basis_idxs)
     end
     return cⁱs
 end
 
 function test_expansion_add_if_valid!(
-            cⁱs, constraints′, # push to cⁱs; use constraints′ as an updating buffer
-            ijks::NTuple{N,Int}, occupation, constraints, basis_occupations, basis, idxs
-            ) where N
+    cⁱs, constraints′, # push to cⁱs; use constraints′ as an updating buffer
+    ijks::NTuple{N,Int}, occupation, constraints, basis_occupations, basis, idxs
+) where {N}
 
     μ = _sum_fillings(ijks, basis_occupations) # accumulate band fillings
     μ ≠ occupation && return μ                 # return early if μ overflows `occupation`
-    
+
     # update `constraints′`
     _update_constraints!(constraints′, ijks, constraints, basis, idxs)
 
@@ -98,14 +98,14 @@ end
 
 # equivalent of μ = μs[i] + μs[j] + μs[k] + ... for i,j,k, in ijks, recursively
 _sum_fillings(ijks::NTuple{1,Int}, μs) = μs[first(ijks)]
-function _sum_fillings(ijks::NTuple{N,Int}, μs) where N
+function _sum_fillings(ijks::NTuple{N,Int}, μs) where {N}
     μs[first(ijks)] + _sum_fillings(Base.tail(ijks), μs)
 end
 
 # update constraints, assigning to `constraints′`
 @inline function _update_constraints!(
-        constraints′, ijks::NTuple{N,Int}, constraints, basis, idxs
-    ) where N
+    constraints′, ijks::NTuple{N,Int}, constraints, basis, idxs
+) where {N}
 
     b = basis
     c = constraints
@@ -114,27 +114,27 @@ end
         i, = ijks
         @views c′ .= c .- b[i][idxs]
     elseif N == 2
-        i,j = ijks
+        i, j = ijks
         @views c′ .= c .- b[i][idxs] .- b[j][idxs]
     elseif N == 3
-        i,j,k = ijks
+        i, j, k = ijks
         @views c′ .= c .- b[i][idxs] .- b[j][idxs] .- b[k][idxs]
     elseif N == 4
-        i,j,k,l = ijks
+        i, j, k, l = ijks
         @views c′ .= c .- b[i][idxs] .- b[j][idxs] .- b[k][idxs] .- b[l][idxs]
     elseif N == 5
-        i,j,k,l,o = ijks
+        i, j, k, l, o = ijks
         @views c′ .= c .- b[i][idxs] .- b[j][idxs] .- b[k][idxs] .- b[l][idxs] .- b[o][idxs]
     else # fall back to looping
         c′ .= c
-        for ijk in ijks 
+        for ijk in ijks
             @views c′ .-= b[ijk][idxs]
         end
     end
     return c′
 end
 
-function add_solution!(cⁱs::Vector{Vector{Int}}, ijks::NTuple{N, Int}) where N
+function add_solution!(cⁱs::Vector{Vector{Int}}, ijks::NTuple{N,Int}) where {N}
     # push `ijks` to solution storage `cⁱs` as a vector of indices
     push!(cⁱs, [idx for idx in ijks])
 end
@@ -143,7 +143,7 @@ end
 # implementation like `sum(basis[idxs])`
 function add_basis_vecs!(n, basis::AbstractVector{<:AbstractVector{<:Integer}}, idxs)
     Nⁱʳʳ = length(n)
-    copy!(n, basis[first(idxs)]) # peel 1st iter & ensure invariance to n's inititialization
+    copy!(n, basis[first(idxs)]) # peel 1st iter & ensure invariance to n's initialization
     @inbounds for idx in @view idxs[2:end]
         nᴴ = basis[idx]
         for i in 1:Nⁱʳʳ
@@ -162,9 +162,9 @@ function coef2idxs(c::AbstractVector{<:Integer})
     cⁱ = Vector{Int}(undef, N)
     pos₁, pos₂, idx = 0, 0, 0
     while true
-        idx  = findnext(≠(0), c, idx+1)
-        pos₁ = pos₂+1
-        pos₂ = pos₂+c[idx]
+        idx = findnext(≠(0), c, idx + 1)
+        pos₁ = pos₂ + 1
+        pos₂ = pos₂ + c[idx]
         cⁱ[pos₁:pos₂] .= idx
         pos₂ == N && break
     end
@@ -180,12 +180,12 @@ function idxs2coef(cⁱ, N_basis) # `N_basis = length(basis)`
 end
 
 function isvalid_solution(
-        cⁱ::AbstractVector{<:Integer}, 
-        occupation::Integer,
-        constraints::AbstractVector{<:Integer}, 
-        basis::AbstractVector{<:AbstractVector{<:Integer}},
-        idxs::AbstractVector{<:Integer}
-        )
+    cⁱ::AbstractVector{<:Integer},
+    occupation::Integer,
+    constraints::AbstractVector{<:Integer},
+    basis::AbstractVector{<:AbstractVector{<:Integer}},
+    idxs::AbstractVector{<:Integer}
+)
     n = add_basis_vecs(basis, cⁱ)
     return all(n[idxs] .≥ constraints) && n[end] == occupation
 end

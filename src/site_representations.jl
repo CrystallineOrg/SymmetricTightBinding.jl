@@ -118,6 +118,11 @@ end
 #     the group action on eigenstates, e.g., for determining the irreps of a tight-binding
 #     Hamiltonian
 """
+    sgrep_induced_by_siteir_generators(
+                                        br::NewBandRep{D},
+                                        gens::AbstractVector{SymOperation{D}})
+        --> Tuple{Vector{SymOperation{D}}, Vector{Matrix{ComplexF64}}}
+
 Induce a representation for the generators of the SG from a representation of the site-symmetry 
 group of a particular maximal WP.
 """
