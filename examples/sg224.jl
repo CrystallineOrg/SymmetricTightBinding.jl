@@ -10,6 +10,6 @@ c[13], c[19] = 1, 1
 cbr = CompositeBandRep(c, brs)
 Rs = [[0, 0, 0]]
 
-tb_model = tb_hamiltonian(cbr, Rs)
+tb_model = tb_hamiltonian(cbr, Rs, time_reversal=false)
 
 hops = TETB.obtain_symmetry_related_hoppings(Rs, brs[13], brs[19])

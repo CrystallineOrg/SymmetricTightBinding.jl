@@ -11,4 +11,4 @@ cbr = CompositeBandRep(coefs, brs)
 
 Rs = [[0,], [1,]]
 
-tbs = tb_hamiltonian(cbr, Rs)
+tbs = tb_hamiltonian(cbr, Rs, false)

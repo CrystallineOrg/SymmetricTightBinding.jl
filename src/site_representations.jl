@@ -46,9 +46,17 @@ function find_bandrep_decompositions(
     end
 end
 
-function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {D}
+function sgrep_induced_by_siteir(br::NewBandRep{D},
+    op::SymOperation{D},
+    time_reversal::Bool=true
+    ) where {D}
 
-    siteir = br.siteir
+    if time_reversal
+        siteir = physical_realify(br.siteir)
+    else
+        siteir = br.siteir
+    end
+
     siteir_dim = irdim(siteir)
     siteg = group(siteir)
     wps = orbit(siteg)
@@ -67,6 +75,18 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {
             idx_h = findfirst(==(h), siteg)
             if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
                 ρ[Block(β, α)] .= siteir.matrices[idx_h]
+                # we build the representation acting as the transpose, i.e., 
+                # gΦ(k) = ρᵀ(g)Φ(Rk), where Φ(k) is the site-symmetry function of
+                # the bandrep. This yields ρⱼᵦᵢₐ(g) = e(-i(Rk)·v) Γⱼᵢ(g) δ(gqₐ, qᵦ),
+                # where Γ is the representation of the site-symmetry group, and 
+                # δ(gqₐ, qᵦ) is the Kronecker delta mod τ ∈ T.
+                # we are building it as the transpose because we want to keep good
+                # composition order: ρ(g₁g₂) = ρ(g₁)ρ(g₂). Check `trs_notes.md`.
+
+                # NB: we do not include the (usually redundant) exponential (k-dependent) phases.
+                # Note that these phases are NOT REDUNDANT if we are intending to use the sgrep as 
+                # the group action on eigenstates, e.g., for determining the irreps of a tight-binding
+                # Hamiltonian
                 check = true
                 break
             end
@@ -77,11 +97,15 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {
     return ρ
 end
 
-function sgrep_induced_by_siteir(cbr::CompositeBandRep{D}, op::SymOperation{D}) where {D}
+function sgrep_induced_by_siteir(
+    cbr::CompositeBandRep{D}, 
+    op::SymOperation{D}, 
+    time_reversal::Bool=true
+    ) where {D}
     ρ = Matrix{Complex}(undef, 0, 0)
     for (idxc, c) in enumerate(cbr.coefs)
         iszero(c) && continue
-        ρ_idxc = sgrep_induced_by_siteir(cbr.brs[idxc], op)
+        ρ_idxc = sgrep_induced_by_siteir(cbr.brs[idxc], op, time_reversal)
         for _ in 1:Int(c)
             ρ = ρ ⊕ ρ_idxc
         end
@@ -91,7 +115,7 @@ end
 
 # NB: we do not include the (usually redundant) exponential (k-dependent) phases below.
 #     Note that these phases are NOT REDUNDANT if we are intending to use the sgrep as 
-#     the group action on eigenstates, e.g., for determining the irreps of a tightbinding
+#     the group action on eigenstates, e.g., for determining the irreps of a tight-binding
 #     Hamiltonian
 """
     sgrep_induced_by_siteir_generators(
@@ -104,9 +128,10 @@ group of a particular maximal WP.
 """
 function sgrep_induced_by_siteir_generators(
     br::NewBandRep{D},
-    gens::AbstractVector{SymOperation{D}}=generators(num(br), SpaceGroup{D})
+    time_reversal::Bool=true,
+    gens::AbstractVector{SymOperation{D}}=generators(num(br), SpaceGroup{D}),
 ) where {D}
-    return gens, sgrep_induced_by_siteir.(Ref(br), gens)
+    return gens, sgrep_induced_by_siteir.(Ref(br), gens, time_reversal)
 end
 
 """
@@ -119,9 +144,10 @@ end
 
 function sgrep_induced_by_siteir_generators(
     cbr::CompositeBandRep{D},
-    gens=generators(num(cbr), SpaceGroup{D})
+    time_reversal::Bool=true,
+    gens=generators(num(cbr), SpaceGroup{D}),
 ) where {D}
     # TODO: primitivize the generators of the space group
-    return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
+    return gens, sgrep_induced_by_siteir.(Ref(cbr), gens, time_reversal)
 
 end

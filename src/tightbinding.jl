@@ -291,18 +291,18 @@ particular matrix from the site-symmetry representation), acting on the M matrix
 Relative to our white-board notes, Q has swapped indices, in the sense we below 
 give `Q[i,j,r,l]`.
 
-(ρₐₐ)ᵣₛ Hₛₜ / (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ / (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / 
-(ρᵦᵦ⁻¹)ₜₗ tⱼ,
+(ρₐₐ)ᵣₛ Hₛₜ (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ tⱼ,
 
-then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ / (ρᵦᵦ⁻¹)ₜₗ
+then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ
 """
 function representation_constraint_matrices(
     Mm::AbstractArray{<:Number,4},
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D}
+    brᵦ::NewBandRep{D},
+    time_reversal::Bool=true
 ) where {D}
-    gensₐ, ρsₐₐ = sgrep_induced_by_siteir_generators(brₐ)
-    gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ)
+    gensₐ, ρsₐₐ = sgrep_induced_by_siteir_generators(brₐ, time_reversal)
+    gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ, time_reversal)
     @assert gensₐ == gensᵦ # just a sanity check that `sgrep_induced_by_siteir_generators` is consistent
 
     Qs = Vector{Array{Complex,4}}(undef, length(gensₐ))
@@ -311,14 +311,22 @@ function representation_constraint_matrices(
         ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
         ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
 
+        # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk).
+        # then, the Hamiltonian will be transformed due to symmetries as
+        # H(RK) = ρₐₐᵀ(g) H(k) ρᵦᵦ*(g), this can be translated into the numerical 
+        # matrices as
+
         Q = zeros(ComplexF64, size(Mm))
         for i in axes(Mm, 1), j in axes(Mm, 2)
-            Q[i, j, :, :] .= ρₐₐ * Mm[i, j, :, :] / ρᵦᵦ # = ρₐₐ * Mm[i, j, :, :] * inv(ρᵦᵦ)
+            Q[i, j, :, :] .= conj(ρₐₐ) * Mm[i, j, :, :] * transpose(ρᵦᵦ)
         end
         Qs[n] = Q
     end
     return Qs
 end
+
+# Notice that if the representation ρ(g) is real, then ρᵀ = (ρ*)ᵀ = ρ⁺ = ρ⁻¹, and
+# we obtain the more natural form of the equation: H(RK) = ρₐₐ⁻¹(g) H(k) ρᵦᵦ(g)
 
 """
     obtain_basis_free_parameters(
@@ -338,9 +346,8 @@ function obtain_basis_free_parameters(
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
     h_orbit::HoppingOrbit{D},
-    order=hamiltonian_term_order(brₐ, brᵦ);
-    time_reversal=false,
-    hermiticity=false
+    order=hamiltonian_term_order(brₐ, brᵦ),
+    time_reversal::Bool=true,
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -355,7 +362,7 @@ function obtain_basis_free_parameters(
     Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, order)
 
     # compute the Q tensor, encoding representation constraints on Hₐᵦ
-    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ)
+    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, time_reversal)
 
     # compute the Z tensor, encoding reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
@@ -491,9 +498,10 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit))) # square matrix acting on the rows of M (formally v)
     for (i, δᵢ) in enumerate(orbit(h_orbit))
-        # crystalline implements that gk = (R⁻¹)ᵀk, then if we translate this operation into 
-        # δ, we have that (gk)⋅δ = ((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ
-        R⁻¹ = SymOperation(inv(rotation(op))) # inverse of rotation-only parts of `op`
+        # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
+        # being a symbolic variable, we will translate its action into δ. For this,
+        # we implement a simple trick: ([R⁻¹]ᵀ k)·r = R⁻¹ᵢⱼ kᵢ rⱼ = k·(R⁻¹ r)
+        R⁻¹ = SymOperation(inv(rotation(op))) # rotation-only part of `op`
         δᵢ′ = compose(R⁻¹, δᵢ)
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
         isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
@@ -532,13 +540,23 @@ function _prune_at_threshold!(
     vs::AbstractVector{<:AbstractVector{T}};
     atol::Real=PRUNE_ATOL_DEFAULT
 ) where {T<:Complex}
-
     for v in vs
         for (j, vⱼ) in enumerate(v)
             rⱼ, iⱼ = reim(vⱼ)
             rⱼ′ = ifelse(abs(rⱼ) < atol, zero(real(T)), rⱼ)
             iⱼ′ = ifelse(abs(iⱼ) < atol, zero(real(T)), iⱼ)
             v[j] = T(rⱼ′, iⱼ′)
+        end
+    end
+    return vs
+end
+function _prune_at_threshold!(
+    vs::AbstractVector{<:AbstractVector{T}};
+    atol::Real=PRUNE_ATOL_DEFAULT
+) where {T<:Real} # needed for type consistency in TRS implementation
+    for v in vs
+        for (j, vⱼ) in enumerate(v)
+            v[j] = abs(vⱼ) < atol ? zero(T) : vⱼ
         end
     end
     return vs
@@ -558,8 +576,9 @@ symmetry operations.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
-    Rs::AbstractVector{Vector{Int}} # "global" translation-representatives of hoppings to
+    Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings to
     # consider
+    time_reversal::Bool=true,
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("provided composite bandrep is not Wannierizable: contains negative or non-integer coefficients")
@@ -611,7 +630,7 @@ function tb_hamiltonian(
                     orbit_representatives)) # check where this δ is in the list of representatives
                 #                             for include it in the right TB model
                 push!(seen_n, n)
-                Mm, t_αβ_basis, _ = obtain_basis_free_parameters(br1, br2, h_orbit, order)
+                Mm, t_αβ_basis, _ = obtain_basis_free_parameters(br1, br2, h_orbit, order, time_reversal)
 
                 A = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
