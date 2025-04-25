@@ -9,7 +9,7 @@ coefs = zeros(Int, length(brs))
 coefs[end] = 1
 cbr = CompositeBandRep(coefs, brs)
 
-or = TETB.hamiltonian_term_order(cbr.brs[end], cbr.brs[end])
+ordering1 = TETB.OrbitalOrdering(cbr.brs[end])
 
 Rs = [[0, 0, 0]]
 
@@ -19,7 +19,7 @@ tb_model = tb_hamiltonian(cbr, Rs)
 
 hops = obtain_symmetry_related_hoppings(Rs, cbr.brs[end], cbr.brs[end])
 
-Mm, tₐᵦ_basis, or = TETB.obtain_basis_free_parameters(cbr.brs[end], cbr.brs[end], hops[2])
+Mm, tₐᵦ_basis = TETB.obtain_basis_free_parameters(hops[2], cbr.brs[end], cbr.brs[end])
 
 # checks
 

@@ -1,5 +1,9 @@
-using TETB, Test
+using Test
+using TETB
+using TETB: count_bandrep_orbitals
+using Crystalline
 using Crystalline: isapprox, constant
+using LinearAlgebra
 
 @testset "TB examples in plane groups" begin
 
