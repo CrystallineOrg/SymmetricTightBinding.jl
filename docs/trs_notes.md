@@ -324,7 +324,7 @@ we will study the action of a symmetry transformation over a basis set in
 $k$-space, and, secondly, the constraints the Hamiltonian matrix, written using
 such basis set, will fullfil due to symmetry.
 
-### Representation of symmetry operators
+### Representation of symmetry operators using a basis
 
 Following the deductions made by Barry in Ref. [1].
 
@@ -348,7 +348,7 @@ Within the primitive unit cell, an orbital localized on each $\mathbf{q}_α$
 can be defined as:
 
 $$
-ψ_{iα}(\mathbf{r}) = g_α ψ_{i1}(\mathbf{r}) = ψ_{i1}(g_α^{-1}),
+ψ_{iα}(\mathbf{r}) = g_α ψ_{i1}(\mathbf{r}) = ψ_{i1}(g_α^{-1} \mathbf{r}),
 $$
 where $g_α$, with translations, generates the coset decomposition of 
 $G_\mathbf{q}$ in $G$. In other words, we can assign for each $\mathbf{q}_α$
@@ -401,7 +401,7 @@ useful to view it in reciprocal space. This is more evident when $\mathcal{N}
 \to \infty$. To this end, we define the Fourier transform of our basis:
 
 $$
-φ_{iα}(\mathbf{k,r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} 
+φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} 
 ψ_{iα}(\mathbf{r-t}),
 $$
 where the sum is over all lattice vectors $\mathbf{t} \in T$.
@@ -415,7 +415,7 @@ $\mathcal{N}$ unit cells for $\mathcal{N}$ distinct $\mathbf{k}$ points. The
 action of $g \in G$ in reciprocal space becomes:
 
 $$
-g φ_{iα}(\mathbf{k,r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} g
+g φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} g
 ψ_{iα}(\mathbf{r-t}) = \\
 \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} [ρ(h)]_{ji} 
 ψ_{jβ}(\mathbf{r}-R\mathbf{\mathbf{t}-\mathbf{t}_{αβ}}) = \\
@@ -423,7 +423,7 @@ g φ_{iα}(\mathbf{k,r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} g
 ψ_{jβ}(\mathbf{r-t'}) = \\
 e^{-i([R⁻¹]ᵀ \mathbf{k) \cdot v}} [ρ(h)]_{ji} \sum_\mathbf{t'} 
 e^{i([R⁻¹]ᵀ \mathbf{k) \cdot (t'+q_β)}} ψ_{jβ}(\mathbf{r-t'}) = \\
-e^{-i([R⁻¹]ᵀ \mathbf{k) \cdot v}} [ρ(h)]_{ji} φ_{jβ}([R⁻¹]ᵀ \mathbf{k,r}),
+e^{-i([R⁻¹]ᵀ \mathbf{k) \cdot v}} [ρ(h)]_{ji} φ_{jβ,[R⁻¹]ᵀ\mathbf{k}}(\mathbf{r}),
 $$
 where we have made the substitution: $\mathbf{t}' = R\mathbf{t} + \mathbf{t}_{αβ}
 = R\mathbf{t} + g\mathbf{q_α - q_β} = R\mathbf{t} + R\mathbf{q_α + v - q_β} =
@@ -447,39 +447,39 @@ corresponding to $\mathbf{k'} = R\mathbf{k}$. Mathematically, we can express thi
 as:
 
 $$
-g φ_{iα}(\mathbf{k,r}) = \sum_{jβ\mathbf{k'}} D_{jβ\mathbf{k'},iα\mathbf{k}}(g)
-φ_{jβ}(\mathbf{k'}),
+g φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_{jβ\mathbf{k'}} D_{jβ\mathbf{k'},iα\mathbf{k}}(g)
+φ_{jβ,\mathbf{k}'}(\mathbf{r}),
 $$
 where we have that:
 
 $$
 D_{jβ\mathbf{k'},iα\mathbf{k}}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h)
-\delta_{R\mathbf{k,k'}} \delta_{g\mathbf{q_α - q_β} \mod \tau},
+\delta_{g\mathbf{k,k'}} \delta_{g\mathbf{q_α - q_β} \mod \tau},
 $$
 where $\tau \in T$.
 
 We will use the following notation:
 
 $$
-D_{jβ,iα}^\mathbf{k}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h) 
+Ρ_{jβ,iα}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h) 
 \delta_{g\mathbf{q_α - q_β} \mod \tau},
 $$
-where we skip the dependence on $\mathbf{k}$ which will be unnecessary in the 
-following.
+where we skip the dependence on $\mathbf{k}$ which will be unnecessary.
 
 We can vectorize the previous equation as:
 
 $$
-g Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g) Φ(g\mathbf{k,r}),
+\boxed{g Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g) Φ_{g\mathbf{k}}(\mathbf{r})},
 $$
-where $Φ(\mathbf{k,r})$ is a column vector formed by $\{φ_{iα}(\mathbf{k,r})\}$,
-and, $D_\mathbf{k}(g)$ is a $n \times n$ matrix of $\dim(ρ) \times \dim(ρ)$
-blocks, each of them can be labelled by $α,β$. Most of the blocks are zero: given
-$g \in G$, there is only one non-zero block in each row and column, corresponding
-to $g q_α - q_β = 0 \mod \tau$ with $\tau \in T$, and it is going to be equal to:
+where $Φ_\mathbf{k}(\mathbf{r})$ is a column vector formed by 
+$\{φ_{iα,\mathbf{k}}(\mathbf{r})\}$, and, $Ρ(g)$ is a $n \times n$ matrix of 
+$\dim(ρ) \times \dim(ρ)$ blocks, each of them can be labelled by $α,β$. Most of 
+the blocks are zero: given $g \in G$, there is only one non-zero block in each 
+row and column, corresponding to $g q_α - q_β = 0 \mod \tau$ with $\tau \in T$, 
+and it is going to be equal to:
 
 $$
-D^\mathbf{k}_{jβ,iα}(g)= e^{-i(g\mathbf{k) \cdot v}} [ρ(h)]_{ji} 
+Ρ_{jβ,iα}(g)= e^{-i(g\mathbf{k) \cdot v}} [ρ(h)]_{ji} 
 \delta_{g\mathbf{q_α - q_β} \mod \tau}
 $$
 
@@ -487,99 +487,175 @@ $$
 > We pick the previous definition of the matrix in order to have good properties
 > of composition. This is due to the fact that:
 > $$
-> g₁ g₂ Φ(\mathbf{k,r}) = D^T_\mathbf{k}(g₁g₂) Φ(g₁g₂\mathbf{k,r}) \\
-> = g₁ D^T_\mathbf{k}(g₂) Φ(g₂\mathbf{k,r}) = 
-> D^T_\mathbf{k}(g₂) D^T_\mathbf{k}(g₁) Φ(g₁g₂\mathbf{k,r}) \\
-> \Rightarrow \boxed{D_\mathbf{k}(g₁g₂) = D_\mathbf{k}(g₁) D_\mathbf{k}(g₂)}
+> g₁ g₂ Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g₁g₂) Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\
+> = g₁ Ρ^T(g₂) Φ_{g₂\mathbf{k}}(\mathbf{r}) = Ρ^T(g₂) Ρ^T(g₁) 
+> Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\ 
+> \Rightarrow \boxed{Ρ(g₁g₂) = Ρ(g₁) Ρ(g₂)}
 > $$
 
-### Representation of the Hamiltonian using a real basis
+### Action of symmetry operators in a Hamiltonian
 
-As we have hinted before, in crystalline systems working in reciprocal space is
-more convenient as $\mathcal{N} \to \infty$. For that reason, the Hamiltonian is
-usually represented in reciprocal space as:
+Let us start with the most general non-interacting Hamiltonian:
 
 $$
-H = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}),
+\hat{H} = \sum_{IJ,\mathbf{R}\mathbf{R}'} h_{IJ,\mathbf{R-R}'} \; 
+\hat{c}_{I,\mathbf{R}}^\dagger \hat{c}_{J,\mathbf{R}'},
 $$
-where $Φ(\mathbf{k})$ is a column operator whose components are 
-$\{φ_{iα}(\mathbf{k})\}$.
-
-> [!NOTE]
-> Here I took the vectorial notation since it is less crowded and also dropped 
-> the spatial dependence of Bloch states.
+where $I,J$ wrap up the internal degrees of freedom of the orbitals and the sites
+of the WP, i.e., $I = (i, α)$; and $\mathbf{R,R}'$ run over the lattice translations.
 
 > [!WARNING]
-> Maybe I should include why the Hamiltonian can be represented in this way, no
-> off-diagonal terms in $\mathbf{k}$. 
+> Notice that we have assumed that hopping terms only depends on relative distances.
+> We are going to denote $\mathbf{t \equiv R - R}'$.
 
-Let's study the action of $g = \{R|\mathbf{v}\} \in G$ in the Hamiltonian:
-
-$$
-g H =  g \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
-\sum_\mathbf{k} [g Φ(\mathbf{k})]^\dagger H(\mathbf{k}) [g Φ(\mathbf{k})] g = \\
-\sum_\mathbf{k} Φ^\dagger(g\mathbf{k}) D^*_\mathbf{k}(g) H(\mathbf{k}) 
-D^T_\mathbf{k}(g) Φ(g\mathbf{k}) g
-$$
-
-If we want our Hamiltonian to be invariant, the we must impose that:
+We can apply the same Fourier transform to go into reciprocal space:
 
 $$
-H g = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) g = g H =
-\sum_\mathbf{k} Φ^\dagger(g\mathbf{k}) D^*_\mathbf{k}(g) H(\mathbf{k}) 
-D^T_\mathbf{k}(g) Φ(g\mathbf{k}) g \\
-\Rightarrow \boxed{H(g\mathbf{k}) = D^*_\mathbf{k}(g) H(\mathbf{k}) D^T_\mathbf{k}(g)}
+\hat{c}_{I,\mathbf{R}} = \frac{1}{\sqrt{N}} \sum_{\mathbf{k}} e^{-i\mathbf{k·(R+q_α)}}
+\hat{a}_{I,\mathbf{k}},
+$$
+
+obtaining:
+
+$$
+\hat{H} = \frac{1}{N} \sum_{IJ,\mathbf{RR}'} h_{IJ,\mathbf{t}} \sum_{\mathbf{kk}'}
+e^{i\mathbf{k·(R+q_α)}} e^{-i\mathbf{k'·(R'+q_β)}} \hat{a}^\dagger_{I,\mathbf{k}} 
+\hat{a}_{J,\mathbf{k}'} \\
+= \frac{1}{N} \sum_{IJ,\mathbf{t},\mathbf{kk}'} h_{IJ,\mathbf{t}} 
+\left[ \sum_{\mathbf{R}'} e^{i\mathbf{(k-k')·R+'}} \right] e^{i\mathbf{k·(t+q_α)}} 
+e^{-i\mathbf{k'·q_β}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
+= \sum_{IJ,\mathbf{t},\mathbf{kk}'} h_{IJ,\mathbf{t}} 
+\delta_{\mathbf{k,k'}} e^{i\mathbf{k·(t+q_α)}} e^{-i\mathbf{k'·q_β}} 
+\hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
+= \sum_{IJ,\mathbf{t},\mathbf{k}} h_{IJ,\mathbf{t}} 
+e^{i\mathbf{k·(t+q_α-q_β)}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \\
+= \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} 
+\hat{a}_{J,\mathbf{k}},
+$$
+where he have defined: $h_{IJ,\mathbf{k}} = \sum_\mathbf{t} h_{IJ,\mathbf{t}}
+e^{i\mathbf{k·(t+q_α-q_β)}}$.
+
+#### Quantization of the representations
+
+The quantization of the previous (classical) theory of representations can be 
+written using "braket" notation as:
+
+$$
+\hat{g} \ket{φ_{I,\mathbf{k}}} = Ρ_{JI}(g) \ket{φ_{J,g\mathbf{k}}},
+$$
+where $\ket{φ_{I,\mathbf{k}}} \equiv a^\dagger_{I,\mathbf{k}} \ket{0}$. Then:
+
+$$
+\hat{g} \hat{a}^\dagger_{I,\mathbf{k}} \hat{g}^{-1} \ket{0} = \hat{g} 
+\hat{a}^\dagger_{I,\mathbf{k}} \ket{0} = Ρ_{JI}(g) 
+\hat{a}^\dagger_{J,g\mathbf{k}} \ket{0} \\
+\Rightarrow \boxed{\hat{g} \hat{a}^\dagger_{I,\mathbf{k}} \hat{g}^{-1} = Ρ_{JI}(g) 
+\hat{a}^\dagger_{J,g\mathbf{k}}}
+$$
+
+> [!WARNING]
+> We are using that $\hat{g}^{-1} \ket{0} = \ket{0}$, but I think it is a good 
+> assumption that symmetries do not act on vacuum.
+
+Consequently: 
+$$
+\hat{g} \hat{a}_{I,\mathbf{k}} \hat{g}^\dagger = Ρ^*_{JI}(g)
+\hat{a}_{J,g\mathbf{k}} \\
+\Rightarrow \boxed{\hat{g} \hat{a}_{I,\mathbf{k}} \hat{g}^{-1} = Ρ^*_{JI}(g) 
+\hat{a}_{J,g\mathbf{k}}}
+$$
+
+> [!WARNING]
+> Here I am passing the operator through but I need to check it if this could be
+> done formally. Additionally, we are assuming that $\hat{g}^\dagger = \hat{g}^{-1}$.
+
+
+Then, if we want the Hamiltonian to be invariant under the symmetries, we must 
+impose that:
+
+$$
+\hat{H} = \hat{g} \hat{H} \hat{g}^{-1}
+$$
+
+Then we obtain that:
+
+$$
+\hat{H} = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}}
+\hat{a}_{J,\mathbf{k}} = \\
+\hat{g} \hat{H} \hat{g}^{-1} = \sum_{IJ,\mathbf{k}} \hat{g}
+\hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1} \\
+= \sum_{IJ,\mathbf{k}} \hat{g} \hat{a}^\dagger_{I,\mathbf{k}} \hat{g}^{-1} 
+h_{IJ,\mathbf{k}} \hat{g} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1} \\
+= \sum_{IJ,\mathbf{k},I'J'} \hat{a}^\dagger_{I',g\mathbf{k}} Ρ_{I'I}(g) h_{IJ,\mathbf{k}}
+Ρ^*_{J'J}(g) \hat{a}_{J',g\mathbf{k}} \\
+= \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,g\mathbf{k}} Ρ(g) H_{\mathbf{k}}
+Ρ^\dagger(g) \hat{a}_{J,g\mathbf{k}},
+$$
+where we have defined $H_\mathbf{k} \equiv h_{IJ,\mathbf{k}}$ and made the substitution
+$I',J' \to I,J$. Comparing the first and final rows we obtain the following 
+relation for the Hamiltonian to be invariant under symmetries:
+
+$$
+\boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ^\dagger(g)}
 $$
 
 > [!NOTE]
-> Notice that the representations of spatial operations are unitary so 
-> $D_\mathbf{k}^\dagger = D_\mathbf{k}⁻¹$. Additionally, if they are explicitly 
-> real we have the following relation: $D^T = (D^*)^T = D^\dagger = D^{-1}$. So
-> we end up with:
+> Notice that the representations of spatial operations are unitary, so we end up 
+> with:
 > 
 > $$
-> \boxed{H(g\mathbf{k}) = D_\mathbf{k}(g) H(\mathbf{k}) D⁻¹_\mathbf{k}(g)},
+> \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ⁻¹(g)},
 > $$
 > which is the most usual way to write it.
 
-#### How a symmetry operation g ∈ G acts on $\mathbf{k}$
-
-Conceptually, we want $k \cdot r = (g\circ k) \cdot (g\circ r)$ for $g = (W|0)$. 
-If we let $g$ act on $k$ (specified in a reciprocal lattice basis) as $(W^{-1})^T$
-we can achieve this since:
-
-$$(g\circ k) \cdot (g\circ r) = [(W^{-1})^T k] \cdot (Wr) = k^T W^{-1} W r = 
-k^T r = k\cdot r$$
-
 ### Time reversal symmetry
 
-For TRS a similar computation can be performed:
+For TRS a similar computation can be performed. Let us assume that the action of
+TRS over our basis is the following:
 
 $$
-Θ H =  Θ \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H(\mathbf{k}) Φ(\mathbf{k}) = 
-\sum_\mathbf{k} (Θ Φ^\dagger(\mathbf{k})) H^*(-\mathbf{k}) (Θ Φ(\mathbf{k})) Θ
+Θ \ket{φ_{I,\mathbf{k}}} = \ket{φ_{I,\mathbf{-k}}},
 $$
-
-Assuming that $Φ(\mathbf{k})$ is a real basis, we should have that $Θ \
-Φ(\mathbf{k}) = Φ(\mathbf{-k})$. Then, the invariance with TRS is simply reduced 
-to:
+then we obtain the following relations:
 
 $$
-H Θ = \sum_\mathbf{k} Φ^\dagger(\mathbf{k}) H_\mathbf{k} Φ(\mathbf{k}) Θ = Θ H = 
-\sum_\mathbf{k} Φ^\dagger(\mathbf{-k}) H^*(-\mathbf{k}) Φ(\mathbf{-k}) Θ \\
-\Rightarrow H(\mathbf{k}) = H^*(\mathbf{-k})
+\boxed{\hat{Θ} \hat{a}^\dagger_{I,\mathbf{k}} \hat{Θ}^{-1} = 
+\hat{a}^\dagger_{I,-\mathbf{k}} \quad \hat{Θ} \hat{a}_{I,\mathbf{k}} 
+\hat{Θ}^{-1} = \hat{a}_{I,-\mathbf{k}}}
+$$
+
+Then, the invariance under TRS of the Hamiltonian is simply reduced to:
+
+$$
+\hat{Θ} \hat{H} \hat{Θ}^{-1} = \sum_{IJ,\mathbf{k}} \hat{Θ} 
+\hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \hat{Θ}^{-1} \\
+= \sum_{IJ,\mathbf{k}} \hat{Θ} \hat{a}^\dagger_{I,\mathbf{k}} \hat{Θ}^{-1} 
+h^*_{IJ,\mathbf{k}} \hat{Θ} \hat{a}_{J,\mathbf{k}} \hat{Θ}^{-1} \\
+= \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,-\mathbf{k}} h^*_{IJ,\mathbf{k}} 
+\hat{a}_{J,-\mathbf{k}} = \\
+\hat{H} = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} 
+\hat{a}_{J,\mathbf{k}}
+$$
+
+Obtaining the following relation:
+
+$$
+\boxed{H_\mathbf{k} = H^*_{-\mathbf{k}}}
 $$
 
 ## Proof that physically real representations need a real basis
 
-If the representation is real then $D = D^*$. On one side we have that: $g Ψ = 
-D(g) Ψ$. On the other hand, since $Θ g = g Θ$:
+If the representation is real then $Ρ(g) = Ρ^*(g)$. On one side we have that: 
+$g φ_{I,\mathbf{k}} = Ρ_{JI}(g) φ_{J,g\mathbf{k}}$. On the other hand, since 
+$Θ g = g Θ$:
 
 $$
-g Θ Ψ = Θ (g Ψ) = Θ (D(g) Ψ) = D^*(g) (Θ Ψ) = D(g) (Θ Ψ).
+g Θ φ_{I,\mathbf{k}} = Θ (g φ_{I,\mathbf{k}}) = Θ (Ρ_{JI}(g) φ_{J,g\mathbf{k}}) 
+= Ρ^*_{JI}(g) (Θ φ_{I,\mathbf{k}}) = Ρ_{JI}(g) (Θ φ_{I,\mathbf{k}}).
 $$
 
-Then $Θ Ψ$ yields the same representation as $Ψ$ so they can be consider equal (?)
+Then $Θ φ_{I,\mathbf{k}}$ yields the same representation as $φ_{I,\mathbf{k}} $ 
+so they can picked such that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$
 
 > [!CAUTION]
 > Maybe this is too much of an assumption…
