@@ -313,7 +313,7 @@ function representation_constraint_matrices(
 
         # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk).
         # then, the Hamiltonian will be transformed due to symmetries as
-        # H(RK) = ρₐₐᵀ(g) H(k) ρᵦᵦ*(g), this can be translated into the numerical 
+        # H(RK) = ρₐₐ(g) H(k) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
 
         Q = zeros(ComplexF64, size(Mm))
