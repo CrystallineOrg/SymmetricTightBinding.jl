@@ -560,7 +560,7 @@ $$
 Consequently: 
 $$
 \hat{g} \hat{a}_{I,\mathbf{k}} \hat{g}^\dagger = Ρ^*_{JI}(g)
-\hat{a}_{J,g\mathbf{k}} \\
+\hat{a}_{J,g\mathbf{k}}
 \Rightarrow \boxed{\hat{g} \hat{a}_{I,\mathbf{k}} \hat{g}^{-1} = Ρ^*_{JI}(g) 
 \hat{a}_{J,g\mathbf{k}}}
 $$
@@ -588,8 +588,8 @@ $$
 h_{IJ,\mathbf{k}} \hat{g} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1} \\
 = \sum_{IJ,\mathbf{k},I'J'} \hat{a}^\dagger_{I',g\mathbf{k}} Ρ_{I'I}(g) h_{IJ,\mathbf{k}}
 Ρ^*_{J'J}(g) \hat{a}_{J',g\mathbf{k}} \\
-= \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,g\mathbf{k}} Ρ(g) H_{\mathbf{k}}
-Ρ^\dagger(g) \hat{a}_{J,g\mathbf{k}},
+= \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,g\mathbf{k}} \left[ Ρ(g) H_{\mathbf{k}}
+Ρ^\dagger(g) \right]_{IJ} \hat{a}_{J,g\mathbf{k}},
 $$
 where we have defined $H_\mathbf{k} \equiv h_{IJ,\mathbf{k}}$ and made the substitution
 $I',J' \to I,J$. Comparing the first and final rows we obtain the following 
@@ -610,17 +610,17 @@ $$
 
 ### Time reversal symmetry
 
-For TRS a similar computation can be performed. Let us assume that the action of
+For TRS, a similar computation can be performed. Let us assume that the action of
 TRS over our basis is the following:
 
 $$
 Θ \ket{φ_{I,\mathbf{k}}} = \ket{φ_{I,\mathbf{-k}}},
 $$
-then we obtain the following relations:
+then, we obtain the following relations:
 
 $$
 \boxed{\hat{Θ} \hat{a}^\dagger_{I,\mathbf{k}} \hat{Θ}^{-1} = 
-\hat{a}^\dagger_{I,-\mathbf{k}} \quad \hat{Θ} \hat{a}_{I,\mathbf{k}} 
+\hat{a}^\dagger_{I,-\mathbf{k}}; \quad \hat{Θ} \hat{a}_{I,\mathbf{k}} 
 \hat{Θ}^{-1} = \hat{a}_{I,-\mathbf{k}}}
 $$
 
