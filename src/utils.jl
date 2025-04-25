@@ -1,15 +1,15 @@
 using Crystalline: translation
 
 """
-    obtain_symmetry_vectors(ms::PyObject, sg_num::Int) --> Tuple{Vector{SymmetryVector{D}}, Vector{TopologyKind}}
+    obtain_symmetry_vectors(ms::PyObject, sgnum::Int) --> Tuple{Vector{SymmetryVector{D}}, Vector{TopologyKind}}
 
 Obtains directly the symmetry vector for the bands computed in the MPB model `ms` for the space
-group defined in `sg_num`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
+group defined in `sgnum`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
 vectors and topologies of the bands.
 """
-function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
-    brs = bandreps(sg_num) # elementary band representations
-    lgs = littlegroups(sg_num) # little groups
+function obtain_symmetry_vectors(ms::PyObject, sgnum::Int)
+    brs = bandreps(sgnum) # elementary band representations
+    lgs = littlegroups(sgnum) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
     map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
     lgirsd = pick_lgirreps(lgs; timereversal=true) # small irreps associated with `lgs`
@@ -35,7 +35,7 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     summaries = analyze_symmetry_data(symeigsd, lgirsd, brs)
 
     # --- convert to `SymmetryVector`s ---
-    c_brs = calc_bandreps(sg_num, Val(3))
+    c_brs = calc_bandreps(sgnum, Val(3))
     symvecs = bandsum2symvec.(summaries, Ref(c_brs))
     topologies = getfield.(summaries, Ref(:topology))
     return symvecs, topologies

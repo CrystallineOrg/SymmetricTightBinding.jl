@@ -26,14 +26,14 @@ ms = mpb.ModeSolver(
 ms.init_params(p=mp.ALL, reset_fields=true)
 
 ### obtain the symmetry vectors of the bands computed above
-sg_num = 221
-symvecs, topologies = obtain_symmetry_vectors(ms, sg_num)
+sgnum = 221
+symvecs, topologies = obtain_symmetry_vectors(ms, sgnum)
 
 m = symvecs[1] # pick the 2 lower bands
 
 ### obtain an EBR decomposition with at least one additional band
 μᴸ = 1
-brs = calc_bandreps(sg_num)
+brs = calc_bandreps(sgnum)
 candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
 
 ##-----------------------------------------------------------------------------------------#

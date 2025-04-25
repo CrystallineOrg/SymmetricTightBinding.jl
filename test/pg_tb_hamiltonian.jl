@@ -10,8 +10,8 @@ using LinearAlgebra
     # TODO: add more cases apart from Graphene
 
     @testset "Graphene" begin
-        pg_num, D = 17, 2
-        brs = calc_bandreps(pg_num, Val(D))
+        sgnum, D = 17, 2
+        brs = calc_bandreps(sgnum, Val(D))
         coefs = zeros(Int, length(brs))
         coefs[5] = 1
         cbr = CompositeBandRep(coefs, brs)
@@ -36,7 +36,7 @@ using LinearAlgebra
                 first_nn = hop_orbits[2]
                 @test length(first_nn.orbit) == 2 * 3 # there are 3 1st nn and we consider separately
                 #                                       going forward and backward hopping terms
-                lattice_vecs = directbasis(pg_num, D)
+                lattice_vecs = directbasis(sgnum, D)
                 first_nn_dist = norm(cartesianize(constant(first_nn.orbit[1]), lattice_vecs))
                 @test first_nn_dist ≈ 1 / sqrt(3) # distance between 1st nn in Graphene
 

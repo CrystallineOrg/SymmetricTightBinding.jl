@@ -5,8 +5,8 @@ Pkg.activate(@__DIR__)
 using Crystalline
 using TETB
 
-sg_num = 2
-brs = calc_bandreps(sg_num)
+sgnum = 2
+brs = calc_bandreps(sgnum)
 lgirsv = irreps(brs)
 
 # ----------------------------------------------------------------------------------------#
