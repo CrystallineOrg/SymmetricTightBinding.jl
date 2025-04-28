@@ -660,6 +660,52 @@ so they can picked such that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$
 > [!CAUTION]
 > Maybe this is too much of an assumption…
 
+## Appendix A
+
+Usually "quantum experts" like to use commutators instead of the relations we 
+used above. Just to have a complete view, I am going to obtain the commutators 
+of a symmetry $g ∈ G$ with the creation and annihilation operators.
+
+$$
+[\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}] \ket{0} = \hat{g} 
+\hat{a}^\dagger_{I,\mathbf{k}} \ket{0} - \hat{a}^\dagger_{I,\mathbf{k}} \hat{g}
+\ket{0} = \hat{g} \ket{φ_{I,\mathbf{k}}} - \hat{a}^\dagger_{I,\mathbf{k}} \ket{0} \\
+= Ρ_{JI}(g) \ket{φ_{J,g\mathbf{k}}} - \hat{a}^\dagger_{I,\mathbf{k}} \ket{0} = 
+\left( Ρ_{JI}(g) \hat{a}^\dagger_{J,g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}} 
+\right) \ket{0} \\
+\Rightarrow \boxed{[\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}] = 
+Ρ_{JI}(g) \hat{a}^\dagger_{J,g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}}}
+$$
+
+Now we want to do a similar computation for the annihilation operator. However, 
+since $[a,a^\dagger] ≠ 0$, we cannot do the previous trick. We will use a more 
+general single-particle state $\ket{φ_{I',\mathbf{k}'}}$
+$$
+\left[\hat{g}, \hat{a}_{I,\mathbf{k}} \right] \ket{φ_{I',\mathbf{k}'}} = \hat{g} 
+\hat{a}_{I,\mathbf{k}} \ket{φ_{I',\mathbf{k}'}} - \hat{a}_{I,\mathbf{k}} \hat{g} 
+\ket{φ_{I',\mathbf{k}'}} = δ_{II'} δ_{\mathbf{kk}'} \hat{g} \ket{0} - P_{JI'}(g)
+\hat{a}_{I,\mathbf{k}} \ket{φ_{J,\mathbf{gk}}} \\
+\Rightarrow \boxed{\left[\hat{g}, \hat{a}_{I,\mathbf{k}} \right] = 0}
+$$
+
+Then:
+
+$$
+[\hat{g}, \hat{H}] = \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} [\hat{g}, 
+\hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}}] = \sum_{IJ,\mathbf{k}} 
+h_{IJ,\mathbf{k}} \left( [\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}] 
+\hat{a}_{J,\mathbf{k}} + \hat{a}^\dagger_{I,\mathbf{k}} [\hat{g}, 
+\hat{a}_{J,\mathbf{k}}] \right) \\
+= \sum_{IJ,\mathbf{k}, I'} h_{IJ,\mathbf{k}} \left[ Ρ_{I'I}(g) 
+\hat{a}^\dagger_{I',g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}} \right] 
+\hat{a}_{J,\mathbf{k}}
+$$
+
+> [!CAUTION]
+> You end up with an expression that does not help you really much on anything...
+> Maybe I will need to relate $\hat{a}_{J,\mathbf{k}}$ with $\hat{a}_{J,g\mathbf{k}}$,
+> which I don't know how. 
+
 ## References
 
 [1] Band Representations and Topological Quantum Chemistry by Bradlyn *et al.*
