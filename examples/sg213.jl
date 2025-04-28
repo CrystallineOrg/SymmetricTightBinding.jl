@@ -17,9 +17,9 @@ tb_model = tb_hamiltonian(cbr, Rs)
 
 # let me check how the basis vectors look like
 
-hops = obtain_symmetry_related_hoppings(Rs, cbr.brs[end], cbr.brs[end])
+h_orbits = obtain_symmetry_related_hoppings(Rs, cbr.brs[end], cbr.brs[end])
 
-Mm, tₐᵦ_basis = TETB.obtain_basis_free_parameters(hops[2], cbr.brs[end], cbr.brs[end])
+Mm, tₐᵦ_basis = TETB.obtain_basis_free_parameters(h_orbits[2], cbr.brs[end], cbr.brs[end])
 
 # checks
 
