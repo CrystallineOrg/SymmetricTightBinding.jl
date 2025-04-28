@@ -3,8 +3,8 @@ Pkg.activate(@__DIR__)
 
 using Crystalline, TETB
 
-pg_num = 10
-brs = calc_bandreps(pg_num, Val(2))
+sgnum = 10
+brs = calc_bandreps(sgnum, Val(2))
 
 # needs to do that to find the WPs properly
 coefs = zeros(Int, length(brs))

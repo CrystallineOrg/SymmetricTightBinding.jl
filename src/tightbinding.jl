@@ -1,10 +1,10 @@
 """
-        obtain_symmetry_related_hoppings(
-                                        Rs::AbstractVector{V}, 
-                                        brₐ::NewBandRep{D}, 
-                                        brᵦ::NewBandRep{D}
-                                        ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
-                                        --> Vector{HoppingOrbit{D}}
+    obtain_symmetry_related_hoppings(
+        Rs::AbstractVector{V}, 
+        brₐ::NewBandRep{D}, 
+        brᵦ::NewBandRep{D}
+        ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
+        --> Vector{HoppingOrbit{D}}
 
     Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
     WP of `brᵦ`displaced a set of primitive lattice vectors `Rs`.
@@ -178,51 +178,54 @@ end
 # ---------------------------------------------------------------------------- #
 
 """
-    hamiltonian_term_order(br1::NewBandRep{D}, br2::NewBandRep{D}) 
-        --> Matrix{Pair{Tuple{Int64,WyckoffPosition{D}}, Tuple{Int64,WyckoffPosition{D}}}}
+    OrbitalOrdering(br :: NewBandRep{D}) --> OrbitalOrdering{D}
 
-Gives an order for the Hamiltonian's term concerning hopping between `br1` and 
-`br2`. This is the default order used for building the TB Hamiltonian in 
-`tb_hamiltonian`.
+Establishes a canonical, local ordering for the orbitals associated to a band representation
+`br`. This is the default ordering used when associating row/column indices in a
+tight-binding Hamiltonian block to specific orbitals in the associated band representations.
 
-A matrix with the dimensions of the Hamiltonian is given back where each term 
-indicates the hopping term considered in the Hamiltonian at that position.
+The canonical orbital ordering is stored in `.ordering`. The `i`th elements of `ordering`,
+`ordering[i]`, is a `NamedTuple` with two fields:
+`wp` and `idx`:
+- `wp`: stores a Wyckoff position in the orbit of the Wyckoff position associated to
+  `br.wp`.
+- `idx`: stores the index of the partner function of the site-symmetry irrep associated to
+  `br` at `wp`.
+
+I.e., the `i`th orbital associated to `br` is located at `wp` and transforms as the `idx`th
+partner function of the site-symmetry irrep of `br.siteir`.
+The total number of orbitals associated to a band representation, and hence the length of
+`ordering`, is the product of the site-symmetry irrep dimensionality and the number of sites
+in the Wyckoff position orbit.
 """
-function hamiltonian_term_order(
-    br1::NewBandRep{D},
-    br2::NewBandRep{D},
+function OrbitalOrdering(
+    br::NewBandRep{D}
 ) where {D}
-
-    sgnum = num(br1)
-    num(br2) == sgnum || error("Both band representations must be in the same space group")
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
     # operations - but is still specified in a conventional basis. So, below, we remove
     # redundant operations from the space group, and also change both the operations and the
     # positions from a conventional to a primitive basis
+    sgnum = num(br)
     cntr = centering(sgnum, D)
-    wp1 = primitivize.(orbit(group(br1)), cntr)
-    wp2 = primitivize.(orbit(group(br2)), cntr)
+    wps = primitivize.(orbit(group(br)), cntr)
 
-    V1, V2 = length(wp1), length(wp2)
-    Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
-    T_pair_eltype = Tuple{Int64,WyckoffPosition{D}}
-    order = Matrix{Pair{T_pair_eltype,T_pair_eltype}}(undef, V1 * Q1, V2 * Q2)
-    for i in 1:V1
-        for j in 1:V2
-            for k in 1:Q1
-                for l in 1:Q2
-                    order[(i-1)*Q1+k, (j-1)*Q2+l] = (k, wp1[i]) => (l, wp2[j])
-                end
-            end
+    V = length(wps)       # number of Wyckoff positions in orbit
+    Q = irdim(br.siteir) # number of orbitals partner functions at each Wyckoff position
+    ordering = Vector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}(undef, V * Q)
+    for i in 1:V
+        for k in 1:Q
+            ordering[(i-1)*Q+k] = (; wp=wps[i], idx=k)
         end
     end
-    return order
+    return OrbitalOrdering(ordering)
 end
 
 """
-    construct_M_matrix(h_orbit::HoppingOrbit{D}, br1::NewBandRep{D}, br2::NewBandRep{D}, order) 
+    construct_M_matrix(
+        h_orbit::HoppingOrbit{D}, br1::NewBandRep{D}, br2::NewBandRep{D},
+        [ordering1, ordering2]) 
         --> Array{Int,4}
 
 Construct a set of matrices that encodes a Hamiltonian's term which resembles the 
@@ -241,7 +244,8 @@ function construct_M_matrix(
     h_orbit::HoppingOrbit{D},
     br1::NewBandRep{D},
     br2::NewBandRep{D},
-    order=hamiltonian_term_order(br1, br2) # an internal order for the Hamiltonian's terms
+    ordering1::OrbitalOrdering{D} = OrbitalOrdering(br1), # canonical orbital orderings for
+    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2)  # `br1` & `br2`, respectively
 ) where {D}
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (assumed constant for all i)
@@ -253,11 +257,12 @@ function construct_M_matrix(
 
     # matrix of matrices that will store the matrices for each
     # Hamiltonian's term
-    Mm = zeros(Int, V, V * E * Q, size(order, 1), size(order, 2))
+    Mm = zeros(Int, V, V * E * Q, length(ordering1), length(ordering2))
 
     # fill in the unit-elements of `Mm`
-    for α in axes(order, 1), β in axes(order, 2)
-        (i, q), (j, w) = order[α, β]
+    for α in eachindex(ordering1), β in eachindex(ordering2)
+        (q, i) = ordering1[α]
+        (w, j) = ordering2[β]
         q = parent(q)
         w = parent(w)
 
@@ -281,10 +286,9 @@ end
 
 """
     representation_constraints_matrices(
-                                    Mm::Array{Int,4}, 
-                                    gens::AbstractVector{SymOperation{D}}, 
-                                    h_orbit::HoppingOrbit{D}
-                                    ) --> Vector{Array{Complex,4}}
+        Mm::Array{Int,4}, 
+        brₐ::NewBandRep{D},
+        brᵦ::NewBandRep{D}) --> Vector{Array{ComplexF64,4}}
 
 Build the Q matrix for a particular symmetry operation (or, equivalently, a 
 particular matrix from the site-symmetry representation), acting on the M matrix. 
@@ -296,58 +300,51 @@ give `Q[i,j,r,l]`.
 then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ
 """
 function representation_constraint_matrices(
-    Mm::AbstractArray{<:Number,4},
+    Mm::AbstractArray{Int, 4},
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
-    time_reversal::Bool=true
+    brᵦ::NewBandRep{D}
 ) where {D}
-    gensₐ, ρsₐₐ = sgrep_induced_by_siteir_generators(brₐ, time_reversal)
-    gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ, time_reversal)
-    @assert gensₐ == gensᵦ # just a sanity check that `sgrep_induced_by_siteir_generators` is consistent
+    gensₐ, ρsₐₐ = sgrep_induced_by_siteir_generators(brₐ)
+    gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ)
+    @assert gensₐ == gensᵦ # check that `sgrep_induced_by_siteir_generators` are consistent
 
-    Qs = Vector{Array{Complex,4}}(undef, length(gensₐ))
+    Qs = [zeros(ComplexF64, size(Mm)) for _ in eachindex(gensₐ)]
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
-
         ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
         ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
 
         # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk).
         # then, the Hamiltonian will be transformed due to symmetries as
-        # H(RK) = ρₐₐᵀ(g) H(k) ρᵦᵦ*(g), this can be translated into the numerical 
+        # H(RK) = ρₐₐ(g) H(k) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
-
-        Q = zeros(ComplexF64, size(Mm))
+        Q = Qs[n]
         for i in axes(Mm, 1), j in axes(Mm, 2)
-            Q[i, j, :, :] .= conj(ρₐₐ) * Mm[i, j, :, :] * transpose(ρᵦᵦ)
+            Q[i, j, :, :] .= ρₐₐ * Mm[i, j, :, :] * ρᵦᵦ'
         end
-        Qs[n] = Q
     end
+
     return Qs
 end
 
-# Notice that if the representation ρ(g) is real, then ρᵀ = (ρ*)ᵀ = ρ⁺ = ρ⁻¹, and
-# we obtain the more natural form of the equation: H(RK) = ρₐₐ⁻¹(g) H(k) ρᵦᵦ(g)
-
 """
     obtain_basis_free_parameters(
-                                brₐ::NewBandRep{D}, 
-                                brᵦ::NewBandRep{D}, 
-                                h_orbit::HoppingOrbit{D}, 
-                                order=hamiltonian_term_order(brₐ, brᵦ)
-                                ) --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}, 
-                                            Matrix{Pair{Tuple{Int,WyckoffPosition{D}},
-                                                        Tuple{Int,WyckoffPosition{D}}}}
+        h_orbit::HoppingOrbit{D},
+        brₐ::NewBandRep{D}, 
+        brᵦ::NewBandRep{D}, 
+        [orderingₐ = OrbitalOrdering(brₐ), orderingᵦ = OrbitalOrdering(brᵦ)];
+        [timereversal::Bool = true]
+        )                            --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
-associated with the hopping orbit `h_orbit`. The Hamiltonian's default order is 
-given by `order`.
+associated with the hopping orbit `h_orbit`.
 """
 function obtain_basis_free_parameters(
+    h_orbit::HoppingOrbit{D},
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
-    h_orbit::HoppingOrbit{D},
-    order=hamiltonian_term_order(brₐ, brᵦ),
-    time_reversal::Bool=true,
+    orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
+    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ);
+    timereversal::Bool = true
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -358,13 +355,13 @@ function obtain_basis_free_parameters(
     cntr = centering(num(brₐ), D)
     gens = cntr ∈ ('P', 'p') ? gensₐ : primitivize.(gensₐ, cntr)
 
-    # compute the tensor M that encodes the Hamiltonian as a numerical matrix
-    Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, order)
+    # encode Hamiltonian as a coefficient matrix sandwiched by exponentials & hopping ampl.
+    Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
 
-    # compute the Q tensor, encoding representation constraints on Hₐᵦ
-    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, time_reversal)
+    # encode representation constraints on Hₐᵦ
+    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ)
 
-    # compute the Z tensor, encoding reciprocal-rotation constraints on Hₐᵦ
+    # encode reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
@@ -390,59 +387,56 @@ function obtain_basis_free_parameters(
     # prune near-zero elements of basis vectors
     _prune_at_threshold!(tₐᵦ_basis)
 
-    Mm_final = Mm
+    # if there's no TRS constraints, we're done by now
+    timereversal || return Mm, tₐᵦ_basis
 
-    if time_reversal
-        # rewrite `tₐᵦ_basis` in the desired form t -> [real(t) real(im*t); imag(t) imag(im*t)] 
-        # and store it as columns in a matrix. Read `split_complex` docstring for details.
-        tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-        tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
+    ## ----------------------------------------------------------------------------------- #
+    # `timereversal` is `true`: we now "add" the associated TRS constraints
 
-        # this works the following way:
-        # julia> t₁ = [im,0]
-        # 2-element Vector{Complex{Int64}}:
-        # 0 + 1im
-        # 0 + 0im
+    # ** Step 0 **
+    # If the set of basis vectors obtained from symmetry constraints was empty, there's no
+    # point in continuing: we then return early
+    isempty(tₐᵦ_basis) && return Mm, tₐᵦ_basis
 
-        # julia> t₂ = [1,im]
-        # 2-element Vector{Complex{Int64}}:
-        # 1 + 0im
-        # 0 + 1im
+    # ** Step 1 **
+    # split up each potentially complex "basis" vector `tᵢ = tₐᵦ_basis[i]` into 2 real
+    # vectors `x` and `y``, that represent the possible real and imaginary parts of `tᵢ`
+    # multiplied by a complex scalar α, i.e., αtᵢ = Re(α)x + iIm(α)y, where x = real(αtᵢ) and
+    # rewrite `tₐᵦ_basis` in the desired form t -> [real(t) real(im*t); imag(t) imag(im*t)] 
+    # and store it as columns in a matrix. See `split_complex` details.
 
-        # julia> t_basis = [t₁,t₂]
-        # 2-element Vector{Vector{Complex{Int64}}}:
-        # [0 + 1im, 0 + 0im]
-        # [1 + 0im, 0 + 1im]
+    #= 
+    suppose we have `t₁ = [im,0]`, `t₂ = [1,im]`, and `tₐᵦ_basis = [t₁,t₂]`, then:
+        ```
+        julia> tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
+        2-element Vector{Matrix{Int64}}:
+         [0 -1; 0 0; 1 0; 0 0]
+         [1 0; 0 -1; 0 1; 1 0]
 
-        # julia> t_basis_split = TETB.split_complex.(t_basis)
-        # 2-element Vector{Matrix{Int64}}:
-        # [0 -1; 0 0; 1 0; 0 0]
-        # [1 0; 0 -1; 0 1; 1 0]
-        # julia> TETB.split_complex(t)
-        # 4×2 Matrix{Int64}:
-        # 1   0
-        # 0  -1
-        # 0   1
-        # 1   0
+        julia> tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
+        4×4 Matrix{Int64}:
+         0  -1  1   0
+         0   0  0  -1
+         1   0  0   1
+         0   0  1   0
+        ```
+    =#
+    tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
+    tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
 
-        # julia> tₐᵦ_basis_split_matrix = reduce(hcat, t_basis_split)
-        # 4×4 Matrix{Int64}:
-        # 0  -1  1   0
-        # 0   0  0  -1
-        # 1   0  0   1
-        # 0   0  1   0
+    # ** Step 2 **
+    # now we want to construct the TRS constraints, and then intersect the allowable basis
+    # terms on that constraint with those corresponding to the previously computed basis
+    # NB: Under TRS, `Mm` is "doubled", i.e., `Mm_tr = [Mm Mm]`, to facilitate the splitting
+    #     of complex-valued coefficient basis vectors into real-valued vectors.
+    Mm_tr, tₐᵦ_basis_tr = obtain_basis_free_parameters_TRS(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
+    # NB: `tₐᵦ_basis_tr` is already in "doubled" representation (i.e., consequently real),
+    #     so no need to split `tₐᵦ_basis_tr` via `split_complex`
 
-        # julia>
+    tₐᵦ_basis_tr_matrix = reduce(hcat, tₐᵦ_basis_tr)
+    tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_basis_tr_matrix)
 
-        # obtain the TRS basis and intersect
-        Mm_final, tₐᵦ_extra, _ = obtain_basis_free_parameters_TRS(brₐ, brᵦ, h_orbit, order)
-        # WARNING: we are assuming that the returned `tₐᵦ_extra` is real, so no need to split
-
-        tₐᵦ_extra_matrix = reduce(hcat, tₐᵦ_extra)
-        tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_extra_matrix)
-    end
-
-    return Mm_final, tₐᵦ_basis, order
+    return Mm_tr, tₐᵦ_basis
 end
 
 """
@@ -496,7 +490,10 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
     h_orbit::HoppingOrbit{D},
     op::SymOperation{D}
 ) where {D}
-    P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit))) # square matrix acting on the rows of M (formally v)
+    # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
+    # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
+    # for expressions of the kind (Pv)ᵀM … = vᵀPᵀM …
+    P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
     for (i, δᵢ) in enumerate(orbit(h_orbit))
         # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
         # being a symbolic variable, we will translate its action into δ. For this,
@@ -506,7 +503,7 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
         isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
         P[i, j] = 1
-        # P acts as g on v: g v = P v so (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
+        # since P acts as g v = P v, we have (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
     end
     return P
 end
@@ -550,6 +547,7 @@ function _prune_at_threshold!(
     end
     return vs
 end
+
 function _prune_at_threshold!(
     vs::AbstractVector{<:AbstractVector{T}};
     atol::Real=PRUNE_ATOL_DEFAULT
@@ -576,9 +574,8 @@ symmetry operations.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
-    Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings to
-    # consider
-    time_reversal::Bool=true,
+    Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings
+    timereversal::Bool=true,
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("provided composite bandrep is not Wannierizable: contains negative or non-integer coefficients")
@@ -622,19 +619,28 @@ function tb_hamiltonian(
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
             h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            ordering1 = OrbitalOrdering(br1)
+            ordering2 = OrbitalOrdering(br2)
             seen_n = Set{Int}()
-            order = hamiltonian_term_order(br1, br2)
             for h_orbit in h_orbits
                 δ = representative(h_orbit)
                 n = something(findfirst(δ′ -> isapprox(δ, δ′, nothing, false),
                     orbit_representatives)) # check where this δ is in the list of representatives
-                #                             for include it in the right TB model
+                                            # for include it in the right TB model
                 push!(seen_n, n)
-                Mm, t_αβ_basis, _ = obtain_basis_free_parameters(br1, br2, h_orbit, order, time_reversal)
+                Mm, t_αβ_basis = obtain_basis_free_parameters(
+                                    h_orbit, br1, br2, ordering1, ordering2; timereversal)
 
                 A = TightBindingBlock{D}(
-                    (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                    order, Mm, t_αβ_basis, h_orbit,
+                    (block_i, block_j),
+                    (Norbs[block_i], Norbs[block_j]),
+                    br1,
+                    br2,
+                    ordering1,
+                    ordering2,
+                    Mm,
+                    t_αβ_basis,
+                    h_orbit,
                     c_idx_start:c_idx_start+length(t_αβ_basis))
                 tbs[n][Block(block_i), Block(block_j)] = A
                 c_idx_start += length(t_αβ_basis)
@@ -645,11 +651,11 @@ function tb_hamiltonian(
                 n ∈ seen_n && continue
                 tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
                     (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                    order,
-                    zeros(Int, 0, 0, size(order, 1), size(order, 2)), # Mm
-                    Vector{Vector{ComplexF64}}(),                     # t_αβ_basis
-                    nothing,                                          # h_orbit
-                    1:0)                                              # c_idxs (empty)
+                    ordering1, ordering2,
+                    zeros(Int, 0, 0, length(ordering1), length(ordering2)), # Mm
+                    Vector{Vector{ComplexF64}}(),                           # t_αβ_basis
+                    nothing,                                                # h_orbit
+                    1:0)                                                    # c_idxs (empty)
             end
         end
     end

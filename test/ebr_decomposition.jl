@@ -4,8 +4,8 @@ using Crystalline
 @testset "EBR decomposition" begin
 
     @testset "SG #2" begin
-        sg_num, D = 2, 3
-        brs = calc_bandreps(sg_num, Val(D))
+        sgnum, D = 2, 3
+        brs = calc_bandreps(sgnum, Val(D))
         lgirsv = irreps(brs)
         ms = SymmetryVector{D}[]
 
@@ -27,7 +27,7 @@ using Crystalline
 
         for m in mv
             for μᴸ in 1:8
-                brs = calc_bandreps(sg_num)
+                brs = calc_bandreps(sgnum)
                 candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
 
                 # we should find at least one decomposition

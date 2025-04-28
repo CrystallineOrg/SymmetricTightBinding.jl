@@ -1,15 +1,15 @@
 using Crystalline: translation
 
 """
-    obtain_symmetry_vectors(ms::PyObject, sg_num::Int) --> Tuple{Vector{SymmetryVector{D}}, Vector{TopologyKind}}
+    obtain_symmetry_vectors(ms::PyObject, sgnum::Int) --> Tuple{Vector{SymmetryVector{D}}, Vector{TopologyKind}}
 
 Obtains directly the symmetry vector for the bands computed in the MPB model `ms` for the space
-group defined in `sg_num`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
+group defined in `sgnum`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
 vectors and topologies of the bands.
 """
-function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
-    brs = bandreps(sg_num) # elementary band representations
-    lgs = littlegroups(sg_num) # little groups
+function obtain_symmetry_vectors(ms::PyObject, sgnum::Int)
+    brs = bandreps(sgnum) # elementary band representations
+    lgs = littlegroups(sgnum) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
     map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
     lgirsd = pick_lgirreps(lgs; timereversal=true) # small irreps associated with `lgs`
@@ -35,7 +35,7 @@ function obtain_symmetry_vectors(ms::PyObject, sg_num::Int)
     summaries = analyze_symmetry_data(symeigsd, lgirsd, brs)
 
     # --- convert to `SymmetryVector`s ---
-    c_brs = calc_bandreps(sg_num, Val(3))
+    c_brs = calc_bandreps(sgnum, Val(3))
     symvecs = bandsum2symvec.(summaries, Ref(c_brs))
     topologies = getfield.(summaries, Ref(:topology))
     return symvecs, topologies
@@ -225,31 +225,50 @@ end
 """
     split_complex(t::Vector{<:Number}) -> Matrix{Real}
 
-Consider `αt` where `α∈ℂ` and `t∈ℂⁿ` and split it into real and imaginary parts. This
-is done by the following transformation: `αt = (a + im*b)t = [a;b] [t im*t] ->
-[a; b] [real(t) real(im*t); imag(t) imag(im*t)]`. This is done to avoid complex
-variables in the code.
+Consider `αt` where `α ∈ ℂ` and `t ∈ ℂⁿ` and build from `t` a matrix representation
+`T` that allows access to the real and imaginary parts of the product `αt` without using
+complex numbers by splitting α into a real 2-vector of its real and imaginary parts.
 
-# Examples:
+In particular, let ``α = αᴿ + iαᴵ`` and ``t = tᴿ + itᴵ`` with `αᴿ, αᴵ ∈ ℝ` and
+``tᴿ, tᴵ ∈ ℝⁿ``, then ``αt`` can be rewritten as
+
+```math
+αt = (αᴿ + iαᴵ)(tᴿ + itᴵ) = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)
+```
+
+Then, defining `T = [tᴿ -tᴵ; tᴵ tᴿ]`, the above product can then be reexpressed as:
+``Re(αt) = αᴿtᴿ - αᴵtᴵ =`` `(T * [αᴿ; αᴵ])[1:n]` and ``Im(αt) = αᴿtᴵ + αᴵtᴿ =``
+`(T * [αᴿ; αᴵ])[n+1:2n]`.
+I.e., the "upper half" of the product `T * [real(α), imag(α)]` is `real(α * t)` and the 
+"lower half" is `imag(αt)`.
+
+This functionality is used to avoid complex numbers in amplitude basis coefficients, which
+simplifies the application of time-reversal symmetry and hermicity.
+
+## Examples
 
 ```julia
-julia> t=[im,0]
+julia> using TETB: split_complex
+
+julia> t = [im,0]
 2-element Vector{Complex{Int64}}:
  0 + 1im
  0 + 0im
 
-julia> TETB.split_complex(t)
+julia> T = TETB.split_complex(t)
 4×2 Matrix{Int64}:
  0  -1
  0   0
  1   0
  0   0
 
-julia> 
+julia> α = 0.5+0.2im; αv = [real(α), imag(α)];
+
+julia> (T * αv)[1:2] == real(α*t) && (T * αv)[3:4] == imag(α*t)
 ```
 
 ```julia
-julia> t=[1,im]
+julia> t = [1,im]
 2-element Vector{Complex{Int64}}:
  1 + 0im
  0 + 1im
@@ -260,10 +279,9 @@ julia> TETB.split_complex(t)
  0  -1
  0   1
  1   0
-
-julia> 
 ```
 """
 function split_complex(t::Vector{<:Number})
-    return [real(t) real(im * t); imag(t) imag(im * t)]
+    re_t, im_t = reim(t)
+    return [re_t -im_t; im_t re_t] # == [real(t) real(im * t); imag(t) imag(im * t)]
 end

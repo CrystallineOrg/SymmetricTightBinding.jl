@@ -46,17 +46,10 @@ function find_bandrep_decompositions(
     end
 end
 
-function sgrep_induced_by_siteir(br::NewBandRep{D},
-    op::SymOperation{D},
-    time_reversal::Bool=true
-    ) where {D}
-
-    if time_reversal
-        siteir = physical_realify(br.siteir)
-    else
-        siteir = br.siteir
-    end
-
+function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {D}
+    # NB: `calc_bandreps` in Crystalline already applies `physical_realify` if
+    #     `timereversal` is true, so we don't need to manually redo it for `siteir` below
+    siteir = br.siteir
     siteir_dim = irdim(siteir)
     siteg = group(siteir)
     wps = orbit(siteg)
@@ -97,15 +90,11 @@ function sgrep_induced_by_siteir(br::NewBandRep{D},
     return ρ
 end
 
-function sgrep_induced_by_siteir(
-    cbr::CompositeBandRep{D}, 
-    op::SymOperation{D}, 
-    time_reversal::Bool=true
-    ) where {D}
+function sgrep_induced_by_siteir(cbr::CompositeBandRep{D}, op::SymOperation{D}) where {D}
     ρ = Matrix{Complex}(undef, 0, 0)
     for (idxc, c) in enumerate(cbr.coefs)
         iszero(c) && continue
-        ρ_idxc = sgrep_induced_by_siteir(cbr.brs[idxc], op, time_reversal)
+        ρ_idxc = sgrep_induced_by_siteir(cbr.brs[idxc], op)
         for _ in 1:Int(c)
             ρ = ρ ⊕ ρ_idxc
         end
@@ -119,19 +108,18 @@ end
 #     Hamiltonian
 """
     sgrep_induced_by_siteir_generators(
-                                        br::NewBandRep{D},
-                                        gens::AbstractVector{SymOperation{D}})
-        --> Tuple{Vector{SymOperation{D}}, Vector{Matrix{ComplexF64}}}
+        br::NewBandRep{D},
+        gens::AbstractVector{SymOperation{D}})
+    --> Tuple{Vector{SymOperation{D}}, Vector{Matrix{ComplexF64}}}
 
 Induce a representation for the generators of the SG from a representation of the site-symmetry 
 group of a particular maximal WP.
 """
 function sgrep_induced_by_siteir_generators(
     br::NewBandRep{D},
-    time_reversal::Bool=true,
     gens::AbstractVector{SymOperation{D}}=generators(num(br), SpaceGroup{D}),
 ) where {D}
-    return gens, sgrep_induced_by_siteir.(Ref(br), gens, time_reversal)
+    return gens, sgrep_induced_by_siteir.(Ref(br), gens)
 end
 
 """
@@ -144,10 +132,8 @@ end
 
 function sgrep_induced_by_siteir_generators(
     cbr::CompositeBandRep{D},
-    time_reversal::Bool=true,
-    gens=generators(num(cbr), SpaceGroup{D}),
+    gens::AbstractVector{SymOperation{D}}=generators(num(cbr), SpaceGroup{D}),
 ) where {D}
     # TODO: primitivize the generators of the space group
-    return gens, sgrep_induced_by_siteir.(Ref(cbr), gens, time_reversal)
-
+    return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
 end

@@ -3,8 +3,8 @@ Pkg.activate(@__DIR__)
 
 using Crystalline, TETB
 
-sg_num = 13
-brs = calc_bandreps(sg_num, Val(2))
+sgnum = 13
+brs = calc_bandreps(sgnum, Val(2))
 coefs = [1, 1, 0, 0, 0, 1]
 cbr = CompositeBandRep(coefs, brs)
 

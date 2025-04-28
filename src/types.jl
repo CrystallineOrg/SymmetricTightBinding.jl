@@ -44,6 +44,20 @@ end
 representative(s::HoppingOrbit) = s.representative
 Crystalline.orbit(s::HoppingOrbit) = s.orbit # extend to avoid clash w/ Crystalline's `orbit`
 
+
+
+# ---------------------------------------------------------------------------------------- #
+# constructor defined in /src/tightbinding.jl
+
+struct OrbitalOrdering{D} <: AbstractVector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}
+  ordering :: Vector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}
+end
+Base.getindex(o::OrbitalOrdering, i::Int) = o.ordering[i]
+Base.size(o::OrbitalOrdering) = size(o.ordering)
+Base.setindex!(::OrbitalOrdering, v, i::Int) = error("setindex! is not supported")
+
+# ---------------------------------------------------------------------------------------- #
+
 """
     TightBindingElementString
 
@@ -68,30 +82,31 @@ end
 """
     TightBindingBlock{D}
 
-A structure for storing information about a particular tight-binding matrix block.
+A structure for storing information about a matrix block of a tight-binding Hamiltonian.
 
 A block will represent the hopping terms between two band representations `br1` and `br2`. 
 For this hopping we store the order of the hopping terms, the matrix codifying the Hamiltonian
 `Mm` and the basis vectors `t_αβ_basis` which indicates the symmetry related free-coefficients.
 
 ## Fields
-- `block_ij :: Tuple{Int,Int}`: the indices of the block in the full tight-binding matrix
-- `global_ij :: Tuple{Int,Int}`: the indices of the particular block 
-- `br1 :: NewBandRep{D}`: the first band representation
-- `br2 :: NewBandRep{D}`: the second band representation
-- `order :: Matrix{Pair{Tuple{Int,WyckoffPosition{D}},Tuple{Int,WyckoffPosition{D}}}}`:
-  the order of the hopping terms considered
-- `Mm :: Array{Int,4}`: the matrix codifying the Hamiltonian
-- `t_αβ_basis :: Vector{Vector{ComplexF64}}`: the basis vectors for the free coefficients
-- `h_orbit :: Union{Nothing,HoppingOrbit{D}}`: the hopping orbit associated to the block
-- `c_idxs :: UnitRange{Int}`: the indices of the free coefficients
+- `block_ij :: Tuple{Int,Int}`: indices of the block in the full tight-binding matrix
+- `global_ij :: Tuple{Int,Int}`: indices of the particular block 
+- `br1 :: NewBandRep{D}`: first band representation
+- `br2 :: NewBandRep{D}`: second band representation
+- `ordering1 :: OrbitalOrdering{D}`: ordering of the orbitals in `br1`
+- `ordering2 :: OrbitalOrdering{D}`: ordering of the orbitals in `br2`
+- `Mm :: Array{Int,4}`: matrix codifying Hamiltonian
+- `t_αβ_basis :: Vector{Vector{ComplexF64}}`: basis vectors for the free coefficients
+- `h_orbit :: Union{Nothing,HoppingOrbit{D}}`: hopping orbit associated to the block
+- `c_idxs :: UnitRange{Int}`: indices of the free coefficients
 """
 struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
   block_ij::Tuple{Int,Int}
   global_ij::Tuple{Int,Int}
   br1::NewBandRep{D}
   br2::NewBandRep{D}
-  order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
+  ordering1::OrbitalOrdering{D}
+  ordering2::OrbitalOrdering{D}
   Mm::Array{Int,4}
   t_αβ_basis::Vector{Vector{ComplexF64}}
   h_orbit::Union{Nothing,HoppingOrbit{D}}
@@ -100,7 +115,7 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
   # TODO: figure out how much of this is needed, e.g.:
   # TODO: find better schema for naming the free coefficients than the arbitrary `c_idxs`
   # TODO: do we need the indexing information in `block_ij` and `global_ij`? Probably not
-  # -> global_ij isn't even used in the code, not even block_ij, br1, br2, order...
+  # -> global_ij isn't even used in the code, not even block_ij, br1, br2, ordering1, ordering2...
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
@@ -131,11 +146,9 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
       exp_strs[n] = "" # = 1, but omit for compactness
     end
   end
-  exp_strs
-
-  Mm = tbb.Mm
-
+  
   io = IOBuffer()
+  Mm = tbb.Mm
   first_t_αβ_basis_vec = true
   for k in eachindex(tbb.t_αβ_basis)
     Mⁱʲtᵏ = Mm[:, :, i, j] * tbb.t_αβ_basis[k] # symmetry related Hamiltonian terms
@@ -186,11 +199,9 @@ function _stringify_characters(c::Number; digits::Int=3)
   if iszero(ci)     # real
     isinteger(cr) && return (REAL_STR, cr, string(Int(cr)))
     return (REAL_STR, cr, string(cr))
-
   elseif iszero(cr) # imaginary
     isinteger(ci) && return (IMAG_STR, ci, string(Int(ci)) * "i")
     return (IMAG_STR, ci, string(ci) * "i")
-
   else              # complex
     if isinteger(cr) && isinteger(ci)
       return COMPLEX_STR, zero(cr), _complex_as_compact_string(Complex{Int}(cr, ci))
@@ -209,8 +220,12 @@ end
 struct NewTightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
   br1::NewBandRep{D}
   br2::NewBandRep{D}
-  order::Matrix{Pair{Tuple{Int64,WyckoffPosition{D}},Tuple{Int64,WyckoffPosition{D}}}}
+  ordering1::OrbitalOrdering{D}
+  ordering2::OrbitalOrdering{D}
   Mm::Array{ComplexF64,3}
   t_αβ_basis::Vector{Array{ComplexF64,3}}
   c_idxs::Vector{Int}
 end
+
+# struct TightBindingMatrix{D} <: AbstractBlockMatrix
+# end

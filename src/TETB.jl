@@ -57,7 +57,7 @@ export tb_hamiltonian
 include("plotting_utils.jl")
 export hop_plot
 include("zassenhaus.jl")
-include("time_reversal.jl")
+include("timereversal.jl")
 
 # ---------------------------------------------------------------------------- #
 end # module

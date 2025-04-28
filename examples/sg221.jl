@@ -3,14 +3,14 @@ Pkg.activate(@__DIR__)
 
 using Crystalline, TETB
 
-sg_num = 221
-brs = calc_bandreps(sg_num)
+sgnum = 221
+brs = calc_bandreps(sgnum)
 
 coefs = zeros(Int, length(brs))
 coefs[6] = 1
 cbr = CompositeBandRep(coefs, brs)
 
-or = TETB.hamiltonian_term_order(cbr.brs[6], cbr.brs[6])
+ordering = TETB.OrbitalOrdering(cbr.brs[6])
 
 Rs = [[0, 0, 0]]
 

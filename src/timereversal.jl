@@ -46,54 +46,48 @@
 
 """
     obtain_basis_free_parameters_TRS(
-                                    brₐ::NewBandRep{D}, 
-                                    brᵦ::NewBandRep{D}, 
-                                    h_orbit::HoppingOrbit{D}, 
-                                    order=hamiltonian_term_order(brₐ, brᵦ)
-                                    ) --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}, 
-                                                Matrix{Pair{Tuple{Int,WyckoffPosition{D}},
-                                                            Tuple{Int,WyckoffPosition{D}}}}
+        h_orbit::HoppingOrbit{D}, 
+        brₐ::NewBandRep{D}, 
+        brᵦ::NewBandRep{D}, 
+        orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
+        orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
+        Mm::Array{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
+        )                             --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
-associated with the hopping orbit `h_orbit` under time-reversal symmetry. The Hamiltonian's 
-default order is given by `order`.
+associated with the hopping orbit `h_orbit` under time-reversal symmetry.
 
-WARNING: differentiation between real and imaginary parts is implemented. Only real variables
-are considered.
+Real and imaginary parts of the basis vectors are differentiated explicitly: internally,
+we consider only variables.
 """
 function obtain_basis_free_parameters_TRS(
+    h_orbit::HoppingOrbit{D},
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
-    h_orbit::HoppingOrbit{D},
-    order=hamiltonian_term_order(brₐ, brᵦ)
+    orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
+    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
+    Mm::Array{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
 ) where {D}
-    # compute the tensor M that encodes the Hamiltonian as a numerical matrix
-    Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, order)
+    # To add time-reversal constraints, we duplicate the `M` matrix so that we can transfer
+    # the conjugation from `t` to `M`. We exploit the following splitting:
+    #    `Hᵢⱼ = vᵀ Mᵢⱼ t = vᵀ Mᵢⱼ (tᴿ + itᴵ) = vᵀ [Mᵢⱼ Mᵢⱼ] [tᴿ; itᴵ]`
 
-    # now we need to add time-reversal constraints. For this we first duplicate 
-    # the M matrix since `Hᵢⱼ = vᵀ (Mᵢⱼ Mᵢⱼ) (tᴿ; tᴵ)`
-    # WARNING : we assume that we have ±δ in v. Is this true? why? it is ok physically
-    #           and in here we will see if they are equal or not.
-
-    # removed since now this should work if first we physically-realify the site-symmetry
-    # group irreps.
-
-    # compute the Z tensor, encoding time-reversal constraints on H for the k-space
-    # part. This is done by `Hᵢⱼ(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)]`
-    # `= (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)]`
-    # `= vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [real(t); imag(t)]`
-
+    # Step 1: compute the Z tensor, encoding time-reversal constraints on H for the k-space
+    # part. This is done by `Hᵢⱼ(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
+    # `= (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
+    # `= vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [tᴿ; tᴵ]`
     Z_trs = reciprocal_constraints_trs(Mm, h_orbit)
+    # QUESTION: in the above assume that we have ±δ in v. Is this true? why? it is ok
+    #           physically and in here we will see if they are equal or not.
 
-    # compute the Q tensor, encoding time-reversal constraints on H for the free-
-    # parameter part. This is done by `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); -imag(t)]`
-    # `= (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)]`
-    # `= vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [real(t); imag(t)]`
-
+    # Step 2: compute the Q tensor, encoding time-reversal constraints on H for the free-
+    # parameter part. This is done by `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; -itᴵ]`
+    # `= (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [tᴿ; tᴵ]`
+    # `= vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [tᴿ; tᴵ]`
     Q_trs = representation_constraint_trs(Mm, h_orbit)
 
-    # build an constraint matrix acting on the hopping coefficient vector `tₐᵦ` 
-    # associated with h_orbit
+    # Step 3: build an constraint matrix acting on the doubled hopping coefficient vector
+    # `[tᴿ; itᴵ]` associated with `h_orbit`
     constraint_vs = Vector{Vector{Float64}}()
     for s in axes(Q_trs, 3), t in axes(Q_trs, 4)
         q = @view Q_trs[:, :, s, t]
@@ -115,10 +109,8 @@ function obtain_basis_free_parameters_TRS(
 
     # prune near-zero elements of basis vectors
     _prune_at_threshold!(tₐᵦ_basis)
-    # TODO: problem with type T<:Complex, made everything Complex so we skip this
-    # problem
 
-    return [Mm Mm], tₐᵦ_basis, order
+    return [Mm Mm], tₐᵦ_basis
 end
 
 """
@@ -132,7 +124,7 @@ function reciprocal_constraints_trs(
     Mm::Array{Int,4},
     h_orbit::HoppingOrbit{D}
 ) where {D}
-    Z_trs = zeros(ComplexF64, size(Mm))
+    Z_trs = zeros(Int, size(Mm))
     op = SymOperation([-I(D) zeros(D)])
     P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
     for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
@@ -147,13 +139,13 @@ end
 
 Time reversal symmetry action on the Hamiltonian. It is given by the association δ -> -δ and 
 the complex conjugation in the free-parameter part:
-`tⱼ -> tⱼ* = (tⱼᴿ|tⱼᴵ) -> (tⱼᴿ| -tⱼᴵ) => H(k) -> H*(k)`.
+``tⱼ -> tⱼ* ⇒ [tⱼᴿ, itⱼᴵ] -> [tⱼᴿ, -itⱼᴵ] ⇒ H(k) -> H*(k)``.
 """
 function representation_constraint_trs(
     Mm::AbstractArray{<:Number,4},
     h_orbit::HoppingOrbit{D},
 ) where {D}
-    Q_trs = zeros(ComplexF64, size(Mm))
+    Q_trs = zeros(Int, size(Mm))
     op = SymOperation([-I(D) zeros(D)])
     P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
     for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
