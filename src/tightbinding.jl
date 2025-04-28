@@ -43,7 +43,6 @@ function obtain_symmetry_related_hoppings(
     wpsₐ = primitivize.(orbit(group(brₐ)), cntr)
     wpsᵦ = primitivize.(orbit(group(brᵦ)), cntr)
 
-
     # we have defined a structure `HoppingOrbit` to gather the information. It is 
     # structured as:
     # 1. `HoppingOrbit.representatives` will store a representative hopping vector δ
@@ -58,17 +57,21 @@ function obtain_symmetry_related_hoppings(
         R = RVec{D}(R) # change the type of R for type consistency
         for (qₐ, qᵦ) in Iterators.product(wpsₐ, wpsᵦ)
             qₐ = parent(qₐ) # work with RVec directly rather than Wyckoff Position
-            #                 (type consistent)
             qᵦ = parent(qᵦ)
             δ = qᵦ + R - qₐ # potential representative in next element of `h_orbits`
             maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops)
-            maybe_add_hoppings!(h_orbits, -δ, qᵦ, qₐ, -R, ops)
-            # TODO (future): check if adding `δ` and `-δ` at the same time is a good idea
-            # or it is better to consider it afterwards at hermiticity. Is this 
-            # valid for any space group? Well yes, but they might be different if
-            # nor inversion nor TRS are present
         end
     end
+
+    # we now make sure that for every hopping `qₐ + δ → qᵦ + R` we also have the reverse
+    # hopping qᵦ + (-δ) → qₐ + (-R): we need this in order enforce hermicity/anti-hermicity
+    # - otherwise the Hamiltonian term is not closed under complex conjugation; similarly,
+    # we need it for enforcing time-reversal symmetry.
+    # We add the reverse hops _here_, rather than above, in order to still distinguish
+    # between orbits where δ and -δ wouldn't have naturally belonged to the same `h_orbit`,
+    # because δ and -δ would have involved different Wyckoff positions (not merely reversed)
+    maybe_add_reverse_hoppings!(h_orbits)
+
     return h_orbits
 end
 
@@ -86,12 +89,11 @@ function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{Sy
     if isnothing(δ_idx)
         # if it wasn't already in `h_orbits`, we add it and its symmetry-related partners
         δ_orbit = HoppingOrbit{D}(δ, [δ], [[(qₐ, qᵦ, R)]])
-        _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops)
         push!(h_orbits, δ_orbit)
     else # if it was already in `h_orbits`, we only add its symmetry-related partners
         δ_orbit = h_orbits[δ_idx]
-        _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops)
     end
+    _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops)
 end
 
 """
@@ -143,6 +145,44 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
         end
     end
     return δ_orbit
+end
+
+function maybe_add_reverse_hoppings!(h_orbits)
+    for h_orbit in h_orbits
+        I = length(h_orbit.orbit) # the length may change below, so fix it beforehand
+        for i in 1:I
+            hopsᵢ = h_orbit.hoppings[i]
+            δᵢ = h_orbit.orbit[i]
+            rev_δᵢ = -δᵢ # reverse the hopping vector
+            rev_i = findfirst(δ -> isapprox(δ, rev_δᵢ, nothing, false), orbit(h_orbit))
+            if isnothing(rev_i)
+                # the reverse δ is not already in the orbit: add it and its hopping terms
+                push!(h_orbit.orbit, rev_δᵢ)
+                rev_hops = similar(hopsᵢ)
+                for (j, hop) in enumerate(hopsᵢ)
+                    qₐ, qᵦ, R = hop
+                    rev_hops[j] = (qᵦ, qₐ, -R)
+                end
+                push!(h_orbit.hoppings, rev_hops)
+
+            else
+                # the reversed δ is already in orbit: we still want to make sure that each
+                # of the reversed hoppings `qᵦ + (-δ) → qₐ + (-R)` are also there though
+                for hop in hopsᵢ
+                    qₐ, qᵦ, R = hop
+                    qₐ, qᵦ, R = qᵦ, qₐ, -R # reverse the hopping term
+                    # check if the reversed hopping is already in the list of hoppings
+                    rev_hopsᵢ = h_orbit.hoppings[something(rev_i)]
+                    bool = any(rev_hopsᵢ) do (qₐ′, qᵦ′, R′)
+                        (   isapprox(qₐ′, qₐ, nothing, false)
+                         && isapprox(qᵦ′, qᵦ, nothing, false)
+                         && isapprox(R′,  R,  nothing, false))
+                    end # `true` if already in the list of hoppings
+                    bool || push!(rev_hopsᵢ, (qₐ, qᵦ, R))
+                end
+            end
+        end
+    end
 end
 
 # ---------------------------------------------------------------------------- #
