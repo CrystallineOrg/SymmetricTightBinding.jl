@@ -373,7 +373,7 @@ function representation_constraint_matrices(
     gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ)
     @assert gensₐ == gensᵦ # check that `sgrep_induced_by_siteir_generators` are consistent
 
-    Qs = [similar(Mm) for _ in eachindex(gensₐ)]
+    Qs = [similar(Mm, ComplexF64) for _ in eachindex(gensₐ)]
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
         ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
         ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
