@@ -74,9 +74,7 @@ struct TightBindingElementString
 end
 function Base.show(io::IO, tbe_str::TightBindingElementString)
   if tbe_str.s == "0"
-    # TODO: change to `printstyled(io, "0"; color=:light_black)` if/when
-    #       https://github.com/JuliaArrays/BlockArrays.jl/pull/443 is merged    
-    print(io, "0")
+    printstyled(io, "0"; color=:light_black)
   else
     print(io, tbe_str.s)
   end
@@ -139,7 +137,8 @@ function Base.getindex(H::TightBindingMatrix, i::Int, j::Int)
                      conjugate=true,
                      antihermitian=H.hermiticity == ANTIHERMITIAN)
   else # not a stored block
-    return TightBindingElementString("\e[39m0\e[39m") # a gray zero
+    return TightBindingElementString("0") # a gray zero
+    #return TightBindingElementString("\e[39m0\e[39m") # a gray zero
   end
 end
 
