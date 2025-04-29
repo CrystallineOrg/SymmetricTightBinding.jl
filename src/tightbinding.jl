@@ -695,7 +695,7 @@ end
 
 """
     tb_hamiltonian(cbr::CompositeBandRep{D}, Rs::AbstractVector{Vector{Int}}) 
-        --> Vector{BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}}
+        --> Vector{TightBindingMatrix{D}}
 
 Construct the TB Hamiltonian matrix from a given composite band representation 
 `cbr` and a set of global translation-representatives `Rs`. The Hamiltonian is 
@@ -729,9 +729,10 @@ function tb_hamiltonian(
     # symmetry independent
     hermiticity = antihermitian ? ANTIHERMITIAN : HERMITIAN
     axis = BlockArrays.BlockedOneTo(cumsum((count_bandrep_orbitals(br) for br in brs)))
-    tbsv = Vector{Vector{TightBindingMatrix{D}}}()
+    tbsv = Vector{TightBindingMatrix{D}}()
     for (block_i, br1) in enumerate(brs)
         for block_j in block_i:length(brs) # only over upper triangular part, cf. hermicity
+            diagonal_block = (block_i==block_j)
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
@@ -739,15 +740,15 @@ function tb_hamiltonian(
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit, br1, br2, ordering1, ordering2;
-                    timereversal, diagonal_block=block_i==block_j, antihermitian)
+                    timereversal, diagonal_block, antihermitian)
                 tbs = Vector{TightBindingMatrix{D}}(undef, length(t_αβ_basis))
                 for (n, t) in enumerate(t_αβ_basis)
                     block = TightBindingBlock{D}(
                         br1, br2, ordering1, ordering2, h_orbit, Mm, t)
-                    h = TightBindingMatrix{D}(axis, (block_i, block_j), block, hermiticity)
+                    h = TightBindingMatrix{D}(axis, (block_i, block_j), block, hermiticity, brs)
                     tbs[n] = h
                 end
-                isempty(tbs) || push!(tbsv, tbs)
+                isempty(tbs) || append!(tbsv, tbs)
             end
         end
     end

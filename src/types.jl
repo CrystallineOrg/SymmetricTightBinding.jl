@@ -68,16 +68,18 @@ A structure for pretty-printing tight-binding matrix elements.
 
 ## Fields
 - `s :: String`: the string representing the tight-binding matrix element
+- `active :: Bool`: whether the element belongs to an "active" block - i.e., one we want to
+  highlight (then shown in blue).
 """
 struct TightBindingElementString
   s::String
+  active::Bool
 end
 function Base.show(io::IO, tbe_str::TightBindingElementString)
-  if tbe_str.s == "0"
-    printstyled(io, "0"; color=:light_black)
-  else
-    print(io, tbe_str.s)
-  end
+  s = tbe_str.s
+  color = (tbe_str.active ? (s == "0" ? :normal : :blue) 
+                          : (s == "0" ? :light_black : :normal))
+  printstyled(io, s; color)
 end
 
 """
@@ -119,6 +121,7 @@ struct TightBindingMatrix{D} <: AbstractBlockMatrix{TightBindingElementString}
   block_ij :: NTuple{2, Int}
   block :: TightBindingBlock{D}
   hermiticity :: Hermiticity
+  brs :: Vector{NewBandRep{D}}
 end
 
 Base.axes(H::TightBindingMatrix) = (H.axis, H.axis)
@@ -137,8 +140,7 @@ function Base.getindex(H::TightBindingMatrix, i::Int, j::Int)
                      conjugate=true,
                      antihermitian=H.hermiticity == ANTIHERMITIAN)
   else # not a stored block
-    return TightBindingElementString("0") # a gray zero
-    #return TightBindingElementString("\e[39m0\e[39m") # a gray zero
+    return TightBindingElementString("0", #=active=# false)
   end
 end
 
@@ -159,7 +161,7 @@ function _getindex(
   Mⁱʲt_im = Mⁱʲ * @view tbb.t[N+1:end]
   if !(any(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲt_re) || 
        any(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲt_im))
-    return TightBindingElementString("0")
+    return TightBindingElementString("0", #=active=# true)
   end
   
   first = true
@@ -184,11 +186,11 @@ function _getindex(
     print(io, v_str)
 
     δ = tbb.h_orbit.orbit[n]
-    if !iszero(δ) # print the exponential
+    if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(2πi𝐤⋅δ)
       print(io, "𝕖(")
       # TODO: could do a little better here, since we know that `-δ` is in the orbit?
       conjugate && print(io, "-")
-      print(io, "k⋅δ", Crystalline.subscriptify(string(n)), ")")
+      print(io, "δ", Crystalline.subscriptify(string(n)), ")")
     else
       print(io, "1")
     end
@@ -197,7 +199,7 @@ function _getindex(
   end
 
   s = String(take!(io))
-  return TightBindingElementString(s)
+  return TightBindingElementString(s, #=active=# true)
 end
 
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
@@ -205,6 +207,33 @@ function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
 end
 
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
+
+function Base.summary(io::IO, H::TightBindingMatrix{D}) where D
+  print(io, "TightBindingMatrix{", D, "} over [")
+  for (n, br) in enumerate(H.brs)
+    printstyled(io, br, color=n ∈ H.block_ij ? :blue : :light_black)
+    print(io, n == length(H.brs) ? "]" : ", ")
+  end
+end
+function Base.show(io::IO, ::MIME"text/plain", H::TightBindingMatrix{D}) where D
+  summary(io, H)
+  println(io, ":")
+  Base.print_array(io, H)
+  print(io, "\n\n (")
+  δs = H.block.h_orbit.orbit
+  for (i, δ) in enumerate(δs)
+    print(io, "δ", Crystalline.subscriptify(string(i)), "=")
+    rev_idx = findfirst(δ′ -> isapprox(-δ, δ′, nothing, false), @view δs[1:i-1])
+    if isnothing(rev_idx)
+      print(io, replace(string(δ), ", "=>","))
+    else
+      print(io, "-δ", Crystalline.subscriptify(string(something(rev_idx))))
+    end
+    i == length(δs) || print(io, ", ")
+  end
+  print(io, ")")
+end
+
 
 # pretty-printing of scalars
 
@@ -219,4 +248,10 @@ function _complex_as_compact_string(c::Complex) # usual string(::Complex) has sp
   io = IOBuffer()
   print(io, real(c), Crystalline.signaschar(imag(c)), abs(imag(c)), "i")
   return String(take!(io))
+end
+
+
+# ---------------------------------------------------------------------------------------- #
+struct TightBindingExpansion{D} <: AbstractVector{TightBindingMatrix{D}}
+  Hs::Vector{TightBindingMatrix{D}}
 end
