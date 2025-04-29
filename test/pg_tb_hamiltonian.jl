@@ -10,7 +10,8 @@ using LinearAlgebra
     # TODO: add more cases apart from Graphene
 
     @testset "Graphene" begin
-        sgnum, D = 17, 2
+        D = 2
+        sgnum = 17
         brs = calc_bandreps(sgnum, Val(D))
         coefs = zeros(Int, length(brs))
         coefs[5] = 1

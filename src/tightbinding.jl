@@ -296,12 +296,12 @@ end
 Construct a set of matrices that encodes a Hamiltonian's term which resembles the 
 hopping from EBR `br1` to EBR `br2`.
 
-The Hamiltonian's order which is implicitly used is returned as output, and the 
-matrices are stored on a 4D matrix which last two axes indicate the Hamiltonian 
-term position it is describing and the first axis refer to the `orbit(h_orbit)` 
-and the second axis to the vector `t`. The idea is:
+The encoding is stored as a 4D matrix. Its last two axes correspond to elements of the
+Bloch Hamiltonian H(k); its first axis corresponds to `orbit(h_orbit)` and the associated
+complex exponentials stored in `v`; and its second axis to the elements of the vector `t`.
+That is:
 
-Hₛₜ = vᵢ Mᵢⱼₛₜ tⱼ
+    Hₛₜ(k) = vᵢ(k) Mᵢⱼₛₜ tⱼ
 
 See `devdocs.md` for details.
 """
@@ -373,7 +373,7 @@ function representation_constraint_matrices(
     gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ)
     @assert gensₐ == gensᵦ # check that `sgrep_induced_by_siteir_generators` are consistent
 
-    Qs = [zeros(ComplexF64, size(Mm)) for _ in eachindex(gensₐ)]
+    Qs = [similar(Mm) for _ in eachindex(gensₐ)]
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
         ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
         ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
@@ -384,7 +384,7 @@ function representation_constraint_matrices(
         # matrices as
         Q = Qs[n]
         for i in axes(Mm, 1), j in axes(Mm, 2)
-            Q[i, j, :, :] .= ρₐₐ * Mm[i, j, :, :] * ρᵦᵦ'
+            Q[i, j, :, :] .= ρₐₐ * (@view Mm[i, j, :, :]) * ρᵦᵦ'
         end
     end
 
@@ -409,7 +409,9 @@ function obtain_basis_free_parameters(
     brᵦ::NewBandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ);
-    timereversal::Bool = true
+    timereversal::Bool = true,
+    diagonal_block::Bool = true,
+    antihermitian::Bool = true
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -431,77 +433,140 @@ function obtain_basis_free_parameters(
 
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector tₐᵦ associated with h_orbit
-    constraint_vs = Vector{Vector{ComplexF64}}()
-    for (Q, Z) in zip(Qs, Zs)
-        for s in axes(Q, 3), t in axes(Q, 4)
-            q = @view Q[:, :, s, t]
-            z = @view Z[:, :, s, t]
-            c = q - z
-            filtered_rows = filter(r -> norm(r) > 1e-10, eachrow(c))
-            isempty(filtered_rows) && continue # don't add empty constraints
-            append!(constraint_vs, filtered_rows)
-        end
-    end
-    constraints = stack(constraint_vs, dims=1)
-    tₐᵦ_basis_matrix_form = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
+    constraints = _aggregate_constraints(Qs, Zs)
+    tₐᵦ_basis_matrix = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
+    
+    # at this point, the coefficient-space spanning `tₐᵦ_basis` is implicitly complex; this
+    # is conceptually not too nice for a Hamiltonian, and we'd like to work with strictly
+    # real coefficients. To that end, we "split" the possible products of such complex
+    # coefficients with a complex basis vector into two vectors, where the lower half of
+    # each represents the imaginary part of the product. The benefit of this is that it
+    # becomes possible to take the complex conjugate of each element "symbolically" by
+    # simply multiplying with [1 0; 0 -1] (block matrix). We need to do this anyway if we
+    # we have `timereversal = true`, but it's nice to just have a shared representation
+    # of the basis vectors, so we do it here as well.
 
-    # convert null-space to a sparse column form
-    tₐᵦ_basis_matrix_form′ = _poormans_sparsification(tₐᵦ_basis_matrix_form)
-    tₐᵦ_basis = [collect(v) for v in eachcol(tₐᵦ_basis_matrix_form′)]
-
-    # prune near-zero elements of basis vectors
-    _prune_at_threshold!(tₐᵦ_basis)
-
-    # if there's no TRS constraints, we're done by now
-    timereversal || return Mm, tₐᵦ_basis
-
-    ## ----------------------------------------------------------------------------------- #
-    # `timereversal` is `true`: we now "add" the associated TRS constraints
-
-    # ** Step 0 **
     # If the set of basis vectors obtained from symmetry constraints was empty, there's no
     # point in continuing: we then return early
-    isempty(tₐᵦ_basis) && return Mm, tₐᵦ_basis
+    isempty(tₐᵦ_basis_matrix) && return Mm, Vector{Vector{Float64}}()
 
-    # ** Step 1 **
-    # split up each potentially complex "basis" vector `tᵢ = tₐᵦ_basis[i]` into 2 real
-    # vectors `x` and `y``, that represent the possible real and imaginary parts of `tᵢ`
-    # multiplied by a complex scalar α, i.e., αtᵢ = Re(α)x + iIm(α)y, where x = real(αtᵢ) and
-    # rewrite `tₐᵦ_basis` in the desired form t -> [real(t) real(im*t); imag(t) imag(im*t)] 
-    # and store it as columns in a matrix. See `split_complex` details.
+    # Details: we split up each potentially complex "basis" vector `t = tₐᵦ_basis[i]` into
+    # two real vectors `x` and `y`, such that the _real_ span of `x` and `y` is equivalent
+    # to the complex span of `t`; the key is that we must interpret the lower halfs of `x`
+    # and `y` as representing imaginary numbers. Crucially, this must be kept in mind
+    # everywhere that we use a coefficient vector. In particular, we now must always
+    # interpret `Mm` as acting like `[Mm Mm]` when meeting a "doubled" basis vector of this
+    # kind.
+    # Example: we have `t₁ = [im,0]`, `t₂ = [1,im]`, and `tₐᵦ_basis = [t₁,t₂]`, then:
+    #    ```
+    #    julia> tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
+    #    2-element Vector{Matrix{Int64}}:
+    #     [0 -1; 0 0; 1 0; 0 0]
+    #     [1 0; 0 -1; 0 1; 1 0]
+    #
+    #    julia> tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
+    #    4×4 Matrix{Int64}:
+    #     0  -1  1   0
+    #     0   0  0  -1
+    #     1   0  0   1
+    #     0   0  1   0
+    #    ```
+    # See `split_complex` for more details on the real/imaginary splitting.
+    N = 2size(Mm, 2) # number of elements per `t`-vector, when doubled
+    tₐᵦ_basis_reim = split_complex.(collect(eachcol(tₐᵦ_basis_matrix)))
+    tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim, init=Matrix{Float64}(undef, N, 0))
 
-    #= 
-    suppose we have `t₁ = [im,0]`, `t₂ = [1,im]`, and `tₐᵦ_basis = [t₁,t₂]`, then:
-        ```
-        julia> tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-        2-element Vector{Matrix{Int64}}:
-         [0 -1; 0 0; 1 0; 0 0]
-         [1 0; 0 -1; 0 1; 1 0]
+    ## ----------------------------------------------------------------------------------- #
+    if timereversal # "add" & "intersect" the associated TRS constraints
+        # now we want to construct the TRS constraints, and then intersect the allowable basis
+        # terms on that constraint with those corresponding to the previously computed basis
+        tₐᵦ_basis_tr_reim_matrix = obtain_basis_free_parameters_TRS(
+                                                h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
+        tₐᵦ_basis_reim = zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix)
+        tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
+    end
+    isempty(tₐᵦ_basis_reim_matrix) && return Mm, Vector{Vector{Float64}}()
 
-        julia> tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
-        4×4 Matrix{Int64}:
-         0  -1  1   0
-         0   0  0  -1
-         1   0  0   1
-         0   0  1   0
-        ```
-    =#
-    tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-    tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
+    # ------------------------------------------------------------------------------------ #
+    # "add" & "intersect" the associated hermiticity constraints if this is a diagonal block
+    if diagonal_block
+        tₐᵦ_basis_herm_reim_matrix = obtain_basis_free_parameters_hermiticity(
+                                        h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm;
+                                        antihermitian)
 
-    # ** Step 2 **
-    # now we want to construct the TRS constraints, and then intersect the allowable basis
-    # terms on that constraint with those corresponding to the previously computed basis
-    # NB: Under TRS, `Mm` is "doubled", i.e., `Mm_tr = [Mm Mm]`, to facilitate the splitting
-    #     of complex-valued coefficient basis vectors into real-valued vectors.
-    Mm_tr, tₐᵦ_basis_tr = obtain_basis_free_parameters_TRS(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
-    # NB: `tₐᵦ_basis_tr` is already in "doubled" representation (i.e., consequently real),
-    #     so no need to split `tₐᵦ_basis_tr` via `split_complex`
+        tₐᵦ_basis_reim = zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix)
+        tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
+    end
+    isempty(tₐᵦ_basis_reim_matrix) && return Mm, Vector{Vector{Float64}}()
 
-    tₐᵦ_basis_tr_matrix = reduce(hcat, tₐᵦ_basis_tr)
-    tₐᵦ_basis = zassenhaus_intersection(tₐᵦ_basis_split_matrix, tₐᵦ_basis_tr_matrix)
+    # ------------------------------------------------------------------------------------ #
+    # Make sure we have a reasonably pretty-looking basis in the end by sparsifying &
+    # dropping near-zero elements explicitly
 
-    return Mm_tr, tₐᵦ_basis
+    # convert null-space to a sparse column form
+    tₐᵦ_basis_reim_matrix_form′ = _poormans_sparsification(tₐᵦ_basis_reim_matrix)
+    tₐᵦ_basis_reim = [collect(v) for v in eachcol(tₐᵦ_basis_reim_matrix_form′)]
+
+    # prune near-zero elements of basis vectors
+    _prune_at_threshold!(tₐᵦ_basis_reim)
+
+    return return Mm, tₐᵦ_basis_reim
+end
+
+
+function _aggregate_constraints(
+    Q::AbstractArray{<:Number, 4},
+    Z::AbstractArray{<:Number, 4},
+    row_atol::Real = 1e-10
+)
+    # store constraints in one big vector initially; then we reshape to a matrix after
+    constraint_vs = Vector{promote_type(eltype(Q), eltype(Z))}()
+    _aggregate_constraints!(constraint_vs, Q, Z, row_atol)
+
+    # return a C×J matrix where each row is a constraint, across C constraints
+    J = size(Q, 2) # number of elements per constraint
+    return _reshape_aggregate_constraints(constraint_vs, J)
+end
+
+function _aggregate_constraints(
+    # same as `_aggregate_constraints(Q, V)` but for a vector of Qs and Zs
+    Qs::AbstractVector{<:AbstractArray{<:Number, 4}},
+    Zs::AbstractVector{<:AbstractArray{<:Number, 4}},
+    row_atol::Real = 1e-10
+)
+    constraint_vs = Vector{promote_type(eltype(eltype(Qs)), eltype(eltype(Zs)))}()
+    for (Q, Z) in zip(Qs, Zs)
+        _aggregate_constraints!(constraint_vs, Q, Z, row_atol)
+    end
+    J = size(first(Qs), 2)
+    return _reshape_aggregate_constraints(constraint_vs, J)
+end
+
+function _aggregate_constraints!( # modifies `constraint_vs` in place
+    constraint_vs::Vector{<:Number},
+    Q::AbstractArray{<:Number, 4},
+    Z::AbstractArray{<:Number, 4},
+    row_atol::Real = 1e-10
+)
+    # store constraints in one big vector initially; then we reshape to a matrix after
+    c = Vector{eltype(constraint_vs)}(undef, size(Q, 2))
+    for i in axes(Q, 1), s in axes(Q, 3), t in axes(Q, 4)
+        q = @view Q[i, :, s, t]
+        z = @view Z[i, :, s, t]
+        c .= q .- z
+        norm(c) > row_atol || continue # don't add empty or near-empty constraints
+        append!(constraint_vs, c) # add the constraint to the list
+    end
+        
+    return constraint_vs
+end
+
+function _reshape_aggregate_constraints(
+    constraint_vs :: Vector{<:Number}, # vector of inline-concatenated constraints
+    J :: Int # number of elements per constraint: ≡ size(Mm,2) = size(Q,2) = size(Z,2)
+) 
+    C = length(constraint_vs) ÷ J # number of constraints
+    return permutedims(reshape(constraint_vs, J, C))
 end
 
 """
@@ -523,11 +588,12 @@ function reciprocal_constraints_matrices(
 ) where {D}
     Zs = Vector{Array{Int,4}}(undef, length(gens))
     for (i, op) in enumerate(gens)
-        Z = zeros(Int, size(Mm))
-        P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
-        for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
-            Z[l, j, s, t] = sum(P[i, l] * Mm[i, j, s, t] for i in axes(P, 1))
-            # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
+        Z = similar(Mm)
+        Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op))
+        for s in axes(Mm, 3)
+            for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
+                Z[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
+            end
         end
         Zs[i] = Z
     end
@@ -641,6 +707,7 @@ function tb_hamiltonian(
     cbr::CompositeBandRep{D},
     Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings
     timereversal::Bool=true,
+    antihermitian::Bool=false
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("provided composite bandrep is not Wannierizable: contains negative or non-integer coefficients")
@@ -660,71 +727,32 @@ function tb_hamiltonian(
     # find all families of hoppings between involved band representations
     # the TB model will be divided into each of these representatives since they will be 
     # symmetry independent
-    orbit_representatives = RVec{D}[]
-    for br1 in brs
-        for br2 in brs
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
-            # TODO: maybe store them since we are going to use them again bellow
-            for δ in Iterators.map(representative, h_orbits)
-                if !isapproxin(δ, orbit_representatives, nothing, false)
-                    push!(orbit_representatives, δ)
-                end
-            end
-        end
-    end
-
-    # one determined the family of hopping terms closed by symmetry operations, we can build
-    # the TB Hamiltonian block by block according to the bans representations in `brs`
-    Norbs = count_bandrep_orbitals.(brs)
-    tbs = [BlockMatrix{TightBindingElementString,Matrix{TightBindingBlock{D}}}(
-        undef_blocks, Norbs, Norbs) for _ in orbit_representatives]
-    c_idx_start = 1
+    hermiticity = antihermitian ? ANTIHERMITIAN : HERMITIAN
+    axis = BlockArrays.BlockedOneTo(cumsum((count_bandrep_orbitals(br) for br in brs)))
+    tbsv = Vector{Vector{TightBindingMatrix{D}}}()
     for (block_i, br1) in enumerate(brs)
-        # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
-        #       (br1 vs br2 ~ br2 vs. br1)?
-        for (block_j, br2) in enumerate(brs)
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+        for block_j in block_i:length(brs) # only over upper triangular part, cf. hermicity
+            br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
-            seen_n = Set{Int}()
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2, timereversal)
             for h_orbit in h_orbits
-                δ = representative(h_orbit)
-                n = something(findfirst(δ′ -> isapprox(δ, δ′, nothing, false),
-                    orbit_representatives)) # check where this δ is in the list of representatives
-                                            # for include it in the right TB model
-                push!(seen_n, n)
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
-                                    h_orbit, br1, br2, ordering1, ordering2; timereversal)
-
-                A = TightBindingBlock{D}(
-                    (block_i, block_j),
-                    (Norbs[block_i], Norbs[block_j]),
-                    br1,
-                    br2,
-                    ordering1,
-                    ordering2,
-                    Mm,
-                    t_αβ_basis,
-                    h_orbit,
-                    c_idx_start:c_idx_start+length(t_αβ_basis))
-                tbs[n][Block(block_i), Block(block_j)] = A
-                c_idx_start += length(t_αβ_basis)
-            end
-            # blocks for other values of `n` are not featured in `h_orbits` - i.e., vanish,
-            # so we manually construct zero blocks for those spots:
-            for n in eachindex(orbit_representatives)
-                n ∈ seen_n && continue
-                tbs[n][Block(block_i), Block(block_j)] = TightBindingBlock{D}(
-                    (block_i, block_j), (Norbs[block_i], Norbs[block_j]), br1, br2,
-                    ordering1, ordering2,
-                    zeros(Int, 0, 0, length(ordering1), length(ordering2)), # Mm
-                    Vector{Vector{ComplexF64}}(),                           # t_αβ_basis
-                    nothing,                                                # h_orbit
-                    1:0)                                                    # c_idxs (empty)
+                    h_orbit, br1, br2, ordering1, ordering2;
+                    timereversal, diagonal_block=block_i==block_j, antihermitian)
+                tbs = Vector{TightBindingMatrix{D}}(undef, length(t_αβ_basis))
+                for (n, t) in enumerate(t_αβ_basis)
+                    block = TightBindingBlock{D}(
+                        br1, br2, ordering1, ordering2, h_orbit, Mm, t)
+                    h = TightBindingMatrix{D}(axis, (block_i, block_j), block, hermiticity)
+                    tbs[n] = h
+                end
+                isempty(tbs) || push!(tbsv, tbs)
             end
         end
     end
-    return tbs
+
+    return tbsv
 end
 
 """

@@ -1,6 +1,16 @@
 using Crystalline: translation
 
 """
+    inversion(::Val{D}) --> SymOperation{D}
+
+Return the inversion operation in dimension `D`.
+"""
+inversion(::Val{3}) = S"-x,-y,-z"
+inversion(::Val{2}) = S"-x,-y"
+inversion(::Val{1}) = S"-x"
+inversion(::Val) = error("unsupported dimension")
+
+"""
     obtain_symmetry_vectors(ms::PyObject, sgnum::Int) --> Tuple{Vector{SymmetryVector{D}}, Vector{TopologyKind}}
 
 Obtains directly the symmetry vector for the bands computed in the MPB model `ms` for the space
@@ -233,7 +243,9 @@ In particular, let ``α = αᴿ + iαᴵ`` and ``t = tᴿ + itᴵ`` with `αᴿ,
 ``tᴿ, tᴵ ∈ ℝⁿ``, then ``αt`` can be rewritten as
 
 ```math
-αt = (αᴿ + iαᴵ)(tᴿ + itᴵ) = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)
+αt = (αᴿ + iαᴵ)(tᴿ + itᴵ)
+   = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)
+   = [tᴿ, tᴵ]ᵀ [αᴿ, αᴵ] + i [tᴵ, tᴿ]ᵀ [αᴿ, αᴵ]
 ```
 
 Then, defining `T = [tᴿ -tᴵ; tᴵ tᴿ]`, the above product can then be reexpressed as:
@@ -243,7 +255,7 @@ I.e., the "upper half" of the product `T * [real(α), imag(α)]` is `real(α * t
 "lower half" is `imag(αt)`.
 
 This functionality is used to avoid complex numbers in amplitude basis coefficients, which
-simplifies the application of time-reversal symmetry and hermicity.
+simplifies the application of time-reversal symmetry and hermiticity.
 
 ## Examples
 
@@ -281,7 +293,7 @@ julia> TETB.split_complex(t)
  1   0
 ```
 """
-function split_complex(t::Vector{<:Number})
+function split_complex(t::AbstractVector{<:Number})
     re_t, im_t = reim(t)
     return [re_t -im_t; im_t re_t] # == [real(t) real(im * t); imag(t) imag(im * t)]
 end
