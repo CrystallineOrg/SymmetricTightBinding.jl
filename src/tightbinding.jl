@@ -2,7 +2,8 @@
     obtain_symmetry_related_hoppings(
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
-        brᵦ::NewBandRep{D}
+        brᵦ::NewBandRep{D},
+        timereversal::Bool = brₐ.timereversal
         ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
         --> Vector{HoppingOrbit{D}}
 
@@ -20,18 +21,22 @@
         representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
         If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
         to its list of hoppings.
-3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
-    and repeat step 2.
-4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
+    3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
+        and repeat step 2.
+    4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
+
+    Additionally, if we have time-reversal symmetry, we merge orbits that are relate
+    `δ` and `-δ`.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D}
+    brᵦ::NewBandRep{D},
+    timereversal::Bool = brₐ.timereversal
 ) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
-
     sgnum = num(brₐ)
     num(brᵦ) == sgnum || error("both band representations must be in the same space group")
+    brₐ.timereversal == brᵦ.timereversal || error("both band representations must have the same time-reversal symmetry")
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
@@ -63,14 +68,13 @@ function obtain_symmetry_related_hoppings(
         end
     end
 
-    # we now make sure that for every hopping `qₐ + δ → qᵦ + R` we also have the reverse
-    # hopping qᵦ + (-δ) → qₐ + (-R): we need this in order enforce hermicity/anti-hermicity
-    # - otherwise the Hamiltonian term is not closed under complex conjugation; similarly,
-    # we need it for enforcing time-reversal symmetry.
-    # We add the reverse hops _here_, rather than above, in order to still distinguish
-    # between orbits where δ and -δ wouldn't have naturally belonged to the same `h_orbit`,
-    # because δ and -δ would have involved different Wyckoff positions (not merely reversed)
-    maybe_add_reverse_hoppings!(h_orbits)
+    # timereversal could link orbits that spatial symmetries alone would categorize as
+    # distinct; in particular, if we have timereversal, a hopping vector `δ` must
+    # have a counterpart `-δ` - but those two vectors could have fallen into distinct
+    # hopping orbits at this point; if so, we must merge them
+    if timereversal
+        merge_timereversal_related_orbits(h_orbits)
+    end
 
     return h_orbits
 end
@@ -147,42 +151,63 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
     return δ_orbit
 end
 
-function maybe_add_reverse_hoppings!(h_orbits)
-    for h_orbit in h_orbits
-        I = length(h_orbit.orbit) # the length may change below, so fix it beforehand
-        for i in 1:I
-            hopsᵢ = h_orbit.hoppings[i]
-            δᵢ = h_orbit.orbit[i]
-            rev_δᵢ = -δᵢ # reverse the hopping vector
-            rev_i = findfirst(δ -> isapprox(δ, rev_δᵢ, nothing, false), orbit(h_orbit))
-            if isnothing(rev_i)
-                # the reverse δ is not already in the orbit: add it and its hopping terms
-                push!(h_orbit.orbit, rev_δᵢ)
-                rev_hops = similar(hopsᵢ)
-                for (j, hop) in enumerate(hopsᵢ)
-                    qₐ, qᵦ, R = hop
-                    rev_hops[j] = (qᵦ, qₐ, -R)
-                end
-                push!(h_orbit.hoppings, rev_hops)
+function merge_timereversal_related_orbits(h_orbits :: Vector{<:HoppingOrbit})
+    # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
+    # hopping vector `-δ` is also in the orbit; if not, we go looking for it in another
+    # orbit - once we find it, we merge those two orbits
 
-            else
-                # the reversed δ is already in orbit: we still want to make sure that each
-                # of the reversed hoppings `qᵦ + (-δ) → qₐ + (-R)` are also there though
-                for hop in hopsᵢ
-                    qₐ, qᵦ, R = hop
-                    qₐ, qᵦ, R = qᵦ, qₐ, -R # reverse the hopping term
-                    # check if the reversed hopping is already in the list of hoppings
-                    rev_hopsᵢ = h_orbit.hoppings[something(rev_i)]
-                    bool = any(rev_hopsᵢ) do (qₐ′, qᵦ′, R′)
-                        (   isapprox(qₐ′, qₐ, nothing, false)
-                         && isapprox(qᵦ′, qᵦ, nothing, false)
-                         && isapprox(R′,  R,  nothing, false))
-                    end # `true` if already in the list of hoppings
-                    bool || push!(rev_hopsᵢ, (qₐ, qᵦ, R))
+    # below, we assume that "complete" merging can be achieved between just two orbits:
+    # that's not obviously the case, but seems likely - if counterexamples arise, we error
+
+    # identify which `h_orbit`s should be merged, and with which partners
+    merge_list = Vector{Tuple{Int, Int}}()
+    for (n, h_orbit) in enumerate(h_orbits)
+        δs = orbit(h_orbit)
+        if all(δ -> isapproxin(-δ, δs, nothing, false), δs)
+            # all δs have a -δ counterpart in the orbit: orbit is good as-is
+            continue
+        end
+        # there's at least some δ that doesn't have a -δ counterpart: we pick any such
+        # example and go looking for a counterpart in another orbit
+        idx_δ = something(findfirst(δ′ -> !isapproxin(-δ′, δs, nothing, false), δs))
+        δ = δs[idx_δ]
+        rev_δ = -δ
+        for n′ in n+1:length(h_orbits)
+            any(p -> p[2]==n′, merge_list) && continue # already merged
+            h_orbit′ = h_orbits[n′]
+            δs′ = orbit(h_orbit′)
+            found_partner = false
+            if isapproxin(rev_δ, δs′, nothing, false)
+                # we found a match: add the index of the orbit to the merge list
+                push!(merge_list, (n, n′))
+                merged_δs = vcat(δs, δs′)
+                if any(δ′ -> !isapproxin(-δ′, merged_δs, nothing, false), merged_δs)
+                    error("failed to combine δ to -δ orbits in single merger: unhandled case")
                 end
+                found_partner = true
+                break
             end
+            found_partner || error(lazy"failed to find a -δ partner for orbit #$n")
         end
     end
+
+    # do the actual merging
+    for (n, n′) in merge_list
+        # we have to merge the two orbits: we take the first one and add the second
+        # one to it, and then remove the second one from the list of hopping orbits
+        h_orbit = h_orbits[n]
+        h_orbit′ = h_orbits[n′]
+        append!(orbit(h_orbit), orbit(h_orbit′))
+        append!(h_orbit.hoppings, h_orbit′.hoppings)
+    end
+
+    # delete the "old" orbits
+    if !isempty(merge_list)
+        delete_ns = getindex.(merge_list, 2)
+        deleteat!(h_orbits, delete_ns)
+    end
+
+    return h_orbits
 end
 
 # ---------------------------------------------------------------------------- #
@@ -295,8 +320,7 @@ function construct_M_matrix(
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
 
-    # matrix of matrices that will store the matrices for each
-    # Hamiltonian's term
+    # matrix of matrices that will store the matrix-encoding for each Hamiltonian element
     Mm = zeros(Int, V, V * E * Q, length(ordering1), length(ordering2))
 
     # fill in the unit-elements of `Mm`
@@ -310,7 +334,8 @@ function construct_M_matrix(
         for (r, hops) in enumerate(h_orbit.hoppings)
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(hops)
-                if isapprox(hop[1], q, nothing, false) && isapprox(hop[2], w, nothing, false)
+                q′, w′ = hop[1], hop[2]
+                if isapprox(q′, q, nothing, false) && isapprox(w′, w, nothing, false)
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
