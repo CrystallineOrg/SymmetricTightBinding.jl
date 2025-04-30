@@ -228,6 +228,22 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
+"""
+  TightBindingModel{D}
+
+A structure storing a list of `TightBindingTerm{D}`s. Each term is assumed to associated
+with an identical list of EBRs.
+
+To associate a set of coefficients to each term, see
+[`ParameterizedTightBindingModel`](@ref), which also allows evaluation at specific momenta.
+
+## Fields
+
+- `terms :: Vector{TightBindingTerm{D}}`: a vector of `TightBindingTerm{D}`s, each of which
+  represents a block (or conjugated pairs of blocks) of the Hamiltonian matrix.
+- `N :: Int`: the total number of orbitals in the model, i.e., the size of the Hamiltonian
+  matrix associated to each element of `terms`.
+"""
 struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
   terms :: Vector{TightBindingTerm{D}}
   N :: Int # total number of orbitals, i.e., matrix size
@@ -246,6 +262,28 @@ function (tbm::TightBindingModel{D})(cs::Vector{Float64}) where D
   return ParameterizedTightBindingModel(tbm, cs)
 end
 
+"""
+  ParameterizedTightBindingModel{D}
+
+A coefficient-parameterized tight-binding model, that can be used as a functor for
+evaluation at input momenta `k`.
+
+## Fields
+
+- `tbm :: TightBindingModel{D}`: A tight-binding model, consisting of a set of a list of
+  `TightBindingTerm{D}`s.
+- `cs :: Vector{Float64}`: A vector of coefficients, each associated to a corresponding
+  element of `tbm`.
+- `scratch :: Matrix{ComplexF64}`: A scratch space for evaluating the Hamiltonian matrix at
+  at specific momenta. This is a `N×N` matrix, where `N` is the number of orbitals in `tbm`
+  (i.e., `tbm.N`). The scratch space is instantiated automatically on construction.
+
+## Functor over momenta
+
+A `ParameterizedTightBindingModel` `ptbm` can be be evaluated at any ´D`-dimensional
+momentum `k` by using `ptbm` as a functor. That is, `ptbm(k)` returns a numerical
+representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.`
+"""
 struct ParameterizedTightBindingModel{D}
   tbm :: TightBindingModel{D}
   cs :: Vector{Float64} # coefficients of the tight-binding model
@@ -286,6 +324,6 @@ function (ptbm::ParameterizedTightBindingModel{D})(
       end
     end
   end
-  
+
   return H
 end
