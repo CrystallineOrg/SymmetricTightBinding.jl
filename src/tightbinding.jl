@@ -31,8 +31,8 @@
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
-    timereversal::Bool=brₐ.timereversal
+    brᵦ::NewBandRep{D};
+    timereversal::Bool=true
 ) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum || error("both band representations must be in the same space group")
@@ -438,7 +438,14 @@ function obtain_basis_free_parameters(
             append!(constraint_vs, filtered_rows)
         end
     end
-    constraints = stack(constraint_vs, dims=1)
+    # maybe we filtered everything since no constraint was found, then we need to pass to 
+    # nullspace a matrix of zeros which the appropriate size
+    if isempty(constraint_vs)
+        # no constraints found for the hopping terms
+        constraints = zeros(ComplexF64, 0, size(Mm, 2))
+    else
+        constraints = stack(constraint_vs, dims=1)
+    end
     tₐᵦ_basis_matrix_form = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
 
     # convert null-space to a sparse column form
@@ -659,7 +666,7 @@ function tb_hamiltonian(
     orbit_representatives = RVec{D}[]
     for br1 in brs
         for br2 in brs
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2; timereversal)
             # TODO: maybe store them since we are going to use them again bellow
             for δ in Iterators.map(representative, h_orbits)
                 if !isapproxin(δ, orbit_representatives, nothing, false)
@@ -679,7 +686,7 @@ function tb_hamiltonian(
         # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2; timereversal)
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
             seen_n = Set{Int}()
