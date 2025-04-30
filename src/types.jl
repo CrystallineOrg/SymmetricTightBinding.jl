@@ -242,5 +242,46 @@ function TightBindingModel(terms::Vector{TightBindingTerm{D}}) where D
   N = last(first(terms).axis)
   return TightBindingModel{D}(terms, N)
 end
-(tbm::TightBindingModel{D})(cs::Vector{Float64}) where D = ParameterizedTightBindingModel{D}(tbm, cs)
+function (tbm::TightBindingModel{D})(cs::Vector{Float64}) where D
+  return ParameterizedTightBindingModel(tbm, cs)
+end
 
+struct ParameterizedTightBindingModel{D}
+  tbm :: TightBindingModel{D}
+  cs :: Vector{Float64} # coefficients of the tight-binding model
+  scratch :: Matrix{ComplexF64} # scratch space for evaluation
+end
+
+function ParameterizedTightBindingModel(tbm::TightBindingModel{D}, cs::Vector{Float64}) where D
+  ParameterizedTightBindingModel{D}(tbm, cs, Matrix{ComplexF64}(undef, tbm.N, tbm.N))
+end
+
+function (ptbm::ParameterizedTightBindingModel{D})(
+  k :: Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}}
+) where {D}
+  tbm = ptbm.tbm
+  H = ptbm.scratch # grab & reset scratch space for evaluating Hamiltonian matrix
+  fill!(H, 0.0)
+
+  # evaluate each block of the `Hamiltonian` terms, multiply by coefficients, & store in `H`
+  for (tbt, c) in zip(tbm.terms, ptbm.cs)
+    block = tbt.block
+    block_i, block_j = tbt.block_ij
+    is = tbt.axis[Block(block_i)] # global row indices
+    js = tbt.axis[Block(block_j)] # global col indices
+    t = block.t
+    Nᵗ = length(t)÷2
+    tℂ = ComplexF64.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end])) # complex coefficient vector
+    Mm = block.Mm
+    v = cispi.(2 * dot.(Ref(k), constant.(orbit(block.h_orbit)))) # NB: one more case of assuming no free parameters in `δ`
+    for (local_i, i) in enumerate(is)
+      for (local_j, j) in enumerate(js)
+        Hᵢⱼ = c * transpose(v) * (@view Mm[:, :, local_i, local_j]) * tℂ
+        H[i, j] += Hᵢⱼ
+        H[j, i] += tbt.hermiticity == ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
+      end
+    end
+  end
+  
+  return H
+end
