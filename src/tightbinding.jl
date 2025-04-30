@@ -73,7 +73,7 @@ function obtain_symmetry_related_hoppings(
     # have a counterpart `-δ` - but those two vectors could have fallen into distinct
     # hopping orbits or are not present. We need to take care of those situations.
     if timereversal
-        h_orbits = add_timereversal_related_orbits(h_orbits)
+        add_timereversal_related_orbits!(h_orbits)
     end
 
     return h_orbits
@@ -151,7 +151,7 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
     return δ_orbit
 end
 
-function add_timereversal_related_orbits(h_orbits::Vector{<:HoppingOrbit{D}}) where {D}
+function add_timereversal_related_orbits!(h_orbits::Vector{<:HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
     # hopping vector `-δ` is also in the orbit; if not, we check it is not in any other
     # orbit, and add it manually to the orbit; if it is we error
@@ -204,8 +204,6 @@ function add_timereversal_related_orbits(h_orbits::Vector{<:HoppingOrbit{D}}) wh
         end
         append!(hops_orbit, hops_orbit′)
     end
-
-    return h_orbits
 end
 
 # ---------------------------------------------------------------------------- #
