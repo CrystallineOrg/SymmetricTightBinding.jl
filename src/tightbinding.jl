@@ -31,8 +31,8 @@
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
-    timereversal::Bool = brₐ.timereversal
+    brᵦ::NewBandRep{D};
+    timereversal::Bool=true
 ) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum || error("both band representations must be in the same space group")
@@ -44,7 +44,7 @@ function obtain_symmetry_related_hoppings(
     # redundant operations from the space group, and also change both the operations and the
     # positions from a conventional to a primitive basis
     cntr = centering(sgnum, D)
-    ops = primitivize(spacegroup(sgnum, Val{D}()))
+    ops = primitivize(spacegroup(sgnum, Val{D}())).operations # get the operations
     wpsₐ = primitivize.(orbit(group(brₐ)), cntr)
     wpsᵦ = primitivize.(orbit(group(brᵦ)), cntr)
 
@@ -71,9 +71,9 @@ function obtain_symmetry_related_hoppings(
     # timereversal could link orbits that spatial symmetries alone would categorize as
     # distinct; in particular, if we have timereversal, a hopping vector `δ` must
     # have a counterpart `-δ` - but those two vectors could have fallen into distinct
-    # hopping orbits at this point; if so, we must merge them
+    # hopping orbits or are not present. We need to take care of those situations.
     if timereversal
-        merge_timereversal_related_orbits(h_orbits)
+        add_timereversal_related_orbits!(h_orbits)
     end
 
     return h_orbits
@@ -151,63 +151,59 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
     return δ_orbit
 end
 
-function merge_timereversal_related_orbits(h_orbits :: Vector{<:HoppingOrbit})
+function add_timereversal_related_orbits!(h_orbits::Vector{<:HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
-    # hopping vector `-δ` is also in the orbit; if not, we go looking for it in another
-    # orbit - once we find it, we merge those two orbits
+    # hopping vector `-δ` is also in the orbit; if not, we check it is not in any other
+    # orbit, and add it manually to the orbit; if it is we error
 
-    # below, we assume that "complete" merging can be achieved between just two orbits:
-    # that's not obviously the case, but seems likely - if counterexamples arise, we error
+    # below, we assume that if for some δ no counterpart is found, then no other δ in the
+    # orbit has a counterpart in another orbit, so we can just add it
 
-    # identify which `h_orbit`s should be merged, and with which partners
-    merge_list = Vector{Tuple{Int, Int}}()
+    # identify if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
-        δs = orbit(h_orbit)
+        δss = vcat(orbit.(h_orbits)...) # all δs in all orbits
+        δs = orbit(h_orbit) # δs in the current orbit
+
+        # check if the orbit is already "good" (i.e., all δs have a -δ counterpart)
         if all(δ -> isapproxin(-δ, δs, nothing, false), δs)
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
+        elseif any(δ -> isapproxin(-δ, δss, nothing, false), δs)
+            # at least one δ has a -δ counterpart in another orbit - we need to merge them
+            # TODO: I will assume that if one δ has a -δ counterpart in another orbit, then all
+            # δs in the orbit have a -δ counterpart in the same orbit, so we merge them
+            idx_merge = findfirst(idx -> isapproxin(δs[1], orbit(h_orbits[idx], nothing, false)), length(h_orbits))
+
+            # merge the orbits
+            append!(orbit(h_orbit), orbit(h_orbits[idx_merge]))
+            append!(h_orbit.hoppings, h_orbits[idx_merge].hoppings)
+
+            # remove the merged orbit
+            deleteat!(h_orbits, idx_merge)
+            continue
         end
-        # there's at least some δ that doesn't have a -δ counterpart: we pick any such
-        # example and go looking for a counterpart in another orbit
-        idx_δ = something(findfirst(δ′ -> !isapproxin(-δ′, δs, nothing, false), δs))
-        δ = δs[idx_δ]
-        rev_δ = -δ
-        for n′ in n+1:length(h_orbits)
-            any(p -> p[2]==n′, merge_list) && continue # already merged
-            h_orbit′ = h_orbits[n′]
-            δs′ = orbit(h_orbit′)
-            found_partner = false
-            if isapproxin(rev_δ, δs′, nothing, false)
-                # we found a match: add the index of the orbit to the merge list
-                push!(merge_list, (n, n′))
-                merged_δs = vcat(δs, δs′)
-                if any(δ′ -> !isapproxin(-δ′, merged_δs, nothing, false), merged_δs)
-                    error("failed to combine δ to -δ orbits in single merger: unhandled case")
-                end
-                found_partner = true
-                break
+        # there's at least some δ that doesn't have a -δ counterpart. we assume that, then, 
+        # none of the δs has a -δ counterpart, so we need to add them
+        # TODO: Maybe I am assuming to much. Check if the above statement is true
+
+        # first append the new δs into the orbit
+        append!(δs, -δs)
+
+        # then we need to add the new hopping terms which will be changing: a + δ = b + R, to
+        # b - δ = a - R
+        hops_orbit = h_orbit.hoppings
+        hops_orbit′ = Vector{Tuple{RVec,RVec,RVec}}[] # TODO: maybe to many (unnecessary) allocations
+        for hops in hops_orbit
+            hops′ = Tuple{RVec,RVec,RVec}[] # new vector to store the new hopping terms
+            for (qₐ, qᵦ, R) in hops
+                # we need to add the new hopping terms to the vector. the term will be the 
+                # reversed hopping term, i.e., b - δ = a - R, which gives rise to -δ
+                push!(hops′, (qᵦ, qₐ, -R))
             end
-            found_partner || error(lazy"failed to find a -δ partner for orbit #$n")
+            push!(hops_orbit′, hops′)
         end
+        append!(hops_orbit, hops_orbit′)
     end
-
-    # do the actual merging
-    for (n, n′) in merge_list
-        # we have to merge the two orbits: we take the first one and add the second
-        # one to it, and then remove the second one from the list of hopping orbits
-        h_orbit = h_orbits[n]
-        h_orbit′ = h_orbits[n′]
-        append!(orbit(h_orbit), orbit(h_orbit′))
-        append!(h_orbit.hoppings, h_orbit′.hoppings)
-    end
-
-    # delete the "old" orbits
-    if !isempty(merge_list)
-        delete_ns = getindex.(merge_list, 2)
-        deleteat!(h_orbits, delete_ns)
-    end
-
-    return h_orbits
 end
 
 # ---------------------------------------------------------------------------- #
@@ -309,8 +305,8 @@ function construct_M_matrix(
     h_orbit::HoppingOrbit{D},
     br1::NewBandRep{D},
     br2::NewBandRep{D},
-    ordering1::OrbitalOrdering{D} = OrbitalOrdering(br1), # canonical orbital orderings for
-    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2)  # `br1` & `br2`, respectively
+    ordering1::OrbitalOrdering{D}=OrbitalOrdering(br1), # canonical orbital orderings for
+    ordering2::OrbitalOrdering{D}=OrbitalOrdering(br2)  # `br1` & `br2`, respectively
 ) where {D}
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (assumed constant for all i)
@@ -365,7 +361,7 @@ give `Q[i,j,r,l]`.
 then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ
 """
 function representation_constraint_matrices(
-    Mm::AbstractArray{Int, 4},
+    Mm::AbstractArray{Int,4},
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D}
 ) where {D}
@@ -407,9 +403,9 @@ function obtain_basis_free_parameters(
     h_orbit::HoppingOrbit{D},
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
-    orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
-    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ);
-    timereversal::Bool = true
+    orderingₐ::OrbitalOrdering{D}=OrbitalOrdering(brₐ),
+    orderingᵦ::OrbitalOrdering{D}=OrbitalOrdering(brᵦ);
+    timereversal::Bool=true
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -442,7 +438,14 @@ function obtain_basis_free_parameters(
             append!(constraint_vs, filtered_rows)
         end
     end
-    constraints = stack(constraint_vs, dims=1)
+    # maybe we filtered everything since no constraint was found, then we need to pass to 
+    # nullspace a matrix of zeros which the appropriate size
+    if isempty(constraint_vs)
+        # no constraints found for the hopping terms
+        constraints = zeros(ComplexF64, 0, size(Mm, 2))
+    else
+        constraints = stack(constraint_vs, dims=1)
+    end
     tₐᵦ_basis_matrix_form = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
 
     # convert null-space to a sparse column form
@@ -663,7 +666,7 @@ function tb_hamiltonian(
     orbit_representatives = RVec{D}[]
     for br1 in brs
         for br2 in brs
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2; timereversal)
             # TODO: maybe store them since we are going to use them again bellow
             for δ in Iterators.map(representative, h_orbits)
                 if !isapproxin(δ, orbit_representatives, nothing, false)
@@ -683,7 +686,7 @@ function tb_hamiltonian(
         # TODO: maybe only need to go over upper triangular part of loop cf. hermiticity
         #       (br1 vs br2 ~ br2 vs. br1)?
         for (block_j, br2) in enumerate(brs)
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2; timereversal)
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
             seen_n = Set{Int}()
@@ -691,10 +694,10 @@ function tb_hamiltonian(
                 δ = representative(h_orbit)
                 n = something(findfirst(δ′ -> isapprox(δ, δ′, nothing, false),
                     orbit_representatives)) # check where this δ is in the list of representatives
-                                            # for include it in the right TB model
+                # for include it in the right TB model
                 push!(seen_n, n)
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
-                                    h_orbit, br1, br2, ordering1, ordering2; timereversal)
+                    h_orbit, br1, br2, ordering1, ordering2; timereversal)
 
                 A = TightBindingBlock{D}(
                     (block_i, block_j),
