@@ -116,7 +116,7 @@ Base.size(tbb :: TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
   ANTIHERMITIAN
 end
 
-struct TightBindingMatrix{D} <: AbstractBlockMatrix{TightBindingElementString}
+struct TightBindingTerm{D} <: AbstractBlockMatrix{TightBindingElementString}
   axis :: BlockedOneTo{Int, Vector{Int}}
   block_ij :: NTuple{2, Int}
   block :: TightBindingBlock{D}
@@ -124,11 +124,11 @@ struct TightBindingMatrix{D} <: AbstractBlockMatrix{TightBindingElementString}
   brs :: Vector{NewBandRep{D}}
 end
 
-Base.axes(H::TightBindingMatrix) = (H.axis, H.axis)
-Base.axes(H::TightBindingMatrix, d::Int) = d > 2 ? Base.BlockedOneTo([1,]) : d > 0 ? H.axis : error("dimensionality must be greater than 1")
-Base.size(H::TightBindingMatrix) = (N = last(H.axis); (N, N))
+Base.axes(H::TightBindingTerm) = (H.axis, H.axis)
+Base.axes(H::TightBindingTerm, d::Int) = d > 2 ? Base.BlockedOneTo([1,]) : d > 0 ? H.axis : error("dimensionality must be greater than 1")
+Base.size(H::TightBindingTerm) = (N = last(H.axis); (N, N))
 
-function Base.getindex(H::TightBindingMatrix, i::Int, j::Int)
+function Base.getindex(H::TightBindingTerm, i::Int, j::Int)
   N = size(H, 1)
   @boundscheck 1≤i≤N && 1≤j≤N || error(BoundsError(H, (i, j)))
   tmp = BlockArrays.findblockindex(H.axis, i); block_i = only(tmp.I); local_i = only(tmp.α)
@@ -208,31 +208,6 @@ end
 
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
 
-function Base.summary(io::IO, H::TightBindingMatrix{D}) where D
-  print(io, "TightBindingMatrix{", D, "} over [")
-  for (n, br) in enumerate(H.brs)
-    printstyled(io, br, color=n ∈ H.block_ij ? :blue : :light_black)
-    print(io, n == length(H.brs) ? "]" : ", ")
-  end
-end
-function Base.show(io::IO, ::MIME"text/plain", H::TightBindingMatrix{D}) where D
-  summary(io, H)
-  println(io, ":")
-  Base.print_array(io, H)
-  print(io, "\n\n (")
-  δs = H.block.h_orbit.orbit
-  for (i, δ) in enumerate(δs)
-    print(io, "δ", Crystalline.subscriptify(string(i)), "=")
-    rev_idx = findfirst(δ′ -> isapprox(-δ, δ′, nothing, false), @view δs[1:i-1])
-    if isnothing(rev_idx)
-      print(io, replace(string(δ), ", "=>","))
-    else
-      print(io, "-δ", Crystalline.subscriptify(string(something(rev_idx))))
-    end
-    i == length(δs) || print(io, ", ")
-  end
-  print(io, ")")
-end
 
 
 # pretty-printing of scalars
@@ -252,6 +227,20 @@ end
 
 
 # ---------------------------------------------------------------------------------------- #
-struct TightBindingExpansion{D} <: AbstractVector{TightBindingMatrix{D}}
-  Hs::Vector{TightBindingMatrix{D}}
+
+struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
+  terms :: Vector{TightBindingTerm{D}}
+  N :: Int # total number of orbitals, i.e., matrix size
 end
+Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
+Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
+Base.setindex!(::TightBindingModel, v, i::Int) = error("setindex! is not supported")
+Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
+
+function TightBindingModel(terms::Vector{TightBindingTerm{D}}) where D
+  length(terms) == 0 && return TightBindingModel{D}(terms, 0)
+  N = last(first(terms).axis)
+  return TightBindingModel{D}(terms, N)
+end
+(tbm::TightBindingModel{D})(cs::Vector{Float64}) where D = ParameterizedTightBindingModel{D}(tbm, cs)
+

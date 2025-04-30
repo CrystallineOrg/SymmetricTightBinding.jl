@@ -695,7 +695,7 @@ end
 
 """
     tb_hamiltonian(cbr::CompositeBandRep{D}, Rs::AbstractVector{Vector{Int}}) 
-        --> Vector{TightBindingMatrix{D}}
+        --> Vector{TightBindingTerm{D}}
 
 Construct the TB Hamiltonian matrix from a given composite band representation 
 `cbr` and a set of global translation-representatives `Rs`. The Hamiltonian is 
@@ -728,11 +728,17 @@ function tb_hamiltonian(
     # the TB model will be divided into each of these representatives since they will be 
     # symmetry independent
     hermiticity = antihermitian ? ANTIHERMITIAN : HERMITIAN
+    B = length(brs)
     axis = BlockArrays.BlockedOneTo(cumsum((count_bandrep_orbitals(br) for br in brs)))
-    tbsv = Vector{TightBindingMatrix{D}}()
-    for (block_i, br1) in enumerate(brs)
-        for block_j in block_i:length(brs) # only over upper triangular part, cf. hermicity
-            diagonal_block = (block_i==block_j)
+    tbs = Vector{TightBindingTerm{D}}()
+    for d in 0:B-1 # offset from main diagonal (at 0)
+        for block_i in 1:B-d
+            # we iterate here across diagonal blocks, going from the main diagonal and up
+            # toward the upper block-diagonals: we do this to get a more natural sorting of
+            # the terms in the model, with self-hoppings first
+            # we only go over the upper triangular part cf. hermicity/anti-hermicity
+            block_j = block_i + d
+            br1 = brs[block_i]
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
@@ -740,20 +746,18 @@ function tb_hamiltonian(
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit, br1, br2, ordering1, ordering2;
-                    timereversal, diagonal_block, antihermitian)
-                tbs = Vector{TightBindingMatrix{D}}(undef, length(t_αβ_basis))
-                for (n, t) in enumerate(t_αβ_basis)
+                    timereversal, diagonal_block = d==0, antihermitian)
+                for t in t_αβ_basis
                     block = TightBindingBlock{D}(
                         br1, br2, ordering1, ordering2, h_orbit, Mm, t)
-                    h = TightBindingMatrix{D}(axis, (block_i, block_j), block, hermiticity, brs)
-                    tbs[n] = h
+                    h = TightBindingTerm{D}(axis, (block_i, block_j), block, hermiticity, brs)
+                    push!(tbs, h)
                 end
-                isempty(tbs) || append!(tbsv, tbs)
             end
         end
     end
 
-    return tbsv
+    return TightBindingModel(tbs)
 end
 
 """
