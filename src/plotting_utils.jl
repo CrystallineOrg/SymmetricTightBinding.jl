@@ -14,7 +14,7 @@ function hop_plot(hop::HoppingOrbit{D}) where {D}
     ax = if D == 3
         Axis3(f[1, 1]; aspect=:data, perspectiveness=0.2)
     else
-        Axis(f[1, 1]; aspect=:data)
+        Axis(f[1, 1]; aspect=1)
     end
     hidespines!(ax)
     hidedecorations!(ax)
