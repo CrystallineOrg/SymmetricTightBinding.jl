@@ -56,9 +56,8 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {
     mult = length(wps)
     g = op
 
-    ρ = BlockArray{ComplexF64}(zeros(ComplexF64, siteir_dim * mult, siteir_dim * mult),
-        fill(siteir_dim, mult), fill(siteir_dim, mult))
-
+    block_axis = BlockedOneTo(collect(siteir_dim:siteir_dim:mult*siteir_dim))
+    ρ = zeros(ComplexF64, block_axis, block_axis) # `BlockedMatrix` backed by a `Matrix`
     for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
         check = false
         for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
@@ -107,18 +106,14 @@ end
 #     the group action on eigenstates, e.g., for determining the irreps of a tight-binding
 #     Hamiltonian
 """
-    sgrep_induced_by_siteir_generators(
-        br::NewBandRep{D},
-        gens::AbstractVector{SymOperation{D}})
-    --> Tuple{Vector{SymOperation{D}}, Vector{Matrix{ComplexF64}}}
+    sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
+    --> Tuple{Vector{SymOperation{D}}, Vector{BlockMatrix{ComplexF64}}}
 
 Induce a representation for the generators of the SG from a representation of the site-symmetry 
 group of a particular maximal WP.
 """
-function sgrep_induced_by_siteir_generators(
-    br::NewBandRep{D},
-    gens::AbstractVector{SymOperation{D}}=generators(num(br), SpaceGroup{D}),
-) where {D}
+function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
+    gens = generators(num(br), SpaceGroup{D})
     return gens, sgrep_induced_by_siteir.(Ref(br), gens)
 end
 
@@ -132,8 +127,8 @@ end
 
 function sgrep_induced_by_siteir_generators(
     cbr::CompositeBandRep{D},
-    gens::AbstractVector{SymOperation{D}}=generators(num(cbr), SpaceGroup{D}),
 ) where {D}
-    # TODO: primitivize the generators of the space group
+# TODO: primitivize the generators of the space group
+    gens = generators(num(cbr), SpaceGroup{D})
     return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
 end
