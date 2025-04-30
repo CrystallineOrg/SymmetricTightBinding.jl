@@ -3,24 +3,18 @@ Pkg.activate(@__DIR__)
 
 using Crystalline, TETB
 
-sgnum = 13
-brs = calc_bandreps(sgnum, Val(2))
-coefs = [1, 1, 0, 0, 0, 1]
+# This example shows a non-inversion symmetric case with 2D complex site-symmetry representations
+pgnum, D = 13, 2
+brs = calc_bandreps(pgnum, Val(D))
+coefs = zeros(length(brs))
+coefs[[1, 3]] .= 1
 cbr = CompositeBandRep(coefs, brs)
 
-## debug for the BUG #1
+br₁ = brs[1]
+br₂ = brs[3]
 
-br1 = brs[1]
-br2 = brs[2]
-br3 = brs[6]
-
-## because the problem can be seen in block [1,1], I will study here the term involving 
-## br1 → br1.
+# I will study here the term involving br₁ → br₂, which will be a non-diagonal term
 
 Rs = [[0, 0]]
 
-δss = TETB.obtain_symmetry_related_hoppings(Rs, br1, br1)
-
-println(δss[RVec([0, 0])][1])
-
-# this results in a vector v bigger than expected probably the sort of error.
+hops = obtain_symmetry_related_hoppings(Rs, br₁, br₂, true)
