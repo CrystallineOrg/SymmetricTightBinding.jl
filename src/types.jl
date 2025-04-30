@@ -259,6 +259,10 @@ end
 function (ptbm::ParameterizedTightBindingModel{D})(
   k :: Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}}
 ) where {D}
+  if length(k) ≠ D
+    error("the momentum `k` must be a $D-dimensional vector to match the model dimension")
+  end
+
   tbm = ptbm.tbm
   H = ptbm.scratch # grab & reset scratch space for evaluating Hamiltonian matrix
   fill!(H, 0.0)
