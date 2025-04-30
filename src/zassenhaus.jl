@@ -1,6 +1,6 @@
 # implementation of the Zassenhaus algorithm.
 
-using RowEchelon: rref
+using RowEchelon: rref!
 
 # my idea is to have U and W as the matrices `{aᵢⱼ}` and `{bᵢⱼ}` from the Zassenhaus algorithm
 # `U` is a matrix of `n×m` and `W` is a matrix of `k×m`.
@@ -18,7 +18,8 @@ It assumes that the basis are given by columns.
 """
 function zassenhaus_intersection(
     U::AbstractArray{T},
-    W::AbstractArray{T}
+    W::AbstractArray{T},
+    atol::Real = ZASSENHAUS_ATOL_DEFAULT
 ) where {T<:Number}
     U = transpose(U) # the algorithm assumes that the basis are given by rows
     W = transpose(W) # for me is more natural to give it by columns, so I just
@@ -28,14 +29,16 @@ function zassenhaus_intersection(
     A = [U U; W zeros(size(W, 1), size(U, 2))]
 
     # Perform row reduction (Gaussian elimination)
-    R = rref(A)
+    R = rref!(A, atol)
 
     inter_basis = Vector{Vector{T}}()
     for v in eachrow(R)
-        if all(vᵢ -> abs(vᵢ) < ZASSENHAUS_ATOL_DEFAULT, @view v[1:size(U, 2)])
+        if all(vᵢ -> abs(vᵢ) < atol, @view v[1:size(U, 2)])
             append!(inter_basis, [v[size(U, 2)+1:end]])
         end
     end
+    # @ANTONIO: Could we just take a part of `R` instead of picking out vectors here?
+    # Maybe not so easy with your addition `atol` condition?
 
     return inter_basis
 end

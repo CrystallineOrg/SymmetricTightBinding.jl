@@ -58,6 +58,8 @@ include("plotting_utils.jl")
 export hop_plot
 include("zassenhaus.jl")
 include("timereversal.jl")
+include("hermiticity.jl")
+include("show_tightbinding.jl")
 
 # ---------------------------------------------------------------------------- #
 end # module

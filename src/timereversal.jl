@@ -76,7 +76,7 @@ function obtain_basis_free_parameters_TRS(
     # part. This is done by `Hᵢⱼ(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
     # `= (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
     # `= vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [tᴿ; tᴵ]`
-    Z_trs = reciprocal_constraints_trs(Mm, h_orbit)
+    Z = reciprocal_constraints_trs(Mm, h_orbit)
     # QUESTION: in the above assume that we have ±δ in v. Is this true? why? it is ok
     #           physically and in here we will see if they are equal or not.
 
@@ -84,33 +84,14 @@ function obtain_basis_free_parameters_TRS(
     # parameter part. This is done by `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; -itᴵ]`
     # `= (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [tᴿ; tᴵ]`
     # `= vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [tᴿ; tᴵ]`
-    Q_trs = representation_constraint_trs(Mm, h_orbit)
+    Q = representation_constraint_trs(Mm, h_orbit)
 
     # Step 3: build an constraint matrix acting on the doubled hopping coefficient vector
-    # `[tᴿ; itᴵ]` associated with `h_orbit`
-    constraint_vs = Vector{Vector{Float64}}()
-    for s in axes(Q_trs, 3), t in axes(Q_trs, 4)
-        q = @view Q_trs[:, :, s, t]
-        z = @view Z_trs[:, :, s, t]
-        c = q - z
-        filtered_rows = filter(r -> norm(r) > 1e-10, eachrow(c))
-        isempty(filtered_rows) && continue # don't add empty constraints
-        append!(constraint_vs, filtered_rows)
-    end
+    # `[tᴿ; itᴵ]` associated with `h_orbit`; each row is a constraint
+    constraints = _aggregate_constraints(Q, Z)
+    tₐᵦ_basis_matrix = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
 
-    constraints = stack(constraint_vs, dims=1)
-    tₐᵦ_basis_matrix_form = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
-
-    # convert null-space to a sparse column form
-    tₐᵦ_basis_matrix_form′ = _poormans_sparsification(tₐᵦ_basis_matrix_form)
-    tₐᵦ_basis = [collect(v) for v in eachcol(tₐᵦ_basis_matrix_form′)]
-    # TODO: are this vectors real? -> I think so but let's check it for now
-    all(isreal.(tₐᵦ_basis)) || error("TRS constraint returns COMPLEX basis. Case not considered.")
-
-    # prune near-zero elements of basis vectors
-    _prune_at_threshold!(tₐᵦ_basis)
-
-    return [Mm Mm], tₐᵦ_basis
+    return tₐᵦ_basis_matrix
 end
 
 """
@@ -124,13 +105,15 @@ function reciprocal_constraints_trs(
     Mm::Array{Int,4},
     h_orbit::HoppingOrbit{D}
 ) where {D}
-    Z_trs = zeros(Int, size(Mm))
-    op = SymOperation([-I(D) zeros(D)])
-    P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
-    for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
-        Z_trs[l, j, s, t] = sum(P[i, l] * Mm[i, j, s, t] for i in axes(P, 1))
+    Z = similar(Mm)
+    opI = inversion(Val(D)) # inversion operation
+    Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
+    for s in axes(Mm, 3)
+        for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
+            Z[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
+        end
     end
-    return [Z_trs Z_trs]
+    return [Z Z] 
 end
 
 """
@@ -145,11 +128,15 @@ function representation_constraint_trs(
     Mm::AbstractArray{<:Number,4},
     h_orbit::HoppingOrbit{D},
 ) where {D}
-    Q_trs = zeros(Int, size(Mm))
-    op = SymOperation([-I(D) zeros(D)])
-    P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
-    for l in axes(P, 2), j in axes(Mm, 2), s in axes(Mm, 3), t in axes(Mm, 4)
-        Q_trs[l, j, s, t] = sum(P[i, l] * Mm[i, j, s, t] for i in axes(P, 1))
+    Q = zeros(Int, size(Mm))
+    opI = inversion(Val(D)) # inversion operation
+    # TODO: We are doing exactly the same here as in `representation_constraint_trs`: the
+    #       only difference is we return `[Q -Q]` at the end instead of `[Z Z]` (but Q = Z).
+    Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
+    for s in axes(Mm, 3)
+        for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
+            Q[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
+        end
     end
-    return [Q_trs -Q_trs]
+    return [Q -Q]
 end
