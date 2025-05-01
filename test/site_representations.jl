@@ -9,33 +9,34 @@ using Crystalline
         coefs[6] = 1
         cbr = CompositeBandRep(coefs, brs)
 
-        gens, sg_rep = sgrep_induced_by_siteir_generators(cbr)
+        gens = generators(num(cbr), SpaceGroup{D})
+        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
 
-        @test length(sg_rep) == length(gens) == 5
+        @test length(sgrep) == length(gens) == 5
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representations" begin
-            @test sg_rep[1] == Complex[
+            @test sgrep[1] == Complex[
                 -1.0+0.0im 0.0+0.0im 0.0+0.0im
                 0.0+0.0im -1.0+0.0im 0.0+0.0im
                 0.0+0.0im 0.0+0.0im 1.0+0.0im
             ]
-            @test sg_rep[2] == Complex[
+            @test sgrep[2] == Complex[
                 -1.0+0.0im 0.0+0.0im 0.0+0.0im
                 0.0+0.0im 1.0+0.0im 0.0+0.0im
                 0.0+0.0im 0.0+0.0im -1.0+0.0im
             ]
-            @test sg_rep[3] == Complex[
+            @test sgrep[3] == Complex[
                 0.0+0.0im 0.0+0.0im 1.0+0.0im
                 1.0+0.0im 0.0+0.0im 0.0+0.0im
                 0.0+0.0im 1.0+0.0im 0.0+0.0im
             ]
-            @test sg_rep[4] == Complex[
+            @test sgrep[4] == Complex[
                 0.0+0.0im 1.0+0.0im 0.0+0.0im
                 1.0+0.0im 0.0+0.0im 0.0+0.0im
                 0.0+0.0im 0.0+0.0im -1.0+0.0im
             ]
-            @test sg_rep[5] == Complex[
+            @test sgrep[5] == Complex[
                 -1.0+0.0im 0.0+0.0im 0.0+0.0im
                 0.0+0.0im -1.0+0.0im 0.0+0.0im
                 0.0+0.0im 0.0+0.0im -1.0+0.0im
@@ -50,13 +51,14 @@ using Crystalline
         coefs[[13, 19]] .= 1
         cbr = CompositeBandRep(coefs, brs)
 
-        gens, sg_rep = sgrep_induced_by_siteir_generators(cbr)
+        gens = generators(num(cbr), SpaceGroup{D})
+        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
 
-        @test length(sg_rep) == length(gens) == 5
+        @test length(sgrep) == length(gens) == 5
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representations" begin
-            @test sg_rep[1] == Complex[
+            @test sgrep[1] == Complex[
                 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im
@@ -66,7 +68,7 @@ using Crystalline
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im
             ]
-            @test sg_rep[2] == Complex[
+            @test sgrep[2] == Complex[
                 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
@@ -76,7 +78,7 @@ using Crystalline
                 0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im
             ]
-            @test sg_rep[3] == Complex[
+            @test sgrep[3] == Complex[
                 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im
@@ -86,7 +88,7 @@ using Crystalline
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im
             ]
-            @test sg_rep[4] == Complex[
+            @test sgrep[4] == Complex[
                 0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
@@ -96,7 +98,7 @@ using Crystalline
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im
                 0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im
             ]
-            @test sg_rep[5] == Complex[
+            @test sgrep[5] == Complex[
                 -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
                 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
@@ -116,13 +118,14 @@ using Crystalline
         coefs[[2, 3]] .= 1
         cbr = CompositeBandRep(coefs, brs)
 
-        gens, sg_rep = sgrep_induced_by_siteir_generators(cbr)
+        gens = generators(num(cbr), SpaceGroup{D})
+        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
 
-        @test length(gens) == length(sg_rep) == 1
+        @test length(gens) == length(sgrep) == 1
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representation" begin
-            @test sg_rep[1] == Complex[-1.0-0.0im 0+0im; 0+0im 1.0+0.0im]
+            @test sgrep[1] == Complex[-1.0-0.0im 0+0im; 0+0im 1.0+0.0im]
         end
     end
 
@@ -133,15 +136,16 @@ using Crystalline
         coefs[5] = 1
         cbr = CompositeBandRep(coefs, brs)
 
-        gens, sg_rep = sgrep_induced_by_siteir_generators(cbr)
+        gens = generators(num(cbr), SpaceGroup{D})
+        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
 
-        @test length(gens) == length(sg_rep) == 3
+        @test length(gens) == length(sgrep) == 3
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representation" begin
-            @test sg_rep[1] == Complex[1.0+0.0im 0.0+0.0im; 0.0+0.0im 1.0+0.0im]
-            @test sg_rep[2] == Complex[0.0+0.0im 1.0+0.0im; 1.0+0.0im 0.0+0.0im]
-            @test sg_rep[3] == Complex[1.0+0.0im 0.0+0.0im; 0.0+0.0im 1.0+0.0im]
+            @test sgrep[1] == Complex[1.0+0.0im 0.0+0.0im; 0.0+0.0im 1.0+0.0im]
+            @test sgrep[2] == Complex[0.0+0.0im 1.0+0.0im; 1.0+0.0im 0.0+0.0im]
+            @test sgrep[3] == Complex[1.0+0.0im 0.0+0.0im; 0.0+0.0im 1.0+0.0im]
         end
     end
 
@@ -152,19 +156,20 @@ using Crystalline
         coefs[[1, end]] .= 1
         cbr = CompositeBandRep(coefs, brs)
 
-        gens, sg_reps = sgrep_induced_by_siteir_generators(cbr)
+        gens = generators(num(cbr), SpaceGroup{D})
+        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
 
-        @test length(gens) == length(sg_reps) == 2
+        @test length(gens) == length(sgreps) == 2
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representation" begin
-            @test sg_reps[1] == Complex[
+            @test sgreps[1] == Complex[
                 1.0+0.0im 0.0+0.0im 0+0im 0+0im
                 0.0+0.0im 1.0+0.0im 0+0im 0+0im
                 0+0im 0+0im -1.0+0.0im 0.0+0.0im
                 0+0im 0+0im 0.0+0.0im -1.0+0.0im
             ]
-            @test sg_reps[2] == Complex[
+            @test sgreps[2] == Complex[
                 0.0+0.0im 1.0+0.0im 0+0im 0+0im
                 1.0+0.0im 0.0+0.0im 0+0im 0+0im
                 0+0im 0+0im 0.0+1.0im 0.0+0.0im

@@ -195,9 +195,9 @@ a_{j\beta}(\mathbf{r}-\mathbf{t}^\prime) =
 e^{-i (R\mathbf{k})\cdot\mathbf{v}} [\rho(h)]_{ji} a_{j\beta}(R\mathbf{k},\mathbf{r})
 $$
 
-This functionality is implemented under the function `sgrep_induced_by_siteir_generators`.
-Take into consideration that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is 
-ignored in `sgrep_induced_by_siteir_generators`.
+This functionality is implemented in the function `sgrep_induced_by_siteir_excl_phase`.
+Note, however, that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is ignored in
+`sgrep_induced_by_siteir_excl_phase`.
 
 ## Hamiltonian formalism with translational symmetries
 

@@ -18,7 +18,8 @@ br = brs[1]
 ops = spacegroup(num(br), dim(br))
 wps = orbit(group(br))
 
-gens, sgrep = sgrep_induced_by_siteir_generators(br)
+gens = generators(num(br), SpaceGroup{dim(br)})
+sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(br), gens)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 

@@ -388,11 +388,14 @@ function representation_constraint_matrices(
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
 ) where {D}
-    gensₐ, ρsₐₐ = sgrep_induced_by_siteir_generators(brₐ)
-    gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ)
-    @assert gensₐ == gensᵦ # check that `sgrep_induced_by_siteir_generators` are consistent
+    sgnum = num(brₐ)
+    num(brᵦ) == sgnum ||
+        error("input band representations belong to different space groups")
+    gens = generators(num(brₐ), SpaceGroup{D})
+    ρsₐₐ = sgrep_induced_by_siteir_excl_phase.(Ref(brₐ), gens)
+    ρsᵦᵦ = sgrep_induced_by_siteir_excl_phase.(Ref(brᵦ), gens)
 
-    Qs = [similar(Mm, ComplexF64) for _ in eachindex(gensₐ)]
+    Qs = [similar(Mm, ComplexF64) for _ in eachindex(gens)]
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
         ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
         ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
