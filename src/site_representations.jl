@@ -105,58 +105,17 @@ end
 function sgrep_induced_by_siteir(
     br::Union{NewBandRep{D}, CompositeBandRep{D}},
     op::SymOperation{D},
+    positions::Vector{DirectPoint{D}} = orbital_positions(br),
 ) where D
-    positions = _positions_in_bandrep_induced_sgrep(br)
-
     ρ = sgrep_induced_by_siteir_excl_phase(br, op)
     size(ρ, 1) == length(positions) || error("incompatible dimensions of `ρ` & `positions`")
 
     return SiteInducedSGRepElement{D}(ρ, positions, op)
 end
 
-function _positions_in_bandrep_induced_sgrep(br::NewBandRep{D}) where D
-    dim = irdim(br.siteir)
-    wps = orbit(group(br.siteir))
-    positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
-    for (m, wp) in enumerate(wps)
-        iszero(free(wp)) ||
-            error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
-        r = DirectPoint{D}(constant(wp))
-        for j in ((m-1)*dim+1):(m*dim)
-            positions[j] = r
-        end
-    end
-    return positions
-end
-
-function _positions_in_bandrep_induced_sgrep(cbr::CompositeBandRep{D}) where D
-    N = occupation(cbr)
-    positions = Vector{DirectPoint{D}}(undef, N)
-    j = 0
-    for (i, cᵢ) in enumerate(cbr.coefs)
-        iszero(cᵢ) && continue
-        br = cbr.brs[i]
-
-        dim = irdim(br.siteir)
-        wps = orbit(group(br.siteir))
-        Nᵢ = length(wps) * dim
-        for (m, wp) in enumerate(wps)
-            iszero(free(wp)) ||
-                error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
-            r = DirectPoint{D}(constant(wp))
-            for j′ in ((m-1)*dim+1):(m*dim)
-                positions[j+j′] = r
-            end
-        end
-        j += Nᵢ
-
-        # if cᵢ > 1, we add the just-added positions `cᵢ-1` times more
-        for _ in 1:(Int(cᵢ)-1)
-            @views positions[j+1:j+Nᵢ] .= positions[j-Nᵢ+1:j]
-            j += Nᵢ
-        end
-    end
-    j == N || error("inconsistent size calculation of `positions` vector")
-
-    return positions
+function sgrep_induced_by_siteir(
+    tbm::Union{TightBindingModel{D}, ParameterizedTightBindingModel{D}},
+    op::SymOperation{D},
+) where D
+    return sgrep_induced_by_siteir(CompositeBandRep(tbm), op, orbital_positions(tbm))
 end

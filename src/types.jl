@@ -258,26 +258,33 @@ To associate a set of coefficients to each term, see
 
 - `terms :: Vector{TightBindingTerm{D}}`: a vector of `TightBindingTerm{D}`s, each of which
   represents a block (or conjugated pairs of blocks) of the Hamiltonian matrix.
+- `cbr :: CompositeBandRep{D}`: the composite band representation associated to the model.
+- `positions :: Vector{DirectPoint{D}}`: a vector of positions, specified in the lattice
+  basis, associated to each orbital of the model.
 - `N :: Int`: the total number of orbitals in the model, i.e., the size of the Hamiltonian
   matrix associated to each element of `terms`.
 """
 struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
     terms::Vector{TightBindingTerm{D}}
     cbr::CompositeBandRep{D} # band representation associated to the model
+    positions::Vector{DirectPoint{D}} # positions associated to each orbital
     N::Int # total number of orbitals, i.e., matrix size
 end
 Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
 Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
 Base.setindex!(::TightBindingModel, v, i::Int) = error("setindex! is not supported")
 Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
+orbital_positions(tbm::TightBindingModel) = tbm.positions
+Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
 
 function TightBindingModel(
     terms::Vector{TightBindingTerm{D}},
     cbr::CompositeBandRep{D},
 ) where {D}
     length(terms) == 0 && return TightBindingModel{D}(terms, 0)
+    positions = orbital_positions(cbr)
     N = last(first(terms).axis)
-    return TightBindingModel{D}(terms, cbr, N)
+    return TightBindingModel{D}(terms, cbr, positions, N)
 end
 function (tbm::TightBindingModel{D})(cs::Vector{Float64}) where {D}
     return ParameterizedTightBindingModel(tbm, cs)
@@ -310,6 +317,8 @@ struct ParameterizedTightBindingModel{D}
     cs::Vector{Float64} # coefficients of the tight-binding model
     scratch::Matrix{ComplexF64} # scratch space for evaluation
 end
+orbital_positions(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.positions
+Crystalline.CompositeBandRep(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.cbr
 
 function ParameterizedTightBindingModel(
     tbm::TightBindingModel{D},
@@ -351,4 +360,26 @@ function (ptbm::ParameterizedTightBindingModel{D})(
     end
 
     return H
+end
+
+function solve(
+    ptbm::ParameterizedTightBindingModel{D},
+    k::Union{KVec{D}, AbstractVector{<:Real}};
+    bloch_phase::Union{Val{true}, Val{false}} = Val(true),
+    eigen_kws...,
+) where D
+    length(k) == D || error("dimension mismatch")
+    if ptbm.tbm.terms[1].hermiticity == ANTIHERMITIAN
+        error("ANTIHERMITIAN model solve not implemented") # TODO: cf. `Hermitian` use below
+    end
+
+    es, vs = eigen(Hermitian(ptbm(k)), eigen_kws...)
+    if bloch_phase === Val(true)
+        _k = k isa KVec ? constant(k) : k
+        phases = cispi.(2 .* dot.(Ref(_k), orbital_positions(ptbm))) # e^{ik·r}
+        vs = Diagonal(phases) * vs # add Bloch phases
+        return es, vs
+    else
+        return es, vs
+    end
 end

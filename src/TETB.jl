@@ -40,17 +40,20 @@ export mp, mpb
 include("types.jl")
 export TightBindingCandidateSet
 export HoppingOrbit
-export TightBindingElementString, TightBindingBlock
+export TightBindingElementString
+export TightBindingBlock
+export TightBindingModel
+export ParameterizedTightBindingModel
 include("conversion.jl")
 include("show.jl")
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 export find_apolar_modes
 export find_auxiliary_modes
-include("site_representations.jl")
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
-export sgrep_induced_by_siteir_excl_phase
+include("site_representations.jl")
+export sgrep_induced_by_siteir
 include("tightbinding.jl")
 export obtain_symmetry_related_hoppings
 export tb_hamiltonian
