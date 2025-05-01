@@ -50,7 +50,7 @@ export find_auxiliary_modes
 include("site_representations.jl")
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
-export sgrep_induced_by_siteir_generators
+export sgrep_induced_by_siteir_excl_phase
 include("tightbinding.jl")
 export obtain_symmetry_related_hoppings
 export tb_hamiltonian
@@ -60,6 +60,7 @@ include("zassenhaus.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
 include("show_tightbinding.jl")
+include("utils_tightbinding.jl")
 
 # ---------------------------------------------------------------------------- #
 end # module
