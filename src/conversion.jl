@@ -19,5 +19,5 @@ function bandsum2symvec(bs::BandSummary, lgirsv::Vector{Collection{LGIrrep{D}}})
     return SymmetryVector{D}(lgirsv, multsv, μ) #= occupation =#
 end
 function bandsum2symvec(bs::BandSummary, brs::Collection{<:NewBandRep})
-    return bandsum2symvec(bs, irreps(first(brs)))
+    return bandsum2symvec(bs, irreps(brs))
 end

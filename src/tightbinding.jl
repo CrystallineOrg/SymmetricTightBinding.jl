@@ -808,7 +808,7 @@ function tb_hamiltonian(
         end
     end
 
-    return TightBindingModel(tbs)
+    return TightBindingModel(tbs, cbr)
 end
 
 #=
