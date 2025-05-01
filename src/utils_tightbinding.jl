@@ -73,3 +73,59 @@ inversion(::Val{3}) = S"-x,-y,-z"
 inversion(::Val{2}) = S"-x,-y"
 inversion(::Val{1}) = S"-x"
 inversion(::Val) = error("unsupported dimension")
+
+## --------------------------------------------------------------------------------------- #
+# Extracting a list of positions associated with our convention for orbital ordering of a
+# `NewBandRep` or a `CompositeBandRep`. For a `NewBandRep`, the orbitals are arranged such
+# that the first `irdim(br.siteir)` orbitals associate to the first element of the orbit
+# of its Wyckoff positions; the next `irdim(br.siteir)` orbitals associate to the second
+# element of the orbit, and so on. For a `CompositeBandRep`, the orbitals of each
+# `NewBandRep` are concatenated, in the order of their coefficients. For coefficients
+# greater than 1, the positions are repeated `cᵢ-1` times.
+
+function orbital_positions(br::NewBandRep{D}) where D
+    dim = irdim(br.siteir)
+    wps = orbit(group(br.siteir))
+    positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
+    for (m, wp) in enumerate(wps)
+        iszero(free(wp)) ||
+            error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
+        r = DirectPoint{D}(constant(wp))
+        for j in ((m-1)*dim+1):(m*dim)
+            positions[j] = r
+        end
+    end
+    return positions
+end
+
+function orbital_positions(cbr::CompositeBandRep{D}) where D
+    N = occupation(cbr)
+    positions = Vector{DirectPoint{D}}(undef, N)
+    j = 0
+    for (i, cᵢ) in enumerate(cbr.coefs)
+        iszero(cᵢ) && continue
+        br = cbr.brs[i]
+
+        dim = irdim(br.siteir)
+        wps = orbit(group(br.siteir))
+        Nᵢ = length(wps) * dim
+        for (m, wp) in enumerate(wps)
+            iszero(free(wp)) ||
+                error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
+            r = DirectPoint{D}(constant(wp))
+            for j′ in ((m-1)*dim+1):(m*dim)
+                positions[j+j′] = r
+            end
+        end
+        j += Nᵢ
+
+        # if cᵢ > 1, we add the just-added positions `cᵢ-1` times more
+        for _ in 1:(Int(cᵢ)-1)
+            @views positions[j+1:j+Nᵢ] .= positions[j-Nᵢ+1:j]
+            j += Nᵢ
+        end
+    end
+    j == N || error("inconsistent size calculation of `positions` vector")
+
+    return positions
+end

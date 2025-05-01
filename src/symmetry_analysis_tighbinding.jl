@@ -37,35 +37,23 @@ function symmetry_analysis(
 ) where D
     tbm = ptbm.tbm
     isempty(tbm.terms) && error("`ptbm` is an empty tight-binding model")
-    cbr = tbm.cbr # CompositeBandRep
+    cbr = CompositeBandRep(tbm)
 
     lgirsv = irreps(cbr) # get irreps associated to the EBRs
     lgs = [group(first(lgirs)) for lgirs in lgirsv]
     ops = unique(Iterators.flatten(lgs))
 
     # determine the induced space group rep associated with `cbr` across all `ops`
-    sgrep_d = Dict(op => sgrep_induced_by_siteir(cbr, op) for op in ops)
+    sgrep_d = Dict(op => sgrep_induced_by_siteir(ptbm, op) for op in ops)
 
-    N = ptbm.tbm.N # number of bands in `ptbm`
+    N = tbm.N # number of bands
     symeigsd = Dict{String, Vector{Vector{ComplexF64}}}()
-    positions = _positions_in_bandrep_induced_sgrep(cbr) # for Bloch phases (NB: we already have this in elements of `sgrep_d`)
 
     # determine symmetry eigenvalues for each band in each little group
     for lg in lgs
-        k = constant(position(lg))
-        phases = cispi.(2 .* dot.(Ref(k), positions)) # e^{ik·r}
-
-        H = Hermitian(ptbm(k))
-        es, vs = eigen(H)
-        vs = Diagonal(phases) * vs # add Bloch phases
-        symeigs = [Vector{ComplexF64}(undef, length(lg)) for _ in 1:N]
-        for (j, op) in enumerate(lg)
-            ρ = sgrep_d[op](k)
-            for (n, v) in enumerate(eachcol(vs))
-                symeigs[n][j] = dot(v, transpose(ρ) * v)
-            end
-        end
-        symeigsd[klabel(lg)] = symeigs
+        sgreps = [sgrep_d[op] for op in lg]
+        symeigs = symmetry_eigenvalues(ptbm, lg, sgreps)
+        symeigsd[klabel(lg)] = collect(eachcol(symeigs))
     end
 
     # TODO: transfer these utilities from MBPUtils to Crystalline, and also
@@ -78,4 +66,64 @@ function symmetry_analysis(
     ns = bandsum2symvec.(summaries, Ref(lgirsv))
 
     return ns
+end
+
+"""
+    symmetry_eigenvalues(
+        ptbm::ParameterizedTightBindingModel{D},
+        ops::AbstractVector{SymOperation{D}},
+        k::Union{AbstractVector{<:Real}, KVec{D}},
+        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]) where D --> Matrix{ComplexF64}
+
+    symmetry_eigenvalues(
+        ptbm::ParameterizedTightBindingModel{D},
+        lg::LittleGroup{D},
+        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]) where D --> Matrix{ComplexF64}
+    
+Compute the symmetry eigenvalues of a coefficient-parameterized tight-binding model `ptbm`
+at the **k**-point `k` for the symmetry operations `ops`. A `LittleGroup` can also be
+provided instead of `ops` and `k`.
+
+Representations of the symmetry operations `ops` as acting on the orbitals of the
+tight-binding setting can optionally be provided in `sgreps` (see `sgrep_induced_by_siteir`)
+and are otherwise initialized by the function.
+
+The symmetry eigenvalues are returned as a matrix, with rows running over the elements of
+`ops` and columns running over the bands of `ptbm`.
+"""
+function symmetry_eigenvalues(
+    ptbm::ParameterizedTightBindingModel{D},
+    ops::AbstractVector{SymOperation{D}},
+    k::Union{AbstractVector{<:Real}, KVec{D}},
+    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
+        Ref(ptbm.tbm.cbr),
+        ops,
+    ),
+) where D
+    length(k) == D || error("dimension mismatch")
+    length(sgreps) == length(ops) || error("length of `sgreps` must match length of `ops`")
+
+    _, vs = solve(ptbm, k; bloch_phase = Val(true))
+    symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
+    for (j, sgrep) in enumerate(sgreps)
+        ρ = sgrep(k)
+        for (n, v) in enumerate(eachcol(vs))
+            symeigs[j, n] = dot(v, transpose(ρ) * v)
+        end
+    end
+    return symeigs
+end
+
+function symmetry_eigenvalues(
+    ptbm::ParameterizedTightBindingModel{D},
+    lg::LittleGroup{D},
+    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
+        Ref(ptbm.tbm.cbr),
+        lg,
+    ),
+) where D
+    kv = position(lg)
+    iszero(free(kv)) || error("input k-point has free parameters")
+    k = constant(kv)
+    return symmetry_eigenvalues(ptbm, operations(lg), k, sgreps)
 end
