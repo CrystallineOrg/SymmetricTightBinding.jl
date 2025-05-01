@@ -1,0 +1,14 @@
+indent = 4
+always_for_in = true
+always_use_return = false
+import_to_using = true
+join_lines_based_on_source = false
+pipe_to_function_call = true
+remove_extra_newlines = true
+separate_kwargs_with_semicolon = true
+short_to_long_function_def = true
+whitespace_in_kwargs = true
+whitespace_ops_in_indices = false
+yas_style_nesting = false
+surround_whereop_typeparameters = false
+whitespace_typedefs = true
