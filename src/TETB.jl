@@ -62,7 +62,7 @@ include("timereversal.jl")
 include("hermiticity.jl")
 include("show_tightbinding.jl")
 include("utils_tightbinding.jl")
-include("symmetry_analysis_tighbinding.jl")
+include("symmetry_analysis_tightbinding.jl")
 export symmetry_analysis
 include("plotting_utils.jl")
 export hop_plot
