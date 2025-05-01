@@ -68,31 +68,95 @@ function sgrep_induced_by_siteir_excl_phase(
     return ρ
 end
 
-# NB: we do not include the (usually redundant) exponential (k-dependent) phases below.
-#     Note that these phases are NOT REDUNDANT if we are intending to use the sgrep as 
-#     the group action on eigenstates, e.g., for determining the irreps of a tight-binding
-#     Hamiltonian
-"""
-    sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
-    --> Tuple{Vector{SymOperation{D}}, Vector{BlockMatrix{ComplexF64}}}
+# ---------------------------------------------------------------------------------------- #
+# Site-induced symmetry representation matrix _with_ phase factors
 
-Induce a representation for the generators of the SG from a representation of the site-symmetry 
-group of a particular maximal WP.
-"""
-function sgrep_induced_by_siteir_generators(br::NewBandRep{D}) where {D}
-    gens = generators(num(br), SpaceGroup{D})
-    return gens, sgrep_induced_by_siteir.(Ref(br), gens)
+struct SiteInducedSGRepElement{D}
+    ρ::Matrix{ComplexF64}
+    positions::Vector{DirectPoint{D}}
+    op::SymOperation{D}
+    function SiteInducedSGRepElement{D}(
+        ρ::AbstractMatrix,
+        positions::Vector{DirectPoint{D}},
+        op::SymOperation{D},
+    ) where D
+        @boundscheck N = LinearAlgebra.checksquare(ρ)
+        length(positions) == N || error("length of positions must match the size of ρ")
+        new{D}(Matrix{ComplexF64}(ρ), positions, op)
+    end
 end
 
-"""
-Direct sum of matrices
-"""
-function ⊕(As::AbstractMatrix...)
-    return cat(As...; dims = Val((1, 2)))
+# functor behavior for `SiteInducedSGRepElement`
+function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D}
+    g = sgrep.op
+    gk = compose(g, ReciprocalPoint{3}(k))
+    ρ′ = similar(sgrep.ρ)
+    for (β, qᵦ) in enumerate(sgrep.positions)
+        for (α, qₐ) in enumerate(sgrep.positions)
+            tᵦₐ = compose(g, qₐ) - qᵦ
+            e = cispi(-2dot(gk, tᵦₐ)) # e^{-i(gk)·tᵦₐ}
+            ρ′[β, α] = sgrep.ρ[β, α] * e # ρᵦₐ(g) e^{-i(gk)·tᵦₐ}
+        end
+    end
+
+    return ρ′
 end
 
-function sgrep_induced_by_siteir_generators(cbr::CompositeBandRep{D}) where {D}
-    # TODO: primitivize the generators of the space group
-    gens = generators(num(cbr), SpaceGroup{D})
-    return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
+function sgrep_induced_by_siteir(
+    br::Union{NewBandRep{D}, CompositeBandRep{D}},
+    op::SymOperation{D},
+) where D
+    positions = _positions_in_bandrep_induced_sgrep(br)
+
+    ρ = sgrep_induced_by_siteir_excl_phase(br, op)
+    size(ρ, 1) == length(positions) || error("incompatible dimensions of `ρ` & `positions`")
+
+    return SiteInducedSGRepElement{D}(ρ, positions, op)
+end
+
+function _positions_in_bandrep_induced_sgrep(br::NewBandRep{D}) where D
+    dim = irdim(br.siteir)
+    wps = orbit(group(br.siteir))
+    positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
+    for (m, wp) in enumerate(wps)
+        iszero(free(wp)) ||
+            error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
+        r = DirectPoint{D}(constant(wp))
+        for j in ((m-1)*dim+1):(m*dim)
+            positions[j] = r
+        end
+    end
+    return positions
+end
+
+function _positions_in_bandrep_induced_sgrep(cbr::CompositeBandRep{D}) where D
+    N = occupation(cbr)
+    positions = Vector{DirectPoint{D}}(undef, N)
+    j = 0
+    for (i, cᵢ) in enumerate(cbr.coefs)
+        iszero(cᵢ) && continue
+        br = cbr.brs[i]
+
+        dim = irdim(br.siteir)
+        wps = orbit(group(br.siteir))
+        Nᵢ = length(wps) * dim
+        for (m, wp) in enumerate(wps)
+            iszero(free(wp)) ||
+                error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
+            r = DirectPoint{D}(constant(wp))
+            for j′ in ((m-1)*dim+1):(m*dim)
+                positions[j+j′] = r
+            end
+        end
+        j += Nᵢ
+
+        # if cᵢ > 1, we add the just-added positions `cᵢ-1` times more
+        for _ in 1:(Int(cᵢ)-1)
+            @views positions[j+1:j+Nᵢ] .= positions[j-Nᵢ+1:j]
+            j += Nᵢ
+        end
+    end
+    j == N || error("inconsistent size calculation of `positions` vector")
+
+    return positions
 end

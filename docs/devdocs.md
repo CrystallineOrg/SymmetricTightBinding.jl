@@ -197,7 +197,8 @@ $$
 
 This functionality is implemented in the function `sgrep_induced_by_siteir_excl_phase`.
 Note, however, that the global phase $e^{-i (R\mathbf{k})\cdot\mathbf{v}}$ is ignored in
-`sgrep_induced_by_siteir_excl_phase`.
+`sgrep_induced_by_siteir_excl_phase`; to include the phase, e.g., for use in assessing
+the symmetry transformation of a single Bloch state, see `sgrep_induced_by_siteir`.
 
 ## Hamiltonian formalism with translational symmetries
 
