@@ -32,11 +32,12 @@ function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
-    timereversal::Bool = brₐ.timereversal
-) where {V<:Union{AbstractVector{<:Integer},RVec{D}}} where {D}
+    timereversal::Bool = brₐ.timereversal,
+) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum || error("both band representations must be in the same space group")
-    brₐ.timereversal == brᵦ.timereversal || error("both band representations must have the same time-reversal symmetry")
+    brₐ.timereversal == brᵦ.timereversal ||
+        error("both band representations must have the same time-reversal symmetry")
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
@@ -86,7 +87,14 @@ Checks if a hopping term `δ` is already in the list of representatives. If not,
 it adds it and its symmetry related partners. If it is, it only adds the symmetry 
 related partners.
 """
-function maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
+function maybe_add_hoppings!(
+    h_orbits,
+    δ,
+    qₐ,
+    qᵦ,
+    R,
+    ops::AbstractVector{SymOperation{D}},
+) where {D}
     δ_idx = findfirst(h_orbits) do h_orbit
         isapproxin(δ, orbit(h_orbit), nothing, false) # check if δ is in h_orbits
     end
@@ -107,7 +115,14 @@ function for `maybe_add_hoppings!`.
 Computes and adds the symmetry related partners of a hopping term `δ` to the 
 `δ_orbit`.
 """
-function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{SymOperation{D}}) where {D}
+function _maybe_add_hoppings!(
+    δ_orbit,
+    δ,
+    qₐ,
+    qᵦ,
+    R,
+    ops::AbstractVector{SymOperation{D}},
+) where {D}
     for g in ops
         _qₐ′ = g * qₐ
         _qᵦ′ = g * (qᵦ + R)
@@ -126,8 +141,11 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
         #   1. R´ is a lattice translation, i.e., it is integer
         #   2. R´ doesn't have any free parameters - TODO: try to implement it for WPs with free parameters
         #   3. δ′ = qᵦ′ + R′ - qₐ′
-        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) || error("arrived at non-integer lattice translation R′: should be impossible")
-        isspecial(R′) || error("arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible")
+        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) ||
+            error("arrived at non-integer lattice translation R′: should be impossible")
+        isspecial(R′) || error(
+            "arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible",
+        )
         isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
 
         idx_in_orbit = findfirst(δ′′ -> isapprox(δ′, δ′′, nothing, false), orbit(δ_orbit))
@@ -139,10 +157,14 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
             # δ′ already in `orbit(δ_orbit)` but hopping term might not be:
             # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
             # approximate equality comparison
-            bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
-                (isapprox(qₐ′, qₐ′′, nothing, false) && isapprox(qᵦ′, qᵦ′′, nothing, false)
-                 && isapprox(R′, R′′, nothing, false))
-            end
+            bool =
+                !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+                    (
+                        isapprox(qₐ′, qₐ′′, nothing, false) &&
+                        isapprox(qᵦ′, qᵦ′′, nothing, false) &&
+                        isapprox(R′, R′′, nothing, false)
+                    )
+                end
             if bool
                 push!(δ_orbit.hoppings[idx_in_orbit], (qₐ′, qᵦ′, R′))
             end
@@ -151,7 +173,7 @@ function _maybe_add_hoppings!(δ_orbit, δ, qₐ, qᵦ, R, ops::AbstractVector{S
     return δ_orbit
 end
 
-function merge_timereversal_related_orbits(h_orbits :: Vector{<:HoppingOrbit})
+function merge_timereversal_related_orbits(h_orbits::Vector{<:HoppingOrbit})
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
     # hopping vector `-δ` is also in the orbit; if not, we go looking for it in another
     # orbit - once we find it, we merge those two orbits
@@ -173,7 +195,7 @@ function merge_timereversal_related_orbits(h_orbits :: Vector{<:HoppingOrbit})
         δ = δs[idx_δ]
         rev_δ = -δ
         for n′ in n+1:length(h_orbits)
-            any(p -> p[2]==n′, merge_list) && continue # already merged
+            any(p -> p[2] == n′, merge_list) && continue # already merged
             h_orbit′ = h_orbits[n′]
             δs′ = orbit(h_orbit′)
             found_partner = false
@@ -182,7 +204,9 @@ function merge_timereversal_related_orbits(h_orbits :: Vector{<:HoppingOrbit})
                 push!(merge_list, (n, n′))
                 merged_δs = vcat(δs, δs′)
                 if any(δ′ -> !isapproxin(-δ′, merged_δs, nothing, false), merged_δs)
-                    error("failed to combine δ to -δ orbits in single merger: unhandled case")
+                    error(
+                        "failed to combine δ to -δ orbits in single merger: unhandled case",
+                    )
                 end
                 found_partner = true
                 break
@@ -263,9 +287,7 @@ The total number of orbitals associated to a band representation, and hence the 
 `ordering`, is the product of the site-symmetry irrep dimensionality and the number of sites
 in the Wyckoff position orbit.
 """
-function OrbitalOrdering(
-    br::NewBandRep{D}
-) where {D}
+function OrbitalOrdering(br::NewBandRep{D}) where {D}
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
@@ -281,7 +303,7 @@ function OrbitalOrdering(
     ordering = Vector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}(undef, V * Q)
     for i in 1:V
         for k in 1:Q
-            ordering[(i-1)*Q+k] = (; wp=wps[i], idx=k)
+            ordering[(i-1)*Q+k] = (; wp = wps[i], idx = k)
         end
     end
     return OrbitalOrdering(ordering)
@@ -310,12 +332,13 @@ function construct_M_matrix(
     br1::NewBandRep{D},
     br2::NewBandRep{D},
     ordering1::OrbitalOrdering{D} = OrbitalOrdering(br1), # canonical orbital orderings for
-    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2)  # `br1` & `br2`, respectively
+    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2),  # `br1` & `br2`, respectively
 ) where {D}
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (assumed constant for all i)
     foreach(h_orbit.hoppings) do hops
-        length(hops) == E || error("Unexpectedly had different counts of hoppings across orbit elements")
+        length(hops) == E ||
+            error("Unexpectedly had different counts of hoppings across orbit elements")
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
@@ -367,7 +390,7 @@ then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻�
 function representation_constraint_matrices(
     Mm::AbstractArray{Int, 4},
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D}
+    brᵦ::NewBandRep{D},
 ) where {D}
     gensₐ, ρsₐₐ = sgrep_induced_by_siteir_generators(brₐ)
     gensᵦ, ρsᵦᵦ = sgrep_induced_by_siteir_generators(brᵦ)
@@ -411,7 +434,7 @@ function obtain_basis_free_parameters(
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ);
     timereversal::Bool = true,
     diagonal_block::Bool = true,
-    antihermitian::Bool = true
+    antihermitian::Bool = true,
 ) where {D}
     # We obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -434,8 +457,8 @@ function obtain_basis_free_parameters(
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector tₐᵦ associated with h_orbit
     constraints = _aggregate_constraints(Qs, Zs)
-    tₐᵦ_basis_matrix = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
-    
+    tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
+
     # at this point, the coefficient-space spanning `tₐᵦ_basis` is implicitly complex; this
     # is conceptually not too nice for a Hamiltonian, and we'd like to work with strictly
     # real coefficients. To that end, we "split" the possible products of such complex
@@ -474,16 +497,19 @@ function obtain_basis_free_parameters(
     # See `split_complex` for more details on the real/imaginary splitting.
     N = 2size(Mm, 2) # number of elements per `t`-vector, when doubled
     tₐᵦ_basis_reim = split_complex.(collect(eachcol(tₐᵦ_basis_matrix)))
-    tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim, init=Matrix{Float64}(undef, N, 0))
+    tₐᵦ_basis_reim_matrix =
+        reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
 
     ## ----------------------------------------------------------------------------------- #
     if timereversal # "add" & "intersect" the associated TRS constraints
         # now we want to construct the TRS constraints, and then intersect the allowable basis
         # terms on that constraint with those corresponding to the previously computed basis
-        tₐᵦ_basis_tr_reim_matrix = obtain_basis_free_parameters_TRS(
-                                                h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
-        tₐᵦ_basis_reim = zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix)
-        tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
+        tₐᵦ_basis_tr_reim_matrix =
+            obtain_basis_free_parameters_TRS(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
+        tₐᵦ_basis_reim =
+            zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix)
+        tₐᵦ_basis_reim_matrix =
+            reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
     end
     isempty(tₐᵦ_basis_reim_matrix) && return Mm, Vector{Vector{Float64}}()
 
@@ -491,11 +517,19 @@ function obtain_basis_free_parameters(
     # "add" & "intersect" the associated hermiticity constraints if this is a diagonal block
     if diagonal_block
         tₐᵦ_basis_herm_reim_matrix = obtain_basis_free_parameters_hermiticity(
-                                        h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm;
-                                        antihermitian)
+            h_orbit,
+            brₐ,
+            brᵦ,
+            orderingₐ,
+            orderingᵦ,
+            Mm;
+            antihermitian,
+        )
 
-        tₐᵦ_basis_reim = zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix)
-        tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
+        tₐᵦ_basis_reim =
+            zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix)
+        tₐᵦ_basis_reim_matrix =
+            reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
     end
     isempty(tₐᵦ_basis_reim_matrix) && return Mm, Vector{Vector{Float64}}()
 
@@ -513,11 +547,10 @@ function obtain_basis_free_parameters(
     return return Mm, tₐᵦ_basis_reim
 end
 
-
 function _aggregate_constraints(
     Q::AbstractArray{<:Number, 4},
     Z::AbstractArray{<:Number, 4},
-    row_atol::Real = 1e-10
+    row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
     constraint_vs = Vector{promote_type(eltype(Q), eltype(Z))}()
@@ -532,7 +565,7 @@ function _aggregate_constraints(
     # same as `_aggregate_constraints(Q, V)` but for a vector of Qs and Zs
     Qs::AbstractVector{<:AbstractArray{<:Number, 4}},
     Zs::AbstractVector{<:AbstractArray{<:Number, 4}},
-    row_atol::Real = 1e-10
+    row_atol::Real = 1e-10,
 )
     constraint_vs = Vector{promote_type(eltype(eltype(Qs)), eltype(eltype(Zs)))}()
     for (Q, Z) in zip(Qs, Zs)
@@ -546,7 +579,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
     constraint_vs::Vector{<:Number},
     Q::AbstractArray{<:Number, 4},
     Z::AbstractArray{<:Number, 4},
-    row_atol::Real = 1e-10
+    row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
     c = Vector{eltype(constraint_vs)}(undef, size(Q, 2))
@@ -557,14 +590,14 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
         norm(c) > row_atol || continue # don't add empty or near-empty constraints
         append!(constraint_vs, c) # add the constraint to the list
     end
-        
+
     return constraint_vs
 end
 
 function _reshape_aggregate_constraints(
-    constraint_vs :: Vector{<:Number}, # vector of inline-concatenated constraints
-    J :: Int # number of elements per constraint: ≡ size(Mm,2) = size(Q,2) = size(Z,2)
-) 
+    constraint_vs::Vector{<:Number}, # vector of inline-concatenated constraints
+    J::Int, # number of elements per constraint: ≡ size(Mm,2) = size(Q,2) = size(Z,2)
+)
     C = length(constraint_vs) ÷ J # number of constraints
     return permutedims(reshape(constraint_vs, J, C))
 end
@@ -582,14 +615,16 @@ acting on k-space. See more details in
 `permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
 """
 function reciprocal_constraints_matrices(
-    Mm::Array{Int,4},
+    Mm::Array{Int, 4},
     gens::AbstractVector{SymOperation{D}},
-    h_orbit::HoppingOrbit{D}
+    h_orbit::HoppingOrbit{D},
 ) where {D}
-    Zs = Vector{Array{Int,4}}(undef, length(gens))
+    Zs = Vector{Array{Int, 4}}(undef, length(gens))
     for (i, op) in enumerate(gens)
         Z = similar(Mm)
-        Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op))
+        Pᵀ = transpose(
+            _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op),
+        )
         for s in axes(Mm, 3)
             for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
                 Z[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
@@ -619,7 +654,7 @@ WARNING: we assume that the operation is primitive.
 """
 function _permute_symmetry_related_hoppings_under_symmetry_operation(
     h_orbit::HoppingOrbit{D},
-    op::SymOperation{D}
+    op::SymOperation{D},
 ) where {D}
     # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
     # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
@@ -632,7 +667,8 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
         R⁻¹ = SymOperation(inv(rotation(op))) # rotation-only part of `op`
         δᵢ′ = compose(R⁻¹, δᵢ)
         j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
-        isnothing(j) && error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
+        isnothing(j) &&
+            error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
         P[i, j] = 1
         # since P acts as g v = P v, we have (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
     end
@@ -647,7 +683,8 @@ Poor man's "matrix sparsification" via the reduced row echelon form.
 """
 function _poormans_sparsification(
     A::AbstractMatrix{<:Number};
-    rref_tol::Union{Nothing,Float64}=SPARSIFICATION_ATOL_DEFAULT)
+    rref_tol::Union{Nothing, Float64} = SPARSIFICATION_ATOL_DEFAULT,
+)
     # following appendix E of the Qsymm paper (https://arxiv.org/abs/1806.08363) [copied
     # over from Neumann.jl] [copied over from MPBUtils.jl]
     if !isnothing(rref_tol)
@@ -666,8 +703,8 @@ Prune near-zero elements of vectors in `vs`.
 """
 function _prune_at_threshold!(
     vs::AbstractVector{<:AbstractVector{T}};
-    atol::Real=PRUNE_ATOL_DEFAULT
-) where {T<:Complex}
+    atol::Real = PRUNE_ATOL_DEFAULT,
+) where {T <: Complex}
     for v in vs
         for (j, vⱼ) in enumerate(v)
             rⱼ, iⱼ = reim(vⱼ)
@@ -681,8 +718,8 @@ end
 
 function _prune_at_threshold!(
     vs::AbstractVector{<:AbstractVector{T}};
-    atol::Real=PRUNE_ATOL_DEFAULT
-) where {T<:Real} # needed for type consistency in TRS implementation
+    atol::Real = PRUNE_ATOL_DEFAULT,
+) where {T <: Real} # needed for type consistency in TRS implementation
     for v in vs
         for (j, vⱼ) in enumerate(v)
             v[j] = abs(vⱼ) < atol ? zero(T) : vⱼ
@@ -706,11 +743,13 @@ symmetry operations.
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
     Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings
-    timereversal::Bool=true,
-    antihermitian::Bool=false
+    timereversal::Bool = true,
+    antihermitian::Bool = false,
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
-        error("provided composite bandrep is not Wannierizable: contains negative or non-integer coefficients")
+        error(
+            "provided composite bandrep is not Wannierizable: contains negative or non-integer coefficients",
+        )
         # no TB model can be constructed for such a composite bandrep
     end
     coefs = round.(Int, cbr.coefs)
@@ -745,12 +784,25 @@ function tb_hamiltonian(
             h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2, timereversal)
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
-                    h_orbit, br1, br2, ordering1, ordering2;
-                    timereversal, diagonal_block = d==0, antihermitian)
+                    h_orbit,
+                    br1,
+                    br2,
+                    ordering1,
+                    ordering2;
+                    timereversal,
+                    diagonal_block = d == 0,
+                    antihermitian,
+                )
                 for t in t_αβ_basis
-                    block = TightBindingBlock{D}(
-                        br1, br2, ordering1, ordering2, h_orbit, Mm, t)
-                    h = TightBindingTerm{D}(axis, (block_i, block_j), block, hermiticity, brs)
+                    block =
+                        TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t)
+                    h = TightBindingTerm{D}(
+                        axis,
+                        (block_i, block_j),
+                        block,
+                        hermiticity,
+                        brs,
+                    )
                     push!(tbs, h)
                 end
             end

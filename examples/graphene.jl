@@ -8,4 +8,4 @@ coefs = zeros(Int, length(brs))
 coefs[5] = 1
 cbr = CompositeBandRep(coefs, brs)
 
-tb_model = TETB.tb_hamiltonian(cbr, [[0, 0]], timereversal=true)
+tb_model = TETB.tb_hamiltonian(cbr, [[0, 0]]; timereversal = true)

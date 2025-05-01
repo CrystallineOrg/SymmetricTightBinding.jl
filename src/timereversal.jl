@@ -66,7 +66,7 @@ function obtain_basis_free_parameters_TRS(
     brᵦ::NewBandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    Mm::Array{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
+    Mm::Array{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
     # To add time-reversal constraints, we duplicate the `M` matrix so that we can transfer
     # the conjugation from `t` to `M`. We exploit the following splitting:
@@ -89,7 +89,7 @@ function obtain_basis_free_parameters_TRS(
     # Step 3: build an constraint matrix acting on the doubled hopping coefficient vector
     # `[tᴿ; itᴵ]` associated with `h_orbit`; each row is a constraint
     constraints = _aggregate_constraints(Q, Z)
-    tₐᵦ_basis_matrix = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
+    tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 
     return tₐᵦ_basis_matrix
 end
@@ -101,19 +101,17 @@ end
 Time reversal symmetry action on reciprocal space. It is given by the association 
 `k -> -k => H(k) -> H(-k)`.
 """
-function reciprocal_constraints_trs(
-    Mm::Array{Int,4},
-    h_orbit::HoppingOrbit{D}
-) where {D}
+function reciprocal_constraints_trs(Mm::Array{Int, 4}, h_orbit::HoppingOrbit{D}) where {D}
     Z = similar(Mm)
     opI = inversion(Val(D)) # inversion operation
-    Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
+    Pᵀ =
+        transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
     for s in axes(Mm, 3)
         for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
             Z[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
         end
     end
-    return [Z Z] 
+    return [Z Z]
 end
 
 """
@@ -125,14 +123,15 @@ the complex conjugation in the free-parameter part:
 ``tⱼ -> tⱼ* ⇒ [tⱼᴿ, itⱼᴵ] -> [tⱼᴿ, -itⱼᴵ] ⇒ H(k) -> H*(k)``.
 """
 function representation_constraint_trs(
-    Mm::AbstractArray{<:Number,4},
+    Mm::AbstractArray{<:Number, 4},
     h_orbit::HoppingOrbit{D},
 ) where {D}
     Q = zeros(Int, size(Mm))
     opI = inversion(Val(D)) # inversion operation
     # TODO: We are doing exactly the same here as in `representation_constraint_trs`: the
     #       only difference is we return `[Q -Q]` at the end instead of `[Z Z]` (but Q = Z).
-    Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
+    Pᵀ =
+        transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
     for s in axes(Mm, 3)
         for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
             Q[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾

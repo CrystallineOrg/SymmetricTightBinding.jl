@@ -2,7 +2,6 @@ using TETB, Test
 using Crystalline
 
 @testset "Site representations" begin
-
     @testset "SG #221" begin
         sgnum, D = 221, 3
         brs = calc_bandreps(sgnum, Val(D))
@@ -16,21 +15,31 @@ using Crystalline
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representations" begin
-            @test sg_rep[1] == Complex[-1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0.0+0.0im -1.0+0.0im 0.0+0.0im;
-                0.0+0.0im 0.0+0.0im 1.0+0.0im]
-            @test sg_rep[2] == Complex[-1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0.0+0.0im 1.0+0.0im 0.0+0.0im;
-                0.0+0.0im 0.0+0.0im -1.0+0.0im]
-            @test sg_rep[3] == Complex[0.0+0.0im 0.0+0.0im 1.0+0.0im;
-                1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0.0+0.0im 1.0+0.0im 0.0+0.0im]
-            @test sg_rep[4] == Complex[0.0+0.0im 1.0+0.0im 0.0+0.0im;
-                1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0.0+0.0im 0.0+0.0im -1.0+0.0im]
-            @test sg_rep[5] == Complex[-1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0.0+0.0im -1.0+0.0im 0.0+0.0im;
-                0.0+0.0im 0.0+0.0im -1.0+0.0im]
+            @test sg_rep[1] == Complex[
+                -1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0.0+0.0im -1.0+0.0im 0.0+0.0im
+                0.0+0.0im 0.0+0.0im 1.0+0.0im
+            ]
+            @test sg_rep[2] == Complex[
+                -1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0.0+0.0im 1.0+0.0im 0.0+0.0im
+                0.0+0.0im 0.0+0.0im -1.0+0.0im
+            ]
+            @test sg_rep[3] == Complex[
+                0.0+0.0im 0.0+0.0im 1.0+0.0im
+                1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0.0+0.0im 1.0+0.0im 0.0+0.0im
+            ]
+            @test sg_rep[4] == Complex[
+                0.0+0.0im 1.0+0.0im 0.0+0.0im
+                1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0.0+0.0im 0.0+0.0im -1.0+0.0im
+            ]
+            @test sg_rep[5] == Complex[
+                -1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0.0+0.0im -1.0+0.0im 0.0+0.0im
+                0.0+0.0im 0.0+0.0im -1.0+0.0im
+            ]
         end
     end # SG 221
 
@@ -47,46 +56,56 @@ using Crystalline
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representations" begin
-            @test sg_rep[1] == Complex[0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im]
-            @test sg_rep[2] == Complex[0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im]
-            @test sg_rep[3] == Complex[1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im]
-            @test sg_rep[4] == Complex[0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im]
-            @test sg_rep[5] == Complex[-1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0+0im 0+0im 0+0im 0+0im;
-                0+0im 0+0im 0+0im 0+0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im]
+            @test sg_rep[1] == Complex[
+                0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im
+            ]
+            @test sg_rep[2] == Complex[
+                0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im
+            ]
+            @test sg_rep[3] == Complex[
+                1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0+0im 0+0im 0+0im 0+0im 1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 1.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 1.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 1.0+0.0im 0.0+0.0im 0.0+0.0im
+            ]
+            @test sg_rep[4] == Complex[
+                0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im
+            ]
+            @test sg_rep[5] == Complex[
+                -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0+0im 0+0im 0+0im 0+0im
+                0+0im 0+0im 0+0im 0+0im -1.0+0.0im 0.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im -1.0+0.0im 0.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im -1.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0+0im 0+0im 0.0+0.0im 0.0+0.0im 0.0+0.0im -1.0+0.0im
+            ]
         end
     end # SG 224
 
@@ -139,14 +158,18 @@ using Crystalline
         @test gens == generators(sgnum, SpaceGroup{D})
 
         @testset "Handwritten representation" begin
-            @test sg_reps[1] == Complex[1.0+0.0im 0.0+0.0im 0+0im 0+0im;
-                0.0+0.0im 1.0+0.0im 0+0im 0+0im;
-                0+0im 0+0im -1.0+0.0im 0.0+0.0im;
-                0+0im 0+0im 0.0+0.0im -1.0+0.0im]
-            @test sg_reps[2] == Complex[0.0+0.0im 1.0+0.0im 0+0im 0+0im;
-                1.0+0.0im 0.0+0.0im 0+0im 0+0im;
-                0+0im 0+0im 0.0+1.0im 0.0+0.0im;
-                0+0im 0+0im 0.0+0.0im 0.0-1.0im]
+            @test sg_reps[1] == Complex[
+                1.0+0.0im 0.0+0.0im 0+0im 0+0im
+                0.0+0.0im 1.0+0.0im 0+0im 0+0im
+                0+0im 0+0im -1.0+0.0im 0.0+0.0im
+                0+0im 0+0im 0.0+0.0im -1.0+0.0im
+            ]
+            @test sg_reps[2] == Complex[
+                0.0+0.0im 1.0+0.0im 0+0im 0+0im
+                1.0+0.0im 0.0+0.0im 0+0im 0+0im
+                0+0im 0+0im 0.0+1.0im 0.0+0.0im
+                0+0im 0+0im 0.0+0.0im 0.0-1.0im
+            ]
         end
     end
 end # Site representations

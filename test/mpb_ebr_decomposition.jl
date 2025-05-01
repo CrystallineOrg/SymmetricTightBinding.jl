@@ -2,37 +2,57 @@ using TETB, Test
 using Crystalline # for calc_bandreps
 
 @testset "EBR decomposition" begin
-
     @testset "SG #221" begin
 
         # construct the structure under study
         R1 = 0.2 # cylinder radius
-        mat = mp.Medium(epsilon=12)
+        mat = mp.Medium(; epsilon = 12)
         geometry = [
-            mp.Cylinder(radius=R1, center=[0, 0, 0], axis=[0, 0, 1], height=1, material=mat),
-            mp.Cylinder(radius=R1, center=[0, 0, 0], axis=[0, 1, 0], height=1, material=mat),
-            mp.Cylinder(radius=R1, center=[0, 0, 0], axis=[1, 0, 0], height=1, material=mat),
+            mp.Cylinder(;
+                radius = R1,
+                center = [0, 0, 0],
+                axis = [0, 0, 1],
+                height = 1,
+                material = mat,
+            ),
+            mp.Cylinder(;
+                radius = R1,
+                center = [0, 0, 0],
+                axis = [0, 1, 0],
+                height = 1,
+                material = mat,
+            ),
+            mp.Cylinder(;
+                radius = R1,
+                center = [0, 0, 0],
+                axis = [1, 0, 0],
+                height = 1,
+                material = mat,
+            ),
         ]
 
         # solve the system
-        ms = mpb.ModeSolver(
-            num_bands=8,
-            geometry_lattice=mp.Lattice(basis1=[1, 0, 0], basis2=[0, 1, 0], basis3=[0, 0, 1],
-                size=[1, 1, 1]),
-            geometry=geometry,
-            resolution=16,
+        ms = mpb.ModeSolver(;
+            num_bands = 8,
+            geometry_lattice = mp.Lattice(;
+                basis1 = [1, 0, 0],
+                basis2 = [0, 1, 0],
+                basis3 = [0, 0, 1],
+                size = [1, 1, 1],
+            ),
+            geometry = geometry,
+            resolution = 16,
         )
-        ms.init_params(p=mp.ALL, reset_fields=true)
+        ms.init_params(; p = mp.ALL, reset_fields = true)
 
         # obtain the symmetry vectors of the bands computed above
         sgnum = 221
         symvecs, topologies = obtain_symmetry_vectors(ms, sgnum)
 
         for m in symvecs
-
             for μᴸ in 1:8
                 brs = calc_bandreps(sgnum)
-                candidatesv = find_bandrep_decompositions(m, brs, μᴸ_min=μᴸ)
+                candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min = μᴸ)
 
                 # we should find at least one decomposition
                 isempty(candidatesv) && continue

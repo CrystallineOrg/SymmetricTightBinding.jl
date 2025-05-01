@@ -38,7 +38,8 @@ using LinearAlgebra
                 @test length(first_nn.orbit) == 2 * 3 # there are 3 1st nn and we consider separately
                 #                                       going forward and backward hopping terms
                 lattice_vecs = directbasis(sgnum, D)
-                first_nn_dist = norm(cartesianize(constant(first_nn.orbit[1]), lattice_vecs))
+                first_nn_dist =
+                    norm(cartesianize(constant(first_nn.orbit[1]), lattice_vecs))
                 @test first_nn_dist ≈ 1 / sqrt(3) # distance between 1st nn in Graphene
 
                 for δᵢ in constant.(first_nn.orbit)
@@ -52,10 +53,10 @@ using LinearAlgebra
 
             tb_onsite = tb_model[1]
             # dimensions of the hamiltonian should be equal to the number of orbitals
-            @test size(tb_onsite) == (count_bandrep_orbitals(brs[5]), count_bandrep_orbitals(brs[5]))
+            @test size(tb_onsite) ==
+                  (count_bandrep_orbitals(brs[5]), count_bandrep_orbitals(brs[5]))
 
             # TODO: finish this when the proper `tb_hamiltonian` structure is implemented
         end # Hamiltonian
     end # Graphene
-
 end # plane groups

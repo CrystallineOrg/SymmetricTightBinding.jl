@@ -8,11 +8,10 @@ made. This parameter is settle by default to `true`
 function find_bandrep_decompositions(
     m::AbstractSymmetryVector{D},
     brs::Collection{NewBandRep{D}};
-    μᴸ_min::Integer=0,
-    μᴸ_max::Integer=μᴸ_min + 2 * occupation(m),
-    connected_to_zero_frequency::Bool=true
+    μᴸ_min::Integer = 0,
+    μᴸ_max::Integer = μᴸ_min + 2 * occupation(m),
+    connected_to_zero_frequency::Bool = true,
 ) where {D}
-
     if D < 3 || !connected_to_zero_frequency
         μ = occupation(m)
         μs_brs = occupation.(brs)
@@ -30,7 +29,6 @@ function find_bandrep_decompositions(
         return TightBindingCandidateSet(longitudinal, apolar, [Float64[]])
 
     else
-
         μᴸ = μᴸ_min - 1
         while μᴸ < μᴸ_max
             μᴸ += 1
@@ -63,7 +61,11 @@ function sgrep_induced_by_siteir(br::NewBandRep{D}, op::SymOperation{D}) where {
         for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
             tᵦₐ = constant(g * parent(qₐ) - parent(qᵦ)) # ignore free parts of the WP
             # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
-            h = compose(compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false), gₐ, false)
+            h = compose(
+                compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false),
+                gₐ,
+                false,
+            )
             idx_h = findfirst(==(h), siteg)
             if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
                 ρ[Block(β, α)] .= siteir.matrices[idx_h]
@@ -121,14 +123,11 @@ end
 Direct sum of matrices
 """
 function ⊕(As::AbstractMatrix...)
-    return cat(As..., dims=Val((1, 2)))
+    return cat(As...; dims = Val((1, 2)))
 end
 
-
-function sgrep_induced_by_siteir_generators(
-    cbr::CompositeBandRep{D},
-) where {D}
-# TODO: primitivize the generators of the space group
+function sgrep_induced_by_siteir_generators(cbr::CompositeBandRep{D}) where {D}
+    # TODO: primitivize the generators of the space group
     gens = generators(num(cbr), SpaceGroup{D})
     return gens, sgrep_induced_by_siteir.(Ref(cbr), gens)
 end
