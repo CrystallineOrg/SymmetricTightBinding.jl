@@ -54,13 +54,15 @@ export sgrep_induced_by_siteir_excl_phase
 include("tightbinding.jl")
 export obtain_symmetry_related_hoppings
 export tb_hamiltonian
-include("plotting_utils.jl")
-export hop_plot
 include("zassenhaus.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
 include("show_tightbinding.jl")
 include("utils_tightbinding.jl")
+include("symmetry_analysis_tighbinding.jl")
+export symmetry_analysis
+include("plotting_utils.jl")
+export hop_plot
 
 # ---------------------------------------------------------------------------- #
 end # module

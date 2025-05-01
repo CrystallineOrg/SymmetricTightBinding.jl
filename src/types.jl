@@ -263,6 +263,7 @@ To associate a set of coefficients to each term, see
 """
 struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
     terms::Vector{TightBindingTerm{D}}
+    cbr::CompositeBandRep{D} # band representation associated to the model
     N::Int # total number of orbitals, i.e., matrix size
 end
 Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
@@ -270,10 +271,13 @@ Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
 Base.setindex!(::TightBindingModel, v, i::Int) = error("setindex! is not supported")
 Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
 
-function TightBindingModel(terms::Vector{TightBindingTerm{D}}) where {D}
+function TightBindingModel(
+    terms::Vector{TightBindingTerm{D}},
+    cbr::CompositeBandRep{D},
+) where {D}
     length(terms) == 0 && return TightBindingModel{D}(terms, 0)
     N = last(first(terms).axis)
-    return TightBindingModel{D}(terms, N)
+    return TightBindingModel{D}(terms, cbr, N)
 end
 function (tbm::TightBindingModel{D})(cs::Vector{Float64}) where {D}
     return ParameterizedTightBindingModel(tbm, cs)
