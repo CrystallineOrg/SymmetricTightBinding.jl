@@ -767,7 +767,7 @@ function tb_hamiltonian(
     # symmetry independent
     hermiticity = antihermitian ? ANTIHERMITIAN : HERMITIAN
     B = length(brs)
-    axis = BlockArrays.BlockedOneTo(cumsum((count_bandrep_orbitals(br) for br in brs)))
+    axis = BlockArrays.BlockedOneTo((cumsum(occupation(br) for br in brs)))
     tbs = Vector{TightBindingTerm{D}}()
     for d in 0:B-1 # offset from main diagonal (at 0)
         for block_i in 1:B-d
@@ -811,15 +811,18 @@ function tb_hamiltonian(
     return TightBindingModel(tbs)
 end
 
+#=
 """
-    count_bandrep_orbitals(br::NewBandRep{D}) --> Int
+    occupation(br::NewBandRep{D}) --> Int
 
 Counts the number of orbitals in a band representation `br`. This is done by taking 
 the multiplicity of the Wyckoff position associated to `br`, dividing it by the 
 centering volume fraction (excluding copies due to conventional setting) and 
 multiplying it by the dimension of the site irrep.
+
+NB: This is equivalent to `occupation(br)`..!
 """
-function count_bandrep_orbitals(br::NewBandRep{D}) where {D}
+function occupation(br::NewBandRep{D}) where {D}
     mult = multiplicity(position(br)) # multiplicity in conventional setting
     # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
     # divide by the the number of centering-translations
@@ -829,5 +832,4 @@ function count_bandrep_orbitals(br::NewBandRep{D}) where {D}
 
     return mult * irdim(br.siteir)
 end
-
-# ---------------------------------------------------------------------------- #
+=#

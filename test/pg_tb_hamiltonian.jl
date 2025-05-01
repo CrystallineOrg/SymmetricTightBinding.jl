@@ -1,6 +1,5 @@
 using Test
 using TETB
-using TETB: count_bandrep_orbitals
 using Crystalline
 using Crystalline: isapprox, constant
 using LinearAlgebra
@@ -53,8 +52,7 @@ using LinearAlgebra
 
             tb_onsite = tb_model[1]
             # dimensions of the hamiltonian should be equal to the number of orbitals
-            @test size(tb_onsite) ==
-                  (count_bandrep_orbitals(brs[5]), count_bandrep_orbitals(brs[5]))
+            @test size(tb_onsite) == (occupation(brs[5]), occupation(brs[5]))
 
             # TODO: finish this when the proper `tb_hamiltonian` structure is implemented
         end # Hamiltonian
