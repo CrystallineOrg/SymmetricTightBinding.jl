@@ -22,7 +22,7 @@ gens, sgrep = sgrep_induced_by_siteir_generators(br)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 
-Rs = [[0,0], [1, 0], [1,-1]] # vector containing the translations we want to consider
+Rs = [[0, 0], [1, 0], [1, -1]] # vector containing the translations we want to consider
 
 Δs = TETB.find_symmetry_related_hoppings(Rs, br, br)
 

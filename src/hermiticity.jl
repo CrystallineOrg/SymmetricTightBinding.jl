@@ -5,7 +5,7 @@ function obtain_basis_free_parameters_hermiticity(
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
     Mm::Array{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ);
-    antihermitian::Bool = false
+    antihermitian::Bool = false,
 ) where {D}
     # Determine a basis for coefficient vectors t⁽ⁿ⁾ that span the space of Hermitian (or
     # `antihermitian` if `true`) TB Hamiltonians Hₛₜ(k) = vᵢ(k) Mᵢⱼₛₜ tⱼ = vᵀ(k) M⁽ˢᵗ⁾ t. 
@@ -28,19 +28,20 @@ function obtain_basis_free_parameters_hermiticity(
     constraints = _aggregate_constraints(Q, Z)
 
     # Step 4: find the nullspace of the constraints
-    tₐᵦ_basis_matrix = nullspace(constraints; atol=NULLSPACE_ATOL_DEFAULT)
+    tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 
     return tₐᵦ_basis_matrix
 end
 
 function constraint_hermiticity(
-        Mm::AbstractArray{<:Number,4},
-        h_orbit::HoppingOrbit{D},
-        antihermitian::Bool
-    ) where {D}
+    Mm::AbstractArray{<:Number, 4},
+    h_orbit::HoppingOrbit{D},
+    antihermitian::Bool,
+) where {D}
     Q = Array{Int}(undef, size(Mm))
     opI = inversion(Val(D)) # inversion operation
-    Pᵀ = transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
+    Pᵀ =
+        transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
     for s in axes(Mm, 3)
         for t in axes(Mm, 4)
             Q[:, :, s, t] .= Pᵀ * Mm[:, :, t, s] # Pᵀ M⁽ᵗˢ⁾

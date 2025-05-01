@@ -9,6 +9,6 @@ coefs = zeros(Int, length(brs))
 coefs[[1, 3]] .= 1
 cbr = CompositeBandRep(coefs, brs)
 
-Rs = [[0,], [1,]]
+Rs = [[0], [1]]
 
 tbs = tb_hamiltonian(cbr, Rs, false)

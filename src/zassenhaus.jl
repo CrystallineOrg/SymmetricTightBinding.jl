@@ -19,8 +19,8 @@ It assumes that the basis are given by columns.
 function zassenhaus_intersection(
     U::AbstractArray{T},
     W::AbstractArray{T},
-    atol::Real = ZASSENHAUS_ATOL_DEFAULT
-) where {T<:Number}
+    atol::Real = ZASSENHAUS_ATOL_DEFAULT,
+) where {T <: Number}
     U = transpose(U) # the algorithm assumes that the basis are given by rows
     W = transpose(W) # for me is more natural to give it by columns, so I just
     # transpose them   transpose them

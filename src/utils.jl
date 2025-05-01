@@ -22,9 +22,9 @@ function obtain_symmetry_vectors(ms::PyObject, sgnum::Int)
     lgs = littlegroups(sgnum) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
     map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
-    lgirsd = pick_lgirreps(lgs; timereversal=true) # small irreps associated with `lgs`
+    lgirsd = pick_lgirreps(lgs; timereversal = true) # small irreps associated with `lgs`
 
-    symeigsd = Dict{String,Vector{Vector{ComplexF64}}}()
+    symeigsd = Dict{String, Vector{Vector{ComplexF64}}}()
     for (klab, lg) in lgs
         kv = mp.Vector3(position(lg)()...)
         ms.solve_kpoint(kv)
@@ -68,8 +68,12 @@ function find_auxiliary_modes(μᴸ::Int, brs::Collection{<:NewBandRep})
     iszero(μᴸ) && return [Int[]]
     μs_brs = occupation.(brs)
     long_cand = find_all_admissible_expansions(
-        brs, μs_brs, μᴸ, #= occupation =#
-        Int[], Int[]) #= idxs =#
+        brs,
+        μs_brs,
+        μᴸ, #= occupation =#
+        Int[],
+        Int[],
+    ) #= idxs =#
 
     return long_cand
 end
@@ -146,11 +150,12 @@ We ensure this by the following check:
 Check if a certain solution `(nᵀ⁺ᴸ, nᴸ)` subduces properly the O(3) representation at Γ and 
 zero frequency. This is fulfilled if `p` is an integer vector. Check `devdocs.md`.
 """
-function is_integer_p_check(m::AbstractSymmetryVector,
+function is_integer_p_check(
+    m::AbstractSymmetryVector,
     nᵀ⁺ᴸ::AbstractSymmetryVector{D},
     nᴸ::AbstractSymmetryVector{D},
     Q::Matrix{Int},
-    Γ_idx::Int
+    Γ_idx::Int,
 ) where {D}
     # convert everything into vectors w/o occupation and take the content at Γ
     mᵧ = multiplicities(m)[Γ_idx]
@@ -183,8 +188,8 @@ are not used to regularize the symmetry content at zero frequency.
 function find_apolar_modes(
     m::AbstractSymmetryVector{D},
     idxsᴸs::Vector{Vector{Int64}},
-    brs::Collection{NewBandRep{D}}) where {D}
-
+    brs::Collection{NewBandRep{D}},
+) where {D}
     μs_brs = occupation.(brs)
     idxs = eachindex(first(brs))
 
@@ -194,9 +199,10 @@ function find_apolar_modes(
 
     n_fixed, Q = physical_zero_frequency_gamma_irreps(
         lgirs;
-        supergroup_constraints=true,
-        force_fixed=true,
-        lattice_reduce=true)
+        supergroup_constraints = true,
+        force_fixed = true,
+        lattice_reduce = true,
+    )
 
     candidatesv = TightBindingCandidateSet[]
     for idxsᴸ in idxsᴸs
@@ -216,7 +222,8 @@ function find_apolar_modes(
         constraints = m + nᴸ # now the constraints are wrong at Γ; proceed to correct this
         constraints.multsv[Γ_idx] -= n_fixed + multiplicities(nᴸ)[Γ_idx] # now: fixed
 
-        idxsᵀ⁺ᴸs = find_all_admissible_expansions(brs, μs_brs, μᵀ⁺ᴸ, Vector(constraints), idxs)
+        idxsᵀ⁺ᴸs =
+            find_all_admissible_expansions(brs, μs_brs, μᵀ⁺ᴸ, Vector(constraints), idxs)
 
         if !isempty(idxsᵀ⁺ᴸs)
             ps = map(idxsᵀ⁺ᴸs) do idxsᵀ⁺ᴸ
