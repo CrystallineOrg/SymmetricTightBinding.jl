@@ -10,7 +10,7 @@ compatibility-respecting (i.e., energy separable along high-symmetry **k**-lines
   used in determining the multiplicities of irreps across high-symmetry **k**-points.
 
 ## Example
-```jl-repl
+```julia-repl
 julia> using Crystalline, TETB
 
 julia> brs = calc_bandreps(221); coefs = zeros(Int, length(brs)); coefs[[1, 2]] .= 1;
