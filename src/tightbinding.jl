@@ -25,8 +25,8 @@
         and repeat step 2.
     4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-    Additionally, if we have time-reversal symmetry, we merge orbits that are relate
-    `δ` and `-δ`.
+    Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
+    `-δ` are present if not we add them.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -74,7 +74,7 @@ function obtain_symmetry_related_hoppings(
     # have a counterpart `-δ` - but those two vectors could have fallen into distinct
     # hopping orbits at this point; if so, we must merge them
     if timereversal
-        merge_timereversal_related_orbits(h_orbits)
+        add_timereversal_related_orbits!(h_orbits)
     end
 
     return h_orbits
@@ -173,65 +173,62 @@ function _maybe_add_hoppings!(
     return δ_orbit
 end
 
-function merge_timereversal_related_orbits(h_orbits::Vector{<:HoppingOrbit})
+function add_timereversal_related_orbits!(h_orbits::Vector{<:HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
-    # hopping vector `-δ` is also in the orbit; if not, we go looking for it in another
-    # orbit - once we find it, we merge those two orbits
+    # hopping vector `-δ` is also in the orbit; if not, we check it is not in any other
+    # orbit, and add it manually to the orbit; if it is we error
 
-    # below, we assume that "complete" merging can be achieved between just two orbits:
-    # that's not obviously the case, but seems likely - if counterexamples arise, we error
+    # below, we assume that if for some δ no counterpart is found, then no other δ in the
+    # orbit has a counterpart in another orbit, so we can just add it
 
-    # identify which `h_orbit`s should be merged, and with which partners
-    merge_list = Vector{Tuple{Int, Int}}()
+    # identify if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
-        δs = orbit(h_orbit)
+        δss = vcat(orbit.(h_orbits)...) # all δs in all orbits
+        δs = orbit(h_orbit) # δs in the current orbit
+
+        # check if the orbit is already "good" (i.e., all δs have a -δ counterpart)
         if all(δ -> isapproxin(-δ, δs, nothing, false), δs)
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
+        elseif any(δ -> isapproxin(-δ, δss, nothing, false), δs)
+            # at least one δ has a -δ counterpart in another orbit - we need to merge them
+            # TODO: I will assume that if one δ has a -δ counterpart in another orbit, then all
+            # δs in the orbit have a -δ counterpart in the same orbit, so we merge them
+            idx_merge = findfirst(
+                idx -> isapproxin(δs[1], orbit(h_orbits[idx], nothing, false)),
+                length(h_orbits),
+            )
+
+            # merge the orbits
+            append!(orbit(h_orbit), orbit(h_orbits[idx_merge]))
+            append!(h_orbit.hoppings, h_orbits[idx_merge].hoppings)
+
+            # remove the merged orbit
+            deleteat!(h_orbits, idx_merge)
+            continue
         end
-        # there's at least some δ that doesn't have a -δ counterpart: we pick any such
-        # example and go looking for a counterpart in another orbit
-        idx_δ = something(findfirst(δ′ -> !isapproxin(-δ′, δs, nothing, false), δs))
-        δ = δs[idx_δ]
-        rev_δ = -δ
-        for n′ in n+1:length(h_orbits)
-            any(p -> p[2] == n′, merge_list) && continue # already merged
-            h_orbit′ = h_orbits[n′]
-            δs′ = orbit(h_orbit′)
-            found_partner = false
-            if isapproxin(rev_δ, δs′, nothing, false)
-                # we found a match: add the index of the orbit to the merge list
-                push!(merge_list, (n, n′))
-                merged_δs = vcat(δs, δs′)
-                if any(δ′ -> !isapproxin(-δ′, merged_δs, nothing, false), merged_δs)
-                    error(
-                        "failed to combine δ to -δ orbits in single merger: unhandled case",
-                    )
-                end
-                found_partner = true
-                break
+        # there's at least some δ that doesn't have a -δ counterpart. we assume that, then, 
+        # none of the δs has a -δ counterpart, so we need to add them
+        # TODO: Maybe I am assuming to much. Check if the above statement is true
+
+        # first append the new δs into the orbit
+        append!(δs, -δs)
+
+        # then we need to add the new hopping terms which will be changing: a + δ = b + R, to
+        # b - δ = a - R
+        hops_orbit = h_orbit.hoppings
+        hops_orbit′ = Vector{Tuple{RVec, RVec, RVec}}[] # TODO: maybe to many (unnecessary) allocations
+        for hops in hops_orbit
+            hops′ = Tuple{RVec, RVec, RVec}[] # new vector to store the new hopping terms
+            for (qₐ, qᵦ, R) in hops
+                # we need to add the new hopping terms to the vector. the term will be the 
+                # reversed hopping term, i.e., b - δ = a - R, which gives rise to -δ
+                push!(hops′, (qᵦ, qₐ, -R))
             end
-            found_partner || error(lazy"failed to find a -δ partner for orbit #$n")
+            push!(hops_orbit′, hops′)
         end
+        append!(hops_orbit, hops_orbit′)
     end
-
-    # do the actual merging
-    for (n, n′) in merge_list
-        # we have to merge the two orbits: we take the first one and add the second
-        # one to it, and then remove the second one from the list of hopping orbits
-        h_orbit = h_orbits[n]
-        h_orbit′ = h_orbits[n′]
-        append!(orbit(h_orbit), orbit(h_orbit′))
-        append!(h_orbit.hoppings, h_orbit′.hoppings)
-    end
-
-    # delete the "old" orbits
-    if !isempty(merge_list)
-        delete_ns = getindex.(merge_list, 2)
-        deleteat!(h_orbits, delete_ns)
-    end
-
-    return h_orbits
 end
 
 # ---------------------------------------------------------------------------- #
