@@ -348,11 +348,13 @@ function (ptbm::ParameterizedTightBindingModel{D})(
         Nᵗ = length(t) ÷ 2
         tℂ = ComplexF64.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end])) # complex coefficient vector
         Mm = block.Mm
-        v = cispi.(2 * dot.(Ref(k), constant.(orbit(block.h_orbit))))
+        v = cispi.(dot.(Ref(2k), constant.(orbit(block.h_orbit))))
         # NB: ↑ one more case of assuming no free parameters in `δ`
+        M_tℂ = Vector{ComplexF64}(undef, size(Mm, 1))
         for (local_i, i) in enumerate(is)
             for (local_j, j) in enumerate(js)
-                Hᵢⱼ = c * transpose(v) * (@view Mm[:, :, local_i, local_j]) * tℂ
+                mul!(M_tℂ, (@view Mm[:, :, local_i, local_j]), tℂ) # M_tℂ = M[:,:,i,j] * tℂ
+                Hᵢⱼ = c * dot(v, M_tℂ)
                 H[i, j] += Hᵢⱼ
                 H[j, i] += tbt.hermiticity == ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
             end
