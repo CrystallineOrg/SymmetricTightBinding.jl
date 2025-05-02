@@ -64,6 +64,8 @@ include("show_tightbinding.jl")
 include("utils_tightbinding.jl")
 include("symmetry_analysis_tightbinding.jl")
 export symmetry_analysis
+include("spectrum_tightbinding.jl")
+export spectrum
 include("plotting_utils.jl")
 export hop_plot
 
