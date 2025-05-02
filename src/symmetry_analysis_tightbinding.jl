@@ -19,9 +19,9 @@ julia> cbr = CompositeBandRep(coefs, brs)
 40-irrep CompositeBandRep{3}:
  (3d|A₁g) + (3d|A₁ᵤ) (6 bands)
 
-julia> tbm = tb_hamiltonian(cbr, [zeros(Int, dim(cbr))]); # a 4-term tight-binding model
+julia> tbm = tb_hamiltonian(cbr, [zeros(Int, dim(cbr))]); # a 4-term, 6-band model
 
-julia> ptbm = tbm([1.0, 0.2, -1.0, 0.3]); # fix free coefficients
+julia> ptbm = tbm([1.0, 0.1, -1.0, 0.1]); # fix free coefficients
 
 julia> symmetry_analysis(ptbm)
 2-element Vector{SymmetryVector{3}}:
@@ -103,7 +103,11 @@ function symmetry_eigenvalues(
     length(k) == D || error("dimension mismatch")
     length(sgreps) == length(ops) || error("length of `sgreps` must match length of `ops`")
 
-    _, vs = solve(ptbm, k; bloch_phase = Val(true))
+    # NB: Currently, the site-symmetry induced reps assume the "Convention 1" Fourier
+    #     transform, which doesn't depend on "in-unit-cell" coordinates; so we don't add
+    #     such phases here. Longer term, we might want to do that though since it could
+    #     simplify the induced rep phases to an overall phase instead of the tᵦₐ-business
+    _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         ρ = sgrep(k)
