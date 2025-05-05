@@ -189,14 +189,18 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
         if all(δ -> isapproxin(-δ, δs, nothing, false), δs)
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
-        elseif any(δ -> isapproxin(-δ, δss, nothing, false), δs)
+        end
+        
+        merge_idx = findfirst(
+            h_orbit′-> isapproxin(δs[1], orbit(h_orbit′), nothing, false)),
+            @view h_orbits[n+1:end],
+        )
+        if !isnothing(merge_idx)
             # at least one δ has a -δ counterpart in another orbit - we need to merge them
             # TODO: I will assume that if one δ has a -δ counterpart in another orbit, then all
             # δs in the orbit have a -δ counterpart in the same orbit, so we merge them
-            idx_merge = findfirst(
-                idx -> isapproxin(δs[1], orbit(h_orbits[idx], nothing, false)),
-                length(h_orbits),
-            )
+            n′ = something(idx_merge) + n
+            h_orbit′ = h_orbits[n′]
 
             # merge the orbits
             append!(orbit(h_orbit), orbit(h_orbits[idx_merge]))
