@@ -190,10 +190,10 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
         end
-        
+
         merge_idx = findfirst(
-            h_orbit′-> isapproxin(δs[1], orbit(h_orbit′), nothing, false)),
-            @view h_orbits[n+1:end],
+            h_orbit′ -> isapproxin(δs[1], orbit(h_orbit′), nothing, false),
+            @view h_orbits[n+1:end]
         )
         if !isnothing(merge_idx)
             # at least one δ has a -δ counterpart in another orbit - we need to merge them
@@ -219,7 +219,7 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
 
         # add the "reversed" hopping terms: i.e., for every a + δ = b + R, add b + (-δ) = a + (-R)
         hoppings = h_orbit.hoppings
-        hoppings′ = [Vector{NTuple{3, RVec{D}}(undef, length(hops)) for hops in hoppings]
+        hoppings′ = [Vector{NTuple{3, RVec{D}}}(undef, length(hops)) for hops in hoppings]
         for (hops, hops′) in zip(hoppings, hoppings′)
             for (qₐ, qᵦ, R) in hops
                 # we need to add the new hopping terms to the vector. the term will be the 
