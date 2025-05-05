@@ -348,8 +348,9 @@ function (ptbm::ParameterizedTightBindingModel{D})(
         Nᵗ = length(t) ÷ 2
         tℂ = ComplexF64.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end])) # complex coefficient vector
         Mm = block.Mm
+
+        # NB: ↓ one more case of assuming no free parameters in `δ`
         v = cispi.(dot.(Ref(2k), constant.(orbit(block.h_orbit))))
-        # NB: ↑ one more case of assuming no free parameters in `δ`
         M_tℂ = Vector{ComplexF64}(undef, size(Mm, 1))
         for (local_i, i) in enumerate(is)
             for (local_j, j) in enumerate(js)

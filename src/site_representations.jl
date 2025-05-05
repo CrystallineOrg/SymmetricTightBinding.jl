@@ -23,7 +23,7 @@ function sgrep_induced_by_siteir_excl_phase(
                 gₐ,
                 false,
             )
-            idx_h = findfirst(==(h), siteg)
+            idx_h = findfirst(h′ -> isapprox(h, h′, nothing, false), siteg)
             if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
                 ρ[Block(β, α)] .= siteir.matrices[idx_h]
                 # we build the representation acting as the transpose, i.e., 
@@ -43,7 +43,7 @@ function sgrep_induced_by_siteir_excl_phase(
                 break
             end
         end
-        check || error("failed to find any nonzero block")
+        check || error(lazy"failed to find any nonzero block (br=$br, siteg=$siteg)")
     end
 
     return ρ
@@ -89,7 +89,7 @@ end
 # functor behavior for `SiteInducedSGRepElement`
 function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D}
     g = sgrep.op
-    gk = compose(g, ReciprocalPoint{3}(k))
+    gk = compose(g, ReciprocalPoint{D}(k))
     ρ′ = similar(sgrep.ρ)
     for (β, qᵦ) in enumerate(sgrep.positions)
         for (α, qₐ) in enumerate(sgrep.positions)
