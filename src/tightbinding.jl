@@ -212,7 +212,7 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
         end
         # we now know that at least some δ doesn't have a -δ counterpart: we assume that
         # this implies that none of the δs have a -δ counterpart, so we need to add them all
-        # TODO: Maybe I am assuming to much. Check if the above statement is true
+        @assert all(δ -> !isapproxin(-δ, δs, nothing, false), δs)
 
         # first append the new δs into the orbit
         append!(δs, -δs)
