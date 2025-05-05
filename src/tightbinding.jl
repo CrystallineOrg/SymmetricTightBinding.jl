@@ -226,7 +226,7 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
                 # reversed hopping term, i.e., b - δ = a - R, which gives rise to -δ
                 push!(hops′, (qᵦ, qₐ, -R))
             end
-            push!(hops_orbit′, hops′)
+            push!(hoppings′, hops′)
         end
         append!(hops_orbit, hops_orbit′)
     end
