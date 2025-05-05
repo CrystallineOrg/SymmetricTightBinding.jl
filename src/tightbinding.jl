@@ -210,8 +210,8 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
             deleteat!(h_orbits, n′)
             continue
         end
-        # there's at least some δ that doesn't have a -δ counterpart. we assume that, then, 
-        # none of the δs has a -δ counterpart, so we need to add them
+        # we now know that at least some δ doesn't have a -δ counterpart: we assume that
+        # this implies that none of the δs have a -δ counterpart, so we need to add them all
         # TODO: Maybe I am assuming to much. Check if the above statement is true
 
         # first append the new δs into the orbit
