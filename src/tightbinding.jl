@@ -228,7 +228,7 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
             end
             push!(hoppings′, hops′)
         end
-        append!(hops_orbit, hops_orbit′)
+        append!(hoppings, hoppings′)
     end
 end
 
