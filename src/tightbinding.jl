@@ -26,7 +26,7 @@
     4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
     Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
-    `-δ` are present if not we add them.
+    `-δ` are present; if not, we add them.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
