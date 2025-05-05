@@ -203,8 +203,8 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
             h_orbit′ = h_orbits[n′]
 
             # merge the orbits
-            append!(orbit(h_orbit), orbit(h_orbits[idx_merge]))
-            append!(h_orbit.hoppings, h_orbits[idx_merge].hoppings)
+            append!(h_orbit.orbit, h_orbit′.orbit)
+            append!(h_orbit.hoppings, h_orbit′.hoppings)
 
             # remove the merged orbit
             deleteat!(h_orbits, idx_merge)
