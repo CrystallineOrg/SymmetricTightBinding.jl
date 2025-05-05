@@ -175,11 +175,11 @@ end
 
 function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
-    # hopping vector `-δ` is also in the orbit; if not, we check it is not in any other
-    # orbit, and add it manually to the orbit; if it is we error
+    # hopping vector `-δ` is also in the orbit; if not, we check if it is in any other
+    # orbit to merge them, and, if not, we add it manually to the orbit
 
     # below, we assume that if for some δ no counterpart is found, then no other δ in the
-    # orbit has a counterpart in another orbit, so we can just add it
+    # orbit has a counterpart, so we can just add it manually
 
     # identify if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
