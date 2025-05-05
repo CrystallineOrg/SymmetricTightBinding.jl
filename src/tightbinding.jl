@@ -183,7 +183,6 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
 
     # determine if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
-        δss = vcat(orbit.(h_orbits)...) # all δs in all orbits
         δs = orbit(h_orbit) # δs in the current orbit
 
         # check if the orbit is already "good" (i.e., all δs have a -δ counterpart)
