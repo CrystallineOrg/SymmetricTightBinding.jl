@@ -3,87 +3,91 @@
 ## Notation
 
 Let me first specify the notation we are going to use through out the code in other to avoid
-any misunderstandings. We are going to use Unicode characters and face as best as we can with 
-their limitations.
+any misunderstandings.
+We are going to use Unicode characters and face as best as we can with their limitations.
 
 First, we need to differentiate between symmetry vectors obtained from MPB (or given by the 
-user) and the ones obtained from the code as possible candidates for a TETB model. For making 
-this differentiation we are going to use the following notation:
+user) and the ones obtained from the code as possible candidates for a TETB model.
+For making this differentiation we are going to use the following notation:
 
-1. Symmetry vectors obtained from MPB will be denoted by $m$.
-2. However symmetry vectors coming as outputs of the code will be denoted by $n$. There will 
-   be different vectors coming as outputs from the code. We will denoted them by a super-index 
-   indicating their "polarization". Being mere specific, the symmetry vector representing the 
-   whole TETB model (transverse + longitudinal modes) and will be denoted by $n^{T+L}$; and 
-   the one representing only the longitudinal modes $n^L$. You can obtain the symmetry vector 
-   of transversal modes from those two by $n^T=n^{T+L}-n^L$.
+1. Symmetry vectors obtained from MPB will be denoted by $𝗺$.
+2. However symmetry vectors coming as outputs of the code will be denoted by $𝗻$. There will
+   be different vectors coming as outputs from the code.
+   We will denoted them by a super-index indicating their "polarization".
+   Being more specific, the symmetry vector representing the whole TETB model (transverse +
+   longitudinal modes) and will be denoted by $𝗻^{t+l}$; and the one representing only the
+   longitudinal modes $𝗻^l$. You can obtain the symmetry vector of transversal modes from
+   those two by $𝗻^t = 𝗻^{t+l} - 𝗻^l$.
 
 Additionally, it is interesting to separate those symmetry vectors into the irreps belonging 
-to $\Gamma$ and the others. This is because we need to test if the zero frequency modes are 
-well represented by the model as stipulated by 
-[Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066), and that any negative 
-multiplicity coming from the ill-definition of that content is present on the longitudinal 
-modes $n^L$. For this we do the following:
+to Γ and other HSPs.
+This is because we need to test if the zero frequency modes are well represented by the model
+as stipulated by this [paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066), and that
+any negative multiplicity coming from the ill-definition of that content is present on the
+longitudinal modes $𝗻^l$. For this we do the following:
 
-1. Separate all the symmetry vectors into a part belonging to $\Gamma$ and the other high 
-   symmetry points. For example for the symmetry vector coming from MPB: 
-   $m = m_\Gamma + m_{-\Gamma}$, but this could be dome similarly for the other symmetry vectors.
-2. Additionally, the part belonging to $\Gamma$ can be separated into two: 
-   $m_\Gamma=m_\Gamma^{=0}+m_\Gamma^{>0}$, one part belonging to the modes at $\omega=0$ and 
-   the ones at $\omega>0$.
+1. Separate all the symmetry vectors into a part belonging to Γ and the other HSPs.
+   For example for the symmetry vector coming from MPB: $𝗺 = 𝗺_Γ + 𝗺_{-Γ}$, but this could
+   be dome similarly for the other symmetry vectors.
+2. Additionally, the part belonging to Γ can be separated into two: 
+   $𝗺_Γ = 𝗺_Γ^{=0} + 𝗺_Γ^{>0}$, one part belonging to the modes at $ω = 0$ and the ones at
+   $ω > 0$.
 
 Now having the notation clear we can explain how our code works.
 
 ## The problem we want to solve
 
-Basically the problem we want to solve can be written as: $Ac^T=m$, where $A$ is the matrix 
-of BRs in the SG and $c$ is a vector of coefficients in the BRs. It's important to have in mind
-that $Ac^T=n^T$. In the code $A$ will be called `brs`. The notation explained for the symmetry 
-vectors can also be applied to this matrix. We can divide this problem into two enabling us 
-to study the $\Gamma$-point separately:
+Basically the problem we want to solve can be written as: $A 𝗰^t = 𝗺$, where $A$ is the
+matrix of BRs in the SG and $𝗰^t$ is a vector of coefficients in the BRs.
+It's important to have in mind that $A 𝗰^t = 𝗻^t$.
+In the code $A$ will be usually called `brs`.
+The notation explained for the symmetry vectors can also be applied to this matrix.
+We can divide this problem into two enabling us to study the Γ-point separately:
 
 $$
-\begin{bmatrix} A_\Gamma \\ A_{-\Gamma} \end{bmatrix} c^T = 
-\begin{bmatrix} m_\Gamma \\ m_{-\Gamma} \end{bmatrix}
+\begin{bmatrix} A_Γ \\ A_{-Γ} \end{bmatrix} 𝗰^t = 
+\begin{bmatrix} 𝗺_Γ \\ 𝗺_{-Γ} \end{bmatrix}
 $$
 
 ### Problem 1
 
 $$
-A_{-\Gamma} c^T = 
-m_{-\Gamma} \Rightarrow A_{-\Gamma} c^{T+L} = 
-m_{-\Gamma} + A_{-\Gamma} c^L
+A_{-Γ} 𝗰^t = 
+𝗺_{-Γ} \Rightarrow A_{-Γ} 𝗰^{t+l} = 
+𝗺_{-Γ} + A_{-Γ} 𝗰^l
 $$
 
-In general $n^T$ could have some irreps with negative multiplicities, that why we separated 
-the problem into $n^{T+L}$ and $n^L$ so the problem will be strictly positive. For more details 
-check [Antonio's paper](https://doi.org/10.48550/arXiv.2305.18257).
+In general $𝗰^t$ could have some irreps with negative multiplicities, that why we separated
+the problem into $𝗰^{t+l}$ and $𝗰^l$ so the problem will be strictly positive.
+For more details check this [paper](https://doi.org/10.48550/arXiv.2305.18257).
 
-First we find all possible longitudinal modes $n^L$ in the SG for a given (usually, smallest 
-possible) occupation `t`. 
+First, we find all possible longitudinal modes $𝗻^l = A 𝗰^l$ in the SG for a given (usually,
+smallest possible) occupation `t`. 
 This is performed with the function `find_auxiliary_modes`.
 
-Then, using the identified set of of fixed-occupation $\{n^L\}$, we search if there are 
-transverse+longitudinal modes $n^{T+L}$ that satisfy the previous equation. This is done in 
-the function `find_apolar_modes`.
+Then, using the identified set of of fixed-occupation $\{ 𝗻^l \}$, we search if there are
+transverse+longitudinal modes $𝗻^{t+l}$ that satisfy the previous equation.
+This is done in the function `find_apolar_modes`.
 
 ### Problem 2
 
 $$
-A_{\Gamma} c^T = 
-m_{\Gamma} = 
-m_\Gamma^{=0} + m_\Gamma^{>0}
+A_{Γ} 𝗰^t = 
+𝗺_{Γ} = 
+𝗺_Γ^{=0} + 𝗺_Γ^{>0}
 $$
 
-`MPBUtils.jl` forces the content at zero frequency to be exactly that shown in Table 
-(S6-8) of [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066) which we are 
-going to call `n_fixed`, but we have some freedom coming from $Q\mathbf{p}$ which can appear 
-in our model. Then, the previous equality should be thought of as `n_fixed`$\mod Q$.
-More explicitly, a compatible solution must solve the following with some $\mathbf{p}\in\mathbb{Z}$:
+`MPBUtils.jl` forces the content at zero frequency to be exactly what is shown in Table 
+(S6-8) of this [paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066) which we are
+going to call `n_fixed`, but we have some freedom coming from $Q 𝗽$ which can appear
+in our model.
+Then, the previous equality should be thought of as `n_fixed`$\mod Q$.
+More explicitly, a compatible solution must solve the following equation with 
+$𝗽 ∈ ℤ$:
 
 $$
-A_{\Gamma} c^T - m_{\Gamma} =
-Q\mathbf{p}
+A_{Γ} 𝗰^T - 𝗺_{Γ} =
+Q 𝗽
 $$
 
 See the details in [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.021066).
@@ -92,45 +96,45 @@ See the details in [Thomas' paper](https://link.aps.org/doi/10.1103/PhysRevX.12.
 
 Description of what a *physical* solutions means.
 
-Assume we have a solution provided by our code, which consist on a longitudinal part $n^L$ 
-and a transverse+longitudinal one $n^{T+L}$. This is obtained by solving [Problem 1](#problem-1). 
-Given a symmetry vector $m$ from MPB, we are considering if our solution properly represents 
-the content at $\Gamma$, which has been in the computation of the solution. For this we 
+Assume we have a solution provided by our code, which consist on a longitudinal part $𝗻^l$ 
+and a transverse+longitudinal one $𝗻^{t+l}$.
+This is obtained by solving [Problem 1](#problem-1). 
+Given a symmetry vector $𝗺$ from MPB, we are considering if our solution properly represents 
+the content at Γ, which has been in the computation of the solution. For this we 
 need to check two things:
 
-1. Whether our solution sub-duces properly to the $O(3)$ representation at $\Gamma$ and zero 
+1. Whether our solution sub-duces properly to the $O(3)$ representation at Γ and zero 
    frequency. This can be checked easily using `PhotonicBandConnectivity.jl`. As explained 
-   before in [Problem 2](#problem-2), this is fulfilled if there exists a $\mathbf{p}\in\mathbb{Z}$ 
-   solving $A_{\Gamma} c^T - m_{\Gamma} = Q\mathbf{p}$.
-2. Whether our solution doesn't make use of the higher frequency irreps present in 
-   $m_\Gamma^{>0}$ to regularize the symmetry content at zero frequency, and that instead 
-   those negative multiplicities in the irreps are cancelled out by the longitudinal modes $n^L$. 
-   We ensure this by the following check:
-
-    Define the candidate-solution's zero-frequency content at $\Gamma$ by:
+   before in [Problem 2](#problem-2), this is fulfilled if there exists a $𝗽 ∈ ℤ$ solving 
+   $A_{Γ} 𝗰^T - 𝗺_{Γ} = Q 𝗽$.
+2. Whether our solution doesn't make use of the higher frequency irreps ($ω > 0$) present in
+   $𝗺_Γ^{>0}$ to regularize the symmetry content at $ω = 0$, and that instead those negative
+   multiplicities in the irreps are cancelled out by the longitudinal modes $𝗻^l$. 
+   We ensure this by the following check:𝗻
+    Define the candidate-solution's zero-frequency content at Γ by:
 
     $$
-    n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = 
-    n_{\Gamma}^{T+L} - n_{\Gamma}^L - m_{\Gamma}^{>0} = 
-    m_{\Gamma}^{=0} + Q\mathbf{p}
+    𝗻_Γ^{t,=0} = 𝗻_{Γ}^{t} - 𝗻_{Γ}^{>0} = 
+    𝗻_{Γ}^{t+l} - 𝗻_{Γ}^l - 𝗻_{Γ}^{>0} = 
+    𝗺_{Γ}^{=0} + Q 𝗽
     $$
   
     Consider the following two cases:
-    - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ 
-        for that $i$; equivalently, in this case $n_{\Gamma,i}^L \geq -n_{\Gamma,i}^{T,=0}$.
-    - Conversely, if  $n_{\Gamma,i}^{T,=0} ≥ 0$ for some $i$, we still have $n_{\Gamma,i}^L ≥ 0$
-         and consequently also $n_{\Gamma,i}^L ≥ -n_{\Gamma,i}^{T,=0}$.
+    - If $n_{Γ,i}^{t,=0} < 0$ for some $i$, then $n_{Γ,i}^l \geq |n_{Γ,i}^{t,=0}|$ for that
+    $i$; equivalently, in this case $n_{Γ,i}^l \geq -n_{Γ,i}^{t,=0}$.
+    - Conversely, if  $n_{Γ,i}^{t,=0} ≥ 0$ for some $i$, we still have $n_{Γ,i}^l ≥ 0$ and
+    consequently also $n_{Γ,i}^l ≥ -n_{Γ,i}^{t,=0}$.
 
-    Thus, regardless of the sign of $n_{\Gamma,i}^{T,=0}$, we may require that:
+    Thus, regardless of the sign of $n_{Γ,i}^{t,=0}$, we may require that:
 
     $$
-    n_{\Gamma}^L \geq -n_\Gamma^{T,=0}
+    n_{Γ}^l \geq -n_Γ^{t,=0}
     $$
 
 These constraints are directly imposed in the function `find_apolar_modes` thanks to the
 functionalities of `find_all_admissible_expansions`.
 
-## Representation of the SG operations in $\mathbf{k}$-space
+## Representation of the SG operations in 𝗸-space
 
 As discussed in Section 3 of 
 [Barry's article](https://doi.org/10.1146/annurev-conmatphys-041720-124134), we know Wannier
@@ -392,7 +396,7 @@ $$
     =
     v_\alpha \mathbf{R}_{\alpha\beta}(g) t_\beta
     \text{ with }
-    \mathbf{R}_{\alpha\beta}(g) = \bm{\rho}_G(g)\mathbf{M}_{\alpha\beta}\bm{\rho}_G^{-1}(g)
+    \mathbf{R}_{\alpha\beta}(g) = \bm{\rho}_G(g)𝗺_{\alpha\beta}\bm{\rho}_G^{-1}(g)
 $$
 
 Or, defining $\mathbf{R}$ as a block-matrix with elements $\mathbf{R}_{\alpha\beta}$, we have:
@@ -403,14 +407,14 @@ $$
 
 The transformation $H(gk)$, on the other hand, becomes:
 
-$$ H(gk)_{ij} = \text{permuted}(\mathbf{v})^T \mathbf{M}^{ij} \mathbf{t} = \mathbf{v}^T 
-\text{permuted}(\mathbf{M})^{ij} \mathbf{t} $$
+$$ H(gk)_{ij} = \text{permuted}(\mathbf{v})^T 𝗺^{ij} \mathbf{t} = \mathbf{v}^T 
+\text{permuted}(𝗺)^{ij} \mathbf{t} $$
 
-The permutation of $\mathbf{v}$ can be realized by a permutation matrix $\mathbf{P}(g)$, s.t.
-$\text{permuted}(\mathbf{v}^T) = \mathbf{P}(g)\mathbf{v}$, s.t.:
+The permutation of $\mathbf{v}$ can be realized by a permutation matrix $𝗽(g)$, s.t.
+$\text{permuted}(\mathbf{v}^T) = 𝗽(g)\mathbf{v}$, s.t.:
 
 $$
-    \text{permuted}(M)^{ij} = \mathbf{P}(g)^T \mathbf{M}^{ij}
+    \text{permuted}(M)^{ij} = 𝗽(g)^T 𝗺^{ij}
 $$
 
 #### How do we obtain such permutation?
@@ -506,19 +510,19 @@ inside the hopping distance $\delta_i$.
 Then each term of the Hamiltonian matrix can be written as:
 
 $$
-H_{\alpha\beta,ij} = \mathbf{v}^T \mathbf{M}_{\alpha\beta,ij} \mathbf{t}
+H_{\alpha\beta,ij} = \mathbf{v}^T 𝗺_{\alpha\beta,ij} \mathbf{t}
 $$
 
-where $\mathbf{M}_{\alpha\beta,ij}$ is a numerical matrix that will relate a phase with a 
+where $𝗺_{\alpha\beta,ij}$ is a numerical matrix that will relate a phase with a 
 free-parameter present on the Hamiltonian matrix term. At the end what we are doing is the 
 encoding the bilinear form of the Hamiltonian matrix term so we can operate with it in 
 Julia.
 
-We will, then, work with a set of matrices {$\mathbf{M}_{\alpha\beta}$} that will encode the 
+We will, then, work with a set of matrices {$𝗺_{\alpha\beta}$} that will encode the 
 full Hamiltonian term and will allow us to operate with it.
 
 Allow us now to show how symmetry operations acts on this set of matrices and how to obtain 
 the constraints they impose on the Hamiltonian term.
 
-### Action of symmetries on the $\mathbf{M}$ matrices
+### Action of symmetries on the $𝗺$ matrices
 
