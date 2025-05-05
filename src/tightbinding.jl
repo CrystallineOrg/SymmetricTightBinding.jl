@@ -173,7 +173,7 @@ function _maybe_add_hoppings!(
     return δ_orbit
 end
 
-function add_timereversal_related_orbits!(h_orbits::Vector{<:HoppingOrbit{D}}) where {D}
+function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
     # hopping vector `-δ` is also in the orbit; if not, we check it is not in any other
     # orbit, and add it manually to the orbit; if it is we error
