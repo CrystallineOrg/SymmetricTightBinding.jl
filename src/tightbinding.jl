@@ -181,7 +181,7 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
     # below, we assume that if for some δ no counterpart is found, then no other δ in the
     # orbit has a counterpart, so we can just add it manually
 
-    # identify if `h_orbit`s should be modified
+    # determine if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
         δss = vcat(orbit.(h_orbits)...) # all δs in all orbits
         δs = orbit(h_orbit) # δs in the current orbit
