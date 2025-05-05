@@ -656,7 +656,7 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
     # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
-    # for expressions of the kind (Pv)ᵀM … = vᵀPᵀM …
+    # for expressions of the kind (Pv)ᵀ M … = vᵀ Pᵀ M …
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
     for (i, δᵢ) in enumerate(orbit(h_orbit))
         # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
@@ -773,7 +773,7 @@ function tb_hamiltonian(
             # we iterate here across diagonal blocks, going from the main diagonal and up
             # toward the upper block-diagonals: we do this to get a more natural sorting of
             # the terms in the model, with self-hoppings first
-            # we only go over the upper triangular part cf. hermicity/anti-hermicity
+            # we only go over the upper triangular part cf. hermiticity/anti-hermiticity
             block_j = block_i + d
             br1 = brs[block_i]
             br2 = brs[block_j]
