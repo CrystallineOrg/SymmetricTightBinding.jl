@@ -207,7 +207,7 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
             append!(h_orbit.hoppings, h_orbit′.hoppings)
 
             # remove the merged orbit
-            deleteat!(h_orbits, idx_merge)
+            deleteat!(h_orbits, n′)
             continue
         end
         # there's at least some δ that doesn't have a -δ counterpart. we assume that, then, 
