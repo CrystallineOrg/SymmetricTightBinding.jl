@@ -25,8 +25,8 @@
         and repeat step 2.
     4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-    Additionally, if we have time-reversal symmetry, we merge orbits that are relate
-    `δ` and `-δ`.
+    Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
+    `-δ` are present; if not, we add them.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -74,7 +74,7 @@ function obtain_symmetry_related_hoppings(
     # have a counterpart `-δ` - but those two vectors could have fallen into distinct
     # hopping orbits at this point; if so, we must merge them
     if timereversal
-        merge_timereversal_related_orbits(h_orbits)
+        add_timereversal_related_orbits!(h_orbits)
     end
 
     return h_orbits
@@ -173,65 +173,61 @@ function _maybe_add_hoppings!(
     return δ_orbit
 end
 
-function merge_timereversal_related_orbits(h_orbits::Vector{<:HoppingOrbit})
+function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
-    # hopping vector `-δ` is also in the orbit; if not, we go looking for it in another
-    # orbit - once we find it, we merge those two orbits
+    # hopping vector `-δ` is also in the orbit; if not, we check if it is in any other
+    # orbit to merge them, and, if not, we add it manually to the orbit
 
-    # below, we assume that "complete" merging can be achieved between just two orbits:
-    # that's not obviously the case, but seems likely - if counterexamples arise, we error
+    # below, we assume that if for some δ no counterpart is found, then no other δ in the
+    # orbit has a counterpart, so we can just add it manually
 
-    # identify which `h_orbit`s should be merged, and with which partners
-    merge_list = Vector{Tuple{Int, Int}}()
+    # determine if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
-        δs = orbit(h_orbit)
+        δs = orbit(h_orbit) # δs in the current orbit
+
+        # check if the orbit is already "good" (i.e., all δs have a -δ counterpart)
         if all(δ -> isapproxin(-δ, δs, nothing, false), δs)
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
         end
-        # there's at least some δ that doesn't have a -δ counterpart: we pick any such
-        # example and go looking for a counterpart in another orbit
-        idx_δ = something(findfirst(δ′ -> !isapproxin(-δ′, δs, nothing, false), δs))
-        δ = δs[idx_δ]
-        rev_δ = -δ
-        for n′ in n+1:length(h_orbits)
-            any(p -> p[2] == n′, merge_list) && continue # already merged
+
+        merge_idx = findfirst(
+            h_orbit′ -> isapproxin(δs[1], orbit(h_orbit′), nothing, false),
+            @view h_orbits[n+1:end]
+        )
+        if !isnothing(merge_idx)
+            # at least one δ has a -δ counterpart in another orbit - we need to merge them
+            # TODO: I will assume that if one δ has a -δ counterpart in another orbit, then all
+            # δs in the orbit have a -δ counterpart in the same orbit, so we merge them
+            n′ = something(idx_merge) + n
             h_orbit′ = h_orbits[n′]
-            δs′ = orbit(h_orbit′)
-            found_partner = false
-            if isapproxin(rev_δ, δs′, nothing, false)
-                # we found a match: add the index of the orbit to the merge list
-                push!(merge_list, (n, n′))
-                merged_δs = vcat(δs, δs′)
-                if any(δ′ -> !isapproxin(-δ′, merged_δs, nothing, false), merged_δs)
-                    error(
-                        "failed to combine δ to -δ orbits in single merger: unhandled case",
-                    )
-                end
-                found_partner = true
-                break
-            end
-            found_partner || error(lazy"failed to find a -δ partner for orbit #$n")
+
+            # merge the orbits
+            append!(h_orbit.orbit, h_orbit′.orbit)
+            append!(h_orbit.hoppings, h_orbit′.hoppings)
+
+            # remove the merged orbit
+            deleteat!(h_orbits, n′)
+            continue
         end
-    end
+        # we now know that at least some δ doesn't have a -δ counterpart: we assume that
+        # this implies that none of the δs have a -δ counterpart, so we need to add them all
+        @assert all(δ -> !isapproxin(-δ, δs, nothing, false), δs)
 
-    # do the actual merging
-    for (n, n′) in merge_list
-        # we have to merge the two orbits: we take the first one and add the second
-        # one to it, and then remove the second one from the list of hopping orbits
-        h_orbit = h_orbits[n]
-        h_orbit′ = h_orbits[n′]
-        append!(orbit(h_orbit), orbit(h_orbit′))
-        append!(h_orbit.hoppings, h_orbit′.hoppings)
-    end
+        # first append the new δs into the orbit
+        append!(δs, -δs)
 
-    # delete the "old" orbits
-    if !isempty(merge_list)
-        delete_ns = getindex.(merge_list, 2)
-        deleteat!(h_orbits, delete_ns)
+        # add the "reversed" hopping terms: i.e., for every a + δ = b + R, add b + (-δ) = a + (-R)
+        hoppings = h_orbit.hoppings
+        hoppings′ = [Vector{NTuple{3, RVec{D}}}(undef, length(hops)) for hops in hoppings]
+        for (hops, hops′) in zip(hoppings, hoppings′)
+            for (qₐ, qᵦ, R) in hops
+                push!(hops′, (qᵦ, qₐ, -R))
+            end
+            push!(hoppings′, hops′)
+        end
+        append!(hoppings, hoppings′)
     end
-
-    return h_orbits
 end
 
 # ---------------------------------------------------------------------------- #
@@ -658,7 +654,7 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
 ) where {D}
     # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
     # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
-    # for expressions of the kind (Pv)ᵀM … = vᵀPᵀM …
+    # for expressions of the kind (Pv)ᵀ M … = vᵀ Pᵀ M …
     P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
     for (i, δᵢ) in enumerate(orbit(h_orbit))
         # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
@@ -775,7 +771,7 @@ function tb_hamiltonian(
             # we iterate here across diagonal blocks, going from the main diagonal and up
             # toward the upper block-diagonals: we do this to get a more natural sorting of
             # the terms in the model, with self-hoppings first
-            # we only go over the upper triangular part cf. hermicity/anti-hermicity
+            # we only go over the upper triangular part cf. hermiticity/anti-hermiticity
             block_j = block_i + d
             br1 = brs[block_i]
             br2 = brs[block_j]
