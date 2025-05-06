@@ -5,7 +5,7 @@ using Pkg
 Pkg.activate(@__DIR__)
 using Crystalline, TETB
 
-pgnum, D = 13, 2
+sgnum, D = 13, 2
 timereversal = false
 brs = calc_bandreps(pgnum, Val(D); timereversal)
 coefs = zeros(length(brs))
