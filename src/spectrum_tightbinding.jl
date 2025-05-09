@@ -56,7 +56,7 @@ function spectrum(
     ptbm::ParameterizedTightBindingModel{D},
     k::AbstractVector{<:Real}
 ) where D
-    length(k) == D || error(lazy"dimension mismatch of momentum ($length(k)) & model ($D)")
+    length(k) == D || error(lazy"dimension mismatch of momentum ($(length(k))) & model ($D)")
     H = Hermitian(ptbm(k))
     es = eigvals!(H)
     return es
