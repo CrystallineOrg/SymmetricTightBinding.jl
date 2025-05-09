@@ -85,14 +85,11 @@ inversion(::Val) = error("unsupported dimension")
 
 function orbital_positions(br::NewBandRep{D}) where D
     dim = irdim(br.siteir)
-    wps = orbit(group(br.siteir))
+    wps = primitivized_orbit(br)
     positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
     for (m, wp) in enumerate(wps)
-        iszero(free(wp)) ||
-            error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
-        r = DirectPoint{D}(constant(wp))
         for j in ((m-1)*dim+1):(m*dim)
-            positions[j] = r
+            positions[j] = wp
         end
     end
     return positions
@@ -107,14 +104,11 @@ function orbital_positions(cbr::CompositeBandRep{D}) where D
         br = cbr.brs[i]
 
         dim = irdim(br.siteir)
-        wps = orbit(group(br.siteir))
+        wps = primitivized_orbit(br)
         Nᵢ = length(wps) * dim
         for (m, wp) in enumerate(wps)
-            iszero(free(wp)) ||
-                error(lazy"encountered Wyckoff pos. $wp with free parameters: unhandled")
-            r = DirectPoint{D}(constant(wp))
             for j′ in ((m-1)*dim+1):(m*dim)
-                positions[j+j′] = r
+                positions[j+j′] = wp
             end
         end
         j += Nᵢ
@@ -128,4 +122,35 @@ function orbital_positions(cbr::CompositeBandRep{D}) where D
     j == N || error("inconsistent size calculation of `positions` vector")
 
     return positions
+end
+
+"""
+    primitivized_orbit(br::NewBandRep{D}) where D
+
+Return the orbit of the Wyckoff position associated with the band representation `br`.
+The coordinates of positions in the orbit are given relative to the primitive unit cell.
+
+Positions are returned as a `Vector{DirectPoint{D}}`.
+
+The following checks are made, producing an error if violated:
+1. There are no free parameters associated with the Wyckoff position.
+2. For every position, its coordinates, referred to the primitive basis, is in the range
+   [0,1); i.e., every position lies in the paralleliped primitive unit cell [0,1)ᴰ.
+"""
+function primitivized_orbit(br::NewBandRep{D}) where D
+    wps = orbit(group(br))
+    cntr = centering(num(br), D)
+    wps′_pts = Vector{DirectPoint{D}}(undef, length(wps))
+    for (m, wp) in enumerate(wps)
+        wp′ = primitivize(wp, cntr)
+        if !iszero(free(wp′))
+            error(lazy"encountered Wyckoff position $wp with free parameters: not allowed")
+        end
+        wp′_cnst = constant(wp′)
+        if any(rᵢ -> rᵢ<0 || rᵢ≥1, wp′_cnst)
+            error(lazy"encountered Wyckoff position $wp (conventional coordinates) with primitive coordinates $wp′_cnst outside [0,1): this inconsistent with implementation expectations, please file a bug report")
+        end
+        wps′_pts[m] = DirectPoint{D}(wp′_cnst)
+    end
+    return wps′_pts
 end
