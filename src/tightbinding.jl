@@ -369,7 +369,7 @@ end
 
 """
     representation_constraints_matrices(
-        Mm::Array{Int,4}, 
+        Mm::AbstractArray{Int,4}, 
         brₐ::NewBandRep{D},
         brᵦ::NewBandRep{D}) --> Vector{Array{ComplexF64,4}}
 
@@ -629,7 +629,7 @@ end
 
 """
     reciprocal_constraints_matrices(
-                                    Mm::Array{Int,4}, 
+                                    Mm::AbstractArray{Int,4}, 
                                     gens::AbstractVector{SymOperation{D}}, 
                                     h_orbit::HoppingOrbit{D}
                                     ) --> Vector{Array{Int,4}}
@@ -640,7 +640,7 @@ acting on k-space. See more details in
 `permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
 """
 function reciprocal_constraints_matrices(
-    Mm::Array{Int, 4},
+    Mm::AbstractArray{Int, 4},
     gens::AbstractVector{SymOperation{D}},
     h_orbit::HoppingOrbit{D},
 ) where {D}

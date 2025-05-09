@@ -4,7 +4,7 @@ function obtain_basis_free_parameters_hermiticity(
     brᵦ::NewBandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    Mm::Array{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ);
+    Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ);
     antihermitian::Bool = false,
 ) where {D}
     # Determine a basis for coefficient vectors t⁽ⁿ⁾ that span the space of Hermitian (or

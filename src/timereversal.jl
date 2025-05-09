@@ -51,7 +51,7 @@
         brᵦ::NewBandRep{D}, 
         orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-        Mm::Array{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
+        Mm::AbstractArray{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
         )                             --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
@@ -66,7 +66,7 @@ function obtain_basis_free_parameters_TRS(
     brᵦ::NewBandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    Mm::Array{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
+    Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
     # To add time-reversal constraints, we duplicate the `M` matrix so that we can transfer
     # the conjugation from `t` to `M`. We exploit the following splitting:
@@ -95,13 +95,16 @@ function obtain_basis_free_parameters_TRS(
 end
 
 """
-    reciprocal_constraints_trs(Mm::Array{Int,4}, h_orbit::HoppingOrbit{D}) 
+    reciprocal_constraints_trs(Mm::AbstractArray{Int,4}, h_orbit::HoppingOrbit{D}) 
     --> Array{ComplexF64,4}
 
 Time reversal symmetry action on reciprocal space. It is given by the association 
 `k -> -k => H(k) -> H(-k)`.
 """
-function reciprocal_constraints_trs(Mm::Array{Int, 4}, h_orbit::HoppingOrbit{D}) where {D}
+function reciprocal_constraints_trs(
+    Mm::AbstractArray{Int, 4},
+    h_orbit::HoppingOrbit{D}
+) where {D}
     Z = similar(Mm)
     opI = inversion(Val(D)) # inversion operation
     Pᵀ =
@@ -115,7 +118,7 @@ function reciprocal_constraints_trs(Mm::Array{Int, 4}, h_orbit::HoppingOrbit{D})
 end
 
 """
-    representation_constraint_trs(Mm::Array{Int,4}, h_orbit::HoppingOrbit{D})
+    representation_constraint_trs(Mm::AbstractArray{Int,4}, h_orbit::HoppingOrbit{D})
     --> Array{ComplexF64,4}
 
 Time reversal symmetry action on the Hamiltonian. It is given by the association δ -> -δ and 
