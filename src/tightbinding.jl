@@ -333,8 +333,9 @@ function construct_M_matrix(
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (assumed constant for all i)
     foreach(h_orbit.hoppings) do hops
-        length(hops) == E ||
+        if length(hops) ≠ E
             error("Unexpectedly had different counts of hoppings across orbit elements")
+        end
     end
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
@@ -581,13 +582,40 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
     row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
-    c = Vector{eltype(constraint_vs)}(undef, size(Q, 2))
+    J = size(Q, 2)
+    c = Vector{eltype(constraint_vs)}(undef, J)
+    
+    # avoid repeated recomputation of `norm(c′)` in collinearity check below
+    norms = if isempty(constraint_vs)
+        Vector{typeof(norm(c))}()
+    else # `constraint_vs` is not empty
+        map(1:J:length(constraint_vs)) do n
+            c′ = @view constraint_vs[n:n+J-1]
+            norm(c′)
+        end
+    end
+
+    # aggregate constraints into `constraint_vs`
     for i in axes(Q, 1), s in axes(Q, 3), t in axes(Q, 4)
         q = @view Q[i, :, s, t]
         z = @view Z[i, :, s, t]
         c .= q .- z
-        norm(c) > row_atol || continue # don't add empty or near-empty constraints
-        append!(constraint_vs, c) # add the constraint to the list
+
+        # don't add empty or near-empty constraints
+        norm_c = norm(c)
+        norm_c < row_atol && continue
+        
+        # check whether `c` is collinear w/ any existing constraint; if so, don't add again
+        c_dot_c′s = reshape(constraint_vs, J, length(constraint_vs) ÷ J)' * c # elements are `dot(c, c′)`, with `c′` and existing constraint
+        collinear = any(zip(c_dot_c′s, norms)) do (c_dot_c′, norm_c′)
+            # NB: works also if zip(…) is empty, cf. `any("empty iterator") = false`
+            abs(c_dot_c′) ≈ norm_c * norm_c′ # collinear if true
+        end
+        collinear && continue
+
+        # add the constraint to the list
+        append!(constraint_vs, c)
+        append!(norms, norm_c)
     end
 
     return constraint_vs
