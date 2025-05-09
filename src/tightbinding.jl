@@ -219,12 +219,10 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
 
         # add the "reversed" hopping terms: i.e., for every a + δ = b + R, add b + (-δ) = a + (-R)
         hoppings = h_orbit.hoppings
-        hoppings′ = [Vector{NTuple{3, RVec{D}}}(undef, length(hops)) for hops in hoppings]
-        for (hops, hops′) in zip(hoppings, hoppings′)
-            for (qₐ, qᵦ, R) in hops
-                push!(hops′, (qᵦ, qₐ, -R))
+        hoppings′ = map(hoppings) do hops
+            map(hops) do (qₐ, qᵦ, R)
+                (qᵦ, qₐ, -R) # reverse the hopping term
             end
-            push!(hoppings′, hops′)
         end
         append!(hoppings, hoppings′)
     end
