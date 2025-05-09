@@ -10,7 +10,6 @@ using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices,
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
-using GLMakie
 # -------------------- Predefined constant used ------------------------------ #
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
@@ -66,8 +65,8 @@ include("symmetry_analysis_tightbinding.jl")
 export symmetry_analysis
 include("spectrum_tightbinding.jl")
 export spectrum
-include("plotting_utils.jl")
-export hop_plot
+include("plotting_tightbinding.jl") # convert to package extension for Makie
+export plot
 
 # ---------------------------------------------------------------------------- #
 end # module
