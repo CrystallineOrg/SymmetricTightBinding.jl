@@ -4,8 +4,8 @@
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` over an iterable
 of input momenta `ks`. 
 
-The energies are returned as a matrix, with rows running over the bands and columns over
-momenta.
+Energies are returned as a matrix, with rows running over momenta and columns over distinct
+bands.
 
 ## Example
 
@@ -14,7 +14,7 @@ Below, we first construct and parameterize a tight-binding model for the the (2b
 plane group 17, corresponding to the highest-lying orbitals in graphene.
 Next, we construct a path along high-symmetry directions of the Brillouin zone using
 [Brillouin.jl](https://github.com/thchr/Brillouin.jl), calculate the spectrum across this
-path; and finally, plot the band structure using Brillouin and PlotlyJS:
+path; and finally, plot the band structure using Brillouin and GLMakie (or PlotlyJS):
 
 ```julia-repl
 julia> using Crystalline, TETB
@@ -27,11 +27,11 @@ julia> cbr = CompositeBandRep(coefs, brs)
 
 julia> ptbm = tb_hamiltonian(cbr, [zeros(Int, dim(cbr))])([0.0, 1.0]);
 
-julia> using Brillouin, PlotlyJS
+julia> using Brillouin, GLMakie
 
 julia> kpi = interpolate(irrfbz_path(17, directbasis(17, Val(2))), 100);
 
-julia> plot(kpi, spectrum(ptbm, kpi)')
+julia> plot(kpi, spectrum(ptbm, kpi))
 ```
 """
 function spectrum(ptbm::ParameterizedTightBindingModel, ks)
@@ -41,7 +41,7 @@ function spectrum(ptbm::ParameterizedTightBindingModel, ks)
     Es = Matrix{Float64}(undef, ptbm.tbm.N, length(ks))
     for (i, k) in enumerate(ks)
         es = spectrum(ptbm, k)
-        @inbounds Es[:, i] .= es
+        @inbounds Es[i, :] .= es
     end
     return Es
 end

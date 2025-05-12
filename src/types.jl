@@ -329,16 +329,20 @@ end
 
 function (ptbm::ParameterizedTightBindingModel{D})(
     k::Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}},
+    scratch::Matrix{ComplexF64} = ptbm.scratch
 ) where {D}
     if length(k) ≠ D
         error("momentum `k` must be a $D-dimensional vector to match the model dimension")
     end
-
+    if size(scratch) ≠ (ptbm.tbm.N, ptbm.tbm.N)
+        error(DimensionMismatch(
+            "scratch space dimensions ($ssize) do not match model dimensions ($N, $N)"))
+    end
     tbm = ptbm.tbm
-    H = ptbm.scratch # grab & reset scratch space for evaluating Hamiltonian matrix
+    H = scratch # grab & reset scratch space for evaluating Hamiltonian matrix
     fill!(H, 0.0)
 
-    # evaluate each block of the `Hamiltonian` terms, multiply by coefficients, & store in `H`
+    # evaluate each block of the Hamiltonian terms, multiply by coefficients, & store in `H`
     for (tbt, c) in zip(tbm.terms, ptbm.cs)
         block = tbt.block
         block_i, block_j = tbt.block_ij
