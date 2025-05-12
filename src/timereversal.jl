@@ -103,7 +103,7 @@ Time reversal symmetry action on reciprocal space. It is given by the associatio
 """
 function reciprocal_constraints_trs(
     Mm::AbstractArray{Int, 4},
-    h_orbit::HoppingOrbit{D}
+    h_orbit::HoppingOrbit{D},
 ) where {D}
     Z = similar(Mm)
     opI = inversion(Val(D)) # inversion operation

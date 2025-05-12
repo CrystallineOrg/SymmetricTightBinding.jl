@@ -147,8 +147,10 @@ function primitivized_orbit(br::NewBandRep{D}) where D
             error(lazy"encountered Wyckoff position $wp with free parameters: not allowed")
         end
         wp′_cnst = constant(wp′)
-        if any(rᵢ -> rᵢ<0 || rᵢ≥1, wp′_cnst)
-            error(lazy"encountered Wyckoff position $wp (conventional coordinates) with primitive coordinates $wp′_cnst outside [0,1): this inconsistent with implementation expectations, please file a bug report")
+        if any(rᵢ -> rᵢ < 0 || rᵢ ≥ 1, wp′_cnst)
+            error(
+                lazy"encountered Wyckoff position $wp (conventional coordinates) with primitive coordinates $wp′_cnst outside [0,1): this inconsistent with implementation expectations, please file a bug report",
+            )
         end
         wps′_pts[m] = DirectPoint{D}(wp′_cnst)
     end

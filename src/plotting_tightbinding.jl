@@ -1,26 +1,12 @@
 using GLMakie # TODO: Change to Makie when we convert to package extension
 
 @recipe(HoppingOrbitPlot, h, Rs) do Scene
-    Attributes(
-        origins = Attributes(
-            color = :firebrick2,
-            label = "Origins (a)",
-        ),
-        destinations = Attributes(
-            color = :royalblue1,
-            label = "Destinations (b+R)",
-        ),
+    Attributes(;
+        origins = Attributes(; color = :firebrick2, label = "Origins (a)"),
+        destinations = Attributes(; color = :royalblue1, label = "Destinations (b+R)"),
         markersize = 0.05,
-        bonds = Attributes(
-            color = :ivory4,
-            linewidth = 2.0,
-            label = "Bonds",
-        ),
-        unitcell = Attributes(
-            color = :silver,
-            linewidth = 2.0,
-            label = "Unit cell",
-        ),
+        bonds = Attributes(; color = :ivory4, linewidth = 2.0, label = "Bonds"),
+        unitcell = Attributes(; color = :silver, linewidth = 2.0, label = "Unit cell"),
     )
 end
 
@@ -39,7 +25,7 @@ The `Rs` argument should be a _primitive` basis associated with the lattice unde
 If omitted, a cubic basis is used.
 """
 function Makie.plot!(
-    p::HoppingOrbitPlot{<:Tuple{HoppingOrbit{D}, <:DirectBasis{D}}}
+    p::HoppingOrbitPlot{<:Tuple{HoppingOrbit{D}, <:DirectBasis{D}}},
 ) where {D}
     h = p.h[]   # TODO: actually do the Observables updates; just so tedious...
     Rs = p.Rs[]
@@ -48,14 +34,14 @@ function Makie.plot!(
     Rm = stack(Rs)
     origins = mapreduce(vcat, h.hoppings) do hs
         map(hs) do h
-            a = Rm*constant(h[1])
+            a = Rm * constant(h[1])
             P(a)
         end
     end
     destinations = mapreduce(vcat, h.hoppings) do hs
         map(hs) do h
-            b = Rm*constant(h[2])
-            R = Rm*constant(h[3])
+            b = Rm * constant(h[2])
+            R = Rm * constant(h[3])
             P(b + R)
         end
     end
@@ -74,8 +60,11 @@ function Makie.plot!(
         error("unsupported dimension $D")
     end
     lines!(
-        p, unitcell; 
-        color=p.unitcell.color, linewidth=p.unitcell.linewidth, label=p.unitcell.label
+        p,
+        unitcell;
+        color = p.unitcell.color,
+        linewidth = p.unitcell.linewidth,
+        label = p.unitcell.label,
     )
 
     # plot bonds
@@ -95,13 +84,15 @@ function Makie.plot!(
         p,
         unique(destinations);
         markersize = 0.05,
-        color = p.destinations.color, label = p.destinations.label
+        color = p.destinations.color,
+        label = p.destinations.label,
     )
     meshscatter!(
         p,
         unique(origins);
         markersize = 0.05,
-        color = p.origins.color, label = p.origins.label
+        color = p.origins.color,
+        label = p.origins.label,
     )
 
     return p
@@ -111,8 +102,8 @@ function Makie.convert_arguments(::Type{<:HoppingOrbitPlot}, h::HoppingOrbit{D})
     return (h, _cubic_basis(Val(D)))
 end
 
-_cubic_basis(::Val{3}) = crystal(1, 1, 1, π/2, π/2, π/2)
-_cubic_basis(::Val{2}) = crystal(1, 1, π/2)
+_cubic_basis(::Val{3}) = crystal(1, 1, 1, π / 2, π / 2, π / 2)
+_cubic_basis(::Val{2}) = crystal(1, 1, π / 2)
 _cubic_basis(::Val{1}) = crystal(1)
 _cubic_basis(::Val{D}) where {D} = error("Unsupported dimension: $D")
 
@@ -124,12 +115,12 @@ function Makie.plot(
     Rs::DirectBasis{D} = _cubic_basis(Val(D));
     axis = NamedTuple(),
     figure = NamedTuple(),
-    kws...
+    kws...,
 ) where D
     # figure & axis setup
     f = Figure(; figure...)
     ax = if D == 3
-        Axis3(f[1, 1]; aspect = :data, viewmode=:fit, axis...)
+        Axis3(f[1, 1]; aspect = :data, viewmode = :fit, axis...)
     else
         Axis(f[1, 1]; aspect = DataAspect(), axis...)
     end
@@ -146,7 +137,9 @@ end
 Makie.plottype(::HoppingOrbit) = HoppingOrbitPlot
 Makie.plottype(::HoppingOrbit{D}, ::DirectBasis{D}) where D = HoppingOrbitPlot
 function Makie.args_preferred_axis(
-    ::Type{<: HoppingOrbitPlot}, ::HoppingOrbit{D}, ::DirectBasis{D}
+    ::Type{<:HoppingOrbitPlot},
+    ::HoppingOrbit{D},
+    ::DirectBasis{D},
 ) where D
     return D == 3 ? Axis3 : Axis
 end
@@ -156,7 +149,23 @@ end
 #     overload hack above, but it is the idiomatic way to do it and simpler. If desired, we
 #     could overload `Makie.plot` at some point.
 
-Makie.convert_arguments(::Type{<:Plot}, tbb::TightBindingBlock{D}, Rs::DirectBasis{D}) where D = (tbb.h_orbit, Rs)
-Makie.convert_arguments(::Type{<:Plot}, tbb::TightBindingBlock{D}) where D = (tbb.h_orbit, _cubic_basis(Val(D)))
-Makie.convert_arguments(::Type{<:Plot}, tbt::TightBindingTerm{D}, Rs::DirectBasis{D}) where D = (tbt.block.h_orbit, Rs)
-Makie.convert_arguments(::Type{<:Plot}, tbt::TightBindingTerm{D}) where D = (tbt.block.h_orbit, _cubic_basis(Val(D)))
+function Makie.convert_arguments(
+    ::Type{<:Plot},
+    tbb::TightBindingBlock{D},
+    Rs::DirectBasis{D},
+) where D
+    (tbb.h_orbit, Rs)
+end
+function Makie.convert_arguments(::Type{<:Plot}, tbb::TightBindingBlock{D}) where D
+    (tbb.h_orbit, _cubic_basis(Val(D)))
+end
+function Makie.convert_arguments(
+    ::Type{<:Plot},
+    tbt::TightBindingTerm{D},
+    Rs::DirectBasis{D},
+) where D
+    (tbt.block.h_orbit, Rs)
+end
+function Makie.convert_arguments(::Type{<:Plot}, tbt::TightBindingTerm{D}) where D
+    (tbt.block.h_orbit, _cubic_basis(Val(D)))
+end

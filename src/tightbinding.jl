@@ -582,7 +582,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
     # store constraints in one big vector initially; then we reshape to a matrix after
     J = size(Q, 2)
     c = Vector{eltype(constraint_vs)}(undef, J)
-    
+
     # avoid repeated recomputation of `norm(c′)` in collinearity check below
     norms = if isempty(constraint_vs)
         Vector{typeof(norm(c))}()
@@ -602,7 +602,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
         # don't add empty or near-empty constraints
         norm_c = norm(c)
         norm_c < row_atol && continue
-        
+
         # check whether `c` is collinear w/ any existing constraint; if so, don't add again
         c_dot_c′s = reshape(constraint_vs, J, length(constraint_vs) ÷ J)' * c # elements are `dot(c, c′)`, with `c′` and existing constraint
         collinear = any(zip(c_dot_c′s, norms)) do (c_dot_c′, norm_c′)
