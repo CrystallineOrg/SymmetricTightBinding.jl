@@ -335,8 +335,11 @@ function (ptbm::ParameterizedTightBindingModel{D})(
         error("momentum `k` must be a $D-dimensional vector to match the model dimension")
     end
     if size(scratch) ≠ (ptbm.tbm.N, ptbm.tbm.N)
-        error(DimensionMismatch("scratch size ($ssize) does not match model size ($N, $N)"))
-        # TODO: ↑ possible typo. Not previously defined `ssize` or `N`.
+        error(
+            DimensionMismatch(
+                "scratch size ($(size(scratch))) does not match model size ($(ptbm.tbm.N), $(ptbm.tbm.N))",
+            ),
+        )
     end
     tbm = ptbm.tbm
     H = scratch # grab & reset scratch space for evaluating Hamiltonian matrix
