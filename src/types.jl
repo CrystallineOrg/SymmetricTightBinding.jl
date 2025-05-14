@@ -141,7 +141,7 @@ function Base.getindex(H::TightBindingTerm, i::Int, j::Int)
     local_j = only(tmp.α)
     if H.block_ij == (block_i, block_j)
         return _getindex(H.block, local_i, local_j)
-    elseif H.block_ij == (block_j, block_i) # hermicity-related block
+    elseif H.block_ij == (block_j, block_i) # hermiticity-related block
         return _getindex(
             H.block,
             local_j,
@@ -335,7 +335,11 @@ function (ptbm::ParameterizedTightBindingModel{D})(
         error("momentum `k` must be a $D-dimensional vector to match the model dimension")
     end
     if size(scratch) ≠ (ptbm.tbm.N, ptbm.tbm.N)
-        error(DimensionMismatch("scratch size ($ssize) does not match model size ($N, $N)"))
+        error(
+            DimensionMismatch(
+                "scratch size ($(size(scratch))) does not match model size ($(ptbm.tbm.N), $(ptbm.tbm.N))",
+            ),
+        )
     end
     tbm = ptbm.tbm
     H = scratch # grab & reset scratch space for evaluating Hamiltonian matrix

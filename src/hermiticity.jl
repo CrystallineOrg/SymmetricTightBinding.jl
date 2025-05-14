@@ -47,6 +47,6 @@ function constraint_hermiticity(
             Q[:, :, s, t] .= Pᵀ * Mm[:, :, t, s] # Pᵀ M⁽ᵗˢ⁾
         end
     end
-    antihermitian && (Q .= -Q) # anti-hermicity flips signs
+    antihermitian && (Q .= -Q) # anti-hermiticity flips signs
     return [Q -Q] # Pᵀ M⁽ᵗˢ⁾ σ₃
 end
