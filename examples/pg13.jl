@@ -7,7 +7,7 @@ using Crystalline, TETB
 
 sgnum, D = 13, 2
 timereversal = false
-brs = calc_bandreps(pgnum, Val(D); timereversal)
+brs = calc_bandreps(sgnum, Val(D); timereversal)
 coefs = zeros(length(brs))
 
 # we want to pick EBRs (1c|A) and (1b|A), which position will depend on timereversal

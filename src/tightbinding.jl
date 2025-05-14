@@ -767,8 +767,8 @@ symmetry operations.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
-    Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings
-    timereversal::Bool = true,
+    Rs::AbstractVector{Vector{Int}}, # "global" translation-representatives of hoppings
+    timereversal::Bool = first(cbr.brs).timereversal;
     antihermitian::Bool = false,
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
