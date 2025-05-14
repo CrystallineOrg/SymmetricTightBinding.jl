@@ -141,7 +141,7 @@ function Base.getindex(H::TightBindingTerm, i::Int, j::Int)
     local_j = only(tmp.α)
     if H.block_ij == (block_i, block_j)
         return _getindex(H.block, local_i, local_j)
-    elseif H.block_ij == (block_j, block_i) # hermicity-related block
+    elseif H.block_ij == (block_j, block_i) # hermiticity-related block
         return _getindex(
             H.block,
             local_j,
