@@ -1,3 +1,12 @@
+
+"""
+    sgrep_induced_by_siteir_excl_phase(br::NewBandRep, op::SymOperation) -> Matrix{ComplexF64}
+    sgrep_induced_by_siteir_excl_phase(cbr::CompositeBandRep, op::SymOperation) -> Matrix{ComplexF64}
+
+Computes the symmetry representation matrix of a symmetry operation `op` induced by the site
+symmetry group of a band representation `br` or `cbr`, without the phase factors that depend
+on momentum 𝗸.
+"""
 function sgrep_induced_by_siteir_excl_phase(
     br::NewBandRep{D},
     op::SymOperation{D},
@@ -48,7 +57,6 @@ function sgrep_induced_by_siteir_excl_phase(
 
     return ρ
 end
-
 function sgrep_induced_by_siteir_excl_phase(
     cbr::CompositeBandRep{D},
     op::SymOperation{D},
@@ -71,6 +79,13 @@ end
 # ---------------------------------------------------------------------------------------- #
 # Site-induced symmetry representation matrix _with_ phase factors
 
+"""
+    SiteInducedSGRepElement{D}(ρ::AbstractMatrix, positions::Vector{DirectPoint{D}}, op::SymOperation{D})
+
+Store the symmetry representation matrix `ρ` of a symmetry operation `op` induced by the site
+symmetry group of a band representation, along with the positions of the orbitals used for
+building the representation. The matrix `ρ` is a square matrix of size `length(positions)`.
+"""
 struct SiteInducedSGRepElement{D}
     ρ::Matrix{ComplexF64}
     positions::Vector{DirectPoint{D}}
@@ -102,6 +117,16 @@ function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D
     return ρ′
 end
 
+"""
+    sgrep_induced_by_siteir(br::NewBandRep, op::SymOperation, positions::Vector{DirectPoint{D}}) -> SiteInducedSGRepElement{D}
+    sgrep_induced_by_siteir(cbr::CompositeBandRep, op::SymOperation, positions::Vector{DirectPoint{D}}) -> SiteInducedSGRepElement{D}
+    sgrep_induced_by_siteir(tbm::TightBindingModel, op::SymOperation) -> SiteInducedSGRepElement{D}
+    sgrep_induced_by_siteir(tbm::ParameterizedTightBindingModel, op::SymOperation) -> SiteInducedSGRepElement{D}
+
+Computes the symmetry representation matrix of a symmetry operation `op` induced by the site
+symmetry group of a band representation `br` or `cbr`, including the phase factors that depend
+on momentum 𝗸. The matrix `ρ` is a square matrix of size `length(positions)`.
+"""
 function sgrep_induced_by_siteir(
     br::Union{NewBandRep{D}, CompositeBandRep{D}},
     op::SymOperation{D},
@@ -112,7 +137,6 @@ function sgrep_induced_by_siteir(
 
     return SiteInducedSGRepElement{D}(ρ, positions, op)
 end
-
 function sgrep_induced_by_siteir(
     tbm::Union{TightBindingModel{D}, ParameterizedTightBindingModel{D}},
     op::SymOperation{D},
