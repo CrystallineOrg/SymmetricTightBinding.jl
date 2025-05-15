@@ -38,7 +38,7 @@ function spectrum(ptbm::ParameterizedTightBindingModel, ks)
     if !(eltype(ks) <: AbstractVector{<:Real})
         error("the elements of `ks` must subtype `AbstractVector{<:Real}`")
     end
-    Es = Matrix{Float64}(undef, ptbm.tbm.N, length(ks))
+    Es = Matrix{Float64}(undef, length(ks), ptbm.tbm.N)
     for (i, k) in enumerate(ks)
         es = spectrum(ptbm, k)
         @inbounds Es[i, :] .= es

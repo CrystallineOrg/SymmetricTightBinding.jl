@@ -54,8 +54,8 @@
         Mm::AbstractArray{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
         )                             --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}}
 
-Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
-associated with the hopping orbit `h_orbit` under time-reversal symmetry.
+Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` associated
+with the hopping orbit `h_orbit` under time-reversal symmetry.
 
 Real and imaginary parts of the basis vectors are differentiated explicitly: internally,
 we consider only variables.
