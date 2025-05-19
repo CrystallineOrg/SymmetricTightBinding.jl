@@ -10,19 +10,25 @@ GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPBUtils = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
-PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [compat]
-Crystalline = "0.6.15"
+Crystalline = "0.6.16"
 GLMakie = "0.11"
 LinearAlgebra = "1.10, 1.11"
-MPBUtils = "0.1.12"
-PhotonicBandConnectivity = "0.5.0"
+MPBUtils = "0.2"
+PhotonicBandConnectivity = "0.5"
+PythonCall = "0.9.24"
 RowEchelon = "0.2.1"
-SymmetryBases = "0.4.2"
-julia = "1.9"
+SymmetryBases = "0.5"
+julia = "1.11"
+
+[sources]
+MPBUtils = {url="https://github.com/thchr/MPBUtils.jl"}
+PhotonicBandConnectivity = {url="https://github.com/thchr/PhotonicBandConnectivity.jl"}
+SymmetryBases = {url="https://github.com/thchr/SymmetryBases.jl"}
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

@@ -1,44 +1,66 @@
 using Crystalline: translation
 
 """
-    obtain_symmetry_vectors(ms::PyObject, sgnum::Int) --> Tuple{Vector{SymmetryVector{D}}, Vector{TopologyKind}}
+    obtain_symmetry_vectors(ms::Py, sgnum::Int, Val{D}=Val(3); polarization) --> Vector{SymmetryVector{D}}
 
 Obtains directly the symmetry vector for the bands computed in the MPB model `ms` for the space
 group defined in `sgnum`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
 vectors and topologies of the bands.
 """
-function obtain_symmetry_vectors(ms::PyObject, sgnum::Int)
-    brs = bandreps(sgnum) # elementary band representations
-    lgs = littlegroups(sgnum) # little groups
-    filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
-    map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
-    lgirsd = pick_lgirreps(lgs; timereversal = true) # small irreps associated with `lgs`
+function obtain_symmetry_vectors(
+    ms::Py,
+    sgnum::Int,
+    Dᵛ::Val{D} = Val(3);
+    polarization::Union{Nothing, Symbol, Integer} = nothing,
+    verbose::Bool = false
+) where {D}
+    # TODO: maybe move this to MPBUtils.jl?
+    brs = primitivize(calc_bandreps(sgnum, Dᵛ)) # elementary band representations
+    lgirsv = irreps(brs) # small irreps & little groups assoc. w/ `brs`
 
-    symeigsd = Dict{String, Vector{Vector{ComplexF64}}}()
-    for (klab, lg) in lgs
+    # symmetry eigenvalues ⟨Eₙₖ|gᵢDₙₖ⟩
+    symeigsv = Vector{Vector{Vector{ComplexF64}}}(undef, length(lgirsv))
+    for (kidx, lgirs) in enumerate(lgirsv)
+        lg = group(lgirs)
         kv = mp.Vector3(position(lg)()...)
-        ms.solve_kpoint(kv)
+        redirect_stdout(verbose ? stdout : devnull) do 
+            ms.solve_kpoint(kv)
+        end
 
-        symeigsd[klab] = [Vector{ComplexF64}(undef, length(lg)) for n in 1:ms.num_bands]
+        symeigsv[kidx] = [Vector{ComplexF64}(undef, length(lg)) for 
+                                                        n in 1:pyconvert(Int, ms.num_bands)]
         for (i, gᵢ) in enumerate(lg)
-            W = mp.Matrix(eachcol(rotation(gᵢ))...) # decompose gᵢ = {W|w}
+            W = mp.Matrix(eachcol(rotation(gᵢ))..., [0,0,1]) # decompose gᵢ = {W|w}
             w = mp.Vector3(translation(gᵢ)...)
-            symeigs = ms.compute_symmetries(W, w) # compute ⟨Eₙₖ|gᵢ Dₙₖ⟩ for all bands
-            setindex!.(symeigsd[klab], symeigs, i) # update container of symmetry eigenvalues
+            symeigs = ms.compute_symmetries(W, w) # compute ⟨Eₙₖ|gᵢDₙₖ⟩ for all bands
+            symeigs = pyconvert(Vector{ComplexF64}, symeigs) # convert from Py to Julia type
+            setindex!.(symeigsv[kidx], symeigs, i) # update container of sym. eigenvalues
         end
     end
+    
+    # --- fix singular photonic symmetry content at Γ, ω=0 ---
+    D == 2 && (polarization = _check_and_canonicalize_2d_polarization_arg(polarization))
+    fixup_gamma_symmetry!(symeigsv, lgirsv, polarization)
 
-    # --- fix singular photonic symmetry content at Γ, ω=0 --- 
-    fixup_gamma_symmetry!(symeigsd, lgs)
+    # --- obtain compatibility-respecting symmetry vectors assoc. w/ symmetry data ---
+    ns = symeigs_analysis(symeigsv, brs)
 
-    # --- analyze connectivity and topology of symmetry data ---
-    summaries = analyze_symmetry_data(symeigsd, lgirsd, brs)
+    return ns
+end
 
-    # --- convert to `SymmetryVector`s ---
-    c_brs = calc_bandreps(sgnum, Val(3))
-    symvecs = bandsum2symvec.(summaries, Ref(c_brs))
-    topologies = getfield.(summaries, Ref(:topology))
-    return symvecs, topologies
+function _check_and_canonicalize_2d_polarization_arg(polarization)
+    if isnothing(polarization)
+        error("the polarization keyword argument must be set for 2D calculations \
+                (`:TE` / `meep.TE` or `:TM` / `meep.TM`)")
+    elseif polarization isa Integer
+        return (polarization == mp.TE ? :TE : polarization == mp.TM ? :TM :
+                error("invalid polarization"))
+    elseif polarization isa Symbol
+        return polarization ∈ (:TE, :TM) ? polarization : error("invalid polarization")
+    else
+        error("invalid type of polarization keyword argument (must be `Nothing`, `Symbol, \
+              or `<:Integer`)")
+    end
 end
 
 #= 
