@@ -46,7 +46,6 @@ function Crystalline.symeigs_analysis(
     # determine the induced space group rep associated with `cbr` across all `ops`
     sgrep_d = Dict(op => sgrep_induced_by_siteir(ptbm, op) for op in ops)
 
-    N = tbm.N # number of bands
     symeigsv = Vector{Vector{Vector{ComplexF64}}}(undef, length(lgs))
 
     # determine symmetry eigenvalues for each band in each little group
@@ -101,10 +100,11 @@ function symmetry_eigenvalues(
     #     simplify the induced rep phases to an overall phase instead of the tᵦₐ-business
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
+    tmp = Vector{ComplexF64}(undef, ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            symeigs[j, n] = dot(v, transpose(ρ) * v)
+            symeigs[j, n] = dot(v, mul!(tmp, transpose(ρ), v))
         end
     end
     return symeigs

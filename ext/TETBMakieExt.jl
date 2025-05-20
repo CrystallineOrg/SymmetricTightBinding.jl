@@ -1,4 +1,11 @@
-using GLMakie # TODO: Change to Makie when we convert to package extension
+module TETBMakieExt
+
+## --------------------------------------------------------------------------------------- #
+
+using TETB
+using Makie
+
+## --------------------------------------------------------------------------------------- #
 
 @recipe(HoppingOrbitPlot, h, Rs) do Scene
     Attributes(;
@@ -169,3 +176,7 @@ end
 function Makie.convert_arguments(::Type{<:Plot}, tbt::TightBindingTerm{D}) where D
     (tbt.block.h_orbit, _cubic_basis(Val(D)))
 end
+
+## --------------------------------------------------------------------------------------- #
+
+end # module TETBMakieExt

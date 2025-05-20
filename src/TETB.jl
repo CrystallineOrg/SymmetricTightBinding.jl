@@ -4,7 +4,6 @@ module TETB
 using LinearAlgebra
 using Crystalline
 using MPBUtils
-using SymmetryBases
 using PhotonicBandConnectivity
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
@@ -64,8 +63,6 @@ include("symmetry_analysis_tightbinding.jl")
 export symeigs_analysis
 include("spectrum_tightbinding.jl")
 export spectrum
-include("plotting_tightbinding.jl") # convert to package extension for Makie
-export plot
 
 # ---------------------------------------------------------------------------- #
 end # module
