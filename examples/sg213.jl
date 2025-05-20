@@ -5,9 +5,7 @@ using Crystalline, TETB
 
 sgnum = 213
 brs = calc_bandreps(sgnum)
-coefs = zeros(Int, length(brs))
-coefs[end] = 1
-cbr = CompositeBandRep(coefs, brs)
+cbr = @composite brs[6]
 
 ordering1 = TETB.OrbitalOrdering(cbr.brs[end])
 

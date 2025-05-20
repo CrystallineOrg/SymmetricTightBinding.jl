@@ -4,3 +4,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPBUtils = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
 TETB = "0d4be8d3-4503-476c-b33f-e073dd414f32"
+
+[compat]
+Crystalline = "0.6.17"

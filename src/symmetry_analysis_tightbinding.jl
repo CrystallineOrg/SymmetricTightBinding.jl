@@ -15,11 +15,11 @@ julia> using Crystalline, TETB
 
 julia> brs = calc_bandreps(221);
 
-julia> cbr = Crystalline.CompositeBandRep_from_indices([1, 2], brs)
+julia> cbr = @composite brs[1] + brs[2]
 40-irrep CompositeBandRep{3}:
  (3d|A₁g) + (3d|A₁ᵤ) (6 bands)
 
-julia> tbm = tb_hamiltonian(cbr, [zeros(Int, dim(cbr))]); # a 4-term, 6-band model
+julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
 
 julia> ptbm = tbm([1.0, 0.1, -1.0, 0.1]); # fix free coefficients
 

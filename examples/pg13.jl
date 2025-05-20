@@ -8,20 +8,17 @@ using Crystalline, TETB
 sgnum, D = 13, 2
 timereversal = false
 brs = calc_bandreps(pgnum, Val(D); timereversal)
-coefs = zeros(length(brs))
 
 # we want to pick EBRs (1c|A) and (1b|A), which position will depend on timereversal
 if timereversal
     br₁ = brs[1]
     br₂ = brs[3]
-    coefs[[1, 3]] .= 1
+    cbr = @composite brs[1] + brs[3]
 else
     br₁ = brs[1]
     br₂ = brs[4]
-    coefs[[1, 4]] .= 1
+    cbr = @composite brs[1] + brs[4]
 end
-
-cbr = CompositeBandRep(coefs, brs)
 
 # chose a representative jump until where we will consider hopping terms.
 Rs = [[0, 0]]

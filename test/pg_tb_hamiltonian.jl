@@ -12,9 +12,7 @@ using LinearAlgebra
         D = 2
         sgnum = 17
         brs = calc_bandreps(sgnum, Val(D))
-        coefs = zeros(Int, length(brs))
-        coefs[5] = 1
-        cbr = CompositeBandRep(coefs, brs)
+        cbr = @composite brs[5]
 
         Rs = [[0, 0]] # TODO: maybe consider adding more hopping terms
 

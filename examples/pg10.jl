@@ -5,13 +5,7 @@ using Crystalline, TETB
 
 sgnum = 10
 brs = calc_bandreps(sgnum, Val(2))
-
-# needs to do that to find the WPs properly
-coefs = zeros(Int, length(brs))
-coefs[1] = 1
-coefs[end] = 1
-
-cbr = CompositeBandRep(coefs, brs)
+cbr = @composite brs[1] + brs[end]
 
 Rs = [[0, 0]]
 
