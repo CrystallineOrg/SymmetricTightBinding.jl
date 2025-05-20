@@ -1,6 +1,6 @@
 name = "TETB"
 uuid = "0d4be8d3-4503-476c-b33f-e073dd414f32"
-authors = ["Antonio Morales Perez <antonio.morales@dipc.org> and contributors"]
+authors = ["Antonio Morales Perez <antonio.morales@dipc.org>, Thomas Christensen <thomas@dtu.dk>, and contributors"]
 version = "0.0.1"
 
 [deps]
