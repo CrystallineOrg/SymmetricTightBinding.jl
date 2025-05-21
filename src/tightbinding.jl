@@ -42,7 +42,6 @@ function obtain_symmetry_related_hoppings(
     timereversal =
         brₐ.timereversal == brᵦ.timereversal ||
         error("both band representations must be timereversal or not")
-    # TODO: ↑ maybe better to include as a @assert
 
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
