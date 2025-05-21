@@ -135,7 +135,7 @@ Positions are returned as a `Vector{DirectPoint{D}}`.
 The following checks are made, producing an error if violated:
 1. There are no free parameters associated with the Wyckoff position.
 2. For every position, its coordinates, referred to the primitive basis, is in the range
-   [0,1); i.e., every position lies in the paralleliped primitive unit cell [0,1)ᴰ.
+   [0,1); i.e., every position lies in the parallepiped primitive unit cell [0,1)ᴰ.
 """
 function primitivized_orbit(br::NewBandRep{D}) where D
     wps = orbit(group(br))

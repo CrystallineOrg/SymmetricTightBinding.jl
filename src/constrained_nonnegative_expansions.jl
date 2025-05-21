@@ -9,34 +9,36 @@
         maxdepth = div(occupation, minimum(basis_occupations), RoundDown)
         )
 
-Given a basis of vectors `basis` ``= [𝐧₁, 𝐧₂, ...]`` with associated non-negative, integer
-"occupations" `basis_occupations` ``= [μ₁, μ₂, ...]``, find *all* admissible expansion
-coefficients ``{𝐜ⁱ} = {[c₁ⁱ, c₂ⁱ, ...]}`` and associated expansions
+Given a basis of vectors `basis` = [𝐧₁, 𝐧₂, ...] with associated non-negative, integer
+"occupations" `basis_occupations` = [μ₁, μ₂, ...], find **all** admissible expansion
+coefficients {𝐜ⁱ} = {[c₁ⁱ, c₂ⁱ, ...]} and associated expansions
 
-``c₁ⁱ𝐧₁ + c₂ⁱ𝐧₂ + ... = 𝐧``
+    c₁ⁱ𝐧₁ + c₂ⁱ𝐧₂ + ... = 𝐧
 
-such that ``𝐧`` satisfies the constraints:
+such that 𝐧 satisfies the constraints:
 
-1. *occupation constraint*:  each expansion's total occupation ``μ`` is exactly equal to
+1. **occupation constraint**:  each expansion's total occupation μ is exactly equal to
    `occupation` (i.e., satisfies a linear Diophantine equation):
 
-``c₁ⁱμ₁ + c₂ⁱμ₂ + ... = μ``
+        c₁ⁱμ₁ + c₂ⁱμ₂ + ... = μ
 
-2. *symmetry constraint*: each expansion satisfies a set of non-negative, integer
+2. **symmetry constraint**: each expansion satisfies a set of non-negative, integer
    constraints specified by `constraints`, s.t.:
 
-``(𝐧 = c₁𝐧₁ᴴ + c₂𝐧₂ᴴ + ...)```[idxs][j]` ``≥`` `constraints[j]`
+        (𝐧 = c₁𝐧₁ᴴ + c₂𝐧₂ᴴ + ...)[`idxs[j]`] ≥ `constraints[j]`
 
-for all `j ∈ eachindex(constraints)`.
+    for all j ∈ `eachindex(constraints)`.
 
-# Keyword arguments
+## Keyword arguments
+
 - `basis_idxs`: Optionally, if the caller wants to restrict the expansion to a subset of the
   bases in `basis`, the argument `basis_idxs` can provide an indexing into allowable
   elements of `basis`.
 - `maxdepth`: include at most `maxdepth` basis vectors, counted with multiplicity (see
   Implementation notes below).
 
-# Implementation
+## Implementation
+
 Recursion is used to build a nested set of for loops, of depth `maxdepth`, corresponding 
 to the inclusion of at most `maxdepth` basis vectors (this limits the maximum meaningful 
 value of `maxdepth` to `div(μ, minimum(μⱼ), RoundDown)`; its default value). 

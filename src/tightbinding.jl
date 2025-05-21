@@ -7,12 +7,9 @@
         --> Vector{HoppingOrbit{D}}
 
 Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
-WP of `brᵦ` displaced a set of primitive lattice vectors `Rs`.
+WP of `brᵦ` displaced a set of primitive lattice vectors representatives `Rs`.
 
-The vectors provided in `Rs` are just representatives. Because of symmetry 
-operations, bigger primitive lattice vectors could be found.
-
-How it works: 
+## Implementation
 1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
 compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
 2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
@@ -25,11 +22,8 @@ compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
 Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
-`-δ` are present; if not, we add them.
-
-## Note
-
-Timereversal symmetry is called implicitly by the `NewBandRep` constructor.
+`-δ` are present; if not, we add them. The presence or absence of time-reversal symmetry
+is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -88,9 +82,8 @@ end
 """
     maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops) --> Vector{HoppingOrbit{D}}
 
-Checks if a hopping term `δ` is already in the list of representatives. If not, 
-it adds it and its symmetry related partners. If it is, it only adds the symmetry 
-related partners.
+Checks if a hopping term `δ` is already in the list of representatives. If not, it adds it
+and its symmetry related partners. If it is, it only adds the symmetry related partners.
 """
 function maybe_add_hoppings!(
     h_orbits,
@@ -114,11 +107,10 @@ function maybe_add_hoppings!(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper 
-function for `maybe_add_hoppings!`.
+WARNING: This function is not intended to be called directly. It is a helper function for
+`maybe_add_hoppings!`.
 
-Computes and adds the symmetry related partners of a hopping term `δ` to the 
-`δ_orbit`.
+Computes and adds the symmetry related partners of a hopping term `δ` to the `δ_orbit`.
 """
 function _maybe_add_hoppings!(
     δ_orbit,
@@ -178,6 +170,13 @@ function _maybe_add_hoppings!(
     return δ_orbit
 end
 
+"""
+    add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
+
+Adds the time-reversed hopping terms to the hopping orbits in `h_orbits`. The time-reversed
+hopping terms are added to the orbit of the hopping term they are related to, and if they are
+already present in another orbit, the two orbits are merged.
+"""
 function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
     # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
     # hopping vector `-δ` is also in the orbit; if not, we check if it is in any other
@@ -314,8 +313,8 @@ end
         [ordering1, ordering2]) 
         --> Array{Int,4}
 
-Construct a set of matrices that encodes a Hamiltonian's term which resembles the 
-hopping from EBR `br1` to EBR `br2`.
+Construct a set of matrices that encodes a Hamiltonian's term which resembles the hopping
+from EBR `br1` to EBR `br2`.
 
 The encoding is stored as a 4D matrix. Its last two axes correspond to elements of the
 Bloch Hamiltonian H(k); its first axis corresponds to `orbit(h_orbit)` and the associated
@@ -378,10 +377,9 @@ end
         brₐ::NewBandRep{D},
         brᵦ::NewBandRep{D}) --> Vector{Array{ComplexF64,4}}
 
-Build the Q matrix for a particular symmetry operation (or, equivalently, a 
-particular matrix from the site-symmetry representation), acting on the M matrix. 
-Relative to our white-board notes, Q has swapped indices, in the sense we below 
-give `Q[i,j,r,l]`.
+Build the Q matrix for a particular symmetry operation (or, equivalently, a particular matrix
+from the site-symmetry representation), acting on the M matrix.
+Relative to our white-board notes, Q has swapped indices, in the sense we below give `Q[i,j,r,l]`.
 
 (ρₐₐ)ᵣₛ Hₛₜ (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ tⱼ,
 
@@ -644,9 +642,9 @@ end
                                     h_orbit::HoppingOrbit{D}
                                     ) --> Vector{Array{Int,4}}
 
-Compute the reciprocal constraints matrices for the generators of the SG. This is
-done by permuting the rows of the M matrix according to the symmetry operation 
-acting on k-space. See more details in
+Compute the reciprocal constraints matrices for the generators of the SG. This is done by
+permuting the rows of the M matrix according to the symmetry operation acting on k-space.
+See more details in
 `permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
 """
 function reciprocal_constraints_matrices(
@@ -674,16 +672,15 @@ end
 WARNING: This function is not intended to be called directly. It is a helper 
          function for `reciprocal_constraints_matrices`.
 
-Build the P matrix for a particular symmetry operation acting on k-space, which
-permutes the rows of the M matrix.
+Build the P matrix for a particular symmetry operation acting on k-space, which permutes the
+rows of the M matrix.
 
-For obtaining the P matrix, we make use that the action is on exponential of the
-type: 𝐞(2πk⋅δ), to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a
-symbolic variable. Because of that, we need to use the inverse of the rotation
-part of the symmetry operation. Sketch of the proof:
+For obtaining the P matrix, we make use that the action is on exponential of the type: 𝐞(2πk⋅δ),
+to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a symbolic variable.
+Because of that, we need to use the inverse of the rotation part of the symmetry operation.
+Sketch of the proof:
 
-Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then (gk)⋅δ = 
-((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
+Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then (gk)⋅δ = ((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
 
 WARNING: we assume that the operation is primitive.
 """
@@ -769,11 +766,12 @@ end
     tb_hamiltonian(cbr::CompositeBandRep{D}, Rs::AbstractVector{Vector{Int}}) 
         --> Vector{TightBindingTerm{D}}
 
-Construct the TB Hamiltonian matrix from a given composite band representation 
-`cbr` and a set of global translation-representatives `Rs`. The Hamiltonian is 
-constructed block by block according to the symmetry-related hoppings between the 
-band representations in `cbr`. Several model are given back, one of closed in the 
-symmetry operations.
+Construct the TB Hamiltonian matrix from a given composite band representation `cbr` and a
+set of global translation-representatives `Rs`.
+The Hamiltonian is constructed block by block according to the symmetry-related hoppings
+between the band representations in `cbr`.
+Several models returned, each representing a term that is closed under the symmetry operations of 
+the underlying space group.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
