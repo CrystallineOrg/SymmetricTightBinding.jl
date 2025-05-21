@@ -445,10 +445,9 @@ function obtain_basis_free_parameters(
     gensₐ = generators(num(brₐ), SpaceGroup{D})
     gensᵦ = generators(num(brᵦ), SpaceGroup{D})
     @assert gensₐ == gensᵦ # must be from same space group and in same sorting
-    timereversal =
-        brₐ.timereversal == brᵦ.timereversal ||
-        error("both band representations must be timereversal or not")
-    # TODO: ↑ maybe better to include as a @assert
+    brₐ.timereversal == brᵦ.timereversal ||
+        error("input band representations must have identical time-reversal symmetry")
+    timereversal = brₐ.timereversal
 
     # cast generators to primitive basis
     cntr = centering(num(brₐ), D)
