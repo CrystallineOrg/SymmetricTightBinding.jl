@@ -7,7 +7,7 @@ Obtains directly the symmetry vector for the bands computed in the MPB model `ms
 group defined in `sgnum`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
 vectors and topologies of the bands.
 """
-function obtain_symmetry_vectors(ms::PyObject, sgnum::Int; timereversal::Bool = true)
+function obtain_symmetry_vectors(ms::PyObject, sgnum::Int)
     brs = bandreps(sgnum) # elementary band representations
     lgs = littlegroups(sgnum) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
