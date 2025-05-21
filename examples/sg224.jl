@@ -5,11 +5,9 @@ using Crystalline, TETB
 
 sgnum, D = 224, 3
 brs = calc_bandreps(sgnum, Val(D))
-c = zeros(Int, length(brs))
-c[13], c[19] = 1, 1
-cbr = CompositeBandRep(c, brs)
+cbr = @composite brs[13] + brs[19]
 Rs = [[0, 0, 0]]
 
-tb_model = tb_hamiltonian(cbr, Rs; timereversal = false)
+tb_model = tb_hamiltonian(cbr, Rs)
 
 hops = TETB.obtain_symmetry_related_hoppings(Rs, brs[13], brs[19])
