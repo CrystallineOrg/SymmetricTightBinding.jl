@@ -125,9 +125,13 @@ end
         tbm::Union{TightBindingModel, ParameterizedTightBindingModel}, op::SymOperation)
     -> SiteInducedSGRepElement
 
-Computes the symmetry representation matrix of a symmetry operation `op` induced by the site
-symmetry group of a band representation `br` or `cbr`, including the phase factors that depend
-on momentum 𝗸. The matrix `ρ` is a square matrix of size `length(positions)`.
+Computes the representation matrix of a symmetry operation `op` induced by the site symmetry
+group associated with an elementary or composite band representation `br` , _including_ the global
+momentum-dependent phase factor, returning a `SiteInducedSGRepElement`, which is a functor
+over momentum inputs.
+
+A (possibly parameterized) tight-binding model `tbm` can be specified instead of a band representation,
+in which case the latter is inferred from the former.
 """
 function sgrep_induced_by_siteir(
     br::Union{NewBandRep{D}, CompositeBandRep{D}},
