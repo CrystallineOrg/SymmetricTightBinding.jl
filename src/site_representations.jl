@@ -4,8 +4,8 @@
     sgrep_induced_by_siteir_excl_phase(cbr::CompositeBandRep, op::SymOperation) -> Matrix{ComplexF64}
 
 Computes the representation matrix of a symmetry operation `op` induced by the site
-symmetry group of a band representation `br` or `cbr`, without the phase factors that depend
-on momentum 𝗸.
+symmetry group of a band representation `br` or composite band representation `cbr`,
+excluding the global momentum-dependent phase factor.
 """
 function sgrep_induced_by_siteir_excl_phase(
     br::NewBandRep{D},
