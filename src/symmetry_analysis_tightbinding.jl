@@ -1,29 +1,29 @@
 """
-    symmetry_analysis(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
+    symeigs_analysis(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
 
 Determine a decomposition of the bands associated with `ptbm` into a set of
 `SymmetryVector`s, with each symmetry vector corresponding to a set of
 compatibility-respecting (i.e., energy separable along high-symmetry **k**-lines) bands.
 
 ## Keyword arguments
-- `multiplicities_kws...`: keyword arguments passed to `MPBUtils.analyze_symmetry_data`
+- `multiplicities_kws...`: keyword arguments passed to `Crystalline.symeigs_analysis`
   used in determining the multiplicities of irreps across high-symmetry **k**-points.
 
 ## Example
 ```julia-repl
 julia> using Crystalline, TETB
 
-julia> brs = calc_bandreps(221); coefs = zeros(Int, length(brs)); coefs[[1, 2]] .= 1;
+julia> brs = calc_bandreps(221);
 
-julia> cbr = CompositeBandRep(coefs, brs)
+julia> cbr = @composite brs[1] + brs[2]
 40-irrep CompositeBandRep{3}:
  (3d|A₁g) + (3d|A₁ᵤ) (6 bands)
 
-julia> tbm = tb_hamiltonian(cbr, [zeros(Int, dim(cbr))]); # a 4-term, 6-band model
+julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
 
 julia> ptbm = tbm([1.0, 0.1, -1.0, 0.1]); # fix free coefficients
 
-julia> symmetry_analysis(ptbm)
+julia> symeigs_analysis(ptbm)
 2-element Vector{SymmetryVector{3}}:
  [M₅⁺+M₁⁻, X₃⁺+X₁⁻+X₂⁻, Γ₁⁻+Γ₃⁻, R₄⁺] (3 bands)
  [M₁⁺+M₅⁻, X₁⁺+X₂⁺+X₃⁻, Γ₁⁺+Γ₃⁺, R₄⁻] (3 bands)
@@ -31,7 +31,7 @@ julia> symmetry_analysis(ptbm)
 In the above example, the bands separate into two symmetry vectors, one for each of the
 original EBRs in `cbr`.
 """
-function symmetry_analysis(
+function Crystalline.symeigs_analysis(
     ptbm::ParameterizedTightBindingModel{D},
     multiplicities_kws...,
 ) where D
@@ -46,25 +46,16 @@ function symmetry_analysis(
     # determine the induced space group rep associated with `cbr` across all `ops`
     sgrep_d = Dict(op => sgrep_induced_by_siteir(ptbm, op) for op in ops)
 
-    N = tbm.N # number of bands
-    symeigsd = Dict{String, Vector{Vector{ComplexF64}}}()
+    symeigsv = Vector{Vector{Vector{ComplexF64}}}(undef, length(lgs))
 
     # determine symmetry eigenvalues for each band in each little group
-    for lg in lgs
+    for (kidx, lg) in enumerate(lgs)
         sgreps = [sgrep_d[op] for op in lg]
         symeigs = symmetry_eigenvalues(ptbm, lg, sgreps)
-        symeigsd[klabel(lg)] = collect(eachcol(symeigs))
+        symeigsv[kidx] = collect(eachcol(symeigs))
     end
 
-    # TODO: transfer these utilities from MBPUtils to Crystalline, and also
-    # to drop their dependence on taking a BandRepSet rather than a Collection{NewBandRep}
-    _brs = convert(BandRepSet, cbr.brs)
-    lgirsd = Dict(klabel(first(lgirs)) => lgirs for lgirs in irreps(cbr))
-    summaries =
-        MPBUtils.analyze_symmetry_data(symeigsd, lgirsd, _brs; multiplicities_kws...)
-    # TODO: ↓ Ideally, wouldn't be needed once we've transferred from MPBUtils to Crystalline
-    ns = bandsum2symvec.(summaries, Ref(lgirsv))
-
+    ns = symeigs_analysis(symeigsv, cbr.brs; multiplicities_kws...)
     return ns
 end
 
@@ -109,10 +100,11 @@ function symmetry_eigenvalues(
     #     simplify the induced rep phases to an overall phase instead of the tᵦₐ-business
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
+    tmp = Vector{ComplexF64}(undef, ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            symeigs[j, n] = dot(v, transpose(ρ) * v)
+            symeigs[j, n] = dot(v, mul!(tmp, transpose(ρ), v))
         end
     end
     return symeigs

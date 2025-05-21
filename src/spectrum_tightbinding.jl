@@ -19,9 +19,9 @@ path; and finally, plot the band structure using Brillouin and GLMakie (or Plotl
 ```julia-repl
 julia> using Crystalline, TETB
 
-julia> brs = calc_bandreps(17, Val(2)); coefs = zeros(Int, length(brs)); coefs[5] = 1; 
+julia> brs = calc_bandreps(17, Val(2));
 
-julia> cbr = CompositeBandRep(coefs, brs)
+julia> cbr = @composite brs[5]
 13-irrep CompositeBandRep{2}:
  (2b|A₁) (2 bands)
 

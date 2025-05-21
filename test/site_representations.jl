@@ -5,9 +5,7 @@ using Crystalline
     @testset "SG #221" begin
         sgnum, D = 221, 3
         brs = calc_bandreps(sgnum, Val(D))
-        coefs = zeros(Int, length(brs))
-        coefs[6] = 1
-        cbr = CompositeBandRep(coefs, brs)
+        cbr = @composite brs[6]
 
         gens = generators(num(cbr), SpaceGroup{D})
         sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
@@ -47,9 +45,7 @@ using Crystalline
     @testset "SG #224" begin
         sgnum, D = 224, 3
         brs = calc_bandreps(sgnum, Val(D))
-        coefs = zeros(Int, length(brs))
-        coefs[[13, 19]] .= 1
-        cbr = CompositeBandRep(coefs, brs)
+        cbr = @composite brs[13] + brs[19]
 
         gens = generators(num(cbr), SpaceGroup{D})
         sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
@@ -114,9 +110,7 @@ using Crystalline
     @testset "Point Group #2 (-1)" begin
         sgnum, D = 2, 1
         brs = calc_bandreps(sgnum, Val(D))
-        coefs = zeros(Int, length(brs))
-        coefs[[2, 3]] .= 1
-        cbr = CompositeBandRep(coefs, brs)
+        cbr = @composite brs[2] + brs[3]
 
         gens = generators(num(cbr), SpaceGroup{D})
         sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
@@ -132,9 +126,7 @@ using Crystalline
     @testset "Graphene" begin
         sgnum, D = 17, 2
         brs = calc_bandreps(sgnum, Val(D))
-        coefs = zeros(Int, length(brs))
-        coefs[5] = 1
-        cbr = CompositeBandRep(coefs, brs)
+        cbr = @composite brs[5]
 
         gens = generators(num(cbr), SpaceGroup{D})
         sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
@@ -152,9 +144,7 @@ using Crystalline
     @testset "Plane Group #10 (4)" begin
         sgnum = 10
         brs = calc_bandreps(sgnum, Val(2))
-        coefs = zeros(Int, length(brs))
-        coefs[[1, end]] .= 1
-        cbr = CompositeBandRep(coefs, brs)
+        cbr = @composite brs[1] + brs[end]
 
         gens = generators(num(cbr), SpaceGroup{D})
         sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)

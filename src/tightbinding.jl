@@ -777,18 +777,17 @@ symmetry operations.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
-    Rs::AbstractVector{Vector{Int}}; # "global" translation-representatives of hoppings
+    Rs::AbstractVector{Vector{Int}} = [zeros(Int, D)]; # "global" hopping translation-representatives
     antihermitian::Bool = false,
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
-        error(
-            "provided composite bandrep is not Wannierizable: contains negative or non-integer coefficients",
-        )
-        # no TB model can be constructed for such a composite bandrep
+        error("the input composite band representation does not have a symmetric \
+               tight-binding model: its expansion in EBRs contain negative or \
+               fractional coefficients")
     end
     coefs = round.(Int, cbr.coefs)
 
-    # find all band representations involved in the composite band representation and list them
+    # find all bandreps featured in the composite bandrep and build a "repeated" entry list
     brs = Vector{NewBandRep{D}}(undef, sum(coefs))
     idx = 0
     for (i, c) in enumerate(coefs)
@@ -797,9 +796,14 @@ function tb_hamiltonian(
         end
     end
 
-    # find all families of hoppings between involved band representations
-    # the TB model will be divided into each of these representatives since they will be 
-    # symmetry independent
+    if any(br -> !iszero(free(position(br))), brs)
+        error("free parameters in Wyckoff positions are not supported; any non-special \
+               Wyckoff position must have its free parameters pinned to a definite value \
+               prior to calling `tb_hamiltonian`: see `pin_free_parameters`")
+    end
+
+    # find all families of hoppings between involved band representations: the TB model will
+    # be divided into each of these representatives since they will be symmetry independent
     hermiticity = antihermitian ? ANTIHERMITIAN : HERMITIAN
     B = length(brs)
     axis = BlockArrays.BlockedOneTo((cumsum(occupation(br) for br in brs)))

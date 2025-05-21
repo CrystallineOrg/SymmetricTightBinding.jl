@@ -4,12 +4,12 @@ module TETB
 using LinearAlgebra
 using Crystalline
 using MPBUtils
-using SymmetryBases
 using PhotonicBandConnectivity
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
+using PythonCall: pynew, pycopy!, pyimport, Py, pyconvert
 # -------------------- Predefined constant used ------------------------------ #
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
@@ -17,16 +17,14 @@ const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
 const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 # ---------------------------------------------------------------------------------------- #
 
-using PyCall
+using PythonCall
 
-const mp = PyNULL()
-const mpb = PyNULL()
+const mp = pynew()
+const mpb = pynew()
 function __init__()
-    # import the mp and mpb libraries
-    # https://github.com/JuliaPy/PyCall.jl#using-pycall-from-julia-modules)
-    try
-        copy!(mp, pyimport("meep"))
-        copy!(mpb, pyimport("meep.mpb"))
+    try # import the mp and mpb libraries
+        pycopy!(mp, pyimport("meep"))
+        pycopy!(mpb, pyimport("meep.mpb"))
     catch
         @warn "mpb or meep could not be imported: associated functionality is nonfunctional"
     end
@@ -62,11 +60,9 @@ include("hermiticity.jl")
 include("show_tightbinding.jl")
 include("utils_tightbinding.jl")
 include("symmetry_analysis_tightbinding.jl")
-export symmetry_analysis
+export symeigs_analysis
 include("spectrum_tightbinding.jl")
 export spectrum
-include("plotting_tightbinding.jl") # convert to package extension for Makie
-export plot
 
 # ---------------------------------------------------------------------------- #
 end # module
