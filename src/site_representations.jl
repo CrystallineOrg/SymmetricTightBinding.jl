@@ -82,9 +82,17 @@ end
 """
     SiteInducedSGRepElement{D}(ρ::AbstractMatrix, positions::Vector{DirectPoint{D}}, op::SymOperation{D})
 
-Store the symmetry representation matrix `ρ` of a symmetry operation `op` induced by the site
-symmetry group of a band representation, along with the positions of the orbitals used for
-building the representation. The matrix `ρ` is a square matrix of size `length(positions)`.
+Represents a matrix-valued element of a site-induced representation of a space group,
+including a global momentum-dependent phase factor.
+
+This structure behaves like a functor: calling it with a momentum `k :: AbstractVector` 
+returns the matrix representation at `k`.
+
+## Fields (internal)
+Fields
+- `ρ :: Matrix{ComplexF64}` : The momentum-independent matrix part of the representation.
+- `positions :: Vector{DirectPoint{D}}`: Real-space positions corresponding to the orbitals in the
+orbit of the associated site-symmetry group.
 """
 struct SiteInducedSGRepElement{D}
     ρ::Matrix{ComplexF64}
