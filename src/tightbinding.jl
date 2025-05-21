@@ -39,9 +39,9 @@ function obtain_symmetry_related_hoppings(
     sgnum = num(brₐ)
     num(brᵦ) == sgnum ||
         error("both band representations must belong to the same space group")
-    timereversal =
-        brₐ.timereversal == brᵦ.timereversal ||
-        error("both band representations must be timereversal or not")
+    brₐ.timereversal == brᵦ.timereversal ||
+        error("input band representations must have identical time-reversal symmetry")
+    timereversal = brₐ.timereversal
 
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
