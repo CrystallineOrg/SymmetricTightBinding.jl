@@ -12,7 +12,7 @@ function obtain_symmetry_vectors(ms::PyObject, sgnum::Int)
     lgs = littlegroups(sgnum) # little groups
     filter!(((klab, _),) -> klab ∈ klabels(brs), lgs) # restrict to k-points in `brs`
     map!(lg -> primitivize(lg, false), values(lgs)) # convert to primitive setting
-    lgirsd = pick_lgirreps(lgs; timereversal) # small irreps associated with `lgs`
+    lgirsd = pick_lgirreps(lgs; timereversal = true) # small irreps associated with `lgs`
 
     symeigsd = Dict{String, Vector{Vector{ComplexF64}}}()
     for (klab, lg) in lgs
