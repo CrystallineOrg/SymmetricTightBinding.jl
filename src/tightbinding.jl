@@ -766,7 +766,8 @@ Construct the TB Hamiltonian matrix from a given composite band representation `
 set of global translation-representatives `Rs`.
 The Hamiltonian is constructed block by block according to the symmetry-related hoppings
 between the band representations in `cbr`.
-Several model are given back, one of closed in the symmetry operations.
+Several models returned, each representing a term that is closed under the symmetry operations of 
+the underlying space group.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
