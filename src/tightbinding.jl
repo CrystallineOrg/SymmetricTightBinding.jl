@@ -430,7 +430,7 @@ associated with the hopping orbit `h_orbit`.
 
 ## Note
 
-Timereversal symmetry is called implicitly by the `NewBandRep` constructor.
+The presence or absence of time-reversal symmetry is inferred implicitly from `brₐ` and `brᵦ`.
 """
 function obtain_basis_free_parameters(
     h_orbit::HoppingOrbit{D},
