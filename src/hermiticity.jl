@@ -19,7 +19,7 @@ can then be expressed as `vᵀ(k) M⁽ˢᵗ⁾ tⱼ = v*ᵀ(k) M⁽ᵗˢ⁾ σ�
 which requires that `t` be a solution to the nullspace `M⁽ˢᵗ⁾ - Pᵀ M⁽ᵗˢ⁾ σ₃ = 0`. We
 cast this as `Z - Q = 0`, with `Z = M⁽ˢᵗ⁾` and `Q = Pᵀ M⁽ᵗˢ⁾ σ₃`.
 
-## notes
+## Notes
 For anti-Hermitian symmetry, we require `Hₛₜ(k) = -Hₜₛ*(k)`, which translates to
 `M⁽ˢᵗ⁾ + Pᵀ M⁽ᵗˢ⁾ σ₃ = 0`; i.e., simply swaps the sign of `Q`
 """
