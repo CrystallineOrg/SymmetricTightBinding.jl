@@ -3,41 +3,46 @@
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
         brᵦ::NewBandRep{D},
-        timereversal::Bool = brₐ.timereversal
         ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
         --> Vector{HoppingOrbit{D}}
 
-    Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
-    WP of `brᵦ`displaced a set of primitive lattice vectors `Rs`.
+Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
+WP of `brᵦ` displaced a set of primitive lattice vectors `Rs`.
 
-    The vectors provided in `Rs` are just representatives. Because of symmetry 
-    operations, bigger primitive lattice vectors could be found.
+The vectors provided in `Rs` are just representatives. Because of symmetry 
+operations, bigger primitive lattice vectors could be found.
 
-    How it works: 
-    1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
-    compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
-    2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
-        of that representative and continue. If not then, we search inside of all the 
-        representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
-        If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
-        to its list of hoppings.
-    3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
-        and repeat step 2.
-    4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
+How it works: 
+1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
+compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
+    of that representative and continue. If not then, we search inside of all the 
+    representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
+    If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
+    to its list of hoppings.
+3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
+    and repeat step 2.
+4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-    Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
-    `-δ` are present; if not, we add them.
+Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
+`-δ` are present; if not, we add them.
+
+## Note
+
+Timereversal symmetry is called implicitly by the `NewBandRep` constructor.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
-    timereversal::Bool = brₐ.timereversal,
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
-    num(brᵦ) == sgnum || error("both band representations must be in the same space group")
+    num(brᵦ) == sgnum ||
+        error("both band representations must belong to the same space group")
     brₐ.timereversal == brᵦ.timereversal ||
-        error("both band representations must have the same time-reversal symmetry")
+        error("input band representations must have identical time-reversal symmetry")
+    timereversal = brₐ.timereversal
+
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
@@ -417,12 +422,15 @@ end
         h_orbit::HoppingOrbit{D},
         brₐ::NewBandRep{D}, 
         brᵦ::NewBandRep{D}, 
-        [orderingₐ = OrbitalOrdering(brₐ), orderingᵦ = OrbitalOrdering(brᵦ)];
-        [timereversal::Bool = true]
+        [orderingₐ = OrbitalOrdering(brₐ), orderingᵦ = OrbitalOrdering(brᵦ)]
         )                            --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
 associated with the hopping orbit `h_orbit`.
+
+## Note
+
+The presence or absence of time-reversal symmetry is inferred implicitly from `brₐ` and `brᵦ`.
 """
 function obtain_basis_free_parameters(
     h_orbit::HoppingOrbit{D},
@@ -430,7 +438,6 @@ function obtain_basis_free_parameters(
     brᵦ::NewBandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ);
-    timereversal::Bool = true,
     diagonal_block::Bool = true,
     antihermitian::Bool = true,
 ) where {D}
@@ -438,6 +445,9 @@ function obtain_basis_free_parameters(
     gensₐ = generators(num(brₐ), SpaceGroup{D})
     gensᵦ = generators(num(brᵦ), SpaceGroup{D})
     @assert gensₐ == gensᵦ # must be from same space group and in same sorting
+    brₐ.timereversal == brᵦ.timereversal ||
+        error("input band representations must have identical time-reversal symmetry")
+    timereversal = brₐ.timereversal
 
     # cast generators to primitive basis
     cntr = centering(num(brₐ), D)
@@ -768,7 +778,6 @@ symmetry operations.
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
     Rs::AbstractVector{Vector{Int}} = [zeros(Int, D)]; # "global" hopping translation-representatives
-    timereversal::Bool = true,
     antihermitian::Bool = false,
 ) where {D}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
@@ -806,7 +815,7 @@ function tb_hamiltonian(
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2, timereversal)
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit,
@@ -814,7 +823,6 @@ function tb_hamiltonian(
                     br2,
                     ordering1,
                     ordering2;
-                    timereversal,
                     diagonal_block = d == 0,
                     antihermitian,
                 )

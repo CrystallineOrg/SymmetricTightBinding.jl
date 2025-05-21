@@ -9,7 +9,7 @@ cbr = @composite brs[1] + brs[3]
 
 Rs = [[0, 0, 0]]
 
-tb_model = tb_hamiltonian(cbr, Rs; timereversal = false)
+tb_model = tb_hamiltonian(cbr, Rs)
 
 hops = obtain_symmetry_related_hoppings(Rs, brs[1], brs[3])
 
