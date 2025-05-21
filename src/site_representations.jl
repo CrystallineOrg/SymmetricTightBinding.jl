@@ -118,10 +118,12 @@ function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D
 end
 
 """
-    sgrep_induced_by_siteir(br::NewBandRep, op::SymOperation, positions::Vector{DirectPoint{D}}) -> SiteInducedSGRepElement{D}
-    sgrep_induced_by_siteir(cbr::CompositeBandRep, op::SymOperation, positions::Vector{DirectPoint{D}}) -> SiteInducedSGRepElement{D}
-    sgrep_induced_by_siteir(tbm::TightBindingModel, op::SymOperation) -> SiteInducedSGRepElement{D}
-    sgrep_induced_by_siteir(tbm::ParameterizedTightBindingModel, op::SymOperation) -> SiteInducedSGRepElement{D}
+    sgrep_induced_by_siteir(
+        br::Union{NewBandRep, CompositeBandRep},
+        op::SymOperation, [positions::Vector{<:DirectPoint}])
+    sgrep_induced_by_siteir(
+        tbm::Union{TightBindingModel, ParameterizedTightBindingModel}, op::SymOperation)
+    -> SiteInducedSGRepElement
 
 Computes the symmetry representation matrix of a symmetry operation `op` induced by the site
 symmetry group of a band representation `br` or `cbr`, including the phase factors that depend
