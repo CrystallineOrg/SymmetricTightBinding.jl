@@ -372,16 +372,16 @@ function evaluate_tight_binding_term!(
     js = tbt.axis[Block(block_j)] # global col indices
     t = block.t
     Nᵗ = length(t) ÷ 2
-    tℂ = ComplexF64.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end])) # complex coefficient vector
+    tR = @view t[1:Nᵗ]     # real part of coefficient vector
+    tI = @view t[Nᵗ+1:end] # imaginary part of coefficient vector
     Mm = block.Mm
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
     v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
-    M_tℂ = Vector{ComplexF64}(undef, size(Mm, 1))
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
-            mul!(M_tℂ, (@view Mm[:, :, local_i, local_j]), tℂ) # M_tℂ = M[:,:,i,j] * tℂ
-            Hᵢⱼ = dot(v, M_tℂ)
+            Mⁱʲ = @view Mm[:, :, local_i, local_j]
+            Hᵢⱼ = dot(v, Mⁱʲ, tR) + 1im*dot(v, Mⁱʲ, tI)
             isnothing(c) || (Hᵢⱼ *= c) # multiply by coefficient if provided
             H[i, j] += Hᵢⱼ
             i == j && continue # don't add diagonal elements twice
