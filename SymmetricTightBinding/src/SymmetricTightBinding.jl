@@ -39,6 +39,8 @@ include("symmetry_analysis.jl")
 export symmetry_analysis
 include("spectrum.jl")
 export spectrum
+include("gradients.jl")
+export gradient_wrt_hopping, energy_gradient_wrt_hopping
 
 # ---------------------------------------------------------------------------------------- #
 

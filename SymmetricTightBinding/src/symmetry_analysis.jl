@@ -63,7 +63,7 @@ end
     symmetry_eigenvalues(
         ptbm::ParameterizedTightBindingModel{D},
         ops::AbstractVector{SymOperation{D}},
-        k::Union{AbstractVector{<:Real}, KVec{D}},
+        k::ReciprocalPointLike{D},
         [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]) where D --> Matrix{ComplexF64}
 
     symmetry_eigenvalues(
@@ -85,7 +85,7 @@ The symmetry eigenvalues are returned as a matrix, with rows running over the el
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
     ops::AbstractVector{SymOperation{D}},
-    k::Union{AbstractVector{<:Real}, KVec{D}},
+    k::ReciprocalPointLike{D},
     sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
         Ref(ptbm.tbm.cbr),
         ops,
@@ -119,7 +119,7 @@ function symmetry_eigenvalues(
     ),
 ) where D
     kv = position(lg)
-    iszero(free(kv)) || error("input k-point has free parameters")
+    isspecial(kv) || error("input k-point has free parameters")
     k = constant(kv)
     return symmetry_eigenvalues(ptbm, operations(lg), k, sgreps)
 end

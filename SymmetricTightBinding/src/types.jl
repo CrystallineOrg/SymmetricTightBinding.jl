@@ -274,6 +274,16 @@ function (tbm::TightBindingModel{D})(cs::Vector{Float64}) where {D}
     return ParameterizedTightBindingModel(tbm, cs)
 end
 
+# ---------------------------------------------------------------------------------------- #
+
+# union-type for valid k-point input; defined to avoid repeating this everywhere
+const ReciprocalPointLike{D} = Union{
+    AbstractVector{<:Real},
+    NTuple{D, <:Real},
+    ReciprocalPoint{D}}
+
+# ---------------------------------------------------------------------------------------- #
+
 """
   ParameterizedTightBindingModel{D}
 
@@ -312,7 +322,7 @@ function ParameterizedTightBindingModel(
 end
 
 function (ptbm::ParameterizedTightBindingModel{D})(
-    k::Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}},
+    k::ReciprocalPointLike{D},
     scratch::Matrix{ComplexF64} = ptbm.scratch,
 ) where {D}
     if length(k) ≠ D
@@ -331,34 +341,67 @@ function (ptbm::ParameterizedTightBindingModel{D})(
 
     # evaluate each block of the Hamiltonian terms, multiply by coefficients, & store in `H`
     for (tbt, c) in zip(tbm.terms, ptbm.cs)
-        block = tbt.block
-        block_i, block_j = tbt.block_ij
-        is = tbt.axis[Block(block_i)] # global row indices
-        js = tbt.axis[Block(block_j)] # global col indices
-        t = block.t
-        Nᵗ = length(t) ÷ 2
-        tℂ = ComplexF64.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end])) # complex coefficient vector
-        Mm = block.Mm
+        evaluate_tight_binding_term!(tbt, k, c, H) # modifies `H` in-place
+    end
 
-        # NB: ↓ one more case of assuming no free parameters in `δ`
-        v = cispi.(dot.(Ref(2k), constant.(orbit(block.h_orbit))))
-        M_tℂ = Vector{ComplexF64}(undef, size(Mm, 1))
-        for (local_i, i) in enumerate(is)
-            for (local_j, j) in enumerate(js)
-                mul!(M_tℂ, (@view Mm[:, :, local_i, local_j]), tℂ) # M_tℂ = M[:,:,i,j] * tℂ
-                Hᵢⱼ = c * dot(v, M_tℂ)
-                H[i, j] += Hᵢⱼ
-                H[j, i] += tbt.hermiticity == ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
-            end
+    return H
+end
+
+"""
+    evaluate_tight_binding_term!(tbt::TightBindingTerm, k, [c, H])
+
+Evaluate the tight-binding term `tbt` at momentum `k`, possibly multiplied by a scalar
+coefficient `c` (unity if omitted). The term is _added_ into the scratch space matrix `H`;
+if `H` is not provided, it is initialized as a zero matrix of the appropriate size.
+
+The function returns the modified `H` matrix.
+    
+## Note
+The two-argument form of the function, i.e., returning the value of `tbt` at `k`, can be
+more simply achieved via `tbt(k)`.
+"""
+function evaluate_tight_binding_term!(
+    tbt::TightBindingTerm{D},
+    k::ReciprocalPointLike{D},
+    c::Union{Nothing, <:Number} = nothing,
+    H::Matrix{ComplexF64} = zeros(ComplexF64, size(tbt))
+) where {D}
+    block = tbt.block
+    block_i, block_j = tbt.block_ij
+    is = tbt.axis[Block(block_i)] # global row indices
+    js = tbt.axis[Block(block_j)] # global col indices
+    t = block.t
+    Nᵗ = length(t) ÷ 2
+    tℂ = ComplexF64.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end])) # complex coefficient vector
+    Mm = block.Mm
+
+    # NB: ↓ one more case of assuming no free parameters in `δ`
+    v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
+    M_tℂ = Vector{ComplexF64}(undef, size(Mm, 1))
+    for (local_i, i) in enumerate(is)
+        for (local_j, j) in enumerate(js)
+            mul!(M_tℂ, (@view Mm[:, :, local_i, local_j]), tℂ) # M_tℂ = M[:,:,i,j] * tℂ
+            Hᵢⱼ = dot(v, M_tℂ)
+            isnothing(c) || (Hᵢⱼ *= c) # multiply by coefficient if provided
+            H[i, j] += Hᵢⱼ
+            i == j && continue # don't add diagonal elements twice
+            H[j, i] += tbt.hermiticity == ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
         end
     end
 
     return H
 end
 
+function (tbt::TightBindingTerm{D})(k::ReciprocalPointLike{D}) where {D}
+    if length(k) ≠ D
+        error("momentum `k` must be a $D-dimensional vector to match the model dimension")
+    end
+    return evaluate_tight_binding_term!(tbt, k)
+end
+
 function solve(
     ptbm::ParameterizedTightBindingModel{D},
-    k::Union{KVec{D}, AbstractVector{<:Real}};
+    k::ReciprocalPointLike{D};
     bloch_phase::Union{Val{true}, Val{false}} = Val(true),
     eigen_kws...,
 ) where D
@@ -369,11 +412,15 @@ function solve(
 
     es, vs = eigen(Hermitian(ptbm(k)), eigen_kws...)
     if bloch_phase === Val(true)
-        _k = k isa KVec ? constant(k) : k
-        phases = cispi.(2 .* dot.(Ref(_k), orbital_positions(ptbm))) # e^{ik·r}
+        phases = cispi.(dot.(Ref(2 .* k), orbital_positions(ptbm))) # e^{ik·r}
         vs = Diagonal(phases) * vs # add Bloch phases
         return es, vs
     else
         return es, vs
     end
+end
+
+function solve(ptbm::ParameterizedTightBindingModel{D}, k::KVec{D}; kws...) where D
+    isspecial(k) || error("input k-point has free parameters, i.e., is not definite")
+    solve(ptbm, constant(k); kws...)
 end
