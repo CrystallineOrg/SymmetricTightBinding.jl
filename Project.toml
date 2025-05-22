@@ -8,17 +8,21 @@ Crystalline = "ae5e2be0-a263-11e9-351e-f94dad1eb351"
 MPBUtils = "a5feb4ea-5495-4677-96f8-dddb76c9eb4c"
 PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SymmetricTightBinding = "793e0360-0e47-4c52-9513-43d75d53c7d0"
 
 [sources]
 MPBUtils = {url = "https://github.com/thchr/MPBUtils.jl"}
 PhotonicBandConnectivity = {url = "https://github.com/thchr/PhotonicBandConnectivity.jl"}
+SymmetricTightBinding = {path = "../SymmetricTightBinding.jl"}
 
 [compat]
 Crystalline = "0.6.17"
 MPBUtils = "0.2"
 PhotonicBandConnectivity = "0.5"
 PythonCall = "0.9.24"
+Reexport = "1"
+SymmetricTightBinding = "0.1.0"
 julia = "1.11"
 
 [extras]
