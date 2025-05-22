@@ -3,7 +3,7 @@
 
 using Pkg
 Pkg.activate(@__DIR__)
-using Crystalline, TETB
+using Crystalline, SymmetricTightBinding
 
 sgnum, D = 13, 2
 timereversal = false

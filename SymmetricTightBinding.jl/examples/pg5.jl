@@ -5,7 +5,7 @@ Pkg.activate(@__DIR__)
 # erroneously go outside the primitive cell (since the primitive and conventional cells)
 # don't coincide
 
-using Crystalline, TETB
+using Crystalline, SymmetricTightBinding
 
 ##- Compute the necessary things for obtaining the hoppings
 
@@ -25,6 +25,6 @@ sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(br), gens)
 
 Rs = [[0, 0], [1, 0], [1, -1]] # vector containing the translations we want to consider
 
-Δs = TETB.find_symmetry_related_hoppings(Rs, br, br)
+Δs = SymmetricTightBinding.find_symmetry_related_hoppings(Rs, br, br)
 
 ##----------------------------------------------------------------------------------------##

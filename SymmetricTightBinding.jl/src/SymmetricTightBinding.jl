@@ -1,21 +1,24 @@
 module SymmetricTightBinding
 
-# -------------------- Necessary modules for the package --------------------------------- #
+# --- Dependencies ----------------------------------------------------------------------- #
+
 using LinearAlgebra
 using Crystalline
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
-# -------------------- Predefined constant used ------------------------------------------ #
+
+# --- Constants -------------------------------------------------------------------------- #
+
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
 const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
-# ---------------------------------------------------------------------------------------- #
+
+# ---- Code loading ---------------------------------------------------------------------- #
 
 include("types.jl")
-export TightBindingCandidateSet
 export HoppingOrbit
 export TightBindingElementString
 export TightBindingBlock

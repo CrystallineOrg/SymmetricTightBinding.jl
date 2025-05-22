@@ -1,7 +1,7 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-using Crystalline, TETB
+using Crystalline, SymmetricTightBinding, GLMakie
 
 sgnum = 42
 brs = calc_bandreps(sgnum)
@@ -13,4 +13,4 @@ tb_model = tb_hamiltonian(cbr, Rs)
 
 hops = obtain_symmetry_related_hoppings(Rs, brs[1], brs[3])
 
-hop_plot(hops[1])
+plot(hops[1])
