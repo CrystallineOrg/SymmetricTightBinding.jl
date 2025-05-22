@@ -797,7 +797,7 @@ function tb_hamiltonian(
     if any(br -> !iszero(free(position(br))), brs)
         error("free parameters in Wyckoff positions are not supported; any non-special \
                Wyckoff position must have its free parameters pinned to a definite value \
-               prior to calling `tb_hamiltonian`: see `pin_free_parameters`")
+               prior to calling `tb_hamiltonian`: see `pin_free!`")
     end
 
     # find all families of hoppings between involved band representations: the TB model will

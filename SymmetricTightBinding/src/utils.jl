@@ -156,3 +156,69 @@ function primitivized_orbit(br::NewBandRep{D}) where D
     end
     return wps′_pts
 end
+
+
+# ---------------------------------------------------------------------------------------- #
+
+"""
+    pin_free!(brs::Collection{NewBandRep{D}}, idx2αβγ::Pair{Int, <:AbstractVector{<:Real}})
+    pin_free!(brs::Collection{NewBandRep{D}},
+              idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}})
+
+For `idx2αβγ = idx => αβγ`, update `brs[idx]` such that the free parameters of its
+associated Wyckoff positions are pinned to `αβγ`.
+
+A vector of pairs `idx2αβγs` can also be provided, to pin multiple distinct band
+representations.
+
+See also [`pin_free`](@ref) for non-mutated input.
+"""
+function pin_free!(
+    brs::Collection{<:NewBandRep},
+    idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
+)
+    foreach(Base.Fix1(pin_free!, brs), idx2αβγs)
+    return brs
+end
+function pin_free!(
+    brs::Collection{<:NewBandRep},
+    idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
+)
+    idx, αβγ = idx2αβγ
+    checkbounds(Bool, brs, idx) || error("index $idx out of bounds for `brs`")
+    br = @inbounds brs[idx]
+    @inbounds brs[idx] = pin_free(br, αβγ)
+    return brs
+end
+
+"""
+    pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
+
+Pin the free parameters of the Wyckoff position associated with the band representation `br`
+to the values in `αβγ`. 
+
+Returns a new band representation with all other properties, apart from the Wyckoff
+position, identical to (and sharing memory with) `br`.
+"""
+function pin_free(
+    br::NewBandRep{D},
+    αβγ::AbstractVector{<:Real}
+) where D
+    length(αβγ) == D || error(DimensionMismatch("length(αβγ) ≠ D"))
+    if iszero(free(position(br)))
+        error("attempting to pin a band representation without any free parameters")
+    end
+
+    wp = position(br)
+    rv = parent(wp)
+    rv_pin = RVec{3}(rv(αβγ))
+    wp_pin = WyckoffPosition(wp.mult, wp.letter, rv_pin)
+
+    siteir = br.siteir
+    siteg = group(siteir)
+    siteg_pin = SiteGroup{D}(siteg.num, wp_pin, siteg.operations, siteg.cosets)
+    siteir_pin = SiteIrrep{D}(siteir.cdml, siteg_pin, siteir.matrices, siteir.reality,
+                              siteir.iscorep, siteir.pglabel)
+
+    return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
+end
