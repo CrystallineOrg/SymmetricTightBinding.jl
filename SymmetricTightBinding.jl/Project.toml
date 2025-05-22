@@ -8,13 +8,9 @@ BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 Crystalline = "ae5e2be0-a263-11e9-351e-f94dad1eb351"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
-SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-
-[sources]
-SymmetryBases = {url="https://github.com/thchr/SymmetryBases.jl"}
 
 [extensions]
 TETBMakieExt = "Makie"
@@ -25,7 +21,6 @@ Crystalline = "0.6.17"
 Makie = "0.22"
 LinearAlgebra = "1.11.0"
 RowEchelon = "0.2.1"
-SymmetryBases = "0.5.0"
 julia = "1.11"
 
 [extras]

@@ -3,7 +3,6 @@ module SymmetricTightBinding
 # -------------------- Necessary modules for the package --------------------------------- #
 using LinearAlgebra
 using Crystalline
-using SymmetryBases
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using BlockArrays
