@@ -2,7 +2,9 @@ module SymmetricTightBindingMakieExt
 
 ## --------------------------------------------------------------------------------------- #
 
-using SymmetricTightBindingMakieExt
+using SymmetricTightBinding
+using SymmetricTightBinding: TightBindingTerm
+using Crystalline: DirectBasis, crystal, constant
 using Makie
 
 ## --------------------------------------------------------------------------------------- #
