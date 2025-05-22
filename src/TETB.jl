@@ -31,7 +31,9 @@ export mp, mpb
 
 # --- Code loading ----------------------------------------------------------------------- #
 
-include("conversion.jl")
+include("types.jl")
+include("show.jl")
+include("conversion.jl") # TODO: remove this at some point; not needed, I think
 include("constrained_nonnegative_expansions.jl")
 include("utils.jl")
 export find_apolar_modes
