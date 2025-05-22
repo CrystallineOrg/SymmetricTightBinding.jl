@@ -502,7 +502,7 @@ function obtain_basis_free_parameters(
     #    ```
     # See `split_complex` for more details on the real/imaginary splitting.
     N = 2size(Mm, 2) # number of elements per `t`-vector, when doubled
-    tₐᵦ_basis_reim = split_complex.(collect(eachcol(tₐᵦ_basis_matrix)))
+    tₐᵦ_basis_reim = split_complex.(eachcol(tₐᵦ_basis_matrix))
     tₐᵦ_basis_reim_matrix =
         reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
 
