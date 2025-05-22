@@ -13,7 +13,7 @@ RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
-TETBMakieExt = "Makie"
+SymmetricTightBindingMakieExt = "Makie"
 
 [compat]
 BlockArrays = "1.6.3"
