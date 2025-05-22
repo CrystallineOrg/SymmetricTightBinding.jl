@@ -8,6 +8,8 @@ using PhotonicBandConnectivity
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using PythonCall: pynew, pycopy!, pyimport, Py, pyconvert
+using Reexport
+@reexport using SymmetricTightBinding
 # ---------------------------------------------------------------------------------------- #
 
 using PythonCall
