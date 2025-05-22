@@ -100,11 +100,10 @@ function symmetry_eigenvalues(
     #     simplify the induced rep phases to an overall phase instead of the tᵦₐ-business
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
-    tmp = Vector{ComplexF64}(undef, ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            symeigs[j, n] = dot(v, mul!(tmp, transpose(ρ), v))
+            symeigs[j, n] = dot(v, transpose(ρ), v)
         end
     end
     return symeigs
