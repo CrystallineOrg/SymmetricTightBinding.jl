@@ -55,8 +55,8 @@ function Makie.plot!(
         end
     end
 
-    # plot parallepiped unit cell
-    rect = Rect{D, Float32}(P(-0.5), V(1))  # unit cube at origin
+    # plot parallepiped unit cell (with lower left corner at origin)
+    rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
     pts = P.(Ref(Rm) .* Makie.GeometryBasics.coordinates(rect))
     if D == 3
         push!(pts, P(NaN))
