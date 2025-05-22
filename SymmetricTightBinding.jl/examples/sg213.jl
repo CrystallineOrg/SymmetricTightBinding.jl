@@ -1,13 +1,13 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-using Crystalline, TETB
+using Crystalline, SymmetricTightBinding
 
 sgnum = 213
 brs = calc_bandreps(sgnum)
 cbr = @composite brs[6]
 
-ordering1 = TETB.OrbitalOrdering(cbr.brs[end])
+ordering1 = SymmetricTightBinding.OrbitalOrdering(cbr.brs[end])
 
 Rs = [[0, 0, 0]]
 
@@ -17,7 +17,7 @@ tb_model = tb_hamiltonian(cbr, Rs)
 
 h_orbits = obtain_symmetry_related_hoppings(Rs, cbr.brs[end], cbr.brs[end])
 
-Mm, tₐᵦ_basis = TETB.obtain_basis_free_parameters(h_orbits[2], cbr.brs[end], cbr.brs[end])
+Mm, tₐᵦ_basis = obtain_basis_free_parameters(h_orbits[2], cbr.brs[end], cbr.brs[end])
 
 # checks
 

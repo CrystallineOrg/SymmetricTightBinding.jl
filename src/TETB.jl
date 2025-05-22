@@ -1,6 +1,7 @@
 module TETB
 
-# -------------------- Necessary modules for the package --------------------------------- #
+# --- Dependencies ----------------------------------------------------------------------- #
+
 using Crystalline
 using MPBUtils
 # TODO: ↓ probably unnecessary dependency
@@ -10,7 +11,8 @@ using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, 
 using PythonCall: pynew, pycopy!, pyimport, Py, pyconvert
 using Reexport
 @reexport using SymmetricTightBinding
-# ---------------------------------------------------------------------------------------- #
+
+# --- PythonCall init -------------------------------------------------------------------- #
 
 using PythonCall
 
@@ -27,7 +29,7 @@ end
 
 export mp, mpb
 
-# ---------------------------------------------------------------------------- #
+# --- Code loading ----------------------------------------------------------------------- #
 
 include("conversion.jl")
 include("constrained_nonnegative_expansions.jl")

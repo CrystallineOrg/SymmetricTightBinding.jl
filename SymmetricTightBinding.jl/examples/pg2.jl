@@ -1,7 +1,7 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
-using Crystalline, TETB
+using Crystalline, SymmetricTightBinding
 
 sgnum, D = 2, 1
 brs = calc_bandreps(2, Val(D))

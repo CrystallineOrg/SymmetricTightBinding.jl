@@ -26,14 +26,14 @@ simplifies the application of time-reversal symmetry and hermiticity.
 ## Examples
 
 ```julia
-julia> using TETB: split_complex
+julia> using SymmetricTightBinding: split_complex
 
 julia> t = [im,0]
 2-element Vector{Complex{Int64}}:
  0 + 1im
  0 + 0im
 
-julia> T = TETB.split_complex(t)
+julia> T = split_complex(t)
 4×2 Matrix{Int64}:
  0  -1
  0   0
@@ -51,7 +51,7 @@ julia> t = [1,im]
  1 + 0im
  0 + 1im
 
-julia> TETB.split_complex(t)
+julia> split_complex(t)
 4×2 Matrix{Int64}:
  1   0
  0  -1

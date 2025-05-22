@@ -1,7 +1,7 @@
 using Test
-using TETB
+using SymmetricTightBinding
 using Crystalline
-using Crystalline: isapprox, constant
+using Crystalline: constant
 using LinearAlgebra
 
 @testset "TB examples in plane groups" begin

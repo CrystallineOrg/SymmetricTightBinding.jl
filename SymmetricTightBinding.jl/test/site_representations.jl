@@ -1,4 +1,5 @@
-using TETB, Test
+using Test
+using SymmetricTightBinding
 using Crystalline
 
 @testset "Site representations" begin
