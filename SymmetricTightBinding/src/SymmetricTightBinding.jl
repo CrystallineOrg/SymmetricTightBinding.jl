@@ -24,9 +24,7 @@ export TightBindingElementString
 export TightBindingBlock
 export TightBindingModel
 export ParameterizedTightBindingModel
-
 include("show.jl")
-
 include("site_representations.jl")
 export sgrep_induced_by_siteir
 include("tightbinding.jl")
@@ -35,7 +33,6 @@ export tb_hamiltonian
 include("zassenhaus.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
-include("show.jl")
 include("utils.jl")
 include("symmetry_analysis.jl")
 export symmetry_analysis
