@@ -34,9 +34,9 @@ include("zassenhaus.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
 include("utils.jl")
+export pin_free!
 include("symmetry_analysis.jl")
 export symmetry_analysis
-
 include("spectrum.jl")
 export spectrum
 
