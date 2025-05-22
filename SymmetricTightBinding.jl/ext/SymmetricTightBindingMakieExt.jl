@@ -1,8 +1,8 @@
-module TETBMakieExt
+module SymmetricTightBindingMakieExt
 
 ## --------------------------------------------------------------------------------------- #
 
-using TETB
+using SymmetricTightBindingMakieExt
 using Makie
 
 ## --------------------------------------------------------------------------------------- #
@@ -179,4 +179,4 @@ end
 
 ## --------------------------------------------------------------------------------------- #
 
-end # module TETBMakieExt
+end # module SymmetricTightBindingMakieExtMakieExt
