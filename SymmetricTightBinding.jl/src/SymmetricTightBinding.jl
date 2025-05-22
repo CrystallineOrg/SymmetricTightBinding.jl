@@ -33,12 +33,12 @@ export tb_hamiltonian
 include("zassenhaus.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
-include("show_tightbinding.jl")
-include("utils_tightbinding.jl")
-include("symmetry_analysis_tightbinding.jl")
+include("show.jl")
+include("utils.jl")
+include("symmetry_analysis.jl")
 export symmetry_analysis
 
-include("spectrum_tightbinding.jl")
+include("spectrum.jl")
 export spectrum
 
 # ---------------------------------------------------------------------------------------- #
