@@ -14,7 +14,7 @@ SymmetricTightBinding = "793e0360-0e47-4c52-9513-43d75d53c7d0"
 [sources]
 MPBUtils = {url = "https://github.com/thchr/MPBUtils.jl"}
 PhotonicBandConnectivity = {url = "https://github.com/thchr/PhotonicBandConnectivity.jl"}
-SymmetricTightBinding = {path = "../SymmetricTightBinding.jl"}
+SymmetricTightBinding = {path = "./SymmetricTightBinding"}
 
 [compat]
 Crystalline = "0.6.17"
