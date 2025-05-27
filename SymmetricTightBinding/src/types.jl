@@ -270,8 +270,8 @@ function TightBindingModel(
     N = last(first(terms).axis)
     return TightBindingModel{D}(terms, cbr, positions, N)
 end
-function (tbm::TightBindingModel{D})(cs::Vector{Float64}) where {D}
-    return ParameterizedTightBindingModel(tbm, cs)
+function (tbm::TightBindingModel{D})(cs::AbstractVector{<:Real}) where {D}
+    return ParameterizedTightBindingModel{D}(tbm, cs)
 end
 
 # ---------------------------------------------------------------------------------------- #
@@ -310,16 +310,29 @@ struct ParameterizedTightBindingModel{D}
     tbm::TightBindingModel{D}
     cs::Vector{Float64} # coefficients of the tight-binding model
     scratch::Matrix{ComplexF64} # scratch space for evaluation
+    # inner constructor w/ checks & conversion of input
+    function ParameterizedTightBindingModel{D}(
+        tbm::TightBindingModel{D},
+        cs::AbstractVector{<:Real},
+        scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N)
+    ) where {D}
+        length(tbm.terms) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm.terms, cs)
+        size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
+        return new{D}(tbm, convert(Vector{Float64}, cs), scratch)
+    end
 end
+@noinline function _throw_scratch_size_mismatch(scratch, N)
+    s_scratch = size(scratch)
+    error(DimensionMismatch("scratch size ($s_scratch) does not match model size ($N, $N)"))
+end
+@noinline function _throw_term_coef_length_mismatch(terms, cs)
+    Nt = length(terms)
+    Nc = length(cs)
+    error("number of coefficients ($Nc) does not match number of model terms ($Nt)")
+end
+
 orbital_positions(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.positions
 Crystalline.CompositeBandRep(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.cbr
-
-function ParameterizedTightBindingModel(
-    tbm::TightBindingModel{D},
-    cs::Vector{Float64},
-) where {D}
-    ParameterizedTightBindingModel{D}(tbm, cs, Matrix{ComplexF64}(undef, tbm.N, tbm.N))
-end
 
 function (ptbm::ParameterizedTightBindingModel{D})(
     k::ReciprocalPointLike{D},
@@ -328,14 +341,9 @@ function (ptbm::ParameterizedTightBindingModel{D})(
     if length(k) ≠ D
         error("momentum `k` must be a $D-dimensional vector to match the model dimension")
     end
-    if size(scratch) ≠ (ptbm.tbm.N, ptbm.tbm.N)
-        error(
-            DimensionMismatch(
-                "scratch size ($(size(scratch))) does not match model size ($(ptbm.tbm.N), $(ptbm.tbm.N))",
-            ),
-        )
-    end
     tbm = ptbm.tbm
+    size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
+
     H = scratch # grab & reset scratch space for evaluating Hamiltonian matrix
     fill!(H, 0.0)
 

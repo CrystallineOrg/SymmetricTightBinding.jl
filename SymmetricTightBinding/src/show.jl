@@ -91,17 +91,18 @@ function _print_orbit_elements(
     end
 end
 
-function Base.summary(io::IO, tbm::TightBindingModel{D}) where {D}
+# ---------------------------------------------------------------------------------------- #
+
+function _summary_like(io::IO, tbm::TightBindingModel{D}, spoofname::String) where {D}
     N = tbm.N
-    print(io, length(tbm), "-element ", N, "×", N, " TightBindingModel{", D, "}")
+    print(io, length(tbm), "-term ", N, "×", N, " ", spoofname, "{", D, "}")
     N == 0 && return
     length(tbm) == 0 && return
     brs = first(tbm).brs
-    print(io, " over [")
-    for (n, br) in enumerate(brs)
-        print(io, br, n == length(brs) ? "]" : ", ")
-    end
+    print(io, " over ")
+    join(io, brs, "⊕")
 end
+Base.summary(io::IO, tbm::TightBindingModel) = _summary_like(io, tbm, "TightBindingModel")
 
 function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where {D}
     summary(io, tbm)
@@ -138,4 +139,30 @@ function _print_tightbindingterm_block_summary(io::IO, tbt::TightBindingTerm{D})
         print(io, "↔")
         printstyled(io, tbt.brs[j]; color = :blue)
     end
+end
+
+# ---------------------------------------------------------------------------------------- #
+
+function Base.summary(io::IO, ptbm::ParameterizedTightBindingModel)
+    _summary_like(io, ptbm.tbm, "ParameterizedTightBindingModel")
+end
+
+function Base.show(
+    io::IO, 
+    ::MIME"text/plain", 
+    ptbm::ParameterizedTightBindingModel{D}
+) where {D}
+    summary(io, ptbm)
+    length(ptbm.tbm) == 0 && (print(io, " with no amplitudes"); return)
+    println(io, " with amplitudes:")
+    print(io, " [")
+    for (i, c) in enumerate(ptbm.cs)
+        if iszero(c)
+            printstyled(io, "0"; color = :light_black)
+        else
+            print(io, c)
+        end
+        i ≠ length(ptbm.cs) && print(io, ", ")
+    end
+    print(io, "]")
 end
