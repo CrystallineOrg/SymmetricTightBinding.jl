@@ -160,7 +160,7 @@ function Base.show(
         if iszero(c)
             printstyled(io, "0"; color = :light_black)
         else
-            print(io, c)
+            print(io, round(c, sigdigits=5))
         end
         i ≠ length(ptbm.cs) && print(io, ", ")
     end
