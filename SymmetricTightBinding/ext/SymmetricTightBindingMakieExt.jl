@@ -181,4 +181,4 @@ end
 
 ## --------------------------------------------------------------------------------------- #
 
-end # module SymmetricTightBindingMakieExtMakieExt
+end # module SymmetricTightBindingMakieExt

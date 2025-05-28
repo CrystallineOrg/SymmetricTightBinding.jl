@@ -16,7 +16,7 @@ const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
 const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 
-# ---- Code loading ---------------------------------------------------------------------- #
+# --- Code loading ----------------------------------------------------------------------- #
 
 include("types.jl")
 export HoppingOrbit
@@ -40,8 +40,13 @@ export symmetry_analysis
 include("spectrum.jl")
 export spectrum
 include("gradients.jl")
-export gradient_wrt_hopping, energy_gradient_wrt_hopping
+export gradient_wrt_hopping
+export energy_gradient_wrt_hopping
+
+# --- Function defs. & exports for extensions -------------------------------------------- #
+
+function fit end # for Optim.jl extension
+export fit
 
 # ---------------------------------------------------------------------------------------- #
-
 end # module
