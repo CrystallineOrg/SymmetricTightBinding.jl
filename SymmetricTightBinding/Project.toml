@@ -11,17 +11,20 @@ RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
 [extensions]
 SymmetricTightBindingMakieExt = "Makie"
+SymmetricTightBindingOptimExt = "Optim"
 
 [compat]
 BlockArrays = "1.6.3"
 Crystalline = "0.6.17"
-Makie = "0.22"
 LinearAlgebra = "1.11.0"
+Makie = "0.22"
 RowEchelon = "0.2.1"
 julia = "1.11"
 
 [extras]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
