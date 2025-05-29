@@ -4,6 +4,9 @@ Pkg.activate(@__DIR__)
 ### necessary packages
 using TETB
 using Crystalline
+using TETB.PythonCall: pylist
+using TETB.SymmetricTightBinding: ReciprocalPointLike
+using Optim
 
 ### construct the structure under study
 
@@ -42,14 +45,14 @@ ms = mpb.ModeSolver(;
         basis3 = [0, 0, 1],
         size = [1, 1, 1],
     ),
-    geometry = geometry,
+    geometry = pylist(geometry),
     resolution = 16,
 )
 ms.init_params(; p = mp.ALL, reset_fields = true)
 
 ### obtain the symmetry vectors of the bands computed above
 sgnum = 221
-symvecs, topologies = obtain_symmetry_vectors(ms, sgnum)
+symvecs = obtain_symmetry_vectors(ms, sgnum)
 
 m = symvecs[1] # pick the 2 lower bands
 
@@ -63,6 +66,39 @@ candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min = μᴸ)
 
 cbr = candidatesv[1].apolarv[1]
 
-tbs = tb_hamiltonian(cbr, [[0, 0, 0]])
+tbm = tb_hamiltonian(cbr, [[0, 0, 0]])
 
 ##-----------------------------------------------------------------------------------------#
+# fit the TB model to the MPB results
+
+# obtain the k-points and the spectrum
+# TODO: ↓ maybe we can perform this step using Brillouin instead of MPB interpolation
+k_points = [
+    mp.Vector3(),  # Gamma
+    mp.Vector3(0, 0.5, 0),  # X
+    mp.Vector3(0.5, 0.5, 0),  # M
+    mp.Vector3(),  # Gamma
+    mp.Vector3(0, 0.5, 0.5),  # R
+    mp.Vector3(0, 0.5, 0),  # X
+]
+k_interp = 10 # number of k-points
+k_points = mp.interpolate(k_interp, k_points)
+ms = mpb.ModeSolver(;
+    num_bands = 6,
+    geometry_lattice = mp.Lattice(;
+        basis1 = [1, 0, 0],
+        basis2 = [0, 1, 0],
+        basis3 = [0, 0, 1],
+        size = [1, 1, 1],
+    ),
+    geometry = pylist(geometry),
+    k_points = k_points,
+)
+ms.run()
+freqs = ms.all_freqs
+
+# transform the interesting variables to Julia types
+Em_r = TETB.PythonCall.pyconvert(Matrix, freqs)
+ks = TETB.PythonCall.pyconvert(Vector{ReciprocalPoint{3}}, k_points)
+
+ptbm_fit = fit(tbm, Em_r, ks)
