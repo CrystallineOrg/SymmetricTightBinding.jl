@@ -81,10 +81,10 @@ k_points = [
     mp.Vector3(0, 0.5, 0.5),  # R
     mp.Vector3(0, 0.5, 0),  # X
 ]
-k_interp = 10 # number of k-points
+k_interp = 5 # number of k-points
 k_points = mp.interpolate(k_interp, k_points)
 ms = mpb.ModeSolver(;
-    num_bands = 6,
+    num_bands = 2,
     geometry_lattice = mp.Lattice(;
         basis1 = [1, 0, 0],
         basis2 = [0, 1, 0],
@@ -101,4 +101,19 @@ freqs = ms.all_freqs
 Em_r = TETB.PythonCall.pyconvert(Matrix, freqs)
 ks = TETB.PythonCall.pyconvert(Vector{ReciprocalPoint{3}}, k_points)
 
-ptbm_fit = fit(tbm, Em_r, ks)
+# ptbm_fit = fit(tbm, Em_r, ks) # TODO: it does not converge...
+# Em_fitted = spectrum(ptbm_fit, ks)
+
+# ---------------------------------------------------------------------------------------- #
+# plot the results
+
+using GLMakie
+
+fig = Figure()
+ax = Axis(fig[1, 1]; xlabel = "k", ylabel = "Frequency (c/2πa)")
+
+for i in axes(Em_r, 2)
+    lines!(ax, Em_r[:, i]; linestyle = :dash, color = :black, linewidth = 1)
+end
+
+fig

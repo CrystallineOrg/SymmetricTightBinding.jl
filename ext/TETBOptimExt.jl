@@ -1,5 +1,6 @@
 module TETBOptimExt
 
+using TETB
 using SymmetricTightBinding
 using Optim
 
@@ -20,7 +21,7 @@ function loss(Em_r, ks, tbm, cs)
             L += sum(abs2, (E_r - E for (E_r, E) in zip(Es_r, Es_fit)))
 
             # penalty for extra bands above 0
-            penalty = sum(abs2, max.(E_extra, 0.0))
+            penalty = sum(abs2, max.(Es_extra, 0.0))
             λ = 0.1 # penalty weight
             L += λ * penalty
         end
