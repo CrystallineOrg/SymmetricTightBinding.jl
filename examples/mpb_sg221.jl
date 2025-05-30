@@ -97,11 +97,7 @@ ms = mpb.ModeSolver(;
 ms.run()
 freqs = ms.all_freqs
 
-# transform the interesting variables to Julia types
-Em_r = TETB.PythonCall.pyconvert(Matrix, freqs)
-ks = TETB.PythonCall.pyconvert(Vector{ReciprocalPoint{3}}, k_points)
-
-# ptbm_fit = fit(tbm, Em_r, ks) # TODO: it does not converge...
+ptbm_fit = fit(tbm, freqs, k_points) # TODO: it does not converge...
 # Em_fitted = spectrum(ptbm_fit, ks)
 
 # ---------------------------------------------------------------------------------------- #

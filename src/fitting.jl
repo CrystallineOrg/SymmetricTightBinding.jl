@@ -1,6 +1,8 @@
 
 using SymmetricTightBinding
+using SymmetricTightBinding: ReciprocalPointLike
 using Optim
+using PythonCall: pyconvert
 
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
@@ -68,14 +70,18 @@ the frequencies, the square root of the energies should be taken.
 """
 function fit(
     tbm::TightBindingModel{D},
-    Em_r::AbstractMatrix{<:Real},
-    ks::AbstractVector{<:SymmetricTightBinding.ReciprocalPointLike{D}};
+    freqs_r::PythonCall.Core.Py,
+    ks::PythonCall.Core.Py;
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
     options::Optim.Options = Optim.Options(),
     max_multistarts::Integer = 150,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
     verbose::Bool = false,
 ) where D
+
+    # fix types coming from PythonCall and transform frequencies to energies
+    Em_r = pyconvert(Matrix, freqs_r) .^ 2 # square the frequencies to get energies
+    ks = pyconvert(Vector{ReciprocalPointLike{D}}, ks) # convert to a vector of k-points
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
     loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm
