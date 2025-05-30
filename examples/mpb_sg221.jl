@@ -5,8 +5,6 @@ Pkg.activate(@__DIR__)
 using TETB
 using Crystalline
 using TETB.PythonCall: pylist
-using TETB.SymmetricTightBinding: ReciprocalPointLike
-using Optim
 
 ### construct the structure under study
 
@@ -66,7 +64,8 @@ candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min = μᴸ)
 
 cbr = candidatesv[1].apolarv[1]
 
-tbm = tb_hamiltonian(cbr, [[0, 0, 0]])
+# realize that in we only take intra-cell hoppings, the fitting will not converge
+tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0]])
 
 ##-----------------------------------------------------------------------------------------#
 # fit the TB model to the MPB results

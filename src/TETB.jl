@@ -13,6 +13,10 @@ using Reexport
 @reexport using SymmetricTightBinding
 using Optim # for the fitting of the photonic bands
 
+# --- Constants -------------------------------------------------------------------------- #
+
+const LOSS_PENALTY_WEIGHT = 0.1 # for controlling the penalty for extra bands in the loss function
+
 # --- PythonCall init -------------------------------------------------------------------- #
 
 using PythonCall

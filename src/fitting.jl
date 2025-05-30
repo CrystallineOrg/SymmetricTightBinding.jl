@@ -1,6 +1,6 @@
 
 using SymmetricTightBinding
-using SymmetricTightBinding: ReciprocalPointLike
+using SymmetricTightBinding: ReciprocalPoint
 using Optim
 using PythonCall: pyconvert
 
@@ -8,31 +8,47 @@ using PythonCall: pyconvert
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 # MSE loss
-function photonic_loss(Em_r, ks, tbm, cs)
+function photonic_loss(Em_r, ks, tbm, cs, λ)
     L = zero(Float64)
-    n_extra = length(tbm[1].axis) - size(Em_r, 2) # number of extra bands
-    if n_extra > 0
-        for (Es_r, k) in zip(eachrow(Em_r), ks)
-            Es = spectrum(tbm(cs), k)
-            Es_fit = Es[1:n_extra] # bands to fit
-            Es_extra = Es[n_extra+1:end] # extra bands, not to fit
-
-            # fit loss
-            L += sum(abs2, (E_r - E for (E_r, E) in zip(Es_r, Es_fit)))
-
-            # penalty for extra bands above 0
-            penalty = sum(abs2, max.(Es_extra, 0.0))
-            λ = 0.1 # penalty weight
-            L += λ * penalty
-        end
-        return L
-    end
-
+    n_extra = tbm.N - size(Em_r, 2) # number of extra bands
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Es = spectrum(tbm(cs), k)
-        L += sum(abs2, (E_r - E for (E_r, E) in zip(Es_r, Es)))
+        # ↓ assumes the energies are sorted
+        Es_extra = Es[1:n_extra] # extra bands
+        Es_fit = Es[n_extra+1:end] # bands to fit
+
+        # fit loss
+        L += sum((E_r - E)^2 for (E_r, E) in zip(Es_r, Es_fit))
+
+        # penalty for extra bands above 0
+        L += λ * sum((x^2 for x in Es_extra if x > 0); init = 0.0)
     end
     return L
+end
+
+function photonic_grad_loss!(Em_r, ks, tbm, cs, λ, G = zeros(Float64, length(cs)))
+    ptbm = tbm(cs)
+    fill!(G, zero(eltype(G)))
+    n_fit = size(Em_r, 2) # number of bands to fit
+    n_extra = tbm.N - n_fit # number of extra bands
+    for (Es_r, k) in zip(eachrow(Em_r), ks)
+        Es = spectrum(ptbm, k)
+        ∇Es = energy_gradient_wrt_hopping(ptbm, k)
+
+        # gradient of the penalty for positive extra bands
+        for i in 1:n_extra
+            if Es[i] > 0
+                G .+= λ * 2 * Es[i] .* ∇Es[i]
+            end
+        end
+
+        # gradient of the fit loss
+        for i in 1:n_fit
+            G .+= (Es_r[i] - Es[i+n_extra]) .* ∇Es[i+n_extra]
+        end
+    end
+    G .*= -2
+    return G
 end
 
 """
@@ -63,50 +79,55 @@ The global search returns early if the mean fit error, per band and per frequenc
 
 ## Notes
 The frequencies are provided by the user but the energies are used internally to do the fitting.
-The energies and frequencies are related by the equation `E = ω²`, where `E` is the energy and
-`ω` is the frequency. In order to compare the spectrum of the tight-binding model with
-the frequencies, the square root of the energies should be taken.
+The tight-binding model energies (E) are compared to squared frequencies (ω²), so the provided
+frequencies are squared before fitting.
 ```
 """
 function fit(
     tbm::TightBindingModel{D},
     freqs_r::PythonCall.Core.Py,
-    ks::PythonCall.Core.Py;
+    k_points::PythonCall.Core.Py;
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
     options::Optim.Options = Optim.Options(),
     max_multistarts::Integer = 150,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
     verbose::Bool = false,
+    loss_penalty_weight::Real = LOSS_PENALTY_WEIGHT,
 ) where D
 
-    # fix types coming from PythonCall and transform frequencies to energies
-    Em_r = pyconvert(Matrix, freqs_r) .^ 2 # square the frequencies to get energies
-    ks = pyconvert(Vector{ReciprocalPointLike{D}}, ks) # convert to a vector of k-points
+    # Convert Python objects and prepare energy data
+    Em_r = pyconvert(Matrix, freqs_r) .^ 2 # E = ω²
+    Em_r = mapslices(sort, Em_r; dims = 2) # sort in columns just in case freqs are not sorted
+    ks = pyconvert(Vector{ReciprocalPoint{D}}, k_points)
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm
-        cs -> photonic_loss(Em_r, ks, tbm, cs)
+    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
+        cs -> photonic_loss(Em_r, ks, tbm, cs, λ)
     end
-    grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm
-        (G, cs) -> grad_loss!(Em_r, ks, tbm, cs, G)
+    grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
+        (G, cs) -> photonic_grad_loss!(Em_r, ks, tbm, cs, λ, G)
     end
 
     # multi-start optimization
-    tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
+    n_fit = size(Em_r, 2) # number of bands to fit
+    tol = length(ks) * n_fit * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
     for t in 1:max_multistarts
         init_cs = randn(length(tbm))
         o = optimize(loss_closure, grad_loss_closure!, init_cs, optimizer, options)
         o.minimum > best_loss && continue # discard local optimization; not better globally
+
         if verbose
             println(
                 "   Loss updated (trial $t): mean error = ",
-                round(sqrt(o.minimum / (tbm.N * length(ks))); sigdigits = 3),
+                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3),
             )
         end
+
         best_loss = o.minimum
         best_cs = o.minimizer
+
         if best_loss ≤ tol
             verbose && printstyled("      tolerance met: returning\n"; color = :green)
             break
@@ -119,5 +140,5 @@ function fit(
         )
     end
 
-    return tbm(best_cs)
+    return (model = tbm(best_cs), loss = best_loss, converged = best_loss ≤ tol, trials = t)
 end
