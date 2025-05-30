@@ -1,6 +1,4 @@
-module TETBOptimExt
 
-using TETB
 using SymmetricTightBinding
 using Optim
 
@@ -8,7 +6,7 @@ using Optim
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 # MSE loss
-function loss(Em_r, ks, tbm, cs)
+function photonic_loss(Em_r, ks, tbm, cs)
     L = zero(Float64)
     n_extra = length(tbm[1].axis) - size(Em_r, 2) # number of extra bands
     if n_extra > 0
@@ -35,35 +33,20 @@ function loss(Em_r, ks, tbm, cs)
     return L
 end
 
-# gradient of MSE loss
-function grad_loss!(Em_r, ks, tbm, cs, G = zeros(Float64, length(cs)))
-    ptbm = tbm(cs)
-    fill!(G, zero(eltype(G)))
-    for (Es_r, k) in zip(eachrow(Em_r), ks)
-        Es = spectrum(ptbm, k)
-        ∇Es = energy_gradient_wrt_hopping(ptbm, k)
-        for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
-            G .+= (E_r - E) .* ∇E
-        end
-    end
-    G .*= -2
-    return G
-end
-
 """
     fit(tbm::TightBindingModel{D},
-        Em_r::AbstractMatrix{<:Real},
+        freqs_r::AbstractMatrix{<:Real},
         ks::AbstractVector{<:ReciprocalPointLike{D}},
         kws...)                                  --> ParameterizedTightBindingModel{D}
 
-Fit the hopping amplitudes of a tight-binding model `tbm` to the reference energies `Em_r`,
-assumed sampled over **k**-points `ks`. `Em_r[i,n]` denotes the band energy at `ks[i]` in
+Fit the hopping amplitudes of a tight-binding model `tbm` to the reference frequencies `freqs_r`,
+assumed sampled over **k**-points `ks`. `freqs_r[i,n]` denotes the band frequency at `ks[i]` in
 band `n` (and bands are assumed energetically sorted).
 
 Fitting is performed using a local optimizer (configurable via `optimizer` from Optim.jl)
 with mean-squared error loss. The local optimizer is used as a basis for a "multi-start"
 global optimization.
-The global search returns early if the mean fit error, per band and per energy, is less than
+The global search returns early if the mean fit error, per band and per frequency, is less than
 `atol`.
 
 ## Keyword arguments
@@ -75,35 +58,15 @@ The global search returns early if the mean fit error, per band and per energy, 
   energetic error (averaged over bands and **k**-points).
 - `verbose` (default, `false`): whether to print information on optimization progress.
 
-## Example
 
-As a synthetic example, we might use `fit` to recover the coefficients of a randomly
-parameterized tight-binding model, using its spectrum sampled over 10 **k**-points:
-
-```jldoctest
-julia> using Crystalline, SymmetricTightBinding, Brillouin
-julia> sgnum = 221;
-julia> brs = calc_bandreps(sgnum);
-julia> cbr = @composite brs[1] + brs[7];
-julia> tbm = tb_hamiltonian(cbr);
-
-julia> using Random; Random.seed!(123);
-julia> ptbm_r = tbm(randn(length(tbm)))
-4-term 6×6 ParameterizedTightBindingModel{3} over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
- [-0.64573, -1.4633, -1.6236, -0.21767]
-
-julia> kp = irrfbz_path(sgnum, directbasis(sgnum, Val(3)));
-julia> ks = interpolate(kp, 10);
-julia> Em_r = spectrum(ptbm_r, ks);
-julia> ptbm_fit = fit(tbm, Em_r, ks)
-4-term 6×6 ParameterizedTightBindingModel{3} over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
- [-0.64573, -1.4633, -1.6236, -0.21767]
-
-julia> ptbm_fit.cs ≈ ptbm_r.cs
-true
+## Notes
+The frequencies are provided by the user but the energies are used internally to do the fitting.
+The energies and frequencies are related by the equation `E = ω²`, where `E` is the energy and
+`ω` is the frequency. In order to compare the spectrum of the tight-binding model with
+the frequencies, the square root of the energies should be taken.
 ```
 """
-function TETB.fit(
+function fit(
     tbm::TightBindingModel{D},
     Em_r::AbstractMatrix{<:Real},
     ks::AbstractVector{<:SymmetricTightBinding.ReciprocalPointLike{D}};
@@ -116,7 +79,7 @@ function TETB.fit(
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
     loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm
-        cs -> loss(Em_r, ks, tbm, cs)
+        cs -> photonic_loss(Em_r, ks, tbm, cs)
     end
     grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm
         (G, cs) -> grad_loss!(Em_r, ks, tbm, cs, G)
@@ -145,12 +108,10 @@ function TETB.fit(
     end
     if verbose && best_loss > tol
         printstyled(
-            "      `max_multistarts` exceeded: tolerance not met\n";
+            "      `max_multistarts` exceeded: tolerance not met\n Consider increasing the number of tight-binding terms\n";
             color = :yellow,
         )
     end
 
     return tbm(best_cs)
 end
-
-end # module TETBOptimExt

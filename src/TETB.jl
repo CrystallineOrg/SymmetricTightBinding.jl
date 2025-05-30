@@ -11,6 +11,7 @@ using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, 
 using PythonCall: pynew, pycopy!, pyimport, Py, pyconvert
 using Reexport
 @reexport using SymmetricTightBinding
+using Optim # for the fitting of the photonic bands
 
 # --- PythonCall init -------------------------------------------------------------------- #
 
@@ -40,11 +41,6 @@ export find_apolar_modes
 export find_auxiliary_modes
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
-
-# --- Function defs. & exports for extensions -------------------------------------------- #
-
-function fit end # for Optim.jl extension
-export fit
 
 # ---------------------------------------------------------------------------------------- #
 end # module
