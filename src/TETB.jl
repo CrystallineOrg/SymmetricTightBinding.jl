@@ -41,6 +41,8 @@ export find_apolar_modes
 export find_auxiliary_modes
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
+include("fitting.jl")
+export fit
 
 # ---------------------------------------------------------------------------------------- #
 end # module
