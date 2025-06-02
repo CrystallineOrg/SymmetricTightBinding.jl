@@ -47,6 +47,9 @@ global optimization.
 The global search returns early if the mean fit error, per band and per energy, is less than
 `atol`.
 
+The utility is exposed as an Optim.jl extension to SymmetricTightBinding.jl: i.e., Optim.jl
+must be explicitly loaded to use this function.
+
 ## Keyword arguments
 - `optimizer` (default, `Optim.LBFGS()`): a local optimizer from Optim.jl, capable of
   exploiting gradient information.
@@ -62,7 +65,7 @@ As a synthetic example, we might use `fit` to recover the coefficients of a rand
 parameterized tight-binding model, using its spectrum sampled over 10 **k**-points:
 
 ```jldoctest
-julia> using Crystalline, SymmetricTightBinding, Brillouin
+julia> using Crystalline, SymmetricTightBinding, Brillouin, Optim
 julia> sgnum = 221;
 julia> brs = calc_bandreps(sgnum);
 julia> cbr = @composite brs[1] + brs[7];
