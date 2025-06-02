@@ -48,9 +48,7 @@ export energy_gradient_wrt_hopping
 function fit end # for Optim.jl extension
 export fit
 
-# TODO: ↓ this is a temporary solution, maybe there is a better way to do this
-function grad_loss! end # for TETB.jl to use
-export grad_loss!
+function grad_loss! end # defined here, so we can use it in TETB.jl as well
 
 # ---------------------------------------------------------------------------------------- #
 end # module
