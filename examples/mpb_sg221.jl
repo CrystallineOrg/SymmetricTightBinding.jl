@@ -71,27 +71,16 @@ tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0]])
 # fit the TB model to the MPB results
 
 # obtain the k-points and the spectrum
-# TODO: ↓ maybe we can perform this step using Brillouin instead of MPB interpolation
-k_points = [
-    mp.Vector3(),  # Gamma
-    mp.Vector3(0, 0.5, 0),  # X
-    mp.Vector3(0.5, 0.5, 0),  # M
-    mp.Vector3(),  # Gamma
-    mp.Vector3(0, 0.5, 0.5),  # R
-    mp.Vector3(0, 0.5, 0),  # X
-]
-k_interp = 5 # number of k-points
-k_points = mp.interpolate(k_interp, k_points)
+Rs = directbasis(sgnum, Val(3))
+kp = irrfbz_path(sgnum, Rs)
+kvs = interpolate(kp, 40)
 ms = mpb.ModeSolver(;
     num_bands = 2,
     geometry_lattice = mp.Lattice(;
-        basis1 = [1, 0, 0],
-        basis2 = [0, 1, 0],
-        basis3 = [0, 0, 1],
-        size = [1, 1, 1],
+        basis1 = Rs[1], basis2 = Rs[2], basis3 = Rs[3], size = [1, 1, 1],
     ),
     geometry = pylist(geometry),
-    k_points = k_points,
+    k_points = pylist(map(k->mp.Vector3(k...), kvs))
 )
 ms.run()
 freqs = ms.all_freqs
