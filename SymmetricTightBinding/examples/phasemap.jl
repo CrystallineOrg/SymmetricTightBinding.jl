@@ -1,7 +1,6 @@
-using Crystalline, SymmetricTightBinding
+using Crystalline, SymmetricTightBinding 
 using PythonCall
 const pm = pyimport("phasemap") # requires `pkg> conda pip_add PhaseMap`
-const plt = pyimport("matplotlib.pyplot")
 
 ## --------------------------------------------------------------------------------------- #
 # Define the tight-binding model we want to explore
@@ -72,13 +71,37 @@ for (i, p) in enumerate(box_phases)
     remapped_box_phases[i] = iszero(p) ? NaN : u_phases_d[p]
 end
 
+# build a legend, using the symmetry vector of the valence band
+legend_d = Dict{Int, String}()
+for (i, (ϕθ, p)) in enumerate(zip(box_corners, box_phases))
+    iszero(p) && continue
+    id = u_phases_d[p]
+    haskey(legend_d, id) && continue
+    length(legend_d) == length(u_phases_d) && break
+    n = phase(tbm, ϕθ)[1]
+    s = replace(string(n), "Z₁⁻, Y₁⁻"=>"…", "T₁⁺, Γ₁⁺"=>"…", " (1 band)"=>"")
+    t = calc_topology(n, brs)
+    t == NONTRIVIAL && (s *= " (nontrivial)")
+    legend_d[id] = s
+end
+legend = [legend_d[i] for i in 1:length(u_phases_d)]
+
 ## --------------------------------------------------------------------------------------- #
 # Finally, we can plot the results using meshscatter with a sized box as marker
 
 using GLMakie
-meshscatter(box_corners, markersize = box_sizes,
+f = Figure()
+ax = Axis(f[1,1], 
+    xticks = ([0, π, 2π], ["0", "π", "2π"]),   xlabel = "ϕ",
+    yticks = ([0, π/2, π], ["0", "π/2", "π"]), ylabel = "θ",
+    aspect = DataAspect()
+    )
+meshscatter!(ax, box_corners, markersize = box_sizes,
     marker = Rect2f(0, 0, 1, 1), 
     color = remapped_box_phases, 
     colormap= :tab10, colorrange = (1, 10),
-    nan_color = :gray)
+    nan_color = :gray,
+    label = [l=>(; color=i, markersize=.75) for (i,l) in enumerate(legend)])
 xlims!(limits[1]...); ylims!(limits[2]...);
+Legend(f[1,2], ax, framevisible=false)
+f
