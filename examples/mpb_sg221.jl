@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 ### necessary packages
 using TETB
 using Crystalline
-using TETB.PythonCall: pylist
+using TETB.PythonCall: pylist, pyconvert
 using Brillouin
 
 ### construct the structure under study
