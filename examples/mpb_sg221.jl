@@ -78,15 +78,18 @@ kvs = interpolate(kp, 40)
 ms = mpb.ModeSolver(;
     num_bands = 2,
     geometry_lattice = mp.Lattice(;
-        basis1 = Rs[1], basis2 = Rs[2], basis3 = Rs[3], size = [1, 1, 1],
+        basis1 = Rs[1],
+        basis2 = Rs[2],
+        basis3 = Rs[3],
+        size = [1, 1, 1],
     ),
     geometry = pylist(geometry),
-    k_points = pylist(map(k->mp.Vector3(k...), kvs))
+    k_points = pylist(map(k -> mp.Vector3(k...), kvs)),
 )
 ms.run()
 freqs = pyconvert(Matrix{Float64}, ms.all_freqs)
 
-ptbm_fit = fit(tbm, freqs, kvs) # TODO: it does not converge...
+ptbm_fit = photonic_fit(tbm, freqs, kvs) # TODO: it does not converge...
 # Em_fitted = spectrum(ptbm_fit, ks)
 
 # ---------------------------------------------------------------------------------------- #

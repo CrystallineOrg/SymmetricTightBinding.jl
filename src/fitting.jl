@@ -83,10 +83,10 @@ The tight-binding model energies (E) are compared to squared frequencies (ω²),
 frequencies are squared before fitting.
 ```
 """
-function fit(
+function photonic_fit(
     tbm::TightBindingModel{D},
-    freqs_r::PythonCall.Core.Py,
-    k_points::PythonCall.Core.Py;
+    freqs_r::AbstractMatrix{<:Real},
+    ks::AbstractVector{<:ReciprocalPointLike{D}};
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
     options::Optim.Options = Optim.Options(),
     max_multistarts::Integer = 150,
@@ -94,11 +94,9 @@ function fit(
     verbose::Bool = false,
     loss_penalty_weight::Real = LOSS_PENALTY_WEIGHT,
 ) where D
-
-    # Convert Python objects and prepare energy data
-    Em_r = pyconvert(Matrix, freqs_r) .^ 2 # E = ω²
-    Em_r = mapslices(sort, Em_r; dims = 2) # sort in columns just in case freqs are not sorted
-    ks = pyconvert(Vector{ReciprocalPoint{D}}, k_points)
+    # convert frequencies to energies and sort them
+    Em_r = freqs_r .^ 2
+    Em_r = mapslices(sort, Em_r; dims = 2)
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
     loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
