@@ -84,7 +84,7 @@ ms = mpb.ModeSolver(;
     k_points = pylist(map(k->mp.Vector3(k...), kvs))
 )
 ms.run()
-freqs = ms.all_freqs
+freqs = pyconvert(Matrix{Float64}, ms.all_freqs)
 
 ptbm_fit = fit(tbm, freqs, kvs) # TODO: it does not converge...
 # Em_fitted = spectrum(ptbm_fit, ks)
