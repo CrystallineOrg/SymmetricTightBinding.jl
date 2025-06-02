@@ -86,7 +86,7 @@ ms = mpb.ModeSolver(;
 ms.run()
 freqs = ms.all_freqs
 
-ptbm_fit = fit(tbm, freqs, k_points) # TODO: it does not converge...
+ptbm_fit = fit(tbm, freqs, kvs) # TODO: it does not converge...
 # Em_fitted = spectrum(ptbm_fit, ks)
 
 # ---------------------------------------------------------------------------------------- #
