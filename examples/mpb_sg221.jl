@@ -5,6 +5,7 @@ Pkg.activate(@__DIR__)
 using TETB
 using Crystalline
 using TETB.PythonCall: pylist
+using Brillouin
 
 ### construct the structure under study
 
