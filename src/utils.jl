@@ -1,4 +1,5 @@
 using Crystalline: translation
+using SymmetricTightBinding: ReciprocalPointLike
 
 """
     obtain_symmetry_vectors(ms::Py, sgnum::Int, Val{D}=Val(3); polarization) --> Vector{SymmetryVector{D}}
@@ -300,11 +301,20 @@ function find_bandrep_decompositions(
 end
 
 """
-    energies2frequencies(energies::AbstractMatrix{<:Real}) -> AbstractMatrix{Float64}
-Converts the energies in `energies` to frequencies by taking the square root of the
-energies. If an energy is below zero, it is replaced with `NaN` to avoid complex frequencies.
+    frequency_spectrum(ptbm_fit::ParameterizedTightBindingModel{D},
+                       kvs::AbstractVector{<:ReciprocalPointLike{D}},
+                       μᴸ::Int) -> AbstractMatrix{Float64}
+Obtains the frequency spectrum of the fitted photonic band structure `ptbm_fit` at the
+k-points `kvs` removing the auxiliary modes with dimension `μᴸ`.
 """
-function energies2frequencies(energies::AbstractMatrix{<:Real})
-    # properly remove below 0 energies before taking the square root
-    return map(e -> e < 0 ? NaN : sqrt(e), energies)
+function frequency_spectrum(
+    ptbm_fit::ParameterizedTightBindingModel{D},
+    kvs::AbstractVector{<:ReciprocalPointLike{D}},
+    μᴸ::Int,
+) where {D}
+    # obtain the fitted energies
+    Em_fitted = spectrum(ptbm_fit, kvs)
+    # convert the energies of the transverse modes to frequencies
+    freqs_fitted = map(e -> e < 0 ? 0.0 : sqrt(e), Em_fitted[:, μᴸ+1:end])
+    return freqs_fitted
 end

@@ -90,10 +90,8 @@ ms.run()
 freqs = ms.all_freqs
 
 ptbm_fit = photonic_fit(tbm, freqs, kvs)
-Em_fitted = spectrum(ptbm_fit, kvs)
-
-# obtain the fitted frequencies
-freqs_fit = energies2frequencies(Em_fitted)
+# Em_fitted = spectrum(ptbm_fit, kvs) # if you want the energy spectrum
+freqs_fitted = frequency_spectrum(ptbm_fit, kvs, μᴸ)
 
 # ---------------------------------------------------------------------------------------- #
 # plot the results
@@ -103,7 +101,7 @@ using GLMakie
 plot(
     kvs,
     pyconvert(Matrix, freqs),
-    freqs_fit;
+    freqs_fitted;
     color = [:blue, :red],
     linewidth = [3, 2],
     linestyle = [:solid, :dash],
