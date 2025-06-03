@@ -66,7 +66,7 @@ candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min = μᴸ)
 cbr = candidatesv[1].apolarv[1]
 
 # realize that in we only take intra-cell hoppings, the fitting will not converge
-tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0]])
+tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1]]);
 
 ##-----------------------------------------------------------------------------------------#
 # fit the TB model to the MPB results
@@ -87,7 +87,7 @@ ms = mpb.ModeSolver(;
     k_points = pylist(map(k -> mp.Vector3(k...), kvs)),
 )
 ms.run()
-freqs = pyconvert(Matrix{Float64}, ms.all_freqs)
+freqs = ms.all_freqs
 
 ptbm_fit = photonic_fit(tbm, freqs, kvs) # TODO: it does not converge...
 # Em_fitted = spectrum(ptbm_fit, ks)
@@ -97,11 +97,22 @@ ptbm_fit = photonic_fit(tbm, freqs, kvs) # TODO: it does not converge...
 
 using GLMakie
 
+Em_fitted = spectrum(ptbm_fit, kvs)
+
 fig = Figure()
 ax = Axis(fig[1, 1]; xlabel = "k", ylabel = "Frequency (c/2πa)")
 
-for i in axes(Em_r, 2)
-    lines!(ax, Em_r[:, i]; linestyle = :dash, color = :black, linewidth = 1)
+# plot the original frequencies
+for i in axes(freqs, 2)
+    lines!(ax, freqs[:, i]; color = :black)
+end
+
+# plot the fitted frequencies
+Em_fit = spectrum(ptbm_fit, kvs)
+freqs_fit = map(e -> e < 0 ? NaN : sqrt(e), Em_fit)
+
+for i in axes(freqs_fit, 2)
+    lines!(ax, freqs_fit[:, i]; color = :red, linestyle = :dash)
 end
 
 fig

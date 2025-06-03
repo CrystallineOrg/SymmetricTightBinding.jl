@@ -1,6 +1,6 @@
 
 using SymmetricTightBinding
-using SymmetricTightBinding: ReciprocalPoint
+using SymmetricTightBinding: ReciprocalPointLike
 using Optim
 using PythonCall: pyconvert
 
@@ -14,14 +14,14 @@ function photonic_loss(Em_r, ks, tbm, cs, λ)
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Es = spectrum(tbm(cs), k)
         # ↓ assumes the energies are sorted
-        Es_extra = Es[1:n_extra] # extra bands
-        Es_fit = Es[n_extra+1:end] # bands to fit
+        Es_extra = @view Es[1:n_extra] # extra bands
+        Es_fit = @view Es[n_extra+1:end] # bands to fit
 
         # fit loss
         L += sum((E_r - E)^2 for (E_r, E) in zip(Es_r, Es_fit))
 
         # penalty for extra bands above 0
-        L += λ * sum((x^2 for x in Es_extra if x > 0); init = 0.0)
+        L += λ * sum(E -> max(zero(E), E)^2, Es_extra)
     end
     return L
 end
@@ -38,22 +38,22 @@ function photonic_grad_loss!(Em_r, ks, tbm, cs, λ, G = zeros(Float64, length(cs
         # gradient of the penalty for positive extra bands
         for i in 1:n_extra
             if Es[i] > 0
-                G .+= λ * 2 * Es[i] .* ∇Es[i]
+                G .+= (λ * Es[i]) .* ∇Es[i]
             end
         end
 
         # gradient of the fit loss
         for i in 1:n_fit
-            G .+= (Es_r[i] - Es[i+n_extra]) .* ∇Es[i+n_extra]
+            G .+= (Es[i+n_extra] - Es_r[i]) .* ∇Es[i+n_extra]
         end
     end
-    G .*= -2
+    G .*= 2
     return G
 end
 
 """
     fit(tbm::TightBindingModel{D},
-        freqs_r::AbstractMatrix{<:Real},
+        freqs_r::PythonCall.Core.Py,
         ks::AbstractVector{<:ReciprocalPointLike{D}},
         kws...)                                  --> ParameterizedTightBindingModel{D}
 
@@ -85,7 +85,7 @@ frequencies are squared before fitting.
 """
 function photonic_fit(
     tbm::TightBindingModel{D},
-    freqs_r::AbstractMatrix{<:Real},
+    freqs_r::PythonCall.Core.Py,
     ks::AbstractVector{<:ReciprocalPointLike{D}};
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
     options::Optim.Options = Optim.Options(),
@@ -95,7 +95,7 @@ function photonic_fit(
     loss_penalty_weight::Real = LOSS_PENALTY_WEIGHT,
 ) where D
     # convert frequencies to energies and sort them
-    Em_r = freqs_r .^ 2
+    Em_r = pyconvert(Matrix, freqs_r) .^ 2
     Em_r = mapslices(sort, Em_r; dims = 2)
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
@@ -138,5 +138,5 @@ function photonic_fit(
         )
     end
 
-    return (model = tbm(best_cs), loss = best_loss, converged = best_loss ≤ tol, trials = t)
+    return tbm(best_cs)
 end

@@ -46,7 +46,7 @@ export find_auxiliary_modes
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
 include("fitting.jl")
-export fit
+export photonic_fit
 
 # ---------------------------------------------------------------------------------------- #
 end # module
