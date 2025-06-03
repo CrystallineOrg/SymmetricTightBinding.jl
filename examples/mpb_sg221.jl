@@ -89,7 +89,7 @@ ms = mpb.ModeSolver(;
 ms.run()
 freqs = ms.all_freqs
 
-ptbm_fit = photonic_fit(tbm, freqs, kvs) # TODO: it does not converge...
+ptbm_fit = photonic_fit(tbm, freqs, kvs)
 Em_fitted = spectrum(ptbm_fit, kvs)
 
 # obtain the fitted frequencies
@@ -102,7 +102,7 @@ using GLMakie
 
 plot(
     kvs,
-    freqs,
+    pyconvert(Matrix, freqs),
     freqs_fit;
     color = [:blue, :red],
     linewidth = [3, 2],
