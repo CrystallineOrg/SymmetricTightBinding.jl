@@ -12,7 +12,7 @@ function obtain_symmetry_vectors(
     sgnum::Int,
     Dᵛ::Val{D} = Val(3);
     polarization::Union{Nothing, Symbol, Integer} = nothing,
-    verbose::Bool = false
+    verbose::Bool = false,
 ) where {D}
     # TODO: maybe move this to MPBUtils.jl?
     brs = primitivize(calc_bandreps(sgnum, Dᵛ)) # elementary band representations
@@ -23,21 +23,21 @@ function obtain_symmetry_vectors(
     for (kidx, lgirs) in enumerate(lgirsv)
         lg = group(lgirs)
         kv = mp.Vector3(position(lg)()...)
-        redirect_stdout(verbose ? stdout : devnull) do 
+        redirect_stdout(verbose ? stdout : devnull) do
             ms.solve_kpoint(kv)
         end
 
-        symeigsv[kidx] = [Vector{ComplexF64}(undef, length(lg)) for 
-                                                        n in 1:pyconvert(Int, ms.num_bands)]
+        symeigsv[kidx] =
+            [Vector{ComplexF64}(undef, length(lg)) for n in 1:pyconvert(Int, ms.num_bands)]
         for (i, gᵢ) in enumerate(lg)
-            W = mp.Matrix(eachcol(rotation(gᵢ))..., [0,0,1]) # decompose gᵢ = {W|w}
+            W = mp.Matrix(eachcol(rotation(gᵢ))..., [0, 0, 1]) # decompose gᵢ = {W|w}
             w = mp.Vector3(translation(gᵢ)...)
             symeigs = ms.compute_symmetries(W, w) # compute ⟨Eₙₖ|gᵢDₙₖ⟩ for all bands
             symeigs = pyconvert(Vector{ComplexF64}, symeigs) # convert from Py to Julia type
             setindex!.(symeigsv[kidx], symeigs, i) # update container of sym. eigenvalues
         end
     end
-    
+
     # --- fix singular photonic symmetry content at Γ, ω=0 ---
     D == 2 && (polarization = _check_and_canonicalize_2d_polarization_arg(polarization))
     fixup_gamma_symmetry!(symeigsv, lgirsv, polarization)
@@ -53,8 +53,10 @@ function _check_and_canonicalize_2d_polarization_arg(polarization)
         error("the polarization keyword argument must be set for 2D calculations \
                 (`:TE` / `meep.TE` or `:TM` / `meep.TM`)")
     elseif polarization isa Integer
-        return (polarization == mp.TE ? :TE : polarization == mp.TM ? :TM :
-                error("invalid polarization"))
+        return (
+            polarization == mp.TE ? :TE :
+            polarization == mp.TM ? :TM : error("invalid polarization")
+        )
     elseif polarization isa Symbol
         return polarization ∈ (:TE, :TM) ? polarization : error("invalid polarization")
     else
@@ -295,4 +297,14 @@ function find_bandrep_decompositions(
                 symmetry vector in search range for auxiliary modes; increasing kwarg \
                 `μᴸ_max` may help, if a decomposition exists""")
     end
+end
+
+"""
+    energies2frequencies(energies::AbstractMatrix{<:Real}) -> AbstractMatrix{Float64}
+Converts the energies in `energies` to frequencies by taking the square root of the
+energies. If an energy is below zero, it is replaced with `NaN` to avoid complex frequencies.
+"""
+function energies2frequencies(energies::AbstractMatrix{<:Real})
+    # properly remove below 0 energies before taking the square root
+    return map(e -> e < 0 ? NaN : sqrt(e), energies)
 end

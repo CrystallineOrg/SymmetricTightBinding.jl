@@ -90,29 +90,22 @@ ms.run()
 freqs = ms.all_freqs
 
 ptbm_fit = photonic_fit(tbm, freqs, kvs) # TODO: it does not converge...
-# Em_fitted = spectrum(ptbm_fit, ks)
+Em_fitted = spectrum(ptbm_fit, kvs)
+
+# obtain the fitted frequencies
+freqs_fit = energies2frequencies(Em_fitted)
 
 # ---------------------------------------------------------------------------------------- #
 # plot the results
 
 using GLMakie
 
-Em_fitted = spectrum(ptbm_fit, kvs)
-
-fig = Figure()
-ax = Axis(fig[1, 1]; xlabel = "k", ylabel = "Frequency (c/2πa)")
-
-# plot the original frequencies
-for i in axes(freqs, 2)
-    lines!(ax, freqs[:, i]; color = :black)
-end
-
-# plot the fitted frequencies
-Em_fit = spectrum(ptbm_fit, kvs)
-freqs_fit = map(e -> e < 0 ? NaN : sqrt(e), Em_fit)
-
-for i in axes(freqs_fit, 2)
-    lines!(ax, freqs_fit[:, i]; color = :red, linestyle = :dash)
-end
-
-fig
+plot(
+    kvs,
+    freqs,
+    freqs_fit;
+    color = [:blue, :red],
+    linewidth = [3, 2],
+    linestyle = [:solid, :dash],
+    label = ["MPB", "Model"],
+)
