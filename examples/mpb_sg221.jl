@@ -80,5 +80,4 @@ plot(
     color = [:blue, :red],
     linewidth = [3, 2],
     linestyle = [:solid, :dash],
-    label = ["MPB", "Model"],
 )
