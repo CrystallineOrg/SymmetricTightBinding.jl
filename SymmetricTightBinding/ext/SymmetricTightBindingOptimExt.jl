@@ -47,6 +47,9 @@ global optimization.
 The global search returns early if the mean fit error, per band and per energy, is less than
 `atol`.
 
+The utility is exposed as an Optim.jl extension to SymmetricTightBinding.jl: i.e., Optim.jl
+must be explicitly loaded to use this function.
+
 ## Keyword arguments
 - `optimizer` (default, `Optim.LBFGS()`): a local optimizer from Optim.jl, capable of
   exploiting gradient information.
@@ -62,7 +65,7 @@ As a synthetic example, we might use `fit` to recover the coefficients of a rand
 parameterized tight-binding model, using its spectrum sampled over 10 **k**-points:
 
 ```jldoctest
-julia> using Crystalline, SymmetricTightBinding, Brillouin
+julia> using Crystalline, SymmetricTightBinding, Brillouin, Optim
 julia> sgnum = 221;
 julia> brs = calc_bandreps(sgnum);
 julia> cbr = @composite brs[1] + brs[7];
@@ -92,17 +95,17 @@ function SymmetricTightBinding.fit(
     options::Optim.Options = Optim.Options(),
     max_multistarts::Integer = 150,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
-    verbose::Bool = false,
-) where D
+    verbose::Bool = false
+    ) where D
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm
+    loss_closure = let Em_r=Em_r, ks=ks, tbm=tbm
         cs -> loss(Em_r, ks, tbm, cs)
     end
-    grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm
+    grad_loss_closure! = let Em_r=Em_r, ks=ks, tbm=tbm
         (G, cs) -> grad_loss!(Em_r, ks, tbm, cs, G)
     end
-
+    
     # multi-start optimization
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
@@ -112,23 +115,18 @@ function SymmetricTightBinding.fit(
         o = optimize(loss_closure, grad_loss_closure!, init_cs, optimizer, options)
         o.minimum > best_loss && continue # discard local optimization; not better globally
         if verbose
-            println(
-                "   Loss updated (trial $t): mean error = ",
-                round(sqrt(o.minimum / (tbm.N * length(ks))); sigdigits = 3),
-            )
+            println("   Loss updated (trial $t): mean error = ", 
+                    round(sqrt(o.minimum / (tbm.N * length(ks))), sigdigits=3))
         end
         best_loss = o.minimum
         best_cs = o.minimizer
         if best_loss ≤ tol
-            verbose && printstyled("      tolerance met: returning\n"; color = :green)
+            verbose && printstyled("      tolerance met: returning\n", color=:green)
             break
         end
     end
     if verbose && best_loss > tol
-        printstyled(
-            "      `max_multistarts` exceeded: tolerance not met\n";
-            color = :yellow,
-        )
+        printstyled("      `max_multistarts` exceeded: tolerance not met\n", color=:yellow)
     end
 
     return tbm(best_cs)
