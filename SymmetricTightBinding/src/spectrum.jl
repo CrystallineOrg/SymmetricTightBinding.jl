@@ -1,11 +1,16 @@
 """
-    spectrum(ptbm::ParameterizedTightBindingModel, ks)
+    spectrum(ptbm::ParameterizedTightBindingModel, ks; transform = identity)
 
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` over an iterable
 of input momenta `ks`. 
 
 Energies are returned as a matrix, with rows running over momenta and columns over distinct
 bands.
+
+## Keyword arguments
+
+- `transform`: a function to apply to the resulting matrix of energies, defaulting to the
+  identity function. This can be used to e.g., convert the energies to a different scaling.
 
 ## Example
 
@@ -34,7 +39,7 @@ julia> kpi = interpolate(irrfbz_path(17, directbasis(17, Val(2))), 100);
 julia> plot(kpi, spectrum(ptbm, kpi))
 ```
 """
-function spectrum(ptbm::ParameterizedTightBindingModel, ks)
+function spectrum(ptbm::ParameterizedTightBindingModel, ks; transform = identity)
     if !(eltype(ks) <: AbstractVector{<:Real})
         error("the elements of `ks` must subtype `AbstractVector{<:Real}`")
     end
@@ -43,7 +48,7 @@ function spectrum(ptbm::ParameterizedTightBindingModel, ks)
         es = spectrum(ptbm, k)
         @inbounds Es[i, :] .= es
     end
-    return Es
+    return transform(Es)
 end
 
 """

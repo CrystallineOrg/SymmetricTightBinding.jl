@@ -301,20 +301,10 @@ function find_bandrep_decompositions(
 end
 
 """
-    frequency_spectrum(ptbm_fit::ParameterizedTightBindingModel{D},
-                       kvs::AbstractVector{<:ReciprocalPointLike{D}},
-                       μᴸ::Int) -> AbstractMatrix{Float64}
-Obtains the frequency spectrum of the fitted photonic band structure `ptbm_fit` at the
-k-points `kvs` removing the auxiliary modes with dimension `μᴸ`.
+    energy2frequency(λ::Real)
+
+Map a squared "energy" λ = ω² to a frequency ω, thresholding negative λ-values to zero.
+For use in SymmetricTightBinding.jl's `spectrum` for photonic tight-binding models.
 """
-function frequency_spectrum(
-    ptbm_fit::ParameterizedTightBindingModel{D},
-    kvs::AbstractVector{<:ReciprocalPointLike{D}},
-    μᴸ::Int,
-) where {D}
-    # obtain the fitted energies
-    Em_fitted = spectrum(ptbm_fit, kvs)
-    # convert the energies of the transverse modes to frequencies
-    freqs_fitted = map(e -> e < 0 ? 0.0 : sqrt(e), Em_fitted[:, μᴸ+1:end])
-    return freqs_fitted
-end
+
+energy2frequency(λ::Real) = λ < 0 ? 0.0 : sqrt(λ) # λ = ω²

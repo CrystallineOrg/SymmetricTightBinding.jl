@@ -8,52 +8,35 @@ using PythonCall: pyconvert
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 # MSE loss
-function photonic_loss(Em_r, ks, tbm, cs, λ)
+function longitudinal_loss(ks, tbm, cs, μᴸ; λ = 1)
     L = zero(Float64)
-    n_extra = tbm.N - size(Em_r, 2) # number of extra bands
-    for (Es_r, k) in zip(eachrow(Em_r), ks)
+    for k in ks
         Es = spectrum(tbm(cs), k)
-        # ↓ assumes the energies are sorted
-        Es_extra = @view Es[1:n_extra] # extra bands
-        Es_fit = @view Es[n_extra+1:end] # bands to fit
+        Es_extra = @view Es[1:μᴸ] # extra bands
 
-        # fit loss
-        L += sum((E_r - E)^2 for (E_r, E) in zip(Es_r, Es_fit))
-
-        # penalty for extra bands above 0
-        L += λ * sum(E -> max(zero(E), E)^2, Es_extra)
+        L += sum(E -> max(zero(E), E)^2, Es_extra) # penalty for extra bands above 0
     end
-    return L
+    return λ*L
 end
 
-function photonic_grad_loss!(Em_r, ks, tbm, cs, λ, G = zeros(Float64, length(cs)))
+function grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G = zeros(Float64, length(cs)); λ = 1)
     ptbm = tbm(cs)
-    fill!(G, zero(eltype(G)))
-    n_fit = size(Em_r, 2) # number of bands to fit
-    n_extra = tbm.N - n_fit # number of extra bands
-    for (Es_r, k) in zip(eachrow(Em_r), ks)
+    for k in ks
         Es = spectrum(ptbm, k)
         ∇Es = energy_gradient_wrt_hopping(ptbm, k)
-
         # gradient of the penalty for positive extra bands
-        for i in 1:n_extra
+        for i in 1:μᴸ
             if Es[i] > 0
-                G .+= (λ * Es[i]) .* ∇Es[i]
+                G .+= (2λ * Es[i]) .* ∇Es[i]
             end
         end
-
-        # gradient of the fit loss
-        for i in 1:n_fit
-            G .+= (Es[i+n_extra] - Es_r[i]) .* ∇Es[i+n_extra]
-        end
     end
-    G .*= 2
     return G
 end
 
 """
     fit(tbm::TightBindingModel{D},
-        freqs_r::PythonCall.Core.Py,
+        freqs_r::AbstractMatrix{<:Real},
         ks::AbstractVector{<:ReciprocalPointLike{D}},
         kws...)                                  --> ParameterizedTightBindingModel{D}
 
@@ -85,7 +68,7 @@ frequencies are squared before fitting.
 """
 function photonic_fit(
     tbm::TightBindingModel{D},
-    freqs_r::PythonCall.Core.Py,
+    freqs_r::AbstractMatrix{<:Real},
     ks::AbstractVector{<:ReciprocalPointLike{D}};
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
     options::Optim.Options = Optim.Options(),
@@ -95,15 +78,20 @@ function photonic_fit(
     loss_penalty_weight::Real = LOSS_PENALTY_WEIGHT,
 ) where D
     # convert frequencies to energies and sort them
-    Em_r = pyconvert(Matrix, freqs_r) .^ 2
-    Em_r = mapslices(sort, Em_r; dims = 2)
+    Em_r = freqs_r .^ 2
+    Em_r = sort(Em_r; dims=2)
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
-        cs -> photonic_loss(Em_r, ks, tbm, cs, λ)
+    μᴸ = tbm.N - size(Em_r, 2) # number of extra bands
+    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm, μᴸ = μᴸ, λ = loss_penalty_weight
+        cs -> loss(Em_r, ks, tbm, cs; start = μᴸ+1) + longitudinal_loss(ks, tbm, cs, μᴸ; λ)
     end
     grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
-        (G, cs) -> photonic_grad_loss!(Em_r, ks, tbm, cs, λ, G)
+        (G, cs) -> begin
+            fill!(G, zero(eltype(G)))
+            grad_loss!(Em_r, ks, tbm, cs, G; start = μᴸ+1)
+            grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G; λ)
+        end
     end
 
     # multi-start optimization

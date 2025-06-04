@@ -8,49 +8,31 @@ using TETB.PythonCall: pylist, pyconvert
 using Brillouin
 
 ### construct the structure under study
+sgnum = 221 # space group number
+Rs = directbasis(sgnum, Val(3))
 
 R1 = 0.2 #cylinder radius
 mat = mp.Medium(; epsilon = 12)
-geometry = [
+geometry = map([[0,0,1], [0,1,0], [1,0,0]]) do axis
     mp.Cylinder(;
         radius = R1,
         center = [0, 0, 0],
-        axis = [0, 0, 1],
+        axis = axis,
         height = 1,
         material = mat,
-    ),
-    mp.Cylinder(;
-        radius = R1,
-        center = [0, 0, 0],
-        axis = [0, 1, 0],
-        height = 1,
-        material = mat,
-    ),
-    mp.Cylinder(;
-        radius = R1,
-        center = [0, 0, 0],
-        axis = [1, 0, 0],
-        height = 1,
-        material = mat,
-    ),
-]
+    )
+end
 
 ### solve the system
 ms = mpb.ModeSolver(;
     num_bands = 8,
-    geometry_lattice = mp.Lattice(;
-        basis1 = [1, 0, 0],
-        basis2 = [0, 1, 0],
-        basis3 = [0, 0, 1],
-        size = [1, 1, 1],
-    ),
+    geometry_lattice = mp.Lattice(; basis1 = Rs[1],  basis2 = Rs[2], basis3 = Rs[3]),
     geometry = pylist(geometry),
     resolution = 16,
 )
 ms.init_params(; p = mp.ALL, reset_fields = true)
 
 ### obtain the symmetry vectors of the bands computed above
-sgnum = 221
 symvecs = obtain_symmetry_vectors(ms, sgnum)
 
 m = symvecs[1] # pick the 2 lower bands
@@ -72,26 +54,19 @@ tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1]]);
 # fit the TB model to the MPB results
 
 # obtain the k-points and the spectrum
-Rs = directbasis(sgnum, Val(3))
 kp = irrfbz_path(sgnum, Rs)
 kvs = interpolate(kp, 40)
 ms = mpb.ModeSolver(;
     num_bands = 2,
-    geometry_lattice = mp.Lattice(;
-        basis1 = Rs[1],
-        basis2 = Rs[2],
-        basis3 = Rs[3],
-        size = [1, 1, 1],
-    ),
+    geometry_lattice = mp.Lattice(; basis1 = Rs[1], basis2 = Rs[2], basis3 = Rs[3]),
     geometry = pylist(geometry),
     k_points = pylist(map(k -> mp.Vector3(k...), kvs)),
 )
 ms.run()
-freqs = ms.all_freqs
+freqs = pyconvert(Matrix{Float64}, ms.all_freqs)
 
 ptbm_fit = photonic_fit(tbm, freqs, kvs)
-# Em_fitted = spectrum(ptbm_fit, kvs) # if you want the energy spectrum
-freqs_fitted = frequency_spectrum(ptbm_fit, kvs, μᴸ)
+freqs_fit = spectrum(ptbm_fit, kvs, μᴸ; transform=energy2frequency)[:, μᴸ+1:end]
 
 # ---------------------------------------------------------------------------------------- #
 # plot the results
@@ -100,8 +75,8 @@ using GLMakie
 
 plot(
     kvs,
-    pyconvert(Matrix, freqs),
-    freqs_fitted;
+    freqs,
+    freqs_fit;
     color = [:blue, :red],
     linewidth = [3, 2],
     linestyle = [:solid, :dash],

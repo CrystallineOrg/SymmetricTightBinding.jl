@@ -7,23 +7,22 @@ using Optim
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 # MSE loss
-function loss(Em_r, ks, tbm, cs)
+function loss(Em_r, ks, tbm, cs; start = firstindex(Em_r, 2))
     L = zero(Float64)
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Es = spectrum(tbm(cs), k)
-        L += sum(abs2, (E_r - E for (E_r, E) in zip(Es_r, Es)))
+        L += sum(abs2, (E_r - E for (E_r, E) in zip((@view Es_r[start:end]), Es)))
     end
     return L
 end
 
 # gradient of MSE loss
-function grad_loss!(Em_r, ks, tbm, cs, G = zeros(Float64, length(cs)))
+function grad_loss!(Em_r, ks, tbm, cs, G = zeros(Float64, length(cs)); start = firstindex(Em_r, 2))
     ptbm = tbm(cs)
-    fill!(G, zero(eltype(G)))
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Es = spectrum(ptbm, k)
         ∇Es = energy_gradient_wrt_hopping(ptbm, k)
-        for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
+        for (E_r, E, ∇E) in zip((@view Es_r[start:end]), Es, ∇Es)
             G .+= (E_r - E) .* ∇E
         end
     end
@@ -103,7 +102,7 @@ function SymmetricTightBinding.fit(
         cs -> loss(Em_r, ks, tbm, cs)
     end
     grad_loss_closure! = let Em_r=Em_r, ks=ks, tbm=tbm
-        (G, cs) -> grad_loss!(Em_r, ks, tbm, cs, G)
+        (G, cs) -> (fill!(G, zero(eltype(G))); grad_loss!(Em_r, ks, tbm, cs, G))
     end
     
     # multi-start optimization
