@@ -7,22 +7,29 @@ using Optim
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 # MSE loss
-function loss(Em_r, ks, tbm, cs; start = firstindex(Em_r, 2))
+function SymmetricTightBinding.loss(Em_r, ks, tbm, cs; start = firstindex(Em_r, 2))
     L = zero(Float64)
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Es = spectrum(tbm(cs), k)
-        L += sum(abs2, (E_r - E for (E_r, E) in zip((@view Es_r[start:end]), Es)))
+        L += sum(abs2, (E_r - E for (E_r, E) in zip(Es_r, (@view Es[start:end]))))
     end
     return L
 end
 
 # gradient of MSE loss
-function grad_loss!(Em_r, ks, tbm, cs, G = zeros(Float64, length(cs)); start = firstindex(Em_r, 2))
+function SymmetricTightBinding.grad_loss!(
+    Em_r,
+    ks,
+    tbm,
+    cs,
+    G = zeros(Float64, length(cs));
+    start = firstindex(Em_r, 2),
+)
     ptbm = tbm(cs)
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Es = spectrum(ptbm, k)
         ∇Es = energy_gradient_wrt_hopping(ptbm, k)
-        for (E_r, E, ∇E) in zip((@view Es_r[start:end]), Es, ∇Es)
+        for (E_r, E, ∇E) in zip(Es_r, (@view Es[start:end]), (@view ∇Es[start:end]))
             G .+= (E_r - E) .* ∇E
         end
     end
@@ -94,17 +101,17 @@ function SymmetricTightBinding.fit(
     options::Optim.Options = Optim.Options(),
     max_multistarts::Integer = 150,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
-    verbose::Bool = false
-    ) where D
+    verbose::Bool = false,
+) where D
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    loss_closure = let Em_r=Em_r, ks=ks, tbm=tbm
+    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm
         cs -> loss(Em_r, ks, tbm, cs)
     end
-    grad_loss_closure! = let Em_r=Em_r, ks=ks, tbm=tbm
+    grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm
         (G, cs) -> (fill!(G, zero(eltype(G))); grad_loss!(Em_r, ks, tbm, cs, G))
     end
-    
+
     # multi-start optimization
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
@@ -114,18 +121,23 @@ function SymmetricTightBinding.fit(
         o = optimize(loss_closure, grad_loss_closure!, init_cs, optimizer, options)
         o.minimum > best_loss && continue # discard local optimization; not better globally
         if verbose
-            println("   Loss updated (trial $t): mean error = ", 
-                    round(sqrt(o.minimum / (tbm.N * length(ks))), sigdigits=3))
+            println(
+                "   Loss updated (trial $t): mean error = ",
+                round(sqrt(o.minimum / (tbm.N * length(ks))); sigdigits = 3),
+            )
         end
         best_loss = o.minimum
         best_cs = o.minimizer
         if best_loss ≤ tol
-            verbose && printstyled("      tolerance met: returning\n", color=:green)
+            verbose && printstyled("      tolerance met: returning\n"; color = :green)
             break
         end
     end
     if verbose && best_loss > tol
-        printstyled("      `max_multistarts` exceeded: tolerance not met\n", color=:yellow)
+        printstyled(
+            "      `max_multistarts` exceeded: tolerance not met\n";
+            color = :yellow,
+        )
     end
 
     return tbm(best_cs)

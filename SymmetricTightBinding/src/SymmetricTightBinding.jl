@@ -49,6 +49,10 @@ function fit end # for Optim.jl extension
 export fit
 
 function grad_loss! end # defined here, so we can use it in TETB.jl as well
+export grad_loss!
+
+function loss end # defined here, so we can use it in TETB.jl as well
+export loss
 
 # ---------------------------------------------------------------------------------------- #
 end # module
