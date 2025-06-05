@@ -13,20 +13,14 @@ Rs = directbasis(sgnum, Val(3))
 
 R1 = 0.2 #cylinder radius
 mat = mp.Medium(; epsilon = 12)
-geometry = map([[0,0,1], [0,1,0], [1,0,0]]) do axis
-    mp.Cylinder(;
-        radius = R1,
-        center = [0, 0, 0],
-        axis = axis,
-        height = 1,
-        material = mat,
-    )
+geometry = map([[0, 0, 1], [0, 1, 0], [1, 0, 0]]) do axis
+    mp.Cylinder(; radius = R1, center = [0, 0, 0], axis = axis, height = 1, material = mat)
 end
 
 ### solve the system
 ms = mpb.ModeSolver(;
     num_bands = 8,
-    geometry_lattice = mp.Lattice(; basis1 = Rs[1],  basis2 = Rs[2], basis3 = Rs[3]),
+    geometry_lattice = mp.Lattice(; basis1 = Rs[1], basis2 = Rs[2], basis3 = Rs[3]),
     geometry = pylist(geometry),
     resolution = 16,
 )
@@ -38,9 +32,9 @@ symvecs = obtain_symmetry_vectors(ms, sgnum)
 m = symvecs[1] # pick the 2 lower bands
 
 ### obtain an EBR decomposition with at least one additional band
-μᴸ = 1
+μᴸ_min = 1
 brs = calc_bandreps(sgnum)
-candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min = μᴸ)
+candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min)
 
 ##-----------------------------------------------------------------------------------------#
 # make a TB model out of one of the solutions
@@ -65,8 +59,10 @@ ms = mpb.ModeSolver(;
 ms.run()
 freqs = pyconvert(Matrix{Float64}, ms.all_freqs)
 
+μᴸ = tbm.N - size(freqs, 2) # number of longitudinal bands
+
 ptbm_fit = photonic_fit(tbm, freqs, kvs)
-freqs_fit = spectrum(ptbm_fit, kvs, μᴸ; transform=energy2frequency)[:, μᴸ+1:end]
+freqs_fit = spectrum(ptbm_fit, kvs, μᴸ; transform = energy2frequency)[:, μᴸ+1:end]
 
 # ---------------------------------------------------------------------------------------- #
 # plot the results

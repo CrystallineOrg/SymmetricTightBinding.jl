@@ -1,8 +1,7 @@
 
 using SymmetricTightBinding
-using SymmetricTightBinding: ReciprocalPointLike
 using Optim
-using PythonCall: pyconvert
+using SymmetricTightBinding: loss, grad_loss!
 
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
@@ -16,7 +15,7 @@ function longitudinal_loss(ks, tbm, cs, μᴸ; λ = 1)
 
         L += sum(E -> max(zero(E), E)^2, Es_extra) # penalty for extra bands above 0
     end
-    return λ*L
+    return λ * L
 end
 
 function grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G = zeros(Float64, length(cs)); λ = 1)
@@ -26,8 +25,9 @@ function grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G = zeros(Float64, length(c
         ∇Es = energy_gradient_wrt_hopping(ptbm, k)
         # gradient of the penalty for positive extra bands
         for i in 1:μᴸ
-            if Es[i] > 0
-                G .+= (2λ * Es[i]) .* ∇Es[i]
+            E = Es[i]
+            if E > 0
+                G .+= (2λ * E) .* ∇Es[i]
             end
         end
     end
@@ -79,17 +79,18 @@ function photonic_fit(
 ) where D
     # convert frequencies to energies and sort them
     Em_r = freqs_r .^ 2
-    Em_r = sort(Em_r; dims=2)
+    Em_r = sort(Em_r; dims = 2)
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
     μᴸ = tbm.N - size(Em_r, 2) # number of extra bands
     loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm, μᴸ = μᴸ, λ = loss_penalty_weight
-        cs -> loss(Em_r, ks, tbm, cs; start = μᴸ+1) + longitudinal_loss(ks, tbm, cs, μᴸ; λ)
+        cs ->
+            loss(Em_r, ks, tbm, cs; start = μᴸ + 1) + longitudinal_loss(ks, tbm, cs, μᴸ; λ)
     end
     grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
         (G, cs) -> begin
             fill!(G, zero(eltype(G)))
-            grad_loss!(Em_r, ks, tbm, cs, G; start = μᴸ+1)
+            grad_loss!(Em_r, ks, tbm, cs, G; start = μᴸ + 1)
             grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G; λ)
         end
     end
