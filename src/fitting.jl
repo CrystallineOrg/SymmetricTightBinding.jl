@@ -61,7 +61,7 @@ The global search returns early if the mean fit error, per band and per frequenc
 ## Keyword arguments
 - `optimizer` (default, `Optim.LBFGS()`): a local optimizer from Optim.jl, capable of
   exploiting gradient information.
-- `max_multistarts` (default, `150`): maximum number of multi-start iterations.
+- `max_multistarts` (default, `100`): maximum number of multi-start iterations.
 - `atol` (default, `1e-3`): threshold for early return, specifying the minimum required mean
   energetic error (averaged over bands and **k**-points).
 - `verbose` (default, `false`): whether to print information on optimization progress.
@@ -86,7 +86,7 @@ function photonic_fit(
     ks::AbstractVector{<:ReciprocalPointLike{D}};
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
-    max_multistarts::Integer = 150,
+    max_multistarts::Integer = 100,
     verbose::Bool = false,
     loss_penalty_weight::Real = LOSS_PENALTY_WEIGHT,
     options::Optim.Options = Optim.Options(;
@@ -111,17 +111,19 @@ function photonic_fit(
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
     init_hopping_scale = sum(Em_r) / length(Em_r) * 0.25
+    verbose && println("Starting multi-start optimization with $max_multistarts trials")
     for t in 1:max_multistarts
-        println("Trial $t")
+        verbose && println("   trial #$t")
         init_cs = randn(length(tbm))
         init_cs .*= init_hopping_scale
         o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
         o.minimum > best_loss && continue # discard local optimization; not better globally
 
         if verbose
-            println(
-                "   Loss updated (trial $t): mean error = ",
-                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3),
+            printstyled(
+                " (improvement: mean error = ",
+                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3), ")\n";
+                color = :green
             )
         end
 
@@ -129,26 +131,29 @@ function photonic_fit(
         best_cs = o.minimizer
 
         if best_loss ≤ tol
-            verbose && printstyled("      tolerance met: returning\n"; color = :green)
+            if verbose
+                printstyled("   tolerance met: returning\n"; color = :green, bold = true)
+            end
             break
         end
     end
     if verbose && best_loss > tol
         printstyled(
-            "      `max_multistarts` exceeded: tolerance not met\n Consider increasing the number of tight-binding terms\n";
+            "   ! `max_multistarts` exceeded: tolerance not met\n   (consider increasing the number of tight-binding terms)\n";
             color = :yellow,
         )
     end
 
     # polish off the best result
     if polish
-        verbose && printstyled("Polishing off... \n"; color = :blue)
+        verbose && print("\nPolishing off ")
         o = optimize(Optim.only_fg!(_fg!), best_cs, optimizer)
-        o.minimum > best_loss && (best_cs = o.minimizer)
+        o.minimum > best_loss && (best_loss = o.minimum; best_cs = o.minimizer)
         if verbose
-            println(
-                "   Post-polish: mean error = ",
-                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3),
+            printstyled(
+                " (final mean error = ",
+                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3), ")\n";
+                color = :green
             )
         end
     end

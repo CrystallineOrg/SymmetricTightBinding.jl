@@ -41,7 +41,7 @@ candidatesv = find_bandrep_decompositions(m, brs; μᴸ_min)
 
 cbr = candidatesv[1].apolarv[1]
 
-# realize that in we only take intra-cell hoppings, the fitting will not converge
+# realize that if we only take intra-cell hoppings, the fitting will not converge
 tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1]]);
 
 ##-----------------------------------------------------------------------------------------#
@@ -64,7 +64,7 @@ cbrᴸ = candidatesv[1].longitudinal
 μᴸ = occupation(cbrᴸ)
 μᵀ = occupation(cbr) - μᴸ
 
-ptbm_fit = photonic_fit(tbm, freqs[:, 1:μᵀ], kvs)
+ptbm_fit = photonic_fit(tbm, freqs[:, 1:μᵀ], kvs; verbose = true)
 freqs_fit = spectrum(ptbm_fit, kvs; transform = energy2frequency)[:, μᴸ+1:end]
 
 # ---------------------------------------------------------------------------------------- #
