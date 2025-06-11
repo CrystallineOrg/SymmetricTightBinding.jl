@@ -10,13 +10,11 @@ vectors and topologies of the bands.
 """
 function obtain_symmetry_vectors(
     ms::Py,
-    sgnum::Int,
-    Dᵛ::Val{D} = Val(3);
+    brs::Collection{NewBandRep{D}};
     polarization::Union{Nothing, Symbol, Integer} = nothing,
     verbose::Bool = false,
 ) where {D}
     # TODO: maybe move this to MPBUtils.jl?
-    brs = primitivize(calc_bandreps(sgnum, Dᵛ)) # elementary band representations
     lgirsv = irreps(brs) # small irreps & little groups assoc. w/ `brs`
 
     # symmetry eigenvalues ⟨Eₙₖ|gᵢDₙₖ⟩
@@ -47,6 +45,10 @@ function obtain_symmetry_vectors(
     ns = symeigs_analysis(symeigsv, brs)
 
     return ns
+end
+function obtain_symmetry_vectors(ms::Py, sgnum::Int, Dᵛ::Val{D} = Val(3); kws...) where {D}
+    brs = primitivize(calc_bandreps(sgnum, Dᵛ)) # elementary band representations
+    return obtain_symmetry_vectors(ms, brs; kws...)
 end
 
 function _check_and_canonicalize_2d_polarization_arg(polarization)

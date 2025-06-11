@@ -1,37 +1,45 @@
 
 using SymmetricTightBinding
 using Optim
-using SymmetricTightBinding: loss, grad_loss!
+using LinearAlgebra: eigen!, Hermitian
 
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
-# MSE loss
-function longitudinal_loss(ks, tbm, cs, μᴸ; λ = 1)
-    L = zero(Float64)
-    for k in ks
-        Es = spectrum(tbm(cs), k)
-        Es_extra = @view Es[1:μᴸ] # extra bands
-
-        L += sum(E -> max(zero(E), E)^2, Es_extra) # penalty for extra bands above 0
-    end
-    return λ * L
-end
-
-function grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G = zeros(Float64, length(cs)); λ = 1)
+function fg!(F, G, cs, tbm::TightBindingModel, Em_r, ks, μᴸ; λ = 1)
     ptbm = tbm(cs)
-    for k in ks
-        Es = spectrum(ptbm, k)
-        ∇Es = energy_gradient_wrt_hopping(ptbm, k)
-        # gradient of the penalty for positive extra bands
-        for i in 1:μᴸ
-            E = Es[i]
-            if E > 0
-                G .+= (2λ * E) .* ∇Es[i]
+    if !isnothing(G)
+        fill!(G, zero(eltype(G)))
+    end
+
+    for (Es_r, k) in zip(eachrow(Em_r), ks)
+        H = Hermitian(ptbm(k))
+        Es, us = eigen!(H) # no Bloch phases, deliberately
+        Esᴸ = @view Es[1:μᴸ]     # longitudinal bands
+        Esᵀ = @view Es[μᴸ+1:end] # regular, transverse bands
+        # MSE loss
+        if !isnothing(F)
+            F += sum(abs2∘splat(-), zip(Es_r, Esᵀ); init=zero(F)) # regular loss
+            F += λ * sum(E -> max(zero(E), E)^2, Esᴸ)             # longitudinal loss
+        end
+
+        # gradient of MSE loss
+        if !isnothing(G)
+            ∇Es = energy_gradient_wrt_hopping(ptbm, k, (Es, us))
+            ∇Esᴸ = @view ∇Es[1:μᴸ]
+            ∇Esᵀ = @view ∇Es[μᴸ+1:end]
+            @assert size(Esᵀ) == size(∇Esᵀ) == size(Es_r)
+            for (E_r, E, ∇E) in zip(Es_r, Esᵀ, ∇Esᵀ) # regular loss gradient
+                G .+= (-2 * (E_r - E)) .* ∇E
+            end
+            for (E, ∇E) in zip(Esᴸ, ∇Esᴸ)            # longitudinal loss gradient
+                if E > 0
+                    G .+= (2λ * E) .* ∇E
+                end
             end
         end
     end
-    return G
+    return F
 end
 
 """
@@ -53,11 +61,17 @@ The global search returns early if the mean fit error, per band and per frequenc
 ## Keyword arguments
 - `optimizer` (default, `Optim.LBFGS()`): a local optimizer from Optim.jl, capable of
   exploiting gradient information.
-- `options` (default, empty): a `Optim.Options(…)` structure of optimization options.
 - `max_multistarts` (default, `150`): maximum number of multi-start iterations.
 - `atol` (default, `1e-3`): threshold for early return, specifying the minimum required mean
   energetic error (averaged over bands and **k**-points).
 - `verbose` (default, `false`): whether to print information on optimization progress.
+- `options` (default, empty): a `Optim.Options(…)` structure of optimization options, used
+  during the local optimization of the multi-start search. Defaults to
+  `Optim.Options(g_abstol=1e-2, f_reltol=1e-5)` (i.e., low tolerances, suitable for the
+  low precision demands of the multi-start search).
+- `polish` (default, `true`): whether to polish off the multi-start optimization with a
+  final local optimization step using default Optim.jl options. This is useful to ensure
+  that the best candidate from the multi-start search is fully converged.
 
 
 ## Notes
@@ -71,28 +85,24 @@ function photonic_fit(
     freqs_r::AbstractMatrix{<:Real},
     ks::AbstractVector{<:ReciprocalPointLike{D}};
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
-    options::Optim.Options = Optim.Options(),
-    max_multistarts::Integer = 150,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
+    max_multistarts::Integer = 150,
     verbose::Bool = false,
     loss_penalty_weight::Real = LOSS_PENALTY_WEIGHT,
+    options::Optim.Options = Optim.Options(;
+        g_abstol = 1e-2,
+        f_reltol = 1e-5,
+        ),
+    polish::Bool = true,
 ) where D
     # convert frequencies to energies and sort them
     Em_r = freqs_r .^ 2
-    Em_r = sort(Em_r; dims = 2)
+    sort!(Em_r; dims = 2)
 
+    μᴸ = tbm.N - size(Em_r, 2) # number of longitudinal bands
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    μᴸ = tbm.N - size(Em_r, 2) # number of extra bands
-    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm, μᴸ = μᴸ, λ = loss_penalty_weight
-        cs ->
-            loss(Em_r, ks, tbm, cs; start = μᴸ + 1) + longitudinal_loss(ks, tbm, cs, μᴸ; λ)
-    end
-    grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm, λ = loss_penalty_weight
-        (G, cs) -> begin
-            fill!(G, zero(eltype(G)))
-            grad_loss!(Em_r, ks, tbm, cs, G; start = μᴸ + 1)
-            grad_longitudinal_loss!(ks, tbm, cs, μᴸ, G; λ)
-        end
+    _fg! = let tbm = tbm, Em_r = Em_r, ks = ks, μᴸ = μᴸ, λ = loss_penalty_weight
+        (F, G, cs) -> fg!(F, G, cs, tbm, Em_r, ks, μᴸ; λ)
     end
 
     # multi-start optimization
@@ -100,9 +110,12 @@ function photonic_fit(
     tol = length(ks) * n_fit * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
+    init_hopping_scale = sum(Em_r) / length(Em_r) * 0.25
     for t in 1:max_multistarts
+        println("Trial $t")
         init_cs = randn(length(tbm))
-        o = optimize(loss_closure, grad_loss_closure!, init_cs, optimizer, options)
+        init_cs .*= init_hopping_scale
+        o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
         o.minimum > best_loss && continue # discard local optimization; not better globally
 
         if verbose
@@ -127,5 +140,18 @@ function photonic_fit(
         )
     end
 
+    # polish off the best result
+    if polish
+        verbose && printstyled("Polishing off... \n"; color = :blue)
+        o = optimize(Optim.only_fg!(_fg!), best_cs, optimizer)
+        o.minimum > best_loss && (best_cs = o.minimizer)
+        if verbose
+            println(
+                "   Post-polish: mean error = ",
+                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3),
+            )
+        end
+    end
+        
     return tbm(best_cs)
 end

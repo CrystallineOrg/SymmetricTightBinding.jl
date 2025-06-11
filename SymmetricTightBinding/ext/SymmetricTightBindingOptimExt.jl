@@ -1,40 +1,38 @@
 module SymmetricTightBindingOptimExt
 
 using SymmetricTightBinding
+using SymmetricTightBinding: solve
+using LinearAlgebra: eigen!, Hermitian
 using Optim
+import SymmetricTightBinding: fit
 
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
-# MSE loss
-function SymmetricTightBinding.loss(Em_r, ks, tbm, cs; start = firstindex(Em_r, 2))
-    L = zero(Float64)
-    for (Es_r, k) in zip(eachrow(Em_r), ks)
-        Es = spectrum(tbm(cs), k)
-        L += sum(abs2, (E_r - E for (E_r, E) in zip(Es_r, (@view Es[start:end]))))
-    end
-    return L
-end
-
-# gradient of MSE loss
-function SymmetricTightBinding.grad_loss!(
-    Em_r,
-    ks,
-    tbm,
-    cs,
-    G = zeros(Float64, length(cs));
-    start = firstindex(Em_r, 2),
-)
+function fg!(F, G, cs, tbm::TightBindingModel, Em_r, ks)
     ptbm = tbm(cs)
+    if !isnothing(G)
+        fill!(G, zero(eltype(G)))
+    end
+
     for (Es_r, k) in zip(eachrow(Em_r), ks)
-        Es = spectrum(ptbm, k)
-        ∇Es = energy_gradient_wrt_hopping(ptbm, k)
-        for (E_r, E, ∇E) in zip(Es_r, (@view Es[start:end]), (@view ∇Es[start:end]))
-            G .+= (E_r - E) .* ∇E
+        H = Hermitian(ptbm(k))
+        Es, us = eigen!(H) # no Bloch phases, deliberately
+
+        # MSE loss
+        if !isnothing(F)
+            F += sum(abs2∘splat(-), zip(Es_r, Es))
+        end
+
+        # gradient of MSE loss
+        if !isnothing(G)
+            ∇Es = energy_gradient_wrt_hopping(ptbm, k, (Es, us))
+            for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
+                G .+= (-2 * (E_r - E)) .* ∇E
+            end
         end
     end
-    G .*= -2
-    return G
+    return F
 end
 
 """
@@ -53,17 +51,23 @@ global optimization.
 The global search returns early if the mean fit error, per band and per energy, is less than
 `atol`.
 
-The utility is exposed as an Optim.jl extension to SymmetricTightBinding.jl: i.e., Optim.jl
+The function is defined as an Optim.jl extension to SymmetricTightBinding.jl: i.e., Optim.jl
 must be explicitly loaded to use this function.
 
 ## Keyword arguments
 - `optimizer` (default, `Optim.LBFGS()`): a local optimizer from Optim.jl, capable of
   exploiting gradient information.
-- `options` (default, empty): a `Optim.Options(…)` structure of optimization options.
 - `max_multistarts` (default, `150`): maximum number of multi-start iterations.
 - `atol` (default, `1e-3`): threshold for early return, specifying the minimum required mean
   energetic error (averaged over bands and **k**-points).
 - `verbose` (default, `false`): whether to print information on optimization progress.
+- `options` (default, empty): a `Optim.Options(…)` structure of optimization options, used
+  during the local optimization of the multi-start search. Defaults to
+  `Optim.Options(g_abstol=1e-2, f_reltol=1e-5)` (i.e., low tolerances, suitable for the
+  low precision demands of the multi-start search).
+- `polish` (default, `true`): whether to polish off the multi-start optimization with a
+  final local optimization step using default Optim.jl options. This is useful to ensure
+  that the best candidate from the multi-start search is fully converged.
 
 ## Example
 
@@ -93,32 +97,35 @@ julia> ptbm_fit.cs ≈ ptbm_r.cs
 true
 ```
 """
-function SymmetricTightBinding.fit(
+function fit(
     tbm::TightBindingModel{D},
     Em_r::AbstractMatrix{<:Real},
     ks::AbstractVector{<:SymmetricTightBinding.ReciprocalPointLike{D}};
     optimizer::Optim.FirstOrderOptimizer = LBFGS(),
-    options::Optim.Options = Optim.Options(),
     max_multistarts::Integer = 150,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
     verbose::Bool = false,
+    options::Optim.Options = Optim.Options(;
+        g_abstol = 1e-2,
+        f_reltol = 1e-5,
+    ),
+    polish::Bool = true
 ) where D
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    loss_closure = let Em_r = Em_r, ks = ks, tbm = tbm
-        cs -> loss(Em_r, ks, tbm, cs)
-    end
-    grad_loss_closure! = let Em_r = Em_r, ks = ks, tbm = tbm
-        (G, cs) -> (fill!(G, zero(eltype(G))); grad_loss!(Em_r, ks, tbm, cs, G))
+    _fg! = let Em_r = Em_r, ks = ks, tbm = tbm
+        (F, G, cs) -> fg!(F, G, cs, tbm, Em_r, ks)
     end
 
     # multi-start optimization
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
+    init_hopping_scale = sum(Em_r) / length(Em_r) * 0.25
     for t in 1:max_multistarts
         init_cs = randn(length(tbm))
-        o = optimize(loss_closure, grad_loss_closure!, init_cs, optimizer, options)
+        init_cs .*= init_hopping_scale # TODO: Improve guess; could likely do much better
+        o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
         o.minimum > best_loss && continue # discard local optimization; not better globally
         if verbose
             println(
@@ -138,6 +145,19 @@ function SymmetricTightBinding.fit(
             "      `max_multistarts` exceeded: tolerance not met\n";
             color = :yellow,
         )
+    end
+
+    # polish off the best result
+    if polish
+        verbose && printstyled("Polishing off... \n"; color = :blue)
+        o = optimize(Optim.only_fg!(_fg!), best_cs, optimizer)
+        o.minimum > best_loss && (best_cs = o.minimizer)
+        if verbose
+            println(
+                "   Post-polish: mean error = ",
+                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3),
+            )
+        end
     end
 
     return tbm(best_cs)
