@@ -60,9 +60,12 @@ ms.run()
 freqs = pyconvert(Matrix{Float64}, ms.all_freqs)
 
 μᴸ = tbm.N - size(freqs, 2) # number of longitudinal bands
+cbrᴸ = candidatesv[1].longitudinal
+μᴸ = occupation(cbrᴸ)
+μᵀ = occupation(cbr) - μᴸ
 
-ptbm_fit = photonic_fit(tbm, freqs, kvs)
-freqs_fit = spectrum(ptbm_fit, kvs, μᴸ; transform = energy2frequency)[:, μᴸ+1:end]
+ptbm_fit = photonic_fit(tbm, freqs[:, 1:μᵀ], kvs)
+freqs_fit = spectrum(ptbm_fit, kvs; transform = energy2frequency)[:, μᴸ+1:end]
 
 # ---------------------------------------------------------------------------------------- #
 # plot the results
