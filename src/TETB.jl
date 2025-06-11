@@ -44,7 +44,7 @@ export find_apolar_modes
 export find_auxiliary_modes
 export find_bandrep_decompositions
 export obtain_symmetry_vectors
-export frequency_spectrum
+export energy2frequency
 include("fitting.jl")
 export photonic_fit
 
