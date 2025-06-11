@@ -122,21 +122,23 @@ function fit(
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
     init_hopping_scale = sum(Em_r) / length(Em_r) * 0.25
-    verbose && println("Starting multi-start optimization with $max_multistarts trials")
+    verbose && println("Starting multi-start optimization with $max_multistarts trials:")
     for t in 1:max_multistarts
-        verbose && println("   trial #$t")
+        verbose && print("   trial #$t")
         init_cs = randn(length(tbm))
         init_cs .*= init_hopping_scale # TODO: Improve guess; could likely do much better
         o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
-        o.minimum > best_loss && continue # discard local optimization; not better globally
-
+        accept = o.minimum < best_loss
+        
         if verbose
+            mean_err = round(o.minimum / (tbm.N * length(ks)); sigdigits = 3)
             printstyled(
-                " (improvement: mean error = ",
-                round(sqrt(o.minimum / (tbm.N * length(ks))); sigdigits = 3), ")\n";
-                color = :green
+                " (", accept ? "improvement: " : "not accepted:  ", "mean error ",
+                mean_err, ")\n"; color = accept ? :green : :light_black
             )
         end
+
+        accept || continue # discard local optimization; not better globally
 
         best_loss = o.minimum
         best_cs = o.minimizer
@@ -150,20 +152,20 @@ function fit(
     end
     if verbose && best_loss > tol
         printstyled(
-            "   ! `max_multistarts` exceeded: tolerance not met\n   (consider increasing the number of tight-binding terms)\n";
+            "   `max_multistarts` exceeded: tolerance not met\n   (consider increasing the number of tight-binding terms)\n";
             color = :yellow,
         )
     end
 
     # polish off the best result
     if polish
-        verbose && print("\nPolishing off ")
+        verbose && print("Polishing off ")
         o = optimize(Optim.only_fg!(_fg!), best_cs, optimizer)
         o.minimum > best_loss && (best_loss = o.minimum; best_cs = o.minimizer)
         if verbose
             printstyled(
-                " (final mean error = ",
-                round(sqrt(o.minimum / (n_fit * length(ks))); sigdigits = 3), ")\n";
+                "(mean error ",
+                round(o.minimum / (tbm.N * length(ks)); sigdigits = 3), ")\n";
                 color = :green
             )
         end
