@@ -91,8 +91,21 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     h_orbit::HoppingOrbit{D}
     Mm::Array{Int, 4}
     t::Vector{Float64}
+    MmtC::Array{ComplexF64, 3} # MmtC[:,i,j] = M[:,:,i,j] * complex.(t[1:N], t[N+1:end])
+    # we include `MmtC` as an optimization: we want `Mm` for structural information (e.g.
+    # for plotting), but for computing the block matrix elements, we actually only need
+    # the (column-)contracted matrix `MmtC` (see `evaluate_tight_binding_term!`)
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
+function TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t) where D
+    Nᵗ = length(t) ÷ 2
+    tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
+    MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
+    for i in axes(Mm, 3), j in axes(Mm, 4)
+        MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
+    end
+    return TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t, MmtC)
+end
 
 @enum Hermiticity::UInt8 begin
     HERMITIAN
@@ -152,21 +165,15 @@ function _getindex(
                  error(BoundsError(tbb, (i, j)))
 
     io = IOBuffer()
-    Mm = tbb.Mm
-    N = size(Mm, 2) # half the length of the re/im-doubled `t[i]`
-    Mⁱʲ = Mm[:, :, i, j]
-    Mⁱʲt_re = Mⁱʲ * @view tbb.t[1:N]     # symmetry related Hamiltonian terms
-    Mⁱʲt_im = Mⁱʲ * @view tbb.t[N+1:end]
-    if !(
-        any(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲt_re) ||
-        any(v -> abs(v) > SPARSIFICATION_ATOL_DEFAULT, Mⁱʲt_im)
-    )
+    MⁱʲtC = tbb.MmtC[:, i, j] # = `tbb.Mm[:,:,i,j] * "complexified"(tbb.t)`
+    if any(v -> abs(v) < SPARSIFICATION_ATOL_DEFAULT, MⁱʲtC)
         return TightBindingElementString("0", true) #=active=#
     end
 
     first = true
-    for (n, (vᴿ, vᴵ)) in enumerate(zip(Mⁱʲt_re, Mⁱʲt_im))
-        abs(complex(vᴿ, vᴵ)) < SPARSIFICATION_ATOL_DEFAULT && continue
+    for (n, v) in enumerate(MⁱʲtC)
+        abs(v) < SPARSIFICATION_ATOL_DEFAULT && continue
+        vᴿ, vᴵ = reim(v)
         if conjugate
             vᴵ = -vᴵ # complex conjugate
             antihermitian && (vᴿ = -vᴿ; vᴵ = -vᴵ) # additional sign-flip from anti-hermiticity
@@ -378,18 +385,13 @@ function evaluate_tight_binding_term!(
     block_i, block_j = tbt.block_ij
     is = tbt.axis[Block(block_i)] # global row indices
     js = tbt.axis[Block(block_j)] # global col indices
-    t = block.t
-    Nᵗ = length(t) ÷ 2
-    tR = @view t[1:Nᵗ]     # real part of coefficient vector
-    tI = @view t[Nᵗ+1:end] # imaginary part of coefficient vector
-    Mm = block.Mm
+    MmtC = block.MmtC # contracted product of `Mm` and (complexified) `t`
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
     v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
-            Mⁱʲ = @view Mm[:, :, local_i, local_j]
-            Hᵢⱼ = dot(v, Mⁱʲ, tR) + 1im*dot(v, Mⁱʲ, tI)
+            Hᵢⱼ = @inbounds dot(v, @view MmtC[:, local_i, local_j])
             isnothing(c) || (Hᵢⱼ *= c) # multiply by coefficient if provided
             H[i, j] += Hᵢⱼ
             i == j && continue # don't add diagonal elements twice
@@ -417,8 +419,8 @@ function solve(
     if ptbm.tbm.terms[1].hermiticity == ANTIHERMITIAN
         error("ANTIHERMITIAN model solve not implemented") # TODO: cf. `Hermitian` use below
     end
-
-    es, vs = eigen(Hermitian(ptbm(k)), eigen_kws...)
+    H = Hermitian(ptbm(k))
+    es, vs = eigen(H; eigen_kws...)
     if bloch_phase === Val(true)
         phases = cispi.(dot.(Ref(2 .* k), orbital_positions(ptbm))) # e^{ik·r}
         vs = Diagonal(phases) * vs # add Bloch phases
