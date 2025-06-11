@@ -166,7 +166,7 @@ function _getindex(
 
     io = IOBuffer()
     MⁱʲtC = tbb.MmtC[:, i, j] # = `tbb.Mm[:,:,i,j] * "complexified"(tbb.t)`
-    if any(v -> abs(v) < SPARSIFICATION_ATOL_DEFAULT, MⁱʲtC)
+    if all(v -> abs(v) < SPARSIFICATION_ATOL_DEFAULT, MⁱʲtC)
         return TightBindingElementString("0", true) #=active=#
     end
 
