@@ -132,10 +132,9 @@ function fit(
         
         if verbose
             mean_err = round(o.minimum / (tbm.N * length(ks)); sigdigits = 3)
-            printstyled(
-                " (", accept ? "improvement: " : "not accepted:  ", "mean error ",
-                mean_err, ")\n"; color = accept ? :green : :light_black
-            )
+            printstyled(" (mean err ", mean_err, ")"; color = :light_black)
+            accept && printstyled(" → new best"; color = :green)
+            println()
         end
 
         accept || continue # discard local optimization; not better globally
