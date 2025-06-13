@@ -12,11 +12,13 @@ PhotonicBandConnectivity = "d7bc101a-f969-4292-96d7-1ebdabfa903f"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SymmetricTightBinding = "793e0360-0e47-4c52-9513-43d75d53c7d0"
+SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [sources]
 MPBUtils = {url = "https://github.com/thchr/MPBUtils.jl"}
 PhotonicBandConnectivity = {url = "https://github.com/thchr/PhotonicBandConnectivity.jl"}
 SymmetricTightBinding = {path = "./SymmetricTightBinding"}
+SymmetryBases = {url = "https://github.com/thchr/SymmetryBases.jl"}
 
 [compat]
 Crystalline = "0.6.17"

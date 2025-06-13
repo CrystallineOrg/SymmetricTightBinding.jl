@@ -214,12 +214,7 @@ function find_apolar_modes(
     Γ_idx = something(findfirst(==("Γ"), klabels(m)))
     lgirs = irreps(m)[Γ_idx]
 
-    n_fixed, Q = physical_zero_frequency_gamma_irreps(
-        lgirs;
-        supergroup_constraints = true,
-        force_fixed = true,
-        lattice_reduce = true,
-    )
+    n_fixed, Q = physical_zero_frequency_gamma_irreps_O3(lgirs)
 
     candidatesv = TightBindingCandidateSet[]
     for idxsᴸ in idxsᴸs
