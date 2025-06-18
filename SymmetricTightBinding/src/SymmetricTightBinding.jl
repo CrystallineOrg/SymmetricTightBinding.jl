@@ -36,12 +36,16 @@ include("hermiticity.jl")
 include("utils.jl")
 export pin_free!
 include("symmetry_analysis.jl")
-export symmetry_analysis
+export symmetry_eigenvalues
 include("spectrum.jl")
 export spectrum
 include("gradients.jl")
 export gradient_wrt_hopping
 export energy_gradient_wrt_hopping
+
+# --- Re-exports ------------------------------------------------------------------------- #
+
+export collect_compatible, collect_irrep_annotations # extended functions from Crystalline
 
 # --- Function defs. & exports for extensions -------------------------------------------- #
 

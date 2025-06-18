@@ -19,9 +19,9 @@ SymmetricTightBindingOptimExt = "Optim"
 
 [compat]
 BlockArrays = "1.6.3"
-Crystalline = "0.6.17"
+Crystalline = "0.6.18"
 LinearAlgebra = "1.11.0"
-Makie = "0.22"
+Makie = "0.23"
 RowEchelon = "0.2.1"
 julia = "1.11"
 
