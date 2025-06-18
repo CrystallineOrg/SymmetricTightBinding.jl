@@ -29,7 +29,8 @@ end
 """
     energy_gradient_wrt_hopping(
         ptbm::ParameterizedTightBindingModel{D},
-        k::ReciprocalPointLike{D};
+        k::ReciprocalPointLike{D}
+        (Es, us) = solve(ptbm, k; bloch_phase=Val(false));
         degen_rtol::Float64 = 1e-12,
         degen_atol::Float64 = 1e-12
     ) where D
@@ -45,14 +46,15 @@ the gradient of the corresponding energy with respect to the hopping coefficient
 """
 function energy_gradient_wrt_hopping(
     ptbm::ParameterizedTightBindingModel{D},
-    k::ReciprocalPointLike{D};
+    k::ReciprocalPointLike{D},
+    (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
+    ;
     degen_rtol::Float64 = 1e-12,
     degen_atol::Float64 = 1e-12
 ) where D
     Nᶜ = length(ptbm.tbm) # number of hopping terms
     Nᵇ = ptbm.tbm.N       # number of bands
 
-    Es, us = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies and eigenstates
     tbmg = gradient_wrt_hopping(ptbm) # ∇ᶜH
     
     # figure out if any bands are degenerate; if so, we need to treat them using degenerate

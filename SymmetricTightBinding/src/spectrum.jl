@@ -1,11 +1,16 @@
 """
-    spectrum(ptbm::ParameterizedTightBindingModel, ks)
+    spectrum(ptbm::ParameterizedTightBindingModel, ks; transform = identity)
 
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` over an iterable
 of input momenta `ks`. 
 
 Energies are returned as a matrix, with rows running over momenta and columns over distinct
 bands.
+
+## Keyword arguments
+
+- `transform`: a function to apply to the resulting matrix of energies, defaulting to the
+  identity function. This can be used to e.g., convert the energies to a different scaling.
 
 ## Example
 
@@ -34,13 +39,13 @@ julia> kpi = interpolate(irrfbz_path(17, directbasis(17, Val(2))), 100);
 julia> plot(kpi, spectrum(ptbm, kpi))
 ```
 """
-function spectrum(ptbm::ParameterizedTightBindingModel, ks)
+function spectrum(ptbm::ParameterizedTightBindingModel, ks; transform = nothing)
     if !(eltype(ks) <: AbstractVector{<:Real})
         error("the elements of `ks` must subtype `AbstractVector{<:Real}`")
     end
     Es = Matrix{Float64}(undef, length(ks), ptbm.tbm.N)
     for (i, k) in enumerate(ks)
-        es = spectrum(ptbm, k)
+        es = spectrum(ptbm, k; transform = transform)
         @inbounds Es[i, :] .= es
     end
     return Es
@@ -54,11 +59,20 @@ momentum `k`, across all the bands of `ptbm`.
 """
 function spectrum(
     ptbm::ParameterizedTightBindingModel{D},
-    k::AbstractVector{<:Real},
+    k::AbstractVector{<:Real};
+    transform = nothing
 ) where D
     length(k) == D ||
         error(lazy"dimension mismatch of momentum ($(length(k))) & model ($D)")
     H = Hermitian(ptbm(k))
     es = eigvals!(H)
-    return es
+    return _apply_transform(es, transform)
+end
+
+function _apply_transform(Es, transform::F) where F
+    if isnothing(transform)
+        return Es
+    else
+        map!(transform, Es, Es)
+    end
 end
