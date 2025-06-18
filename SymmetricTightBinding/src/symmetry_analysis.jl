@@ -122,3 +122,18 @@ function symmetry_eigenvalues(
     k = constant(kv)
     return symmetry_eigenvalues(ptbm, operations(lg), k, sgreps)
 end
+
+"""
+    collect_irrep_annotations(ptbm::ParameterizedTightBindingModel; kws...)
+
+Collect the irrep labels across the high-symmetry **k**-points referenced by the underlying
+composite band representation of `ptbm`, across the bands of the model.
+
+Useful for annotating irrep labels in band structure plots (via the Makie extension call
+`plot(ks, energies; annotations=collect_irrep_annotations(ptbm))`)
+"""
+function Crystalline.collect_irrep_annotations(ptbm::ParameterizedTightBindingModel; kws...)
+    lgirsv = irreps(ptbm.tbm.cbr) # get irreps associated to the EBRs
+    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, group(lgirs))) for lgirs in lgirsv]
+    return collect_irrep_annotations(symeigsv, lgirsv; kws...)
+end
