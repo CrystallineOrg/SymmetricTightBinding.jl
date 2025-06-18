@@ -111,11 +111,11 @@ function photonic_fit(
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
     init_hopping_scale = sum(Em_r) / length(Em_r) * 0.25
+    init_cs = randn(length(tbm)) .* init_hopping_scale
+    since_last_improvement = 0
     verbose && println("Starting multi-start optimization with $max_multistarts trials:")
     for t in 1:max_multistarts
         verbose && print("   trial #$t")
-        init_cs = randn(length(tbm))
-        init_cs .*= init_hopping_scale
         o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
         accept = o.minimum < best_loss
         
@@ -126,17 +126,22 @@ function photonic_fit(
             println()
         end
 
-        accept || continue # discard local optimization; not better globally
-
-        best_loss = o.minimum
-        best_cs = o.minimizer
-
-        if best_loss ≤ tol
-            if verbose
-                printstyled("   tolerance met: returning\n"; color = :green, bold = true)
+        if accept
+            best_loss = o.minimum
+            best_cs = o.minimizer
+            since_last_improvement = 0
+            if best_loss ≤ tol
+                if verbose
+                    printstyled("   tolerance met: returning\n"; color = :green, bold = true)
+                end
+                break
             end
-            break
         end
+
+        # a simple basin-hopping exploration strategy
+        since_last_improvement += 1
+        step_scale = since_last_improvement.^(1/4) * 0.5 / length(tbm)
+        init_cs = best_cs .+ step_scale .* randn(length(tbm)) .* abs.(best_cs)
     end
     if verbose && best_loss > tol
         printstyled(
