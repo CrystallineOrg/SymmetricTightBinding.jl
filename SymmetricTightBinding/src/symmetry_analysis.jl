@@ -64,12 +64,14 @@ end
         ptbm::ParameterizedTightBindingModel{D},
         ops::AbstractVector{SymOperation{D}},
         k::ReciprocalPointLike{D},
-        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]) where D --> Matrix{ComplexF64}
-
+        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]
+    )
     symmetry_eigenvalues(
         ptbm::ParameterizedTightBindingModel{D},
         lg::LittleGroup{D},
-        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]) where D --> Matrix{ComplexF64}
+        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]
+    )
+        --> Matrix{ComplexF64}
     
 Compute the symmetry eigenvalues of a coefficient-parameterized tight-binding model `ptbm`
 at the **k**-point `k` for the symmetry operations `ops`. A `LittleGroup` can also be
