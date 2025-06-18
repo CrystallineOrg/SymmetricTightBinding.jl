@@ -3,8 +3,7 @@
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
         brᵦ::NewBandRep{D},
-        ) where {V<:Union{AbstractVector{<:Integer},RVec{D}} where {D}
-        --> Vector{HoppingOrbit{D}}
+    ) --> Vector{HoppingOrbit{D}}
 
 Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
 WP of `brᵦ` displaced a set of primitive lattice vectors representatives `Rs`.
@@ -107,10 +106,11 @@ function maybe_add_hoppings!(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper function for
-`maybe_add_hoppings!`.
-
 Computes and adds the symmetry related partners of a hopping term `δ` to the `δ_orbit`.
+
+!!! warning
+    This function is an internal helper function for `maybe_add_hoppings!` and
+    is not part of the public API.
 """
 function _maybe_add_hoppings!(
     δ_orbit,
@@ -265,7 +265,7 @@ end
 # ---------------------------------------------------------------------------- #
 
 """
-    OrbitalOrdering(br :: NewBandRep{D}) --> OrbitalOrdering{D}
+    OrbitalOrdering(br::NewBandRep{D}) --> OrbitalOrdering{D}
 
 Establishes a canonical, local ordering for the orbitals associated to a band representation
 `br`. This is the default ordering used when associating row/column indices in a
@@ -669,20 +669,24 @@ function reciprocal_constraints_matrices(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper 
-         function for `reciprocal_constraints_matrices`.
-
 Build the P matrix for a particular symmetry operation acting on k-space, which permutes the
 rows of the M matrix.
 
-For obtaining the P matrix, we make use that the action is on exponential of the type: 𝐞(2πk⋅δ),
-to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a symbolic variable.
-Because of that, we need to use the inverse of the rotation part of the symmetry operation.
-Sketch of the proof:
+For obtaining the P matrix, we make use that the action is on exponential of the type:
+``𝐞xp(2πk⋅δ)``, to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a symbolic
+variable. Because of that, we need to use the inverse of the rotation part of the symmetry
+operation.
 
-Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then (gk)⋅δ = ((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
+!!! details "Sketch of proof"
+    Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then
+    (gk)⋅δ = ((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
 
-WARNING: we assume that the operation is primitive.
+!!! info
+    It is assumed that the operation `op` is provided in a primitive setting.
+
+!!! warning
+    This function is an internal helper function for `reciprocal_constraints_matrices` and
+    is not part of the public API.
 """
 function _permute_symmetry_related_hoppings_under_symmetry_operation(
     h_orbit::HoppingOrbit{D},
@@ -708,10 +712,11 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper 
-function for `obtain_basis_free_parameters`.
-
 Poor man's "matrix sparsification" via the reduced row echelon form.
+
+!!! warning
+    This function is an internal helper function for `obtain_basis_free_parameters` and
+    is not part of the public API.
 """
 function _poormans_sparsification(
     A::AbstractMatrix{<:Number};
@@ -728,10 +733,11 @@ function _poormans_sparsification(
 end
 
 """
-WARNING: This function is not intended to be called directly. It is a helper 
-function for `obtain_basis_free_parameters`.
-
 Prune near-zero elements of vectors in `vs`.
+
+!!! warning
+    This function is an internal helper function for `obtain_basis_free_parameters` and
+    is not part of the public API.
 """
 function _prune_at_threshold!(
     vs::AbstractVector{<:AbstractVector{T}};

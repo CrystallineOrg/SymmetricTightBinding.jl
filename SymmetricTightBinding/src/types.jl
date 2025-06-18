@@ -237,7 +237,7 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 """
-  TightBindingModel{D}
+    TightBindingModel{D}
 
 A structure storing a list of `TightBindingTerm{D}`s. Each term is assumed to associated
 with an identical list of EBRs.
@@ -292,7 +292,7 @@ const ReciprocalPointLike{D} = Union{
 # ---------------------------------------------------------------------------------------- #
 
 """
-  ParameterizedTightBindingModel{D}
+    ParameterizedTightBindingModel{D}
 
 A coefficient-parameterized tight-binding model, that can be used as a functor for
 evaluation at input momenta `k`.

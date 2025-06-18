@@ -161,9 +161,15 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 """
-    pin_free!(brs::Collection{NewBandRep{D}}, idx2αβγ::Pair{Int, <:AbstractVector{<:Real}})
-    pin_free!(brs::Collection{NewBandRep{D}},
-              idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}})
+    pin_free!(
+        brs::Collection{NewBandRep{D}},
+        idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
+    )
+
+    pin_free!(
+        brs::Collection{NewBandRep{D}},
+        idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
+    )
 
 For `idx2αβγ = idx => αβγ`, update `brs[idx]` such that the free parameters of its
 associated Wyckoff positions are pinned to `αβγ`.
@@ -180,6 +186,7 @@ function pin_free!(
     foreach(Base.Fix1(pin_free!, brs), idx2αβγs)
     return brs
 end
+
 function pin_free!(
     brs::Collection{<:NewBandRep},
     idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}

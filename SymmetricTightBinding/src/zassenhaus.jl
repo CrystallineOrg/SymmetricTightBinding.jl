@@ -6,14 +6,13 @@ using RowEchelon: rref!
 # `U` is a matrix of `n×m` and `W` is a matrix of `k×m`.
 
 """
-    zassenhaus_intersection(
-                            U::AbstractArray{<:Number},
-                            W::AbstractArray{<:Number}) -> AbstractArray{<:Number}
+    zassenhaus_intersection(U::AbstractArray{<:Number}, W::AbstractArray{<:Number}) 
+        --> AbstractArray{<:Number}
 
 Finds the intersection of two bases `U` and `W` using the Zassenhaus algorithm.
 It assumes that the basis are given by columns.
 
-# References: 
+## References
 - https://en.wikipedia.org/wiki/Zassenhaus_algorithm
 """
 function zassenhaus_intersection(
