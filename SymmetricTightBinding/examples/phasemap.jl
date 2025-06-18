@@ -21,7 +21,7 @@ function phase(tbm, ϕθ)
     c2 = cos(ϕ) * sin(θ)
     c3 = sin(ϕ)
     ptbm = tbm([0.25, c1, c2, c3, -0.25])
-    symeigs_analysis(ptbm)
+    collect_compatible(ptbm)
 end
 function phase_hash(tbm, ϕθ)
     hash(phase(tbm, ϕθ)) % Int

@@ -1,12 +1,12 @@
 """
-    symeigs_analysis(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
+    collect_compatible(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
 
 Determine a decomposition of the bands associated with `ptbm` into a set of
 `SymmetryVector`s, with each symmetry vector corresponding to a set of
 compatibility-respecting (i.e., energy separable along high-symmetry **k**-lines) bands.
 
 ## Keyword arguments
-- `multiplicities_kws...`: keyword arguments passed to `Crystalline.symeigs_analysis`
+- `multiplicities_kws...`: keyword arguments passed to `Crystalline.collect_compatible`
   used in determining the multiplicities of irreps across high-symmetry **k**-points.
 
 ## Example
@@ -23,7 +23,7 @@ julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
 
 julia> ptbm = tbm([1.0, 0.1, -1.0, 0.1]); # fix free coefficients
 
-julia> symeigs_analysis(ptbm)
+julia> collect_compatible(ptbm)
 2-element Vector{SymmetryVector{3}}:
  [M₅⁺+M₁⁻, X₃⁺+X₁⁻+X₂⁻, Γ₁⁻+Γ₃⁻, R₄⁺] (3 bands)
  [M₁⁺+M₅⁻, X₁⁺+X₂⁺+X₃⁻, Γ₁⁺+Γ₃⁺, R₄⁻] (3 bands)
@@ -31,7 +31,7 @@ julia> symeigs_analysis(ptbm)
 In the above example, the bands separate into two symmetry vectors, one for each of the
 original EBRs in `cbr`.
 """
-function Crystalline.symeigs_analysis(
+function Crystalline.collect_compatible(
     ptbm::ParameterizedTightBindingModel{D},
     multiplicities_kws...,
 ) where D
@@ -55,7 +55,7 @@ function Crystalline.symeigs_analysis(
         symeigsv[kidx] = collect(eachcol(symeigs))
     end
 
-    ns = symeigs_analysis(symeigsv, cbr.brs; multiplicities_kws...)
+    ns = collect_compatible(symeigsv, cbr.brs; multiplicities_kws...)
     return ns
 end
 

@@ -42,7 +42,7 @@ function obtain_symmetry_vectors(
     fixup_gamma_symmetry!(symeigsv, lgirsv, polarization)
 
     # --- obtain compatibility-respecting symmetry vectors assoc. w/ symmetry data ---
-    ns = symeigs_analysis(symeigsv, brs)
+    ns = collect_compatible(symeigsv, brs)
 
     return ns
 end
