@@ -14,15 +14,21 @@ where $\mathbf{D}_{\mathbf{k}}(g)$ is the (momentum-)block-diagonal part of the 
 
 ## Installation
 
-**TODO**.
+The package is registered in the Julia General registry and can be installed from the `pkg>` command line (entered by pressing `]` in the Julia REPL):
+```jl
+pkg> add SymmetricTightBinding, Crystalline
+```
+
+SymmetricTightBinding.jl is designed to work as a companion package to [Crystalline.jl](https://github.com/thchr/Crystalline.jl); so we add Crystalline.jl in the above as well.
 
 ## Tutorial
 
-SymmetricTightBinding.jl is designed to work as a companion package to [Crystalline.jl](https://github.com/thchr/Crystalline.jl); as a first step, we must consequently load both Crystalline.jl and SymmetricTightBinding.jl:
+As a first step, we load both Crystalline.jl and SymmetricTightBinding.jl into our current Julia session:
 
 ```@example basic-use
 using Crystalline, SymmetricTightBinding
 ```
+
 
 As our first example, we'll build the tight-binding model of graphene. Once we've done that, we'll explore how to create related tight-binding models in the same symmetry setting.
 
@@ -126,3 +132,24 @@ For instance, we can label the previously constructed band structure with the li
 ```@example basic-use
 plot(kpi, Es; annotations=collect_irrep_annotations(ptbm))
 ```
+
+Similarly, we can analyze the compatibility respecting bands contained in `ptbm` via [`collect_compatible`](@ref). Here, since we our model contains only a single band representation - and one which is intrinsically connected - such an analysis has only possible answer (the connected band representation itself):
+
+```@example basic-use
+collect_compatible(ptbm)
+```
+
+We can easily set up a more interesting situation, however, by incorporating more band representations (i.e., more orbitals) into our model. E.g., below, we add three *s*-like orbitals placed at the 3c position (edges of the hexagonal unit cell) to the usual graphene model, and pick a reasonably large hybridization between the graphene and 3c orbitals:
+```@example basic-use
+cbr′ = @composite brs[5] + brs[1]
+tbm′ = tb_hamiltonian(cbr′)
+ptbm′ = tbm′([-4, -0, -0.1, 0.0, 1.0, -1.0, 1.0])
+plot(kpi, spectrum(ptbm′, kpi); annotations=irrep_annotations(ptbm))
+```
+The band structures features two connected groups of bands. We can obtain the same result (via a compatibility-analysis involving only the high-symmetry **k**-points) via `collect_compatible`:
+```@example basic-use
+collect_compatible(ptbm′)
+```
+
+!!! todo
+    I suspect that the above is an interesting example - I *think* it should be an example where the connected band groupings do not actually decompose to the original EBRs - but the case is clearly bugged presently (no doubt due to issue CrystallineOrg/SymmetricTightBinding#65).
