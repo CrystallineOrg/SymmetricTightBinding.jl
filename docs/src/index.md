@@ -147,7 +147,7 @@ We can easily set up a more interesting situation, however, by incorporating mor
 cbr′ = @composite brs[5] + brs[1]
 tbm′ = tb_hamiltonian(cbr′)
 ptbm′ = tbm′([-4, -0, -0.1, 0.0, 1.0, -1.0, 1.0])
-plot(kpi, spectrum(ptbm′, kpi); annotations = collect_irrep_annotations(ptbm))
+plot(kpi, spectrum(ptbm′, kpi); annotations = collect_irrep_annotations(ptbm′))
 ```
 The band structures features two connected groups of bands. We can obtain the same result (via a compatibility-analysis involving only the high-symmetry **k**-points) via `collect_compatible`:
 ```@example basic-use
