@@ -5,10 +5,10 @@ makedocs(
     sitename = "SymmetricTightBinding.jl",
     authors = "Antonio Morales Perez <antonio.morales@dipc.org>, Thomas Christensen <thomas@dtu.dk>, and contributors",
     modules = [SymmetricTightBinding],
-    #repo = Remotes.GitHub("org-or-user", "SymmetricTightBinding.jl"),
+    repo = Remotes.GitHub("CrystallineOrg", "SymmetricTightBinding.jl"),
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", nothing) == "true",
-        #canonical = "https://org-or-user.github.io/SymmetricTightBinding.jl",
+        canonical = "https://CrystallineOrg.github.io/SymmetricTightBinding.jl",
         size_threshold = 1000000
     ),
     pages = [
@@ -31,4 +31,15 @@ DocMeta.setdocmeta!(
     :DocTestSetup,
     :(using SymmetricTightBinding);
     recursive=true
+)
+
+# Documenter can also automatically deploy documentation to gh-pages.
+# See "Hosting Documentation" and deploydocs() in the Documenter manual
+# for more information.
+deploydocs(
+    repo   = "github.com/CrystallineOrg/SymmetricTightBinding.jl.git",
+    target = "build",
+    deps   = nothing,
+    make   = nothing,
+    push_preview = true # deploy docs for PRs
 )
