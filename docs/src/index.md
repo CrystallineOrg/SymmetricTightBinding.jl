@@ -130,7 +130,7 @@ Since the theory behind SymmetricTightBinding.jl is anchored in symmetry analysi
 
 For instance, we can label the previously constructed band structure with the little group irrep labels at high-symmetry **k**-points:
 ```@example basic-use
-plot(kpi, Es; annotations=collect_irrep_annotations(ptbm))
+plot(kpi, Es; annotations = collect_irrep_annotations(ptbm))
 ```
 
 Similarly, we can analyze the compatibility respecting bands contained in `ptbm` via [`collect_compatible`](@ref). Here, since we our model contains only a single band representation - and one which is intrinsically connected - such an analysis has only possible answer (the connected band representation itself):
@@ -144,7 +144,7 @@ We can easily set up a more interesting situation, however, by incorporating mor
 cbr′ = @composite brs[5] + brs[1]
 tbm′ = tb_hamiltonian(cbr′)
 ptbm′ = tbm′([-4, -0, -0.1, 0.0, 1.0, -1.0, 1.0])
-plot(kpi, spectrum(ptbm′, kpi); annotations=irrep_annotations(ptbm))
+plot(kpi, spectrum(ptbm′, kpi); annotations = collect_irrep_annotations(ptbm))
 ```
 The band structures features two connected groups of bands. We can obtain the same result (via a compatibility-analysis involving only the high-symmetry **k**-points) via `collect_compatible`:
 ```@example basic-use
