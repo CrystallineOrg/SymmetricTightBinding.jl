@@ -22,7 +22,7 @@ Next, we construct a path along high-symmetry directions of the Brillouin zone u
 path; and finally, plot the band structure using Brillouin and GLMakie (or PlotlyJS):
 
 ```julia-repl
-julia> using Crystalline, TETB
+julia> using Crystalline, SymmetricTightBinding
 
 julia> brs = calc_bandreps(17, Val(2));
 

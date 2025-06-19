@@ -1,4 +1,4 @@
-# Documentation for the package `TETB.jl`
+# Developer documentation for PhotonicTightBinding.jl
 
 This code is aimed at finding a decomposition in terms of EBRs of the band representation of
 the first two photonic bands in a 3D PhC and building a symmetry-constrained TB using the
@@ -17,14 +17,14 @@ any misunderstandings.
 We are going to use Unicode characters and face as best as we can with their limitations.
 
 First, we need to differentiate between symmetry vectors obtained from MPB (or given by the 
-user) and the ones obtained from the code as possible candidates for a TETB model.
+user) and the ones obtained from the code as possible candidates for a PhotonicTightBinding model.
 For making this differentiation we are going to use the following notation:
 
 1. Symmetry vectors obtained from MPB will be denoted by $𝗺$.
 2. However symmetry vectors coming as outputs of the code will be denoted by $𝗻$. There will
    be different vectors coming as outputs from the code.
    We will denoted them by a super-index indicating their "polarization".
-   Being more specific, the symmetry vector representing the whole TETB model (transverse +
+   Being more specific, the symmetry vector representing the whole PhotonicTightBinding model (transverse +
    longitudinal modes) and will be denoted by $𝗻^{t+l}$; and the one representing only the
    longitudinal modes $𝗻^l$. You can obtain the symmetry vector of transversal modes from
    those two by $𝗻^t = 𝗻^{t+l} - 𝗻^l$.

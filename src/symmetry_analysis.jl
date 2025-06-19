@@ -11,7 +11,7 @@ compatibility-respecting (i.e., energy separable along high-symmetry **k**-lines
 
 ## Example
 ```julia-repl
-julia> using Crystalline, TETB
+julia> using Crystalline, SymmetricTightBinding
 
 julia> brs = calc_bandreps(221);
 
