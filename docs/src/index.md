@@ -136,13 +136,18 @@ For instance, we can label the previously constructed band structure with the li
 plot(kpi, Es; annotations = collect_irrep_annotations(ptbm))
 ```
 
-Similarly, we can analyze the compatibility respecting bands contained in `ptbm` via [`collect_compatible`](@ref). Here, since we our model contains only a single band representation - and one which is intrinsically connected - such an analysis has only possible answer (the connected band representation itself):
+Similarly, we can analyze the compatibility respecting bands contained in `ptbm` via [`collect_compatible`](@ref):
 
 ```@example basic-use
 collect_compatible(ptbm)
 ```
 
-We can easily set up a more interesting situation, however, by incorporating more band representations (i.e., more orbitals) into our model. E.g., below, we add three *s*-like orbitals placed at the 3c position (edges of the hexagonal unit cell) to the usual graphene model, and pick a reasonably large hybridization between the graphene and 3c orbitals:
+Here, since our model contains only a single band representation -- which is additioanlly an intrinsically connected one -- such an analysis has only one possible answer (the connected band representation itself): the only possible band groupings is the original band representation. We can verify this by comparing with `cbr`:
+```@example basic-use
+SymmetryVector(cbr)
+```
+
+We can set up a more interesting situation, however, by incorporating more band representations (i.e., more orbitals) into our model. E.g., below, we add three *s*-like orbitals placed at the 3c Wyckoff position (edges of the hexagonal unit cell) to the usual graphene model, and pick a reasonably large hybridization between the graphene and 3c orbitals:
 ```@example basic-use
 cbr′ = @composite brs[5] + brs[1]
 tbm′ = tb_hamiltonian(cbr′)
@@ -155,4 +160,4 @@ collect_compatible(ptbm′)
 ```
 
 !!! todo
-    I suspect that the above is an interesting example - I *think* it should be an example where the connected band groupings do not actually decompose to the original EBRs - but the case is clearly bugged presently (no doubt due to issue CrystallineOrg/SymmetricTightBinding#65).
+    I suspect that the above is an interesting example - I *think* it should be an example where the connected band groupings do not actually decompose to the original EBRs - but the case is clearly bugged presently (no doubt due to [issue #65](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/issues/65)).
