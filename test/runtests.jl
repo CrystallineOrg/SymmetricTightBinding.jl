@@ -1,7 +1,7 @@
 using TETB, Test
 
 @testset "TETB" begin
-    # decompositions into EBRs
-    include("ebr_decomposition.jl")
-    include("mpb_ebr_decomposition.jl")
+    include("pg_tb_hamiltonian.jl")    # plane groups
+    include("sg_tb_hamiltonian.jl")    # space groups
+    include("site_representations.jl") # site representations
 end

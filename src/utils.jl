@@ -1,306 +1,231 @@
-using Crystalline: translation
-using SymmetricTightBinding: ReciprocalPointLike
+"""
+    split_complex(t::Vector{<:Number}) -> Matrix{Real}
+
+Consider `αt` where `α ∈ ℂ` and `t ∈ ℂⁿ` and build from `t` a matrix representation
+`T` that allows access to the real and imaginary parts of the product `αt` without using
+complex numbers by splitting α into a real 2-vector of its real and imaginary parts.
+
+In particular, let ``α = αᴿ + iαᴵ`` and ``t = tᴿ + itᴵ`` with `αᴿ, αᴵ ∈ ℝ` and
+``tᴿ, tᴵ ∈ ℝⁿ``, then ``αt`` can be rewritten as
+
+```math
+αt = (αᴿ + iαᴵ)(tᴿ + itᴵ)
+   = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)
+   = [tᴿ, tᴵ]ᵀ [αᴿ, αᴵ] + i [tᴵ, tᴿ]ᵀ [αᴿ, αᴵ]
+```
+
+Then, defining `T = [tᴿ -tᴵ; tᴵ tᴿ]`, the above product can then be reexpressed as:
+``Re(αt) = αᴿtᴿ - αᴵtᴵ =`` `(T * [αᴿ; αᴵ])[1:n]` and ``Im(αt) = αᴿtᴵ + αᴵtᴿ =``
+`(T * [αᴿ; αᴵ])[n+1:2n]`.
+I.e., the "upper half" of the product `T * [real(α), imag(α)]` is `real(α * t)` and the 
+"lower half" is `imag(αt)`.
+
+This functionality is used to avoid complex numbers in amplitude basis coefficients, which
+simplifies the application of time-reversal symmetry and hermiticity.
+
+## Examples
+
+```julia
+julia> using SymmetricTightBinding: split_complex
+
+julia> t = [im,0]
+2-element Vector{Complex{Int64}}:
+ 0 + 1im
+ 0 + 0im
+
+julia> T = split_complex(t)
+4×2 Matrix{Int64}:
+ 0  -1
+ 0   0
+ 1   0
+ 0   0
+
+julia> α = 0.5+0.2im; αv = [real(α), imag(α)];
+
+julia> (T * αv)[1:2] == real(α*t) && (T * αv)[3:4] == imag(α*t)
+```
+
+```julia
+julia> t = [1,im]
+2-element Vector{Complex{Int64}}:
+ 1 + 0im
+ 0 + 1im
+
+julia> split_complex(t)
+4×2 Matrix{Int64}:
+ 1   0
+ 0  -1
+ 0   1
+ 1   0
+```
+"""
+function split_complex(t::AbstractVector{<:Number})
+    re_t, im_t = reim(t)
+    return [re_t -im_t; im_t re_t] # == [real(t) real(im * t); imag(t) imag(im * t)]
+end
 
 """
-    obtain_symmetry_vectors(ms::Py, sgnum::Int, Val{D}=Val(3); polarization) --> Vector{SymmetryVector{D}}
+    inversion(::Val{D}) --> SymOperation{D}
 
-Obtains directly the symmetry vector for the bands computed in the MPB model `ms` for the space
-group defined in `sgnum`. It fixes up the symmetry content at Γ and ω=0 and returns the symmetry
-vectors and topologies of the bands.
+Return the inversion operation in dimension `D`.
 """
-function obtain_symmetry_vectors(
-    ms::Py,
-    brs::Collection{NewBandRep{D}};
-    polarization::Union{Nothing, Symbol, Integer} = nothing,
-    verbose::Bool = false,
-) where {D}
-    # TODO: maybe move this to MPBUtils.jl?
-    lgirsv = irreps(brs) # small irreps & little groups assoc. w/ `brs`
+inversion(::Val{3}) = S"-x,-y,-z"
+inversion(::Val{2}) = S"-x,-y"
+inversion(::Val{1}) = S"-x"
+inversion(::Val) = error("unsupported dimension")
 
-    # symmetry eigenvalues ⟨Eₙₖ|gᵢDₙₖ⟩
-    symeigsv = Vector{Vector{Vector{ComplexF64}}}(undef, length(lgirsv))
-    for (kidx, lgirs) in enumerate(lgirsv)
-        lg = group(lgirs)
-        kv = mp.Vector3(position(lg)()...)
-        redirect_stdout(verbose ? stdout : devnull) do
-            ms.solve_kpoint(kv)
-        end
+## --------------------------------------------------------------------------------------- #
+# Extracting a list of positions associated with our convention for orbital ordering of a
+# `NewBandRep` or a `CompositeBandRep`. For a `NewBandRep`, the orbitals are arranged such
+# that the first `irdim(br.siteir)` orbitals associate to the first element of the orbit
+# of its Wyckoff positions; the next `irdim(br.siteir)` orbitals associate to the second
+# element of the orbit, and so on. For a `CompositeBandRep`, the orbitals of each
+# `NewBandRep` are concatenated, in the order of their coefficients. For coefficients
+# greater than 1, the positions are repeated `cᵢ-1` times.
 
-        symeigsv[kidx] =
-            [Vector{ComplexF64}(undef, length(lg)) for n in 1:pyconvert(Int, ms.num_bands)]
-        for (i, gᵢ) in enumerate(lg)
-            W = mp.Matrix(eachcol(rotation(gᵢ))..., [0, 0, 1]) # decompose gᵢ = {W|w}
-            w = mp.Vector3(translation(gᵢ)...)
-            symeigs = ms.compute_symmetries(W, w) # compute ⟨Eₙₖ|gᵢDₙₖ⟩ for all bands
-            symeigs = pyconvert(Vector{ComplexF64}, symeigs) # convert from Py to Julia type
-            setindex!.(symeigsv[kidx], symeigs, i) # update container of sym. eigenvalues
+function orbital_positions(br::NewBandRep{D}) where D
+    dim = irdim(br.siteir)
+    wps = primitivized_orbit(br)
+    positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
+    for (m, wp) in enumerate(wps)
+        for j in ((m-1)*dim+1):(m*dim)
+            positions[j] = wp
         end
     end
-
-    # --- fix singular photonic symmetry content at Γ, ω=0 ---
-    D == 2 && (polarization = _check_and_canonicalize_2d_polarization_arg(polarization))
-    fixup_gamma_symmetry!(symeigsv, lgirsv, polarization)
-
-    # --- obtain compatibility-respecting symmetry vectors assoc. w/ symmetry data ---
-    ns = collect_compatible(symeigsv, brs)
-
-    return ns
-end
-function obtain_symmetry_vectors(ms::Py, sgnum::Int, Dᵛ::Val{D} = Val(3); kws...) where {D}
-    brs = primitivize(calc_bandreps(sgnum, Dᵛ)) # elementary band representations
-    return obtain_symmetry_vectors(ms, brs; kws...)
+    return positions
 end
 
-function _check_and_canonicalize_2d_polarization_arg(polarization)
-    if isnothing(polarization)
-        error("the polarization keyword argument must be set for 2D calculations \
-                (`:TE` / `meep.TE` or `:TM` / `meep.TM`)")
-    elseif polarization isa Integer
-        return (
-            polarization == mp.TE ? :TE :
-            polarization == mp.TM ? :TM : error("invalid polarization")
-        )
-    elseif polarization isa Symbol
-        return polarization ∈ (:TE, :TM) ? polarization : error("invalid polarization")
-    else
-        error("invalid type of polarization keyword argument (must be `Nothing`, `Symbol, \
-              or `<:Integer`)")
-    end
-end
+function orbital_positions(cbr::CompositeBandRep{D}) where D
+    N = occupation(cbr)
+    positions = Vector{DirectPoint{D}}(undef, N)
+    j = 0
+    for (i, cᵢ) in enumerate(cbr.coefs)
+        iszero(cᵢ) && continue
+        br = cbr.brs[i]
 
-#= 
-`t` -> dimension os the auxiliary modes to search
-`brs` -> collection of the BRs of the SG
-=#
-
-"""
-    find_auxiliary_modes(μᴸ::Int, brs::Collection{<:NewBandRep}) -> Vector{Vector{Int}}
-
-Finds all sets of bands in the SG that have dimension equal to `μᴸ`.
-
-1. `μᴸ` -> dimension of the auxiliary modes to search
-2. `brs` -> collection of the BRs of the SG
-"""
-function find_auxiliary_modes(μᴸ::Int, brs::Collection{<:NewBandRep})
-    iszero(μᴸ) && return [Int[]]
-    μs_brs = occupation.(brs)
-    long_cand = find_all_admissible_expansions(
-        brs,
-        μs_brs,
-        μᴸ, #= occupation =#
-        Int[],
-        Int[],
-    ) #= idxs =#
-
-    return long_cand
-end
-
-"""
-    generalized_inv(X::AbstractMatrix{<:Integer}) -> AbstractMatrix{Float64}
-
-Computes the generalized inverse `Xᵍ` of `X`, computed from the Smith normal form.
-"""
-function generalized_inv(X::AbstractMatrix{<:Integer})
-    F = smith(X) # compute the Smith normal form X = SΛT
-    Λ = MPBUtils.diagm(F)
-    Λg = zeros(Float64, size(Λ)[2], size(Λ)[1])
-    for (n, λₙ) in enumerate(F.SNF)
-        Λg[n, n] = iszero(λₙ) ? λₙ : inv(λₙ) # inverse of Λ considering the zero values
-    end
-    Xᵍ = F.Tinv * Λg * F.Sinv # generalized inverse
-
-    return Xᵍ
-end
-
-#=
-Different notation used explained here. First we define the notation for symmetry vectors
-obtained from MPB vs the ones for the solutions:
-
-    m                        =====> MPB
-    nᴸ, nᵀ⁺ᴸ, nᵀ = nᵀ⁺ᴸ - nᴸ =====> solutions
-
-Then, symmetry vectors can be split in several ways depending of if the irreps belong to
-Γ or not and if the irreps belongs to higher frequency bands or just ω=0:
-
-    m = mᵧ + m₋ᵧ =====> Differentiate from Γ and not Γ
-    n = nᵧ + n₋ᵧ =====> Differentiate from Γ and not Γ
-
-    mᵧ = mᵧ⁼⁰ + mᵧꜛ⁰ =====> Differentiate from ω=0 and ω>0
-    nᵧ = nᵧ⁼⁰ + nᵧꜛ⁰ =====> Differentiate from ω=0 and ω>0
-
-with the notation clear, now we need to check if the solution we have obtained is physical
-or not. In other words, we need to check two things:
-
-1. Whether if our solution subduces properly the $O(3)$ representation at $\Gamma$ and zero 
-frequency. This can be check easily using `PhotonicBandConnectivity.jl`. As stipulated 
-before in [Problem 2](#problem-2), this is fulfilled if $\mathbf{p}\in\mathbb{Z}$.
-
-2. Whether our solution doesn't make use of the higher frequency irreps present in 
-$m_\Gamma^{>0}$ to regularize the symmetry content at zero frequency, and that instead 
-those negative multiplicities in the irreps are cancelled out by the longitudinal modes $n^L$. 
-We ensure this by the following check:
-
-    Define the candidate-solution's zero-frequency content at $\Gamma$ by:
-
-    $$n_\Gamma^{T,=0} = n_{\Gamma}^{T} - m_{\Gamma}^{>0} = n_{\Gamma}^{T+L} - n_{\Gamma}^L 
-    - m_{\Gamma}^{>0} = m_{\Gamma}^{=0} + Q\mathbf{p}.$$
-
-    Consider the following two cases:
-    - If $n_{\Gamma,i}^{T,=0} < 0$ for some $i$, then $n_{\Gamma,i}^L \geq |n_{\Gamma,i}^{T,=0}|$ 
-        for that $i$; equivalently, in this case $n_{\Gamma,i}^L \geq -n_{\Gamma,i}^{T,=0}$.
-    - Conversely, if  $n_{\Gamma,i}^{T,=0} ≥ 0$ for some $i$, we still have $n_{\Gamma,i}^L ≥ 0$
-         and consequently also $n_{\Gamma,i}^L ≥ -n_{\Gamma,i}^{T,=0}$.
-
-    Thus, regardless of the sign of $n_{\Gamma,i}^{T,=0}$, we may require that:
-
-    $$ n_{\Gamma}^L \geq -n_\Gamma^{T,=0}$$
-
-=#
-
-"""
-            is_integer_p_check(m::AbstractSymmetryVector,
-                nᵀ⁺ᴸ::AbstractSymmetryVector{D},
-                nᴸ::AbstractSymmetryVector{D},
-                Q::Matrix{Int},
-                Γ_idx::Int) where {D}
-
-Check if a certain solution `(nᵀ⁺ᴸ, nᴸ)` subduces properly the O(3) representation at Γ and 
-zero frequency. This is fulfilled if `p` is an integer vector. Check `devdocs.md`.
-"""
-function is_integer_p_check(
-    m::AbstractSymmetryVector,
-    nᵀ⁺ᴸ::AbstractSymmetryVector{D},
-    nᴸ::AbstractSymmetryVector{D},
-    Q::Matrix{Int},
-    Γ_idx::Int,
-) where {D}
-    # convert everything into vectors w/o occupation and take the content at Γ
-    mᵧ = multiplicities(m)[Γ_idx]
-    nᵀ⁺ᴸᵧ = multiplicities(nᵀ⁺ᴸ)[Γ_idx]
-    nᴸᵧ = multiplicities(nᴸ)[Γ_idx]
-
-    Q⁺ = generalized_inv(Q)
-    nᵀᵧ = nᵀ⁺ᴸᵧ - nᴸᵧ # obtain the symmetry vector of the transversal modes
-    p = Q⁺ * (nᵀᵧ - mᵧ) # compute the vector p
-    # this way we assure that the auxiliary modes are used to regularize the symmetry content
-    # at zero frequency
-
-    # finally check if the vector p is an integer vector
-    p_int = round.(Int, p)
-    p_int ≈ p || error("unexpectedly found non-integer p - unhandled")
-    return p_int
-end
-
-"""
-    find_apolar_modes(m::AbstractSymmetryVector{D},
-                      idxsᴸs::Vector{Vector{Int}}, 
-                      brs::Collection{NewBandRep{D}}) -> Vector{TightBindingCandidateSet}
-
-Obtains a possible TETB model `nᵀ⁺ᴸ` for the auxiliary modes provided `idxsᴸs`.
-    
-It checks its **physicality** by ensuring that the solution subduces properly the O(3) 
-representation at Γ and zero frequency and that the higher frequency irreps present in `m` 
-are not used to regularize the symmetry content at zero frequency.
-"""
-function find_apolar_modes(
-    m::AbstractSymmetryVector{D},
-    idxsᴸs::Vector{Vector{Int64}},
-    brs::Collection{NewBandRep{D}},
-) where {D}
-    μs_brs = occupation.(brs)
-    idxs = eachindex(first(brs))
-
-    # compute the fixed part `n_fixed` and the free part `Q` of the physical ω=0 irreps at Γ
-    Γ_idx = something(findfirst(==("Γ"), klabels(m)))
-    lgirs = irreps(m)[Γ_idx]
-
-    n_fixed, Q = physical_zero_frequency_gamma_irreps_O3(lgirs)
-
-    candidatesv = TightBindingCandidateSet[]
-    for idxsᴸ in idxsᴸs
-        nᴸ = if isempty(idxsᴸ)
-            zero(first(brs))
-        else
-            SymmetryVector(sum(brs[idxsᴸ]))
-        end
-        μᵀ⁺ᴸ = occupation(m) + occupation(nᴸ)
-
-        # We want to enforce two constraints, one at Γ, one at "not-Γ" ≡ -Γ:
-        #   @-Γ: nᵀ⁺ᴸ[i] == (m + nᴸ)[i]   (and we translate this to nᵀ⁺ᴸ[i] ≥ (m + nᴸ)[i]
-        #                                  cf. non-negativity)
-        #   @Γ : nᴸ[i] ≥ -n_fixed ==> nᵀ⁺ᴸ[i] ≥ (m - n_fixed)[i]
-        # We can fold these two sets of constraints into one, via the following 
-        # manipulations:
-        constraints = m + nᴸ # now the constraints are wrong at Γ; proceed to correct this
-        constraints.multsv[Γ_idx] -= n_fixed + multiplicities(nᴸ)[Γ_idx] # now: fixed
-
-        idxsᵀ⁺ᴸs =
-            find_all_admissible_expansions(brs, μs_brs, μᵀ⁺ᴸ, Vector(constraints), idxs)
-
-        if !isempty(idxsᵀ⁺ᴸs)
-            ps = map(idxsᵀ⁺ᴸs) do idxsᵀ⁺ᴸ
-                nᵀ⁺ᴸ = SymmetryVector(sum(brs[idxsᵀ⁺ᴸ]))
-                is_integer_p_check(m, nᵀ⁺ᴸ, nᴸ, Q, Γ_idx)
+        dim = irdim(br.siteir)
+        wps = primitivized_orbit(br)
+        Nᵢ = length(wps) * dim
+        for (m, wp) in enumerate(wps)
+            for j′ in ((m-1)*dim+1):(m*dim)
+                positions[j+j′] = wp
             end
-            longitudinal = CompositeBandRep_from_indices(idxsᴸ, brs)
-            apolarv = CompositeBandRep_from_indices.(idxsᵀ⁺ᴸs, Ref(brs))
-            candidates = TightBindingCandidateSet(longitudinal, apolarv, ps)
-            push!(candidatesv, candidates)
+        end
+        j += Nᵢ
+
+        # if cᵢ > 1, we add the just-added positions `cᵢ-1` times more
+        for _ in 1:(Int(cᵢ)-1)
+            @views positions[j+1:j+Nᵢ] .= positions[j-Nᵢ+1:j]
+            j += Nᵢ
         end
     end
-    return candidatesv
+    j == N || error("inconsistent size calculation of `positions` vector")
+
+    return positions
 end
 
 """
-Obtain a bandrep decomposition for the symmetry vector of the bands provided `m` with a minimal
-number of auxiliary bands in the interval `[μᴸ_min,μᴸ_max]`.
+    primitivized_orbit(br::NewBandRep{D}) where D
 
-If the photonic bands are connected to zero frequency corrections to the singularity at Γ are
-made. This parameter is set by default to `true`.
+Return the orbit of the Wyckoff position associated with the band representation `br`.
+The coordinates of positions in the orbit are given relative to the primitive unit cell.
+
+Positions are returned as a `Vector{DirectPoint{D}}`.
+
+The following checks are made, producing an error if violated:
+1. There are no free parameters associated with the Wyckoff position.
+2. For every position, its coordinates, referred to the primitive basis, is in the range
+   [0,1); i.e., every position lies in the parallepiped primitive unit cell [0,1)ᴰ.
 """
-function find_bandrep_decompositions(
-    m::AbstractSymmetryVector{D},
-    brs::Collection{NewBandRep{D}};
-    μᴸ_min::Integer = 0,
-    μᴸ_max::Integer = μᴸ_min + 2 * occupation(m),
-    connected_to_zero_frequency::Bool = true,
-) where {D}
-    if D < 3 || !connected_to_zero_frequency
-        μ = occupation(m)
-        μs_brs = occupation.(brs)
-        idxs_k = eachindex(first(brs))
-
-        # we don't need any longitudinal modes so we can directly find the expansions using
-        # `m` as a constraint
-        idxs_sol = find_all_admissible_expansions(brs, μs_brs, μ, Vector(m), idxs_k)
-
-        longitudinal = Crystalline.CompositeBandRep_from_indices(Int[], brs)
-        apolar = Crystalline.CompositeBandRep_from_indices.(idxs_sol, Ref(brs))
-
-        !isempty(apolar) || error("Check the symmetry vector and space group used")
-
-        return TightBindingCandidateSet(longitudinal, apolar, [Float64[]])
-
-    else
-        μᴸ = μᴸ_min - 1
-        while μᴸ < μᴸ_max
-            μᴸ += 1
-            idxsᴸs = find_auxiliary_modes(μᴸ, brs)
-            (isempty(idxsᴸs) && μᴸ ≠ 0) && continue
-            # compute all possible decomposition of m into valid combinations of nᴸ and nᵀ⁺ᴸ
-            candidatesv = find_apolar_modes(m, idxsᴸs, brs)
-            isempty(candidatesv) || return candidatesv
+function primitivized_orbit(br::NewBandRep{D}) where D
+    wps = orbit(group(br))
+    cntr = centering(num(br), D)
+    wps′_pts = Vector{DirectPoint{D}}(undef, length(wps))
+    for (m, wp) in enumerate(wps)
+        wp′ = primitivize(wp, cntr)
+        if !iszero(free(wp′))
+            error(lazy"encountered Wyckoff position $wp with free parameters: not allowed")
         end
-        error("""failed to find possible auxiliary-apolar decompositions for provided \
-                symmetry vector in search range for auxiliary modes; increasing kwarg \
-                `μᴸ_max` may help, if a decomposition exists""")
+        wp′_cnst = constant(wp′)
+        if any(rᵢ -> rᵢ < 0 || rᵢ ≥ 1, wp′_cnst)
+            error(
+                lazy"encountered Wyckoff position $wp (conventional coordinates) with primitive coordinates $wp′_cnst outside [0,1): this inconsistent with implementation expectations, please file a bug report",
+            )
+        end
+        wps′_pts[m] = DirectPoint{D}(wp′_cnst)
     end
+    return wps′_pts
+end
+
+
+# ---------------------------------------------------------------------------------------- #
+
+"""
+    pin_free!(
+        brs::Collection{NewBandRep{D}},
+        idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
+    )
+
+    pin_free!(
+        brs::Collection{NewBandRep{D}},
+        idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
+    )
+
+For `idx2αβγ = idx => αβγ`, update `brs[idx]` such that the free parameters of its
+associated Wyckoff positions are pinned to `αβγ`.
+
+A vector of pairs `idx2αβγs` can also be provided, to pin multiple distinct band
+representations.
+
+See also [`pin_free`](@ref) for non-mutated input.
+"""
+function pin_free!(
+    brs::Collection{<:NewBandRep},
+    idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
+)
+    foreach(Base.Fix1(pin_free!, brs), idx2αβγs)
+    return brs
+end
+
+function pin_free!(
+    brs::Collection{<:NewBandRep},
+    idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
+)
+    idx, αβγ = idx2αβγ
+    checkbounds(Bool, brs, idx) || error("index $idx out of bounds for `brs`")
+    br = @inbounds brs[idx]
+    @inbounds brs[idx] = pin_free(br, αβγ)
+    return brs
 end
 
 """
-    energy2frequency(λ::Real)
+    pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
 
-Map a squared "energy" λ = ω² to a frequency ω, thresholding negative λ-values to NaN.
-Intended for use in SymmetricTightBinding.jl's `spectrum` for photonic tight-binding models.
+Pin the free parameters of the Wyckoff position associated with the band representation `br`
+to the values in `αβγ`. 
+
+Returns a new band representation with all other properties, apart from the Wyckoff
+position, identical to (and sharing memory with) `br`.
 """
-energy2frequency(λ::T) where T<:Real = sqrt(ifelse(λ < 0, convert(T, NaN), λ)) # λ = ω²
+function pin_free(
+    br::NewBandRep{D},
+    αβγ::AbstractVector{<:Real}
+) where D
+    length(αβγ) == D || error(DimensionMismatch("length(αβγ) ≠ D"))
+    if iszero(free(position(br)))
+        error("attempting to pin a band representation without any free parameters")
+    end
+
+    wp = position(br)
+    rv = parent(wp)
+    rv_pin = RVec{3}(rv(αβγ))
+    wp_pin = WyckoffPosition(wp.mult, wp.letter, rv_pin)
+
+    siteir = br.siteir
+    siteg = group(siteir)
+    siteg_pin = SiteGroup{D}(siteg.num, wp_pin, siteg.operations, siteg.cosets)
+    siteir_pin = SiteIrrep{D}(siteir.cdml, siteg_pin, siteir.matrices, siteir.reality,
+                              siteir.iscorep, siteir.pglabel)
+
+    return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
+end
