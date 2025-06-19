@@ -15,11 +15,15 @@ where $\mathbf{D}_{\mathbf{k}}(g)$ is the (momentum-)block-diagonal part of the 
 ## Installation
 
 The package is registered in the Julia General registry and can be installed from the `pkg>` command line (entered by pressing `]` in the Julia REPL):
+
 ```jl
 pkg> add SymmetricTightBinding, Crystalline
 ```
 
 SymmetricTightBinding.jl is designed to work as a companion package to [Crystalline.jl](https://github.com/thchr/Crystalline.jl); so we add Crystalline.jl in the above as well.
+
+!!! todo
+    The above is currently a lie since we didn't register the package yet; until then SymmetricTightBinding.jl needs to be `dev`'ed from the [https://github.com/CrystallineOrg/SymmetricTightBinding.jl] repo directly.
 
 ## Tutorial
 
@@ -28,7 +32,6 @@ As a first step, we load both Crystalline.jl and SymmetricTightBinding.jl into o
 ```@example basic-use
 using Crystalline, SymmetricTightBinding
 ```
-
 
 As our first example, we'll build the tight-binding model of graphene. Once we've done that, we'll explore how to create related tight-binding models in the same symmetry setting.
 
