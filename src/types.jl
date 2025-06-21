@@ -197,7 +197,7 @@ function _getindex(
         print(io, v_str)
 
         δ = tbb.h_orbit.orbit[n]
-        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(2πi𝐤⋅δ)
+        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(-2πi𝐤⋅δ)
             print(io, "𝕖(")
             # TODO: could do a little better here, since we know that `-δ` is in the orbit?
             conjugate && print(io, "-")
@@ -284,10 +284,8 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 # union-type for valid k-point input; defined to avoid repeating this everywhere
-const ReciprocalPointLike{D} = Union{
-    AbstractVector{<:Real},
-    NTuple{D, <:Real},
-    ReciprocalPoint{D}}
+const ReciprocalPointLike{D} =
+    Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}}
 
 # ---------------------------------------------------------------------------------------- #
 
@@ -321,7 +319,7 @@ struct ParameterizedTightBindingModel{D}
     function ParameterizedTightBindingModel{D}(
         tbm::TightBindingModel{D},
         cs::AbstractVector{<:Real},
-        scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N)
+        scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N),
     ) where {D}
         length(tbm.terms) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm.terms, cs)
         size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
@@ -379,7 +377,7 @@ function evaluate_tight_binding_term!(
     tbt::TightBindingTerm{D},
     k::ReciprocalPointLike{D},
     c::Union{Nothing, <:Number} = nothing,
-    H::Matrix{ComplexF64} = zeros(ComplexF64, size(tbt))
+    H::Matrix{ComplexF64} = zeros(ComplexF64, size(tbt)),
 ) where {D}
     block = tbt.block
     block_i, block_j = tbt.block_ij
@@ -388,7 +386,9 @@ function evaluate_tight_binding_term!(
     MmtC = block.MmtC # contracted product of `Mm` and (complexified) `t`
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
-    v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
+    v = cispi.(dot.(Ref(-2 .* k), constant.(orbit(block.h_orbit))))
+    # ↑ we apply the anti-Fourier transform here, i.e., the exponentials are e^{−2πi𝐤⋅δ}
+    # I made some changes to dev docs to make this need more evident
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
             Hᵢⱼ = @inbounds dot(v, @view MmtC[:, local_i, local_j])

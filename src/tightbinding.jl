@@ -389,11 +389,8 @@ function representation_constraint_matrices(
     Mm::AbstractArray{Int, 4},
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
+    gens::AbstractVector{SymOperation{D}},
 ) where {D}
-    sgnum = num(brₐ)
-    num(brᵦ) == sgnum ||
-        error("input band representations belong to different space groups")
-    gens = generators(num(brₐ), SpaceGroup{D})
     ρsₐₐ = sgrep_induced_by_siteir_excl_phase.(Ref(brₐ), gens)
     ρsᵦᵦ = sgrep_induced_by_siteir_excl_phase.(Ref(brᵦ), gens)
 
@@ -455,7 +452,7 @@ function obtain_basis_free_parameters(
     Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
 
     # encode representation constraints on Hₐᵦ
-    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ)
+    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens)
 
     # encode reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
