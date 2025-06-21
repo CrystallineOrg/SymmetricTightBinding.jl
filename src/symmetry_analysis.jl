@@ -101,6 +101,10 @@ function symmetry_eigenvalues(
     #     such phases here. Longer term, we might want to not do that (change to 
     #     "Convention 1") though since it could simplify the induced rep phases to an 
     #     overall phase instead of the tᵦₐ-business
+    # NOTE: maybe the last comment is not the best since the bloch periodic functions are 
+    #       periodic in real space but not in reciprocal space. This means that we will
+    #       need to correct such phases manually. Changing to "Convention 2", as we do now,
+    #       might be the best option for simplicity.
     _, vs = solve(ptbm, k; bloch_phase = Val(true))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
