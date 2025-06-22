@@ -506,34 +506,33 @@ of the WP, i.e., $I = (i, α)$; and $\mathbf{R,R}'$ run over the lattice transla
 
 > [!WARNING]
 > Notice that we have assumed that hopping terms only depends on relative distances.
-> We are going to denote $\mathbf{t \equiv R - R}'$.
+> We are going to denote $\mathbf{t \equiv R' - R}$.
 
-We can apply the same Fourier transform to go into reciprocal space:
+To be consistent with the previous Fourier transform picked, we need to impose the following transformation to the creation operator:
 
 $$
-\hat{c}_{I,\mathbf{R}} = \frac{1}{\sqrt{N}} \sum_{\mathbf{k}} e^{-i\mathbf{k·(R+q_α)}}
-\hat{a}_{I,\mathbf{k}},
+ĉ_{I,𝐑}^† = \frac{1}{\sqrt{N}} \sum_{𝐤} e^{-i𝐤·(𝐑+𝐪_α)} â_{I,𝐤}^†,
 $$
 
 obtaining:
 
 $$
 \hat{H} = \frac{1}{N} \sum_{IJ,\mathbf{RR}'} h_{IJ,\mathbf{t}} \sum_{\mathbf{kk}'}
-e^{i\mathbf{k·(R+q_α)}} e^{-i\mathbf{k'·(R'+q_β)}} \hat{a}^\dagger_{I,\mathbf{k}} 
+e^{-i\mathbf{k·(R+q_α)}} e^{i\mathbf{k'·(R'+q_β)}} \hat{a}^\dagger_{I,\mathbf{k}} 
 \hat{a}_{J,\mathbf{k}'} \\
 = \frac{1}{N} \sum_{IJ,\mathbf{t},\mathbf{kk}'} h_{IJ,\mathbf{t}} 
-\left[ \sum_{\mathbf{R}'} e^{i\mathbf{(k-k')·R+'}} \right] e^{i\mathbf{k·(t+q_α)}} 
-e^{-i\mathbf{k'·q_β}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
+\left[ \sum_{\mathbf{R}'} e^{i\mathbf{(k'-k)·R}} \right] e^{i\mathbf{k·(t-q_α)}} 
+e^{i\mathbf{k'·q_β}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
 = \sum_{IJ,\mathbf{t},\mathbf{kk}'} h_{IJ,\mathbf{t}} 
-\delta_{\mathbf{k,k'}} e^{i\mathbf{k·(t+q_α)}} e^{-i\mathbf{k'·q_β}} 
+\delta_{\mathbf{k,k'}} e^{i\mathbf{k·(t-q_α)}} e^{i\mathbf{k'·q_β}} 
 \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
 = \sum_{IJ,\mathbf{t},\mathbf{k}} h_{IJ,\mathbf{t}} 
-e^{i\mathbf{k·(t+q_α-q_β)}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \\
+e^{i\mathbf{k·(t+q_β-q_α)}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \\
 = \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} 
 \hat{a}_{J,\mathbf{k}},
 $$
 where he have defined: $h_{IJ,\mathbf{k}} = \sum_\mathbf{t} h_{IJ,\mathbf{t}}
-e^{i\mathbf{k·(t+q_α-q_β)}}$.
+e^{i\mathbf{k·(t+q_β-q_α)}}$.
 
 #### Quantization of the representations
 
