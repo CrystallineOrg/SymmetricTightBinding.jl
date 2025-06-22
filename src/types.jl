@@ -386,8 +386,8 @@ function evaluate_tight_binding_term!(
     MmtC = block.MmtC # contracted product of `Mm` and (complexified) `t`
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
-    v = cispi.(dot.(Ref(-2 .* k), constant.(orbit(block.h_orbit))))
-    # ↑ we apply the anti-Fourier transform here, i.e., the exponentials are e^{−2πi𝐤⋅δ}
+    v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
+    # ↑ we apply the anti-Fourier transform here, i.e., the exponentials are e^{2πi𝐤⋅δ}
     # I made some changes to dev docs to make this need more evident
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
@@ -422,7 +422,7 @@ function solve(
     H = Hermitian(ptbm(k))
     es, vs = eigen(H; eigen_kws...)
     if bloch_phase === Val(true)
-        phases = cispi.(dot.(Ref(2 .* k), orbital_positions(ptbm))) # e^{ik·r}
+        phases = cispi.(dot.(Ref(-2 .* k), orbital_positions(ptbm))) # e^{ik·r}
         vs = Diagonal(phases) * vs # add Bloch phases
         return es, vs
     else
