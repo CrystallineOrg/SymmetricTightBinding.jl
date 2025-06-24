@@ -197,7 +197,7 @@ function _getindex(
         print(io, v_str)
 
         δ = tbb.h_orbit.orbit[n]
-        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(-2πi𝐤⋅δ)
+        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(2πi𝐤⋅δ)
             print(io, "𝕖(")
             # TODO: could do a little better here, since we know that `-δ` is in the orbit?
             conjugate && print(io, "-")
@@ -387,8 +387,11 @@ function evaluate_tight_binding_term!(
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
     v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
-    # ↑ we apply the anti-Fourier transform here, i.e., the exponentials are e^{2πi𝐤⋅δ}
-    # I made some changes to dev docs to make this need more evident
+    # ↑ each term in the hamiltonian is associated to an annihilation/creation operator such
+    # as `aᵢ† aⱼ`. As we use convention 1 for the fourier transform, we have that 
+    # aᵢ† = e^{-ik·(t + rᵢ)} aₖ†, then each term will be multiplied by the phase 
+    # e^{ik·δ}, where δ = R + r\ᵢ - rⱼ, i.e., the hopping vector in the orbit.
+    # Note that we store those hopping vectors in the orbit.
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
             Hᵢⱼ = @inbounds dot(v, @view MmtC[:, local_i, local_j])
@@ -422,7 +425,13 @@ function solve(
     H = Hermitian(ptbm(k))
     es, vs = eigen(H; eigen_kws...)
     if bloch_phase === Val(true)
-        phases = cispi.(dot.(Ref(-2 .* k), orbital_positions(ptbm))) # e^{ik·r}
+        phases = cispi.(dot.(Ref(-2 .* k), orbital_positions(ptbm)))
+        # ↑ we used convention 1 for the Fourier transform, so the Bloch phase is
+        # e^{ik·(t+rᵢ)}. Then, the eigenfuncitons can be associated to the bloch 
+        # periodic functions. Sometimes we want to use the bloch functions which are 
+        # associated to the phases e^{ik·t}. Then, if we want to transform from one to 
+        # the other, we need to multiply the eigenvectors by the phases e^{-ik·rᵢ}.
+        # For more details, see notes on `devdocs/fourier.md`.
         vs = Diagonal(phases) * vs # add Bloch phases
         return es, vs
     else
