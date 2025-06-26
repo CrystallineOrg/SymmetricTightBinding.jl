@@ -8,6 +8,9 @@ brs = calc_bandreps(sgnum, Val(D))
 cbr = @composite brs[13] + brs[19]
 Rs = [[0, 0, 0]]
 
-tb_model = tb_hamiltonian(cbr, Rs)
+tbm = tb_hamiltonian(cbr, Rs)
 
-hops = obtain_symmetry_related_hoppings(Rs, brs[13], brs[19])
+ptbm = tbm(randn(length(tbm)))
+
+println(SymmetryVector(cbr))
+println(collect_compatible(ptbm))

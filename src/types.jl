@@ -284,10 +284,8 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 # union-type for valid k-point input; defined to avoid repeating this everywhere
-const ReciprocalPointLike{D} = Union{
-    AbstractVector{<:Real},
-    NTuple{D, <:Real},
-    ReciprocalPoint{D}}
+const ReciprocalPointLike{D} =
+    Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}}
 
 # ---------------------------------------------------------------------------------------- #
 
@@ -321,7 +319,7 @@ struct ParameterizedTightBindingModel{D}
     function ParameterizedTightBindingModel{D}(
         tbm::TightBindingModel{D},
         cs::AbstractVector{<:Real},
-        scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N)
+        scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N),
     ) where {D}
         length(tbm.terms) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm.terms, cs)
         size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
@@ -379,7 +377,7 @@ function evaluate_tight_binding_term!(
     tbt::TightBindingTerm{D},
     k::ReciprocalPointLike{D},
     c::Union{Nothing, <:Number} = nothing,
-    H::Matrix{ComplexF64} = zeros(ComplexF64, size(tbt))
+    H::Matrix{ComplexF64} = zeros(ComplexF64, size(tbt)),
 ) where {D}
     block = tbt.block
     block_i, block_j = tbt.block_ij
@@ -389,6 +387,11 @@ function evaluate_tight_binding_term!(
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
     v = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
+    # ↑ each term in the hamiltonian is associated to an annihilation/creation operator such
+    # as `aᵢ† aⱼ`. As we use convention 1 for the fourier transform, we have that 
+    # aᵢ† = e^{-ik·(t + rᵢ)} aₖ†, then each term will be multiplied by the phase 
+    # e^{ik·δ}, where δ = R + r\ᵢ - rⱼ, i.e., the hopping vector in the orbit.
+    # Note that we store those hopping vectors in the orbit.
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
             Hᵢⱼ = @inbounds dot(v, @view MmtC[:, local_i, local_j])
@@ -422,7 +425,13 @@ function solve(
     H = Hermitian(ptbm(k))
     es, vs = eigen(H; eigen_kws...)
     if bloch_phase === Val(true)
-        phases = cispi.(dot.(Ref(2 .* k), orbital_positions(ptbm))) # e^{ik·r}
+        phases = cispi.(dot.(Ref(-2 .* k), orbital_positions(ptbm)))
+        # ↑ we used convention 1 for the Fourier transform, so the Bloch phase is
+        # e^{ik·(t+rᵢ)}. Then, the eigenfuncitons can be associated to the bloch 
+        # periodic functions. Sometimes we want to use the bloch functions which are 
+        # associated to the phases e^{ik·t}. Then, if we want to transform from one to 
+        # the other, we need to multiply the eigenvectors by the phases e^{-ik·rᵢ}.
+        # For more details, see notes on `devdocs/fourier.md`.
         vs = Diagonal(phases) * vs # add Bloch phases
         return es, vs
     else

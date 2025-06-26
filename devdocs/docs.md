@@ -159,25 +159,25 @@ $I = (i, α)$; and $𝐑,𝐑'$ run over the lattice translations.
 
 > [!WARNING]
 > Notice that we have assumed that hopping terms only depends on relative distances.
-> We are going to denote $𝘁 ≡ 𝐑 - 𝐑'$.
+> We are going to denote $𝘁 ≡ 𝐑' - 𝐑$.
 
 We can apply the same Fourier transform to go into reciprocal space:
 
 $$
-ĉ_{I,𝐑} = \frac{1}{\sqrt{N}} \sum_{𝗸} e^{-i𝗸·(𝐑+𝗾_α)} â_{I,𝗸},
+ĉ_{I,𝐑} = \frac{1}{\sqrt{N}} \sum_{𝗸} e^{i𝗸·(𝐑+𝗾_α)} â_{I,𝗸},
 $$
 obtaining:
 
 $$
-Ĥ = \frac{1}{N} \sum_{IJ,𝐑𝐑'} h_{IJ,𝘁} \sum_{𝗸𝗸'} e^{i𝗸·(𝐑+𝗾_α)} e^{-i𝗸'·(𝐑'+𝗾_β)}
+Ĥ = \frac{1}{N} \sum_{IJ,𝐑𝐑'} h_{IJ,𝘁} \sum_{𝗸𝗸'} e^{-i𝗸·(𝐑+𝗾_α)} e^{i𝗸'·(𝐑'+𝗾_β)}
 â^†_{I,𝗸} â_{J,𝗸'} \\
-= \frac{1}{N} \sum_{IJ,𝘁,𝗸𝗸'} h_{IJ,𝘁} \left[ \sum_{𝐑'} e^{i(𝗸-𝗸')·𝐑'} \right] 
-e^{i𝗸·(𝘁+𝗾_α)} e^{-i𝗸'·𝗾_β} â^†_{I,𝗸} â_{J,𝗸'} \\
-= \sum_{IJ,𝘁,𝗸𝗸'} h_{IJ,𝘁} δ_{𝗸𝗸'} e^{i𝗸·(𝘁+𝗾_α)} e^{-i𝗸'·𝗾_β} â^†_{I,𝗸} â_{J,𝗸'} \\
-= \sum_{IJ,𝘁,𝗸} h_{IJ,𝘁} e^{i𝗸·𝗸·(𝘁+𝗾_α-𝗾_β)} â^†_{I,𝗸} â_{J,𝗸} \\
+= \frac{1}{N} \sum_{IJ,𝘁,𝗸𝗸'} h_{IJ,𝘁} \left[ \sum_{𝐑'} e^{-i(𝗸-𝗸')·𝐑'} \right] 
+e^{-i𝗸·(𝘁+𝗾_α)} e^{i𝗸'·𝗾_β} â^†_{I,𝗸} â_{J,𝗸'} \\
+= \sum_{IJ,𝘁,𝗸𝗸'} h_{IJ,𝘁} δ_{𝗸𝗸'} e^{-i𝗸·𝗾_α} e^{i𝗸'·(𝐭 + 𝗾_β)} â^†_{I,𝗸} â_{J,𝗸'} \\
+= \sum_{IJ,𝘁,𝗸} h_{IJ,𝘁} e^{i𝗸·(𝘁+𝗾_β-𝗾_α)} â^†_{I,𝗸} â_{J,𝗸} \\
 = \sum_{IJ,𝗸} h_{IJ,𝗸} â^†_{I,𝗸} â_{J,𝗸},
 $$
-where he have defined: $h_{IJ,𝗸} = \sum_𝘁 h_{IJ,𝘁} e^{i𝗸·𝗸·(𝘁+𝗾_α-𝗾_β)}$.
+where he have defined: $h_{IJ,𝗸} = \sum_𝘁 h_{IJ,𝘁} e^{i𝗸·(𝘁+𝗾_β-𝗾_α)}$.
 
 These creation and annihilation operators will correspond to a basis set of functions such as
 $\ket{φ_{I,𝗸}} = â^†_{I,𝗸} \ket{0}$.
