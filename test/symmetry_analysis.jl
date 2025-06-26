@@ -6,8 +6,10 @@ using SymmetricTightBinding, Crystalline
         for sgnum in MAX_SGNUM[D]
             @testset "Space group $sgnum in dimension $D" begin
                 brs = calc_bandreps(sgnum, Val(D))
-                for br in brs
-                    cbr = @composite br
+                for i in eachindex(brs)
+                    coefs = zeros(length(brs))
+                    coefs[i] = 1
+                    cbr = CompositeBandRep(coefs, brs)
                     ptbm = tb_hamiltonian(cbr)(randn(length(cbr)))
 
                     v = SymmetryVector(cbr)
