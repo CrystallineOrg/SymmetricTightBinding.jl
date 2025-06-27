@@ -9,7 +9,10 @@ import SymmetricTightBinding: fit
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
-function fg!(F, G, cs, tbm::TightBindingModel, Em_r, ks)
+function fg!(
+    F, G, cs, tbm::TightBindingModel, Em_r, ks;
+    lasso::Union{Nothing,Real} = nothing
+)
     ptbm = tbm(cs)
     if !isnothing(G)
         fill!(G, zero(eltype(G)))
@@ -19,16 +22,22 @@ function fg!(F, G, cs, tbm::TightBindingModel, Em_r, ks)
         H = Hermitian(ptbm(k))
         Es, us = eigen!(H) # no Bloch phases, deliberately
 
-        # MSE loss
+        # MSE loss (possibly with lasso penalty)
         if !isnothing(F)
             F += sum(abs2∘splat(-), zip(Es_r, Es))
+            if !isnothing(lasso)
+                F += lasso * sum(abs, cs)
+            end
         end
 
-        # gradient of MSE loss
+        # gradient of loss
         if !isnothing(G)
             ∇Es = energy_gradient_wrt_hopping(ptbm, k, (Es, us))
             for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
                 G .+= (-2 * (E_r - E)) .* ∇E
+                if !isnothing(lasso)
+                    G .+= lasso .* sign.(cs) # lasso penalty gradient
+                end
             end
         end
     end
@@ -68,6 +77,9 @@ must be explicitly loaded to use this function.
 - `polish` (default, `true`): whether to polish off the multi-start optimization with a
   final local optimization step using default Optim.jl options. This is useful to ensure
   that the best candidate from the multi-start search is fully converged.
+- `lasso` (defalt, `nothing`): if set to a positive number, applies a LASSO penalty to the
+  hopping amplitudes, encouraging model sparsity (i.e., small hopping amplitudes to
+  vanish). Setting to `nothing` disables the LASSO penalty.
 
 ## Example
 
@@ -109,12 +121,13 @@ function fit(
         g_abstol = 1e-2,
         f_reltol = 1e-5,
     ),
-    polish::Bool = true
+    polish::Bool = true,
+    lasso::Union{Nothing,Real} = nothing,
 ) where D
 
     # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    _fg! = let Em_r = Em_r, ks = ks, tbm = tbm
-        (F, G, cs) -> fg!(F, G, cs, tbm, Em_r, ks)
+    _fg! = let Em_r = Em_r, ks = ks, tbm = tbm, lasso = lasso
+        (F, G, cs) -> fg!(F, G, cs, tbm, Em_r, ks; lasso)
     end
 
     # multi-start optimization
@@ -131,7 +144,11 @@ function fit(
         accept = o.minimum < best_loss
         
         if verbose
-            mean_err = round(o.minimum / (tbm.N * length(ks)); sigdigits = 3)
+            mse_loss = o.minimum
+            if !isnothing(lasso)
+                mse_loss -= lasso * sum(abs, o.minimizer)
+            end
+            mean_err = round(mse_loss / (tbm.N * length(ks)); sigdigits = 3)
             printstyled(" (mean err ", mean_err, ")"; color = :light_black)
             accept && printstyled(" → new best"; color = :green)
             println()
