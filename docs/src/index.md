@@ -22,9 +22,6 @@ pkg> add SymmetricTightBinding, Crystalline
 
 SymmetricTightBinding.jl is designed to work as a companion package to [Crystalline.jl](https://github.com/thchr/Crystalline.jl); so we add Crystalline.jl in the above as well.
 
-!!! todo
-    The above is currently a lie since we didn't register the package yet; until then SymmetricTightBinding.jl needs to be `dev`'ed from the [https://github.com/CrystallineOrg/SymmetricTightBinding.jl] repo directly.
-
 ## Tutorial
 
 As a first step, we load both Crystalline.jl and SymmetricTightBinding.jl into our current Julia session:
@@ -158,6 +155,3 @@ The band structures features two connected groups of bands. We can obtain the sa
 ```@example basic-use
 collect_compatible(ptbm′)
 ```
-
-!!! todo
-    I suspect that the above is an interesting example - I *think* it should be an example where the connected band groupings do not actually decompose to the original EBRs - but the case is clearly bugged presently (no doubt due to [issue #65](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/issues/65)).
