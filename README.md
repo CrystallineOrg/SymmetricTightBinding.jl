@@ -1,7 +1,6 @@
 # SymmetricTightBinding.jl
 
-<!--[![Documentation (stable)][docs-stable-img]][docs-stable-url] -->
-[![Documentation (dev)][docs-dev-img]][docs-dev-url] [![Build status][ci-status-img]][ci-status-url] [![Coverage][coverage-img]][coverage-url]
+[![Documentation (stable)][docs-stable-img]][docs-stable-url] [![Documentation (dev)][docs-dev-img]][docs-dev-url] [![Build status][ci-status-img]][ci-status-url] [![Coverage][coverage-img]][coverage-url]
 
 A tool to construct & explore tight-binding models in any space group.
 
