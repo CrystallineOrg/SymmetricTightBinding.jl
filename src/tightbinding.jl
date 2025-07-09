@@ -436,7 +436,7 @@ function obtain_basis_free_parameters(
     diagonal_block::Bool = true,
     antihermitian::Bool = true,
 ) where {D}
-    # We obtain the needed representations over the generators of each bandrep
+    # obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
     gensᵦ = generators(num(brᵦ), SpaceGroup{D})
     @assert gensₐ == gensᵦ # must be from same space group and in same sorting
@@ -451,6 +451,27 @@ function obtain_basis_free_parameters(
     # encode Hamiltonian as a coefficient matrix sandwiched by exponentials & hopping ampl.
     Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
 
+    # actual computation
+    tₐᵦ_basis_reim = _obtain_basis_free_parameters(
+        h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm, gens, 
+        timereversal, diagonal_block, antihermitian
+    )
+
+    return Mm, tₐᵦ_basis_reim
+end
+
+function _obtain_basis_free_parameters(
+    h_orbit::HoppingOrbit{D},
+    brₐ::NewBandRep{D},
+    brᵦ::NewBandRep{D},
+    orderingₐ::OrbitalOrdering{D},
+    orderingᵦ::OrbitalOrdering{D},
+    Mm::Array{Int, 4},
+    gens::AbstractVector{SymOperation{D}},
+    timereversal::Bool,
+    diagonal_block::Bool,
+    antihermitian::Bool,
+) where {D}
     # encode representation constraints on Hₐᵦ
     Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens)
 
@@ -474,7 +495,7 @@ function obtain_basis_free_parameters(
 
     # If the set of basis vectors obtained from symmetry constraints was empty, there's no
     # point in continuing: we then return early
-    isempty(tₐᵦ_basis_matrix) && return Mm, Vector{Vector{Float64}}()
+    isempty(tₐᵦ_basis_matrix) && return Vector{Vector{Float64}}()
 
     # Details: we split up each potentially complex "basis" vector `t = tₐᵦ_basis[i]` into
     # two real vectors `x` and `y`, such that the _real_ span of `x` and `y` is equivalent
@@ -514,7 +535,7 @@ function obtain_basis_free_parameters(
         tₐᵦ_basis_reim_matrix =
             reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
     end
-    isempty(tₐᵦ_basis_reim_matrix) && return Mm, Vector{Vector{Float64}}()
+    isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
     # ------------------------------------------------------------------------------------ #
     # "add" & "intersect" the associated hermiticity constraints if this is a diagonal block
@@ -534,7 +555,7 @@ function obtain_basis_free_parameters(
         tₐᵦ_basis_reim_matrix =
             reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
     end
-    isempty(tₐᵦ_basis_reim_matrix) && return Mm, Vector{Vector{Float64}}()
+    isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
     # ------------------------------------------------------------------------------------ #
     # Make sure we have a reasonably pretty-looking basis in the end by sparsifying &
@@ -547,7 +568,7 @@ function obtain_basis_free_parameters(
     # prune near-zero elements of basis vectors
     _prune_at_threshold!(tₐᵦ_basis_reim)
 
-    return return Mm, tₐᵦ_basis_reim
+    return tₐᵦ_basis_reim
 end
 
 function _aggregate_constraints(

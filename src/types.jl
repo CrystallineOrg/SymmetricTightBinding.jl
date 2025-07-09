@@ -263,8 +263,17 @@ struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
 end
 Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
 Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
-Base.setindex!(::TightBindingModel, v, i::Int) = error("setindex! is not supported")
+Base.setindex!(tbm::TightBindingModel, v, i::Int) = setindex!(tbm.terms, v, i)
 Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
+function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
+    tbm::TightBindingModel{D},
+    ::Type{TightBindingTerm{D}}, # element_type
+    dims::Tuple{Int}=size(tbm)
+) where {D}
+    similar_terms = similar(tbm.terms, TightBindingTerm{D}, dims)
+    return TightBindingModel{D}(similar_terms, tbm.cbr, tbm.positions, tbm.N)
+end
+
 orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
 
@@ -272,8 +281,8 @@ function TightBindingModel(
     terms::Vector{TightBindingTerm{D}},
     cbr::CompositeBandRep{D},
 ) where {D}
-    length(terms) == 0 && return TightBindingModel{D}(terms, 0)
     positions = orbital_positions(cbr)
+    length(terms) == 0 && return TightBindingModel{D}(terms, cbr, positions, 0)
     N = last(first(terms).axis)
     return TightBindingModel{D}(terms, cbr, positions, N)
 end
