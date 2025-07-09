@@ -1,5 +1,6 @@
 """
-    complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; timereversal) --> TightBindingModel{D}
+    subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; timereversal)
+                                                        --> TightBindingModel{D}
 
 Given a model `tbm` associated with a space group ``G``, determine the new, independent
 tight-binding terms (i.e., the the orthogonal complement of terms) that become 
@@ -41,11 +42,11 @@ julia> cbr = @composite brs[5]
 julia> tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])
 ```
 Each of the 4 terms in this model is proportional to an identity matrix at K = (1/3, 1/3).
-By using `complement`, we can find the new terms that appear if we imagine lowering the
-symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) while also removing
+Using `subduced_complement`, we can find the new terms that appear if we imagine lowering
+the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) while also removing
 time-reversal symmetry.
 ```julia-repl
-julia> Δtbm = complement(tbm, 16; timereversal = false)
+julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
 2-term 2×2 TightBindingModel{2} over (2b|A₁):
 ┌─
 1. ⎡ i𝕖(δ₁)+i𝕖(δ₂)+i𝕖(δ₃)-i𝕖(δ₄)-i𝕖(δ₅)-i𝕖(δ₆)  0                                          ⎤
@@ -78,7 +79,7 @@ exist a transformation from ``G`` to ``H`` that preserves volume (i.e., has
 `det(t.P) == 1` for `t` denoting an element returned by Crystalline.jl's
 `conjugacy_relations`).
 """
-function complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) where D
+function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) where D
     sgnumᴳ = num(tbm.cbr)
     gr = maximal_subgroups(sgnumᴳ, SpaceGroup{D})
     ts = conjugacy_relations(gr, sgnumᴳ, sgnumᴴ)
@@ -100,10 +101,10 @@ function complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) where D
     _gensᴴ = generators(sgnumᴴ, SpaceGroup{D}) # in H setting
     gensᴴ = transform.(_gensᴴ, Ref(Pᴴ²ᴳ), Ref(pᴴ²ᴳ))
 
-    return complement(tbm, gensᴴ; kws...)
+    return subduced_complement(tbm, gensᴴ; kws...)
 end
 
-function complement(
+function subduced_complement(
     tbm::TightBindingModel{D},
     gensᴴ::AbstractVector{SymOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal

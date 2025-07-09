@@ -13,6 +13,9 @@ makedocs(
     ),
     pages = [
         "Home"                  => "index.md",
+        "Tutorial"              => "tutorial.md",
+        "Band symmetry"         => "band-symmetry.md",
+        "Symmetry breaking"     => "symmetry-breaking.md",
         "API"                   => "api.md",
         "Internal API"          => "internal-api.md",
     ],
@@ -25,12 +28,12 @@ makedocs(
     clean = true
 )
 
-# use SymmetricTightBinding as the default module for doctests
+# use SymmetricTightBinding as the default module for doctests, and also load Crystalline
 DocMeta.setdocmeta!(
     SymmetricTightBinding,
     :DocTestSetup,
-    :(using SymmetricTightBinding);
-    recursive=true
+    :(using SymmetricTightBinding, Crystalline);
+    recursive = true,
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
