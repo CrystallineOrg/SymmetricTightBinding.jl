@@ -11,7 +11,7 @@ include("site_representations.jl") # site representations
     brs = calc_bandreps(16, Val(2))
     cbr = @composite brs[3]
     tbm = tb_hamiltonian(cbr, [[0,0],[1,0]])
-    @testset begin "AbstractArray indexing into TightBindingModel"
+    @testset "AbstractArray indexing into TightBindingModel" begin
 
         @test length(tbm) == 4
         tbm_subset1 = tbm[1:3]

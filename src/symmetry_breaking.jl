@@ -110,8 +110,7 @@ function complement(
 ) where D
     timereversalᴳ = first(tbm.cbr.brs).timereversal
     if timereversalᴳ == false && timereversal == true
-        error("requested subgroup `timereversal = true`, but original model was built with
-               time-reversal present; input for H must maintain or reduce symmetry")
+        error("requested subgroup `timereversal = false`, but original model was built with time-reversal present; input for H must maintain or reduce symmetry")
     end
 
     # we need to go through the terms of `tbm` in "groups of the same orbit" - each orbit
