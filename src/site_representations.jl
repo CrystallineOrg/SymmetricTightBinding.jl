@@ -16,7 +16,7 @@ function sgrep_induced_by_siteir_excl_phase(
     #     `timereversal` is true, so we don't need to manually redo it for `siteir` below
     siteir = br.siteir
     siteir_dim = irdim(siteir)
-    siteg = group(siteir)
+    siteg = primitivize(group(siteir))
     wps = orbit(siteg)
     mult = length(wps)
     g = op
@@ -53,7 +53,7 @@ function sgrep_induced_by_siteir_excl_phase(
                 break
             end
         end
-        check || error(lazy"failed to find any nonzero block (br=$br, siteg=$siteg)")
+        check || error(lazy"failed to find any nonzero block (br=$br, siteg=$siteg, op=$op)")
     end
 
     return ρ
