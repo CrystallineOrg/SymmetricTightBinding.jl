@@ -27,7 +27,9 @@ is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brᵦ::NewBandRep{D};
+    hermiticity::Bool = true, # whether to include "reversed" hopping terms. This is also 
+    #                         # enforced if timereversal symmetry is present
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum ||
@@ -67,12 +69,16 @@ function obtain_symmetry_related_hoppings(
         end
     end
 
-    # timereversal could link orbits that spatial symmetries alone would categorize as
-    # distinct; in particular, if we have timereversal, a hopping vector `δ` must
-    # have a counterpart `-δ` - but those two vectors could have fallen into distinct
+    # timereversal or hermiticity could link orbits that spatial symmetries alone would 
+    # categorize as distinct; in particular, if we have timereversal, a hopping vector `δ` 
+    # must have a counterpart `-δ` - but those two vectors could have fallen into distinct
     # hopping orbits at this point; if so, we must merge them
-    if timereversal
-        add_timereversal_related_orbits!(h_orbits)
+
+    # since the code is always considering hermiticity or anti-hermiticity, this terms will
+    # always be added. We kept this as an `if` statement for allowing future implementations
+    # on non-hermitian systems
+    if timereversal || hermiticity
+        add_reversed_orbits!(h_orbits)
     end
 
     return h_orbits
@@ -171,14 +177,14 @@ function _maybe_add_hoppings!(
 end
 
 """
-    add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
+    add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
 
-Adds the time-reversed hopping terms to the hopping orbits in `h_orbits`. The time-reversed
+Adds the reversed hopping terms to the hopping orbits in `h_orbits`. The reversed
 hopping terms are added to the orbit of the hopping term they are related to, and if they are
 already present in another orbit, the two orbits are merged.
 """
-function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
-    # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
+function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
+    # for any orbit that contains a hopping vector `δ`, we check if its reversed
     # hopping vector `-δ` is also in the orbit; if not, we check if it is in any other
     # orbit to merge them, and, if not, we add it manually to the orbit
 
@@ -221,11 +227,13 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
         # first append the new δs into the orbit
         append!(δs, -δs)
 
-        # add the "reversed" hopping terms: i.e., for every a + δ = b + R, add b + (-δ) = a + (-R)
+        # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
+        # => -δ = a - (b + R) = a - b - R = b - 2b - R -a + 2a = b + (2a - 2b - R) - a = b + R' - a
         hoppings = h_orbit.hoppings
         hoppings′ = map(hoppings) do hops
             map(hops) do (qₐ, qᵦ, R)
-                (qᵦ, qₐ, -R) # reverse the hopping term
+                (qₐ, qᵦ, qₐ + qₐ - qᵦ - qᵦ - R) # reverse the hopping term
+                # ↑ TODO: no implementation for *(Int, RVec) yet. I found a workaround. Probably interesting to add.
             end
         end
         append!(hoppings, hoppings′)
@@ -453,8 +461,16 @@ function obtain_basis_free_parameters(
 
     # actual computation
     tₐᵦ_basis_reim = _obtain_basis_free_parameters(
-        h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm, gens, 
-        timereversal, diagonal_block, antihermitian
+        h_orbit,
+        brₐ,
+        brᵦ,
+        orderingₐ,
+        orderingᵦ,
+        Mm,
+        gens,
+        timereversal,
+        diagonal_block,
+        antihermitian,
     )
 
     return Mm, tₐᵦ_basis_reim
