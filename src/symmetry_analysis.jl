@@ -40,7 +40,7 @@ function Crystalline.collect_compatible(
     cbr = CompositeBandRep(tbm)
 
     lgirsv = irreps(cbr) # get irreps associated to the EBRs
-    lgs = [group(first(lgirs)) for lgirs in lgirsv]
+    lgs = [primitivize(group(first(lgirs))) for lgirs in lgirsv]
     ops = unique(Iterators.flatten(lgs))
 
     # determine the induced space group rep associated with `cbr` across all `ops`
@@ -143,6 +143,6 @@ Useful for annotating irrep labels in band structure plots (via the Makie extens
 """
 function Crystalline.collect_irrep_annotations(ptbm::ParameterizedTightBindingModel; kws...)
     lgirsv = irreps(ptbm.tbm.cbr) # get irreps associated to the EBRs
-    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, group(lgirs))) for lgirs in lgirsv]
+    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, primitivize(group(lgirs)))) for lgirs in lgirsv]
     return collect_irrep_annotations(symeigsv, lgirsv; kws...)
 end

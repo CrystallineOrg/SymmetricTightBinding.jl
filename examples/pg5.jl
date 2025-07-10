@@ -16,7 +16,6 @@ brs = calc_bandreps(sgnum, Val(2))
 br = brs[1]
 
 ops = spacegroup(num(br), dim(br))
-wps = orbit(group(br))
 
 gens = generators(num(br), SpaceGroup{dim(br)})
 sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(br), gens)
