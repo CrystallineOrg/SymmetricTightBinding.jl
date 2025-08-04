@@ -41,7 +41,11 @@ include("spectrum.jl")
 export spectrum
 include("gradients.jl")
 export gradient_wrt_hopping
+export TightBindingModelHoppingGradient
 export energy_gradient_wrt_hopping
+export gradient_wrt_momentum
+export TightBindingModelMomentumGradient
+include("berry.jl")
 
 # --- Re-exports ------------------------------------------------------------------------- #
 
