@@ -34,7 +34,7 @@ Origin atoms and destination atoms are shown, as well as hoppings between them. 
 direction is always from an origin atom to a destination atom, with direction indicated by
 an arrow.
 
-The `Rs` argument should be a _primitive` basis associated with the lattice underlying `h`.
+The `Rs` argument should be a _primitive_ basis associated with the lattice underlying `h`.
 If omitted, a cubic basis is used.
 """
 function Makie.plot!(
@@ -71,13 +71,13 @@ function Makie.plot!(
     else
         error("unsupported dimension $D")
     end
-    D == 2 && poly!(pts; color=p.unitcell.patchcolor)
+    D == 2 && poly!(pts; color=p.unitcell[].patchcolor)
     lines!(
         p,
         unitcell;
-        color = p.unitcell.color,
-        linewidth = p.unitcell.linewidth,
-        label = p.unitcell.label,
+        color = p.unitcell[].color,
+        linewidth = p.unitcell[].linewidth,
+        label = p.unitcell[].label,
     )
 
 
@@ -89,11 +89,11 @@ function Makie.plot!(
             origins .+ arrows_dir * .11,
             destinations .- arrows_dir * .09;
             argmode = :endpoint, # interpret inputs as start/end points, not start/direction
-            color = p.bonds.color, # grayish
+            color = p.bonds[].color, # grayish
             shaftwidth = 3,
             tipwidth = 9,
             tiplength = 10,
-            label = p.bonds.label,
+            label = p.bonds[].label,
         )
     end
 
@@ -103,8 +103,8 @@ function Makie.plot!(
         unique(destinations);
         marker = :circle,
         markersize = 14,
-        color = p.destinations.color,
-        label = p.destinations.label,
+        color = p.destinations[].color,
+        label = p.destinations[].label,
         depth_shift = -0.1,
     )
     scatter!(
@@ -112,13 +112,13 @@ function Makie.plot!(
         unique(origins);
         marker = :circle,
         markersize = 14,
-        color = p.origins.color,
-        label = p.origins.label,
+        color = p.origins[].color,
+        label = p.origins[].label,
         depth_shift = -0.1,
     )
 
     # set square axis limits, centered around unit cell center
-    bbox = if isnothing(p.context.limits[])
+    bbox = if isnothing(p.context[].limits[])
         bbox_coords = Makie.GeometryBasics.coordinates(data_limits(p))
         cntr = sum(Rs) ./ 2
         max_dist = maximum(abs,
@@ -128,11 +128,11 @@ function Makie.plot!(
         width = max_dist + pad*0.1
         Rect{D, Float32}(cntr-V(width), V(2*width))
     else
-        p.context.limits[] :: Rect{D, Float32}
+        p.context[].limits[] :: Rect{D, Float32}
     end
 
     # include symmetry-related sites, that we didn't hop to
-    if p.context.include[]
+    if p.context[].include[]
         i_lower = Rm \ (bbox.origin)
         i_lower = ntuple(d->floor(Int, i_lower[d])-1, Val(D))
         i_upper = Rm \ (bbox.origin .+ bbox.widths)
@@ -152,14 +152,14 @@ function Makie.plot!(
             D == 3 && continue # doesn't look nice for 3D
             unitcell′ = unitcell .+ Ref(R)
             any(in(bbox), unitcell′) || continue
-            lines!(unitcell′; color=p.context.linecolor, linewidth=0.5, depth_shift=0)
+            lines!(unitcell′; color=p.context[].linecolor, linewidth=0.5, depth_shift=0)
         end
         scatter!(
             p,
             rs,
             marker = :circle,
             markersize = 11,
-            color = p.context.color,
+            color = p.context[].color,
         )
     end
     limits!(bbox)
