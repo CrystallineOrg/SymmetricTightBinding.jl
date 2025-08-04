@@ -46,6 +46,7 @@ export energy_gradient_wrt_hopping
 export gradient_wrt_momentum
 export TightBindingModelMomentumGradient
 include("berry.jl")
+export berrycurvature
 
 # --- Re-exports ------------------------------------------------------------------------- #
 
