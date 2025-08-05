@@ -18,19 +18,21 @@ of the Hamiltonian.
 ## Implementation
 
 The Berry curvature is evaluated using the Kubo-like or "sum-over-states" formula [^1]:
+
 ```math
-\\Omega_{\\mu, \\nu}^n
+\\Omega_{ij}^n
 =
 \\sum_{n' \\neq n}
-\\frac{\\langle n |\\partial H/\\partial k_\\mu|n'\\rangle \\langle n'|\\partial H/\\partial k_\\nu|n>
-       - (\\nu \\leftrightarrow \\mu)}
+\\frac{\\langle n |\\partial H/\\partial k_i|n'\\rangle \\langle n'|\\partial H/\\partial k_j|n>
+       - (j \\leftrightarrow i)}
       {(E_n - E_{n'})^2}
 =
 -2\\mathrm{Im} \\sum_{n' \\neq n}
-\\frac{\\langle n |\\partial H/\\partial k_\\mu|n'\\rangle \\langle n'|\\partial H/\\partial k_\\nu|n>}
-      {(E_n - E_{n'})^2}
+\\frac{\\langle n |\\partial H/\\partial k_i|n'\\rangle \\langle n'|\\partial H/\\partial k_j|n>}
+      {(E_n - E_{n'})^2},
 ```
-with ``\\Omega_{\\mu, \\nu}^n`` denoting  the Berry curvature tensor component of the `n`th
+
+with ``\\Omega_{ij}^n`` denoting  the Berry curvature tensor component of the `n`th
 band and ``E_n`` denoting the energy of the `n`th band. The Berry curvature pseudovector and
 (antisymmetric) tensor components are related by ``\\Omega_1 = \\Omega_{23}``,
 ``\\Omega_2 = \\Omega_{31}``, and ``\\Omega_3 = \\Omega_{12}``.
@@ -50,13 +52,17 @@ Cartesian components, but components relative to the primitive reciprocal basis.
 
 **In 3D**, this implies that the returned vector `Ω = [Ω₁, Ω₂, Ω₃]` relates to the Berry
 curvature pseudovector ``\\boldsymbol{\\Omega}`` via
+
 ```math
 \\boldsymbol{\\Omega}
 =
-\\Omega_1 \\mathbf{b}_1 + \\Omega_2 \\mathbf{b}_2 + \\Omega_3 \\mathbf{b}_3
+V_{\\text{BZ}}^{-1} (\\Omega_1 \\mathbf{b}_1 + \\Omega_2 \\mathbf{b}_2 + \\Omega_3 \\mathbf{b}_3)
 =
-\\Omega_{23} \\mathbf{b}_1 + \\Omega_{31} \\mathbf{b}_2 + \\Omega_{12} \\mathbf{b}_3
+V_{\\text{BZ}}^{-1} (\\Omega_{23} \\mathbf{b}_1 + \\Omega_{31} \\mathbf{b}_2 + \\Omega_{12} \\mathbf{b}_3),
 ```
+
+with ``V_{\\text{BZ}} = \\mathbf{b}_1 \\cdot (\\mathbf{b}_2 \\times \\mathbf{b}_3)``
+denoting the (signed) volume of the 3D Brillouin zone.
 Here, the tensor components ``\\Omega_{12}`` etc. correspond to momentum derivatives in the
 *reduced* coordinates, i.e., the derivatives ``\\partial/\\partial k_{1,2}`` are taken with
 respect to  reduced (dimensionless) coordinates ``k_{1,2}`` rather than Cartesian ones.
@@ -64,28 +70,37 @@ respect to  reduced (dimensionless) coordinates ``k_{1,2}`` rather than Cartesia
 As a result, the returned Berry curvature pseudovector components ``[Ω₁, Ω₂, Ω₃]`` are
 related to the Cartesian pseudovector components ``[Ω_x, Ω_y, Ω_z]`` by the primitive
 reciprocal lattice matrix ``\\mathbf{B} = [\\mathbf{b}_1 \\mathbf{b}_2 \\mathbf{b}_3]``:
+
 ```math
-[Ω_x, Ω_y, Ω_z]^{\\text{T}} = \\mathbf{B} [Ω₁, Ω₂, Ω₃]^{\\text{T}}
+[Ω_x, Ω_y, Ω_z]^{\\text{T}} = V_{\\text{BZ}}^{-1} \\mathbf{B} [Ω₁, Ω₂, Ω₃]^{\\text{T}}
 ```
 
-**In 2D**, the returned Berry curvature is a (pseudo)scalar ``Ω₃ = Ω₁₂``. This value
-represents the component of the Berry curvature 2-form in the reduced coordinate system. It
-is related to the physical pseudoscalar ``\\Omega_{xy}`` by the signed area of the Brillouin
-zone ``A_{\\text{BZ}} = (\\mathbf{b}_1 \\times \\mathbf{b}_2) \\cdot \\hat{\\mathbf{z}}``:
-```math
-\\Omega_z = \\Omega_{xy} = \\Omega_{12} / A_{\\text{BZ}}
-```
-While this distinction is important for interpreting the curvature at an individual
-**k**-point, it can be ignored when calculating the Chern number as an integral over the
-reduced coordinates ``k_{1,2} \\in (-1/2, 1/2]``, since the geometric factors from the
-curvature and the area element ``\\mathrm{d}^2\\mathbf{k}`` cancel out.
+Equivalently, the antisymmetric Berry curvature tensors ``\\Omega_{ij}`` (``i,j \\in
+\\{1, 2, 3\\}``, i.e., reduced coordinate basis) and ``\\Omega_{\\mu\\nu} (``\\mu, \\nu = 
+\\{x, y, z\\}``, i.e. Cartesian basis) relates via
 
-### Surface integrals and flux in 3D
+```math
+\\Omega_{ij} = \\sum_{\\mu\\nu} B^T_{i\\mu} \\Omega_{\\mu\\nu} B_{\\nu j}\\
+\\Omega_{\\mu\\nu} = \\sum_{ij} B^{-T}_{\\mu i} \\Omega_{ij} B^{-1}_{j\\nu}.
+```
+
+**In 2D**, the returned Berry curvature is a (pseudo)scalar ``Ω₃ = Ω₁₂``. Again, this value
+represents the component of the Berry curvature in the reduced coordinate system. It
+is related to the Cartesian pseudoscalar ``\\Omega_{xy}`` by the (signed) area of the
+Brillouin zone ``A_{\\text{BZ}} = (\\mathbf{b}_1 \\times \\mathbf{b}_2) \\cdot 
+\\hat{\\mathbf{z}}``:
+
+```math
+\\Omega_z = \\Omega_{xy} = \\Omega_{12} / A_{\\text{BZ}}.
+```
+
+### Implications for surface integrals and flux
 
 When using the returned 3D Berry curvature pseudovector `[Ω₁, Ω₂, Ω₃]` to calculate
 physical observables like the Chern number of a slice or the flux through a surface, it's
 crucial to integrate the correct physical quantity. The assumed goal is always to compute
 a flux integral:
+
 ```math
 \\Phi = \\int_S \\boldsymbol{\\Omega} \\cdot \\,\\mathrm{d}\\mathbf{S}.
 ````
@@ -106,9 +121,10 @@ integrand is:
 =
 \\boldsymbol{\\Omega} \\cdot d\\mathbf{S}
 =
+V_{\\text{BZ}}^{-1} 
 (\\Omega_1 \\mathbf{b}_1 + \\Omega_2 \\mathbf{b}_2 + \\Omega_3 \\mathbf{b}_3)
 \\cdot
-(\\mathbf{b}_1 \\times \\mathbf{b}_2) \\, \\mathrm{d}k_1 \\mathrm{d}k_2
+(\\mathbf{b}_1 \\times \\mathbf{b}_2) \\, \\mathrm{d}k_1 \\mathrm{d}k_2.
 ```
 
 By the properties of the triple product, the terms proportional to ``\\Omega_{1,2}`` vanish,
@@ -117,18 +133,23 @@ leaving:
 ```math
 \\mathrm{d}\\Phi
 =
-\\Omega_3 (\\mathbf{b}_3 \\cdot (\\mathbf{b}_1 \\times \\mathbf{b}_2))
-\\, \\mathrm{d}k_1 \\mathrm{d}k_2
+V_{\\text{BZ}}^{-1} \\Omega_3 (\\mathbf{b}_3 \\cdot (\\mathbf{b}_1 \\times \\mathbf{b}_2))
+\\, \\mathrm{d}k_1 \\mathrm{d}k_2.
 ```
 
 The term `\\mathbf{b}_3 \\cdot (\\mathbf{b}_1 \\times \\mathbf{b}_2)` is the volume of the
-3D Brillouin zone, `V_{\text{BZ}}`.
+3D Brillouin zone, `V_{\\text{BZ}}`, cancelling the `V_{\\text{BZ}}^{-1}` prefactor. Thus,
+the flux integral simplifies to:
 
-This shows that the physical flux through the ``(k₁, k₂)`` plane, involves the returned 3D
-component `\\Omega_3``, but scaled by the 3D cell volume `V_BZ`.
+```math
+\\mathrm{d}\\Phi = \\Omega_3 \\, \\mathrm{d}k_1 \\mathrm{d}k_2.
+```
 
-For any general surface, the same principle applies: the full dot product must be evaluated,
-which automatically incorporates the required geometric scaling factors.
+In other words: while the distinction between e.g., ``\\Omega_{xy}`` and ``\\Omega_{12}``
+is important for interpreting the curvature at an individual **k**-point, it can be ignored
+when calculating the Chern number as an integral over the reduced coordinates (e.g., 
+``k_{1,2} \\in (-1/2, 1/2]`` above), since the transformation factors in the curvature
+and the area element ``\\mathrm{d}\\mathbf{S}`` cancel out.
 """
 function berrycurvature(
     ptbm::ParameterizedTightBindingModel{D},
