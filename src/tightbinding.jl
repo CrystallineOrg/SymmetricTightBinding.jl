@@ -2,7 +2,8 @@
     obtain_symmetry_related_hoppings(
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
-        brᵦ::NewBandRep{D},
+        brᵦ::NewBandRep{D};
+        hermiticity::Bool = true,
     ) --> Vector{HoppingOrbit{D}}
 
 Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
@@ -20,9 +21,9 @@ compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
     and repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
-`-δ` are present; if not, we add them. The presence or absence of time-reversal symmetry
-is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
+Additionally, if we have time-reversal symmetry or/and hermiticity , we check if orbits that
+relate `δ` and `-δ` are present; if not, we add them. The presence or absence of time-reversal
+symmetry is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -409,7 +410,7 @@ function representation_constraint_matrices(
 
         # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk).
         # then, the Hamiltonian will be transformed due to symmetries as
-        # H(RK) = ρₐₐ(g) H(k) ρᵦᵦ⁺(g), this can be translated into the numerical 
+        # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
         Q = Qs[n]
         for i in axes(Mm, 1), j in axes(Mm, 2)

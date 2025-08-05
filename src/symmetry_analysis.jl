@@ -96,18 +96,14 @@ function symmetry_eigenvalues(
     length(k) == D || error("dimension mismatch")
     length(sgreps) == length(ops) || error("length of `sgreps` must match length of `ops`")
 
-    # NB: Currently, the site-symmetry induced reps assume the "Convention 2" Fourier
-    #     transform. This Fourier transform doesn't depend on "in-unit-cell" coordinates;
-    #     so we must add such phases here, because we use Convention 1 for the Hamiltonian. 
-    #     Longer term, we might want to not do that (change to "Convention 1") though since
-    #     it could simplify the induced rep phases to an overall phase instead of the 
-    #     tᵦₐ-business
+    # NB: Currently, the site-symmetry induced reps assume the "Convention 1" Fourier
+    #     transform. This Fourier transform does depend on "in-unit-cell" coordinates;
+    #     so we must correct such phases here, as indicated in `/docs/usr/theory.md`.
     #
-    # NOTE: maybe the last idea is not the best since the bloch periodic functions are 
-    #       periodic in real space but not in reciprocal space. This means that we will
-    #       need to correct such phases manually. Changing to "Convention 2", as we do now,
-    #       might be the best option for simplicity and clarity.
-    _, vs = solve(ptbm, k; bloch_phase = Val(true))
+    # NOTE: since we picked "Convention 1" for the Fourier transform, we need to correct an
+    #       extra phase factor to correct the non-periodicity of the Bloch functions under
+    #       this convention.
+    _, vs = solve(ptbm, k)
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         ρ = sgrep(k)

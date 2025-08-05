@@ -157,7 +157,6 @@ function primitivized_orbit(br::NewBandRep{D}) where D
     return wps′_pts
 end
 
-
 # ---------------------------------------------------------------------------------------- #
 
 """
@@ -181,7 +180,7 @@ See also [`pin_free`](@ref) for non-mutated input.
 """
 function pin_free!(
     brs::Collection{<:NewBandRep},
-    idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
+    idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}},
 )
     foreach(Base.Fix1(pin_free!, brs), idx2αβγs)
     return brs
@@ -189,7 +188,7 @@ end
 
 function pin_free!(
     brs::Collection{<:NewBandRep},
-    idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
+    idx2αβγ::Pair{Int, <:AbstractVector{<:Real}},
 )
     idx, αβγ = idx2αβγ
     checkbounds(Bool, brs, idx) || error("index $idx out of bounds for `brs`")
@@ -207,10 +206,7 @@ to the values in `αβγ`.
 Returns a new band representation with all other properties, apart from the Wyckoff
 position, identical to (and sharing memory with) `br`.
 """
-function pin_free(
-    br::NewBandRep{D},
-    αβγ::AbstractVector{<:Real}
-) where D
+function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
     length(αβγ) == D || error(DimensionMismatch("length(αβγ) ≠ D"))
     if iszero(free(position(br)))
         error("attempting to pin a band representation without any free parameters")
@@ -224,8 +220,19 @@ function pin_free(
     siteir = br.siteir
     siteg = group(siteir)
     siteg_pin = SiteGroup{D}(siteg.num, wp_pin, siteg.operations, siteg.cosets)
-    siteir_pin = SiteIrrep{D}(siteir.cdml, siteg_pin, siteir.matrices, siteir.reality,
-                              siteir.iscorep, siteir.pglabel)
+    siteir_pin = SiteIrrep{D}(
+        siteir.cdml,
+        siteg_pin,
+        siteir.matrices,
+        siteir.reality,
+        siteir.iscorep,
+        siteir.pglabel,
+    )
 
     return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
+end
+
+function phase_fix(positions, k::ReciprocalPointLike{D}) where D
+    expsv = cispi(-2dot(k, positions))
+    return Diagonal(expsv)
 end
