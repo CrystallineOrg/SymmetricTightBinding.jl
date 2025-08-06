@@ -103,13 +103,16 @@ function symmetry_eigenvalues(
     # NOTE: since we picked "Convention 1" for the Fourier transform, we need to correct an
     #       extra phase factor to correct the non-periodicity of the Bloch functions under
     #       this convention.
-    Θₖ = phase_fix(orbital_positions(ptbm), k)
     _, vs = solve(ptbm, k)
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
+        g = sgrep.op
+        gk = compose(g, k)
+        G = gk - k
+        Θ_G = phase_fix(orbital_positions(ptbm), G) # correct the phase factor
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            v_fixed = Θₖ * v # correct the phase factor
+            v_fixed = Θ_G * v # correct the phase factor
             symeigs[j, n] = dot(v_fixed, ρ, v)
         end
     end
