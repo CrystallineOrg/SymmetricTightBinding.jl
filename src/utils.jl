@@ -232,7 +232,10 @@ function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
     return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
 end
 
-function phase_fix(positions, k::ReciprocalPointLike{D}) where D
+function phase_fix(
+    positions::AbstractVector{DirectPoint{D}},
+    k::ReciprocalPointLike{D},
+) where D
     expsv = cispi(-2dot(k, positions))
     return Diagonal(expsv)
 end
