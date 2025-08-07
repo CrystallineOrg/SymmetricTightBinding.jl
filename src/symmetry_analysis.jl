@@ -103,7 +103,7 @@ function symmetry_eigenvalues(
     # NOTE: since we picked "Convention 1" for the Fourier transform, we need to correct an
     #       extra phase factor to correct the non-periodicity of the Bloch functions under
     #       this convention.
-    _, vs = solve(ptbm, k)
+    _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         g = sgrep.op
