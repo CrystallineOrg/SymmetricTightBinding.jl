@@ -232,7 +232,7 @@ function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
     return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
 end
 
-function phase_fix(
+function reciprocal_translation_phase(
     positions::AbstractVector{DirectPoint{D}},
     k::ReciprocalPointLike{D},
 ) where D

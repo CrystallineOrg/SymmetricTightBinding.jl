@@ -109,11 +109,11 @@ function symmetry_eigenvalues(
         g = sgrep.op
         gk = compose(g, ReciprocalPoint{D}(k))
         G = gk - k
-        Θ_G = phase_fix(orbital_positions(ptbm), G) # correct the phase factor
+        Θ_G = reciprocal_translation_phase(orbital_positions(ptbm), G) # correct the phase factor
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            v_fixed = Θ_G * v # correct the phase factor
-            symeigs[j, n] = dot(v_fixed, ρ, v)
+            v_kpG = Θ_G * v # correct the phase factor
+            symeigs[j, n] = dot(v_kpG, ρ, v)
         end
     end
     return symeigs
