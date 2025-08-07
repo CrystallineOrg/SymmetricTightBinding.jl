@@ -13,12 +13,12 @@ makedocs(;
     ),
     pages = [
         "Home" => "index.md",
-        "Theory" => "theory.md",
         "Tutorial" => "tutorial.md",
         "Band symmetry" => "band-symmetry.md",
         "Symmetry breaking" => "symmetry-breaking.md",
         "API" => "api.md",
         "Internal API" => "internal-api.md",
+        "Theory" => "theory.md",
     ],
     warnonly = Documenter.except(
         :autodocs_block,
