@@ -76,11 +76,8 @@ function obtain_symmetry_related_hoppings(
     # hopping orbits at this point; if so, we must merge them
 
     # since the code is always considering hermiticity or anti-hermiticity, this terms will
-    # always be added. We kept this as an `if` statement for allowing future implementations
-    # on non-hermitian systems
-    if timereversal || hermiticity
-        add_reversed_orbits!(h_orbits)
-    end
+    # always be added, so we skip any possible `if` statement
+    add_reversed_orbits!(h_orbits)
 
     return h_orbits
 end
@@ -233,8 +230,7 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
         hoppings = h_orbit.hoppings
         hoppings′ = map(hoppings) do hops
             map(hops) do (qₐ, qᵦ, R)
-                (qₐ, qᵦ, qₐ + qₐ - qᵦ - qᵦ - R) # reverse the hopping term
-                # ↑ TODO: no implementation for *(Int, RVec) yet. I found a workaround. Probably interesting to add.
+                (qᵦ, qₐ, -R) # reverse the hopping term
             end
         end
         append!(hoppings, hoppings′)
