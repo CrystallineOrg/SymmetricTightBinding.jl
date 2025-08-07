@@ -236,6 +236,6 @@ function phase_fix(
     positions::AbstractVector{DirectPoint{D}},
     k::ReciprocalPointLike{D},
 ) where D
-    expsv = cispi(-2dot(k, positions))
+    expsv = cispi.(-dot.(Ref(2k), positions))
     return Diagonal(expsv)
 end
