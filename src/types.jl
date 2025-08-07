@@ -424,7 +424,7 @@ end
 function solve(
     ptbm::ParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D};
-    bloch_phase::Union{Val{true}, Val{false}} = Val(true),
+    bloch_phase::Union{Val{true}, Val{false}} = Val(false),
     eigen_kws...,
 ) where D
     length(k) == D || error("dimension mismatch")
@@ -434,14 +434,13 @@ function solve(
     H = Hermitian(ptbm(k))
     es, vs = eigen(H; eigen_kws...)
     if bloch_phase === Val(true)
-        phases = cispi.(dot.(Ref(-2 .* k), orbital_positions(ptbm)))
-        # ↑ we used convention 1 for the Fourier transform, so the Bloch phase is
-        # e^{ik·(t+rᵢ)}. Then, the eigenfunctions can be associated to the bloch 
-        # periodic functions. Sometimes we want to use the bloch functions which are 
-        # associated to the phases e^{ik·t}. Then, if we want to transform from one to 
-        # the other, we need to multiply the eigenvectors by the phases e^{-ik·rᵢ}.
-        # For more details, see notes on `devdocs/fourier.md`.
-        vs = Diagonal(phases) * vs # add Bloch phases
+        Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
+        # NB: we start in convention 1 for the returned eigenfunctions `vs`, so the Bloch 
+        # periodic functions ψ(rᵢ + t) are e^{ik·(t+rᵢ)} * vᵢ (with vᵢ denoting the ith element
+        # a vector `v` in `vs`, corresponding to the ith position rᵢ); this then returns ψ(rᵢ)
+        # This is equivalent to convert the eigenfunctions to the convention 2 Fourier transform,
+        # see Appendix A in `docs/scr/theory.md`.
+        vs = Θₖ' * vs # add Bloch phases
         return es, vs
     else
         return es, vs
