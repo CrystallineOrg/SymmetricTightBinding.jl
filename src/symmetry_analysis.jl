@@ -107,7 +107,7 @@ function symmetry_eigenvalues(
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         g = sgrep.op
-        gk = compose(g, k)
+        gk = compose(g, ReciprocalPoint{D}(k))
         G = gk - k
         Θ_G = phase_fix(orbital_positions(ptbm), G) # correct the phase factor
         ρ = sgrep(k)
