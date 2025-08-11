@@ -13,6 +13,8 @@ This package heavily relays on [representation theory of groups](https://en.wiki
     - [Transformation properties of the Bloch states](#transformation-properties-of-the-bloch-states)
       - [Transformation properties under lattice translations](#transformation-properties-under-lattice-translations)
       - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations)
+  - [Implementing Symbolic Hamiltonians in Non-Symbolic Environments](#implementing-symbolic-hamiltonians-in-non-symbolic-environments)
+    - [Symmetry constraints in the numerical matrix $M$](#symmetry-constraints-in-the-numerical-matrix-m)
   - [Appendix A](#appendix-a)
     - [Transformation properties within Convention 2](#transformation-properties-within-convention-2)
     - [Bloch Hamiltonian under Convention 2](#bloch-hamiltonian-under-convention-2)
@@ -91,7 +93,7 @@ Taking into consideration the definitions of the transformed orbitals and the pr
 = \sum_j [ρ(h)]_{ji} ϕ_{βj}(𝐫 - R𝐭 - 𝐭_{βα})
 ```
 
-In principle, we could use the complete set of orbitals — $\{ϕ_I(𝐫-𝐭)\}$, with all degrees of freedom $I$ and all lattice translations $𝐭$ — to build a tight-binding model. However, it is more practical (and usual) to use the translational invariance of this orbitals to define a Fourier transform, and use their Fourier transformed functions as a basis — we are going to label such functions as induced Bloch functions. By doing so, instead of working with $\dim(I) \times N$ orbitals, where $\dim(I)$ is the number of sites plus the number of orbitals at each site and $N$ is the number of unit cells; you can consider $\dim(I)$ functions evaluated at $N$ points inside the Brillouin zone.
+In principle, we could use the complete set of orbitals — $\{ϕ_I(𝐫-𝐭)\}$, with all degrees of freedom $I$ and all lattice translations $𝐭$ — to build a tight-binding model. However, it is more practical (and usual) to use the translational invariance of this orbitals to define a Fourier transform, and use their Fourier transformed functions as a basis — we are going to label such functions as induced Bloch functions. By doing so, instead of working with $\dim(I) × N$ orbitals, where $\dim(I)$ is the number of sites plus the number of orbitals at each site and $N$ is the number of unit cells; you can consider $\dim(I)$ functions evaluated at $N$ points inside the Brillouin zone.
 
 However, when defining a Fourier transform, there is a gauge freedom which leads to different, so-called, "conventions". This choice has important implications on the representations of the symmetry operations and, even, in the representation of the Hamiltonian. Here, we are going to focus on one convention, and we are going to discuss changes and similarities with another convention in [Appendix A](#appendix-a).
 
@@ -343,7 +345,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [D_𝐤(g)]_{J'J} \braket{φ_{I,𝐤}|φ_{J',g𝐤}} \\
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [D_𝐤(g)]_{J'J} \braket{φ_{I,𝐤}|φ_{J',𝐤+𝐆}} \\
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [D_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} \braket{φ_{I,𝐤}|φ_{J',𝐤}} \\
-= \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [D_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} \delta_{IJ'} \\
+= \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [D_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} δ_{IJ'} \\
 = \sum_{IJ} (w_{I,n𝐤})^* e^{i𝐆·𝐪_α} [D_𝐤(g)]_{IJ} w_{J,n𝐤}
 ```
 where we have used how the Bloch functions transform under reciprocal lattice translations — a property inherit from the convention choice — and their orthogonality.
@@ -355,6 +357,111 @@ Finally, it is interesting to vectorize the previous expression in order to impl
 ```math
 \boxed{\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = (Θ_𝐆 𝐰_{n𝐤}) · (D_𝐤(g) 𝐰_{n𝐤})}
 ```
+
+We have developed all the theory needed to explore the most important parts of the package. However, we have not tickle one important point: the package is implemented in Julia, a non-symbolic language. Then, it is not straightforward to encode the previous formulas and relations in order to obtain the model.
+
+In the following section, we are going to present the strategy we have followed to surpass this apparent issue. The main idea will be based in storing the different nits of information in different structures which we can use to perform all relation and constraints.
+
+## Implementing Symbolic Hamiltonians in Non-Symbolic Environments
+
+In this section we aim to introduce our strategy to encode the symbolic structures and formulas we have presented in a non-symbolic environments, such as Julia.
+
+Let us consider a term in a general Hamiltonian which describes the hopping term between two EBRs. For the sake of simplicity let us call them $α: (𝐪|A)$ and $β: (𝐰|B)$, where $𝐪$ and $𝐰$ represent two certain WP in the SG and $A$ and $B$ are two site-symmetry irreps of any dimension.
+
+For the sake of notation, we will denote each point in the WPs and each term in the site-symmetry irreps in a similar fashion:
+
+```math
+𝐪: q_1, q_2, …, q_N \\
+𝐰: w_1, w_2, …, w_M \\
+A: A_1, A_2, …, A_J \\
+B: B_1, B_2, …, B_K
+```
+
+As we have discussed previously, in reciprocal space the Hamiltonian term involving those EBRs, $H_𝐤$ can be written as a matrix where each row denote an orbital from the "arriving" EBR and the column an orbital from the "departing" EBR. Each of its components will be a complex number which depend on the vector 𝐤 and on some free-parameters that later on we will adjust to obtain the band structure.
+
+In order to encode such Hamiltonian term, we will need to do some previous steps.
+
+The first step we need to do is to list all the possible hopping distances that can be found between this two EBRs. Obviously, that set will be infinite so we need to impose a particular cutoff. As explained above, we will impose it by constraining the hopping terms to a particular set of lattice translations — and obviously theirs symmetry partners. This complex structure is computed in the function `obtain_symmetry_related_hoppings`, where we provide a set of representatives of hopping distances which which is associated to a set of hopping terms that are symmetry related.
+
+Inside of one of this representatives we will find different hopping distances $δs = [δ_1, δ_2, …, δ_n]$, which will be associated to different hopping terms:
+
+```math
+δ_1: q_i → w_j + G_k, q_l → w_l + G_n, … \\
+δ_2: q_o → w_p + G_r, q_s → w_t + G_z, … \\
+\vdots
+```
+where $G_k$ are some particular lattice translations.
+
+With this information we are able to numerically codify the Hamiltonian matrix by terms, as we will show in the following.
+
+As we showed above, the phases in the Bloch Hamiltonian can be computed from this hopping vectors.
+First, we use them to create an abstract vector $𝐯$ which will store the phases that will appear in the Hamiltonian's term in reciprocal space. Being specific, this vector would like:
+
+```math
+𝐯^T = [e^{i𝐤·δ_1}, e^{i𝐤·δ_2}, …, e^{i𝐤·δ_n}]
+```
+
+Note that we are going to use here the order provided by the function `obtain_symmetry_related_hoppings` to store this phases.
+
+Additionally, we will need to assign a free-parameter to each orbital hopping term in the Hamiltonian matrix — the ones that afterwards we will tune to replicate the band structure. This vector then will have a length of $\text{len}(δs) × \# 𝐪 × \# 𝐰 × \text{dim}(A) × \text{dim}(B)$. In particular this vector will look like this:
+
+```math
+𝐭^T = [t(δ_1), …, t(δ_i), …, t(δ_n)]
+```
+
+where each $t(δ_i)$ represent a collection of free-parameter, one per hopping term inside the hopping distance $δ_i$.
+
+Then, each term of the Hamiltonian matrix can be written as bilinear form in the following way:
+
+$$
+H_{𝐤,ij}^{αβ} = 𝐯_𝐤^T M_{ij}^{αβ} 𝐭
+$$
+
+where $αβ$ indicates the two EBRs considered in the tight-binding term, and, $M_{αβ,ij}$ is a numerical matrix that will relate a phase with a free-parameter present on the Hamiltonian matrix term.
+
+We will, then, work with a set of matrices $\{ M_{αβ,ij} \}_{ij}$, each associated to a pair of EBRs, that will encode the tight-binding Hamiltonian and will allow us to operate with it.
+
+In the following section, we will show how symmetry operations acts on this set of matrices and how to obtain the constraints they impose on the tight-binding Hamiltonian.
+
+### Symmetry constraints in the numerical matrix $M$
+
+Now we want to deduce how transformations on the Hamiltonian matrix $H_𝐤^{αβ}$ translate into the numerical matrix $M$.
+
+We will start from the condition imposed into the Hamiltonian term:
+
+```math
+H_{g𝗸}^{αβ} = D_𝐤^{αα}(g) H_𝗸^{αβ} D_𝐤^{ββ,†}(g)
+```
+
+Then,
+
+```math
+𝘃_{g𝗸}^T M_{αβ,ij} 𝘁 = D_𝐤^{αα}(g) 𝘃_𝗸^T M_{αβ,ij} 𝘁 D_𝐤^{ββ,†}(g)
+```
+
+Since the representation matrices act on different indices as $𝘃$ and $𝘁$, we can permute them obtaining:
+
+```math
+𝘃^T_{g𝗸} M_{αβ,ij} 𝘁 = 𝘃^T_𝗸 D_𝐤^{αα}(g) M_{αβ,ij} D_𝐤^{ββ,†}(g) 𝘁
+```
+
+In order to compare both $M$ matrices, we need to analyze what is $𝘃_{g𝗸}$. As can be seeing above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As discussed above, we defined as $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical matrix $M$ as follows:
+
+```math
+(σ(g) 𝘃_𝗸)^T M_{αβ,ij} 𝘁 = 𝘃^T_𝗸 D_𝐤^{αα}(g) M_{αβ,ij} D_𝐤^{ββ,†}(g) 𝘁 \\
+𝘃^T_𝗸 σ(g)^T M_{αβ,ij} 𝘁 = 𝘃^T_𝗸 D_𝐤^{αα}(g) M_{αβ,ij} D_𝐤^{ββ,†}(g) 𝘁
+```
+
+Then, performing some algebra we obtain that:
+
+```math
+𝘃^T_𝗸 \left( σ(g)^T M_{αβ,ij} - D_𝐤^{αα}(g) 𝐌_{αβ,ij} D_𝐤^{ββ†}(g) \right) 𝘁 = 0 \\
+⇒ \boxed{\left( σ(g)^T 𝐌_{αβ,ij} - D_𝐤^{αα}(g) M_{αβ,ij} D_𝐤^{ββ,†}(g) \right) 𝘁 = 0}
+```
+
+This implies that if we compute the null-space of the previous subtraction, we will obtain a set of free-parameter vectors that will fulfill the constrains imposed by unitary operations.
+
+Notice that this set of vectors will be, in general, complex vector, since the matrices involved will have complex entries. Then, in order to avoid compilations, we will split our free-parameter vector $𝘁$ into its real and imaginary part, so we can work only with real parameters. This is performed in `split_complex`. For now on, $𝘁^T = [𝘁^T_\text{real}, i 𝘁^T_\text{imag}]$.
 
 ## Appendix A
 
@@ -521,7 +628,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 = \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [D^{(2)}_𝐤(g)]_{J'J} \braket{φ^{(2)}_{I,𝐤}|φ^{(2)}_{J',g𝐤}} \\
 = \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [D^{(2)}_𝐤(g)]_{J'J} \braket{φ^{(2)}_{I,𝐤}|φ^{(2)}_{J',𝐤+𝐆}} \\
 = \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [D^{(2)}_𝐤(g)]_{J'J} \braket{φ^{(2)}_{I,𝐤}|φ^{(2)}_{J',𝐤}} \\
-= \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [D^{(2)}_𝐤(g)]_{J'J} \delta_{IJ'} \\
+= \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [D^{(2)}_𝐤(g)]_{J'J} δ_{IJ'} \\
 = \sum_{IJ} (w^{(2)}_{I,n𝐤})^* [D_𝐤(g)]_{IJ} w^{(2)}_{J,n𝐤}
 ```
 
