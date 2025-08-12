@@ -123,9 +123,9 @@ function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D
     g = sgrep.op
     v = translation(g)
     gk = compose(g, ReciprocalPoint{D}(k))
-    ρ′ = cispi(-2dot(gk, v)) * sgrep.ρ # e^{-i(gk)·v} ρ(g)
+    Dₖ = cispi(-2dot(gk, v)) * sgrep.ρ # e^{-i(gk)·v} ρ(g)
 
-    return ρ′
+    return Dₖ
 end
 
 """

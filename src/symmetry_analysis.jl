@@ -107,13 +107,14 @@ function symmetry_eigenvalues(
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     for (j, sgrep) in enumerate(sgreps)
         g = sgrep.op
-        gk = compose(g, ReciprocalPoint{D}(k))
-        G = gk - k
-        Θ_G = reciprocal_translation_phase(orbital_positions(ptbm), G) # correct the phase factor
+        gk = compose(g, ReciprocalPoint{D}(k)) # NB: for k ∈ Gₖ, there exist G st g∘k = k+G
+        G = gk - k # the possible reciprocal vector-difference G between k & g∘k; for Θᴳ
+        Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G) # TODO: preallocate & fill
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            v_kpG = Θ_G * v # correct the phase factor
+            v_kpG = Θᴳ * v # correct the phase factor
             symeigs[j, n] = dot(v_kpG, ρ, v)
+            # TODO: preallocate and `mul!` the `Θᴳ * v` term to avoid allocations
         end
     end
     return symeigs

@@ -399,8 +399,7 @@ function evaluate_tight_binding_term!(
     # ↑ each term in the hamiltonian is associated to an annihilation/creation operator such
     # as `aᵢ† aⱼ`. As we use convention 1 for the fourier transform, we have that 
     # aᵢ† = e^{-ik·(t + rᵢ)} aₖ†, then each term will be multiplied by the phase 
-    # e^{ik·δ}, where δ = R + r\ᵢ - rⱼ, i.e., the hopping vector in the orbit.
-    # Note that we store those hopping vectors in the orbit.
+    # e^{ik·δ}, where δ = R + rᵢ - rⱼ, i.e., the hopping vector in the orbit.
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
             Hᵢⱼ = @inbounds dot(v_conj, @view MmtC[:, local_i, local_j])
