@@ -350,7 +350,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 ```
 where we have used how the Bloch functions transform under reciprocal lattice translations — a property inherit from the convention choice — and their orthogonality.
 
-!!! note "Action representation matrix: to transpose or not to transpose"
+!!! note "Acting with representation matrices: to transpose or not to transpose"
     A subtly suprising feature may stand out from the above result: unlike previously, the representation matrix $𝐃_𝐤(g)$ is acting "directly", i.e., untransposed, on the "state" $w_{J,n𝐤}$. Although this may appear to be at odds with the earlier approach of the representation matrix acting via its transpose, it is entirely consistent.
     The key point is that previously, we defined the representation matrix to act via its transpose on _basis vectors_ (e.g., $\ket{φ_{J,𝐤}}$). However, here, the representation matrix is acting on a _coefficient vector_.
 
