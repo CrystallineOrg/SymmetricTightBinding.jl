@@ -2,7 +2,8 @@
     obtain_symmetry_related_hoppings(
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
-        brᵦ::NewBandRep{D},
+        brᵦ::NewBandRep{D};
+        hermiticity::Bool = true,
     ) --> Vector{HoppingOrbit{D}}
 
 Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
@@ -20,14 +21,16 @@ compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
     and repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-Additionally, if we have time-reversal symmetry, we check if orbits that relate `δ` and 
-`-δ` are present; if not, we add them. The presence or absence of time-reversal symmetry
-is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
+Additionally, if we have time-reversal symmetry or/and hermiticity , we check if orbits that
+relate `δ` and `-δ` are present; if not, we add them. The presence or absence of time-reversal
+symmetry is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brᵦ::NewBandRep{D};
+    hermiticity::Bool = true, # whether to include "reversed" hopping terms. This is also 
+    #                         # enforced if timereversal symmetry is present
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum ||
@@ -67,13 +70,14 @@ function obtain_symmetry_related_hoppings(
         end
     end
 
-    # timereversal could link orbits that spatial symmetries alone would categorize as
-    # distinct; in particular, if we have timereversal, a hopping vector `δ` must
-    # have a counterpart `-δ` - but those two vectors could have fallen into distinct
+    # timereversal or hermiticity could link orbits that spatial symmetries alone would 
+    # categorize as distinct; in particular, if we have timereversal, a hopping vector `δ` 
+    # must have a counterpart `-δ` - but those two vectors could have fallen into distinct
     # hopping orbits at this point; if so, we must merge them
-    if timereversal
-        add_timereversal_related_orbits!(h_orbits)
-    end
+
+    # since the code is always considering hermiticity or anti-hermiticity, this terms will
+    # always be added, so we skip any possible `if` statement
+    add_reversed_orbits!(h_orbits)
 
     return h_orbits
 end
@@ -171,14 +175,14 @@ function _maybe_add_hoppings!(
 end
 
 """
-    add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
+    add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
 
-Adds the time-reversed hopping terms to the hopping orbits in `h_orbits`. The time-reversed
+Adds the reversed hopping terms to the hopping orbits in `h_orbits`. The reversed
 hopping terms are added to the orbit of the hopping term they are related to, and if they are
 already present in another orbit, the two orbits are merged.
 """
-function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
-    # for any orbit that contains a hopping vector `δ`, we check if its time-reversed
+function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
+    # for any orbit that contains a hopping vector `δ`, we check if its reversed
     # hopping vector `-δ` is also in the orbit; if not, we check if it is in any other
     # orbit to merge them, and, if not, we add it manually to the orbit
 
@@ -221,7 +225,8 @@ function add_timereversal_related_orbits!(h_orbits::Vector{HoppingOrbit{D}}) whe
         # first append the new δs into the orbit
         append!(δs, -δs)
 
-        # add the "reversed" hopping terms: i.e., for every a + δ = b + R, add b + (-δ) = a + (-R)
+        # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
+        # => -δ = a - (b + R) = a - b - R = b - 2b - R -a + 2a = b + (2a - 2b - R) - a = b + R' - a
         hoppings = h_orbit.hoppings
         hoppings′ = map(hoppings) do hops
             map(hops) do (qₐ, qᵦ, R)
@@ -401,7 +406,7 @@ function representation_constraint_matrices(
 
         # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk).
         # then, the Hamiltonian will be transformed due to symmetries as
-        # H(RK) = ρₐₐ(g) H(k) ρᵦᵦ⁺(g), this can be translated into the numerical 
+        # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
         Q = Qs[n]
         for i in axes(Mm, 1), j in axes(Mm, 2)
@@ -453,8 +458,16 @@ function obtain_basis_free_parameters(
 
     # actual computation
     tₐᵦ_basis_reim = _obtain_basis_free_parameters(
-        h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm, gens, 
-        timereversal, diagonal_block, antihermitian
+        h_orbit,
+        brₐ,
+        brᵦ,
+        orderingₐ,
+        orderingᵦ,
+        Mm,
+        gens,
+        timereversal,
+        diagonal_block,
+        antihermitian,
     )
 
     return Mm, tₐᵦ_basis_reim

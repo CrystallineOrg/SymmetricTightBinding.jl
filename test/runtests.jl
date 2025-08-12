@@ -8,7 +8,7 @@ include("symmetry-breaking.jl")    # symmetry breaking
 #include("symmetry_analysis.jl")    # check that each tb model is symmetry compatible with
 #                                    the constituents EBRs 
 
-@testset "TightBindingModel" begin
+@testset "AbstractArray interface" begin
     brs = calc_bandreps(16, Val(2))
     cbr = @composite brs[3]
     tbm = tb_hamiltonian(cbr, [[0,0],[1,0]])
@@ -29,4 +29,13 @@ include("symmetry-breaking.jl")    # symmetry breaking
         @test vcat(tbm[1:2], tbm[3:3]) == tbm[1:3]
         @test vcat(tbm[1:2], tbm[4:4]) != tbm
     end
+end
+
+@testset "Issue #73: multi-EBR without TR" begin
+    D = 3
+    sgnum = 22
+    brs = calc_bandreps(sgnum, Val(D); timereversal=false)
+    cbr = @composite brs[9]+brs[9+4] # (4b|A) + (4a|A) (2 bands)
+    # simply test that it doesn't error
+    @test tb_hamiltonian(cbr, [[1,1,1]]) isa TightBindingModel
 end
