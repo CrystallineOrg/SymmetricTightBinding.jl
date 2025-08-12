@@ -42,6 +42,8 @@ export spectrum
 include("gradients.jl")
 export gradient_wrt_hopping
 export energy_gradient_wrt_hopping
+include("symmetry_breaking.jl")
+export subduced_complement
 
 # --- Re-exports ------------------------------------------------------------------------- #
 
