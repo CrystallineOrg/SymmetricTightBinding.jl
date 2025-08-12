@@ -1,7 +1,7 @@
 name = "SymmetricTightBinding"
 uuid = "793e0360-0e47-4c52-9513-43d75d53c7d0"
 authors = ["Antonio Morales Perez <antonio.morales@dipc.org>, Thomas Christensen <thomas@dtu.dk>, and contributors"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
