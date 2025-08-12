@@ -47,6 +47,8 @@ export gradient_wrt_momentum
 export TightBindingModelMomentumGradient
 include("berry.jl")
 export berrycurvature
+include("symmetry_breaking.jl")
+export subduced_complement
 
 # --- Re-exports ------------------------------------------------------------------------- #
 

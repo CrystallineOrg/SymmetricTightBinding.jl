@@ -7,6 +7,11 @@
 Return the representation matrix of a symmetry operation `op` induced by the site
 symmetry group of a band representation `br` or composite band representation `cbr`,
 excluding the global momentum-dependent phase factor.
+
+# Note
+This function assumes Convention 1 for the Fourier transform, so the momentum dependence is
+introduced as a global phase factor. This is not true if Convention 2 is used. See 
+`/docs/src/theory.md` for more details.
 """
 function sgrep_induced_by_siteir_excl_phase(
     br::NewBandRep{D},
@@ -38,7 +43,7 @@ function sgrep_induced_by_siteir_excl_phase(
                 ρ[Block(β, α)] .= siteir.matrices[idx_h]
                 # we build the representation acting as the transpose, i.e., 
                 # gΦ(k) = ρᵀ(g)Φ(Rk), where Φ(k) is the site-symmetry function of
-                # the bandrep. This yields ρⱼᵦᵢₐ(g) = e(-i(Rk)·v) Γⱼᵢ(g) δ(gqₐ, qᵦ),
+                # the bandrep. This yields ρⱼᵦᵢₐ(g) = e(-i(gk)·v) Γⱼᵢ(g) δ(gqₐ, qᵦ),
                 # where Γ is the representation of the site-symmetry group, and 
                 # δ(gqₐ, qᵦ) is the Kronecker delta mod τ ∈ T.
                 # we are building it as the transpose because we want to keep good
@@ -116,17 +121,11 @@ end
 # functor behavior for `SiteInducedSGRepElement`
 function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D}
     g = sgrep.op
+    v = translation(g)
     gk = compose(g, ReciprocalPoint{D}(k))
-    ρ′ = similar(sgrep.ρ)
-    for (β, qᵦ) in enumerate(sgrep.positions)
-        for (α, qₐ) in enumerate(sgrep.positions)
-            tᵦₐ = compose(g, qₐ) - qᵦ
-            e = cispi(-2dot(gk, tᵦₐ)) # e^{-i(gk)·tᵦₐ}
-            ρ′[β, α] = sgrep.ρ[β, α] * e # ρᵦₐ(g) e^{-i(gk)·tᵦₐ}
-        end
-    end
+    Dₖ = cispi(-2dot(gk, v)) * sgrep.ρ # e^{-i(gk)·v} ρ(g)
 
-    return ρ′
+    return Dₖ
 end
 
 """
