@@ -350,31 +350,29 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 ```
 where we have used how the Bloch functions transform under reciprocal lattice translations — a property inherit from the convention choice — and their orthogonality.
 
-Notice that this expression has a phase factor that needs to be accounted for. In other conventions this phase factor does not appears making it easier to compute. Nevertheless, we stick to the current convention due to the property of the 𝐤-dependence in the representation matrices of symmetry operations. However, it is interesting to be able to change from one convention to others. Because of that, we include some functions in the package to be able to change from one convention to another one — heavily used in the literature. The relation between these two conventions can be found in [Appendix A](#appendix-a).
+!!! note "Action representation matrix: to transpose or not to transpose"
+    A subtly suprising feature may stand out from the above result: unlike previously, the representation matrix $𝐃_𝐤(g)$ is acting "directly", i.e., untransposed, on the "state" $w_{J,n𝐤}$. Although this may appear to be at odds with the earlier approach of the representation matrix acting via its transpose, it is entirely consistent.
+    The key point is that previously, we defined the representation matrix to act via its transpose on _basis vectors_ (e.g., $\ket{φ_{J,𝐤}}$). However, here, the representation matrix is acting on a _coefficient vector_.
 
-Finally, it is interesting to vectorize the previous expression in order to implemented it in the package. To do so, we make use of the previous phase factor matrix $Θ_𝐤$. Making use of it, the previous expression can be written as:
+    It's easy to see by example that the action on these two different kinds of vectors must be different. In particular, if we define the action of $ĝ$ on a _basis_ $𝐯_i$ as $ĝ 𝐯_i = \sum_{j} D_{ji} 𝐯_j$, then any general vector $ψ = \sum_i c_i 𝐯_i$ (specified by a basis $\{𝐯_i\}$ and a corresponding set of expansion coefficients $\{c_i\}$) must transform as:
 
-```math
-\boxed{\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = (Θ_𝐆 𝐰_{n𝐤}) · (𝐃_𝐤(g) 𝐰_{n𝐤})}
-```
+    ```math
+    ĝ ψ
+    = ĝ \sum_i c_i 𝐯_i
+    =  \sum_i c_i ĝ 𝐯_i 
+    =  \sum_{ij} c_i D_{ji} 𝐯_j
+    ```
 
-It could be confusing that now we are applying the representation without the transpose. It was defined using the transpose when acting on basis elements. However, if we change the perspective to act on the coefficients that multiply such a basis, the picture changes and we must then use the un-transposed representation.
+    The latter expression can be interpreted equivalently as either
 
-It's easy to see that by example. If we have that $ĝ$ acts on a basis $𝐯_i$ as $ĝ 𝐯_i = \sum_{j} D_{ji} 𝐯_j$, then any general vector $ψ = \sum_i c_i 𝐯_i$ must transform as:
+    - $𝐜^T [𝐃^T 𝐯]$: i.e., 𝐃 acting transposed on the "vector of basis vectors" $𝐯 = [𝐯_1, 𝐯_2, …]$, or as 
+    - $[𝐃 𝐜]^T 𝐯$: i.e.,  𝐃 acting un-transposed on the coefficient vector $𝐜 = [c_1, c_2, …]$.
 
-```math
-ĝ ψ
-= ĝ \sum_i c_i 𝐯_i
-=  \sum_i c_i ĝ 𝐯_i 
-=  \sum_{ij} c_i D_{ji} 𝐯_j
-```
+    I.e., the general rule is that the representation matrix acts transposed on basis vectors, and untransposed on coefficient vectors.
 
-The latter expression could be viewed as either
+Notice that this expression has a phase factor that cannot be omitted. In other conventions this phase factor does not appears making it easier to compute. Nevertheless, we stick to the current convention due to the property of the 𝐤-dependence in the representation matrices of symmetry operations. However, it is interesting to be able to change from one convention to others. Because of that, we include some functions in the package to be able to change from one convention to another one — heavily used in the literature. The relation between these two conventions can be found in [Appendix A](#appendix-a).
 
-- $𝐜^T [𝐃^T 𝐯]$: i.e., acting as transpose on the "vector of basis vectors" $𝐯 = [𝐯_1, 𝐯_2, …]$, or as 
-- $[𝐃 𝐜]^T 𝐯$: i.e., acting as un-transposed on the coefficient vector $𝐜 = [c_1, c_2, …]$.
-
-We have developed all the theory needed to explore the most important parts of the package. However, we have not tickle one important point: the package is implemented in Julia, a non-symbolic language. Then, it is not straightforward to encode the previous formulas and relations in order to obtain the model.
+We have now developed the theory needed to explore the most important parts of the package. However, we have not tickle one important point: the package is implemented in Julia, a non-symbolic language. Then, it is not straightforward to encode the previous formulas and relations in order to obtain the model.
 
 In the following section, we are going to present the strategy we have followed to surpass this apparent issue. The main idea will be based in storing the different nits of information in different structures which we can use to perform all relation and constraints.
 
