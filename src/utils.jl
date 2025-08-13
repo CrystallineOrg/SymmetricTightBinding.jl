@@ -232,7 +232,11 @@ function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
     # (which generate the orbit) and potentially also the site group operations for the
     # representative Wyckoff position
     orbit_pin = orbit(siteg_pin)
-    in_primitive_cell = all(rv_pin′ -> all(rᵢ -> 0 ≤ rᵢ < 1, constant(rv_pin′)), orbit_pin)
+    cntr = centering(num(br), D)
+    in_primitive_cell = all(orbit_pin) do rv_pin′
+        rv_pin′_primitive = primitivize(rv_pin′, cntr)
+        all(rᵢ -> 0 ≤ rᵢ < 1, constant(rv_pin′_primitive))
+    end
     if !in_primitive_cell
         siteg_pin, _ = Crystalline.reduce_orbits_and_cosets(siteg_pin)
     end
