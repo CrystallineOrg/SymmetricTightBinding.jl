@@ -32,10 +32,31 @@ include("symmetry-breaking.jl")    # symmetry breaking
 end
 
 @testset "Issue #73: multi-EBR without TR" begin
-    D = 3
     sgnum = 22
-    brs = calc_bandreps(sgnum, Val(D); timereversal=false)
+    brs = calc_bandreps(sgnum, Val(3); timereversal=false)
     cbr = @composite brs[9]+brs[9+4] # (4b|A) + (4a|A) (2 bands)
     # simply test that it doesn't error
     @test tb_hamiltonian(cbr, [[1,1,1]]) isa TightBindingModel
+end
+
+@testset "Issue #85" begin
+    sgnum = 4
+    brs = calc_bandreps(sgnum, Val(2))
+
+    # Sub-issue 1: Wyckoff positions in orbit outside primitive unit cell [0,1)ᴰ
+    br_small_αβγ = SymmetricTightBinding.pin_free(brs[1], [.1, .2])
+    orbit_small_αβγ = orbit(group(br_small_αβγ))
+    @test all(q -> all(qᵢ -> 0 ≤ qᵢ < 1, q()), orbit_small_αβγ)
+
+    br_big_αβγ = SymmetricTightBinding.pin_free(brs[1], [.9, .8])
+    orbit_big_αβγ = orbit(group(br_big_αβγ))
+    @test all(q -> all(qᵢ -> 0 ≤ qᵢ < 1, q()), orbit(group(br_big_αβγ)))
+
+    # Sub-issue 2: missing merging of time-reversal related "partial" orbits
+    for br in [br_small_αβγ, br_big_αβγ]
+        h_orbits = obtain_symmetry_related_hoppings([[0,0]], br, br)
+        @test length(h_orbits) == 2
+        @test length(h_orbits[1].orbit) == 1 # on-site
+        @test length(h_orbits[2].orbit) == 4 # hopping; combination of two orbits, merged by TR
+    end
 end

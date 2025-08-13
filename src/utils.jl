@@ -201,10 +201,15 @@ end
     pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
 
 Pin the free parameters of the Wyckoff position associated with the band representation `br`
-to the values in `αβγ`. 
+to the values in `αβγ`.
 
 Returns a new band representation with all other properties, apart from the Wyckoff
 position, identical to (and sharing memory with) `br`.
+
+Note that the associated orbit of the Wyckoff position will be automatically adjusted to
+ensure that each position in the orbit lies within the primitive unit cell [0,1)ᴰ. That is,
+if a choice of αβγ sends a position in the orbit outside the primitive unit cell, the
+position will be adjusted by integer lattice translations to lie within.
 """
 function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
     length(αβγ) == D || error(DimensionMismatch("length(αβγ) ≠ D"))
@@ -214,12 +219,24 @@ function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
 
     wp = position(br)
     rv = parent(wp)
-    rv_pin = RVec{3}(rv(αβγ))
+    rv_pin = RVec{D}(rv(αβγ))
     wp_pin = WyckoffPosition(wp.mult, wp.letter, rv_pin)
 
     siteir = br.siteir
     siteg = group(siteir)
     siteg_pin = SiteGroup{D}(siteg.num, wp_pin, siteg.operations, siteg.cosets)
+
+    # if the Wyckoff position that was picked is not in the primitive unit cell - or even if
+    # a position in its orbit is not - we need to adjust the Wyckoff positions to lie inside
+    # the primitive cell [0, 1)ᴰ: generally, this entails adjusting the choice of cosets
+    # (which generate the orbit) and potentially also the site group operations for the
+    # representative Wyckoff position
+    orbit_pin = orbit(siteg_pin)
+    in_primitive_cell = all(rv_pin′ -> all(rᵢ -> 0 ≤ rᵢ < 1, constant(rv_pin′)), orbit_pin)
+    if !in_primitive_cell
+        siteg_pin, _ = Crystalline.reduce_orbits_and_cosets(siteg_pin)
+    end
+
     siteir_pin = SiteIrrep{D}(
         siteir.cdml,
         siteg_pin,

@@ -85,8 +85,8 @@ end
 """
     maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops) --> Vector{HoppingOrbit{D}}
 
-Checks if a hopping term `δ` is already in the list of representatives. If not, it adds it
-and its symmetry related partners. If it is, it only adds the symmetry related partners.
+Checks if a hopping term `δ` is already in the list of representatives. If not, adds it
+and its symmetry-related partners. If it is, it only adds the symmetry-related partners.
 """
 function maybe_add_hoppings!(
     h_orbits,
@@ -97,7 +97,7 @@ function maybe_add_hoppings!(
     ops::AbstractVector{SymOperation{D}},
 ) where {D}
     δ_idx = findfirst(h_orbits) do h_orbit
-        isapproxin(δ, orbit(h_orbit), nothing, false) # check if δ is in h_orbits
+        isapproxin(δ, orbit(h_orbit), nothing, false) # check if δ is in existing h_orbits
     end
     if isnothing(δ_idx)
         # if it wasn't already in `h_orbits`, we add it and its symmetry-related partners
@@ -200,14 +200,14 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
         end
 
         merge_idx = findfirst(
-            h_orbit′ -> isapproxin(δs[1], orbit(h_orbit′), nothing, false),
+            h_orbit′ -> isapproxin(-δs[1], orbit(h_orbit′), nothing, false),
             @view h_orbits[n+1:end]
         )
         if !isnothing(merge_idx)
             # at least one δ has a -δ counterpart in another orbit - we need to merge them
-            # TODO: I will assume that if one δ has a -δ counterpart in another orbit, then all
-            # δs in the orbit have a -δ counterpart in the same orbit, so we merge them
-            n′ = something(idx_merge) + n
+            # NB: We assume that if one δ has a -δ counterpart in another orbit, then all
+            #     δs in the orbit have a -δ counterpart in the same orbit, so we merge them
+            n′ = something(merge_idx) + n
             h_orbit′ = h_orbits[n′]
 
             # merge the orbits
