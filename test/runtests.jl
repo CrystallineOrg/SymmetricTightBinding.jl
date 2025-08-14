@@ -60,3 +60,19 @@ end
         @test length(h_orbits[2].orbit) == 4 # hopping; combination of two orbits, merged by TR
     end
 end
+
+@testset "Finnicky case in space group 153 (PR 88)" begin
+    # issue related to a zero translation vector R being detected as different across
+    # hopping terms, due to small numerical floating point differences; fixed in PR #87
+    sgnum = 153
+    brs = calc_bandreps(sgnum, Val(3))
+    cbr = @composite brs[3]
+    br = brs[3]
+    h_orbits = obtain_symmetry_related_hoppings([[0,0,0]], br, br)
+    for h_orbit in h_orbits
+        # check we have consistent number (i.e., the same) of hoppings per orbit element
+        hoppings = h_orbit.hoppings
+        N = length(first(hoppings))
+        @test all(h -> length(h) == N, hoppings)
+    end
+end
