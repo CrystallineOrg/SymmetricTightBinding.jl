@@ -97,7 +97,8 @@ function maybe_add_hoppings!(
     ops::AbstractVector{SymOperation{D}},
 ) where {D}
     δ_idx = findfirst(h_orbits) do h_orbit
-        isapproxin(δ, orbit(h_orbit), nothing, false) # check if δ is in existing h_orbits
+        # check if δ is in existing h_orbits
+        isapproxin(δ, orbit(h_orbit), nothing, false; atol = VEC_CMP_ATOL)
     end
     if isnothing(δ_idx)
         # if it wasn't already in `h_orbits`, we add it and its symmetry-related partners
@@ -142,14 +143,17 @@ function _maybe_add_hoppings!(
         #   1. R´ is a lattice translation, i.e., it is integer
         #   2. R´ doesn't have any free parameters - TODO: try to implement it for WPs with free parameters
         #   3. δ′ = qᵦ′ + R′ - qₐ′
-        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < 1e-10, constant(R′)) ||
+        all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < VEC_CMP_ATOL, constant(R′)) ||
             error("arrived at non-integer lattice translation R′: should be impossible")
         isspecial(R′) || error(
             "arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible",
         )
-        isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false) || error("δ′ ≠ qᵦ′ + R′ - qₐ′")
+        isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false; atol = VEC_CMP_ATOL) ||
+            error("δ′ ≠ qᵦ′ + R′ - qₐ′")
 
-        idx_in_orbit = findfirst(δ′′ -> isapprox(δ′, δ′′, nothing, false), orbit(δ_orbit))
+        idx_in_orbit = findfirst(orbit(δ_orbit)) do δ′′
+            isapprox(δ′, δ′′, nothing, false; atol = VEC_CMP_ATOL)
+        end
         if isnothing(idx_in_orbit)
             # δ′ is not already included in `orbit(δ_orbit)`
             push!(orbit(δ_orbit), δ′)
@@ -158,12 +162,11 @@ function _maybe_add_hoppings!(
             # δ′ already in `orbit(δ_orbit)` but hopping term might not be:
             # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
             # approximate equality comparison
-            bool =
-                !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+            bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
                     (
-                        isapprox(qₐ′, qₐ′′, nothing, false) &&
-                        isapprox(qᵦ′, qᵦ′′, nothing, false) &&
-                        isapprox(R′, R′′, nothing, false)
+                        isapprox(qₐ′, qₐ′′, nothing, false; atol = VEC_CMP_ATOL) &&
+                        isapprox(qᵦ′, qᵦ′′, nothing, false; atol = VEC_CMP_ATOL) &&
+                        isapprox(R′,  R′′,  nothing, false; atol = VEC_CMP_ATOL)
                     )
                 end
             if bool
@@ -194,15 +197,14 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
         δs = orbit(h_orbit) # δs in the current orbit
 
         # check if the orbit is already "good" (i.e., all δs have a -δ counterpart)
-        if all(δ -> isapproxin(-δ, δs, nothing, false), δs)
+        if all(δ -> isapproxin(-δ, δs, nothing, false; atol = VEC_CMP_ATOL), δs)
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
         end
 
-        merge_idx = findfirst(
-            h_orbit′ -> isapproxin(-δs[1], orbit(h_orbit′), nothing, false),
-            @view h_orbits[n+1:end]
-        )
+        merge_idx = findfirst(@view h_orbits[n+1:end]) do h_orbit′
+            isapproxin(-δs[1], orbit(h_orbit′), nothing, false; atol = VEC_CMP_ATOL)
+        end
         if !isnothing(merge_idx)
             # at least one δ has a -δ counterpart in another orbit - we need to merge them
             # NB: We assume that if one δ has a -δ counterpart in another orbit, then all
@@ -220,7 +222,7 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
         end
         # we now know that at least some δ doesn't have a -δ counterpart: we assume that
         # this implies that none of the δs have a -δ counterpart, so we need to add them all
-        @assert all(δ -> !isapproxin(-δ, δs, nothing, false), δs)
+        @assert all(δ -> !isapproxin(-δ, δs, nothing, false; atol = VEC_CMP_ATOL), δs)
 
         # first append the new δs into the orbit
         append!(δs, -δs)
@@ -362,7 +364,8 @@ function construct_M_matrix(
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(hops)
                 q′, w′ = hop[1], hop[2]
-                if isapprox(q′, q, nothing, false) && isapprox(w′, w, nothing, false)
+                if (isapprox(q′, q, nothing, false; atol = VEC_CMP_ATOL) &&
+                    isapprox(w′, w, nothing, false; atol = VEC_CMP_ATOL))
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
@@ -733,7 +736,9 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
         # we implement a simple trick: ([R⁻¹]ᵀ k)·r = R⁻¹ᵢⱼ kᵢ rⱼ = k·(R⁻¹ r)
         R⁻¹ = SymOperation(inv(rotation(op))) # rotation-only part of `op`
         δᵢ′ = compose(R⁻¹, δᵢ)
-        j = findfirst(δ′′ -> isapprox(δᵢ′, δ′′, nothing, false), orbit(h_orbit))
+        j = findfirst(orbit(h_orbit)) do δ′′
+            isapprox(δᵢ′, δ′′, nothing, false; atol = VEC_CMP_ATOL)
+        end
         isnothing(j) &&
             error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
         P[i, j] = 1
