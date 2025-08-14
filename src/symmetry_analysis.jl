@@ -83,6 +83,10 @@ and are otherwise initialized by the function.
 
 The symmetry eigenvalues are returned as a matrix, with rows running over the elements of
 `ops` and columns running over the bands of `ptbm`.
+
+!!! note
+    The inputs `ops`, `k`, and `lg` must be provided in a primitive setting. See
+    Crystalline.jl's `primitivize`.
 """
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
@@ -112,7 +116,7 @@ function symmetry_eigenvalues(
         Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G) # TODO: preallocate & fill
         ρ = sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            v_kpG = Θᴳ * v # correct the phase factor
+            v_kpG = Θᴳ * v # incorporate phase factor
             symeigs[j, n] = dot(v_kpG, ρ, v)
             # TODO: preallocate and `mul!` the `Θᴳ * v` term to avoid allocations
         end
@@ -123,10 +127,9 @@ end
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
     lg::LittleGroup{D},
-    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
-        Ref(ptbm.tbm.cbr),
-        lg,
-    ),
+    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = begin
+        sgrep_induced_by_siteir.(Ref(ptbm.tbm.cbr), lg)
+    end,
 ) where D
     kv = position(lg)
     isspecial(kv) || error("input k-point has free parameters")
