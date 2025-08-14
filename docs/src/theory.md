@@ -344,7 +344,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [𝐃_𝐤(g)]_{J'J} \braket{φ_{I,𝐤}|φ_{J',𝐤+𝐆}} \\
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [𝐃_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} \braket{φ_{I,𝐤}|φ_{J',𝐤}} \\
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [𝐃_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} δ_{IJ'} \\
-= \sum_{IJ} (w_{I,n𝐤})^* [𝐃_𝐤(g)]_{IJ} w_{J,n𝐤}
+= \sum_{IJ} (w_{I,n𝐤})^* e^{i𝐆·𝐪_α} [𝐃_𝐤(g)]_{IJ} w_{J,n𝐤}
 ```
 
 where we have used how the Bloch functions transform under reciprocal lattice translations — a property inherit from the convention choice — and their orthogonality.
@@ -364,12 +364,20 @@ where we have used how the Bloch functions transform under reciprocal lattice tr
 
     The latter expression can be interpreted equivalently as either
 
-    - $𝐜^T [𝐃^T 𝐯]$: i.e., 𝐃 acting transposed on the "vector of basis vectors" $𝐯 = [𝐯_1, 𝐯_2, …]$, or as 
-    - $[𝐃 𝐜]^T 𝐯$: i.e.,  𝐃 acting un-transposed on the coefficient vector $𝐜 = [c_1, c_2, …]$.
+    1. $𝐜^T [𝐃^T 𝐯]$: i.e., 𝐃 acting transposed on the "vector of basis vectors" $𝐯 = [𝐯_1, 𝐯_2, …]$, or as 
+    2. $[𝐃 𝐜]^T 𝐯$: i.e., 𝐃 acting un-transposed on the coefficient vector $𝐜 = [c_1, c_2, …]$.
 
     I.e., the general rule is that the representation matrix acts transposed on basis vectors, and untransposed on coefficient vectors.
 
-Notice that this expression has a phase factor that cannot be omitted. In other conventions this phase factor does not appears making it easier to compute. Nevertheless, we stick to the current convention due to the property of the 𝐤-dependence in the representation matrices of symmetry operations. However, it is interesting to be able to change from one convention to others. Because of that, we include some functions in the package to be able to change from one convention to another one — heavily used in the literature. The relation between these two conventions can be found in [Appendix A](#appendix-a).
+Notice that this expression has a phase factor that cannot be omitted. In Convention 2 this phase factor does not appear, producing an arguably simlper expression. Nevertheless, we stick to the current convention due to the property of the 𝐤-dependence in the representation matrices of symmetry operations. However, it is interesting to be able to change from one convention to others. Because of that, we include some functions in the package to be able to change from one convention to another one — heavily used in the literature. The relation between these two conventions can be found in [Appendix A](#appendix-a).
+
+This expression for $\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = \sum_{IJ} (w_{I,n𝐤})^* w_{J,n𝐤} \braket{φ_{I,𝐤}|ĝ|φ_{J,𝐤}}$ can be rewritten in a vectorized form, convenient for implementation. To do so, we make use of the previously introduced phase-factor diagonal matrix $Θ_𝐤$, allowing:
+
+```math
+\boxed{\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = (Θ_𝐆 𝐰_{n𝐤})^\dagger (𝐃_𝐤(g) 𝐰_{n𝐤}).}
+```
+
+Note that the $[Θ_𝐆]_[II] = e^{-i𝐆·𝐪_α}$  matrix has been placed in the conjugated part of the dot product, reflecting the minus sign in its definition.
 
 We have now developed the theory needed to explore the most important parts of the package. However, we have not tickle one important point: the package is implemented in Julia, a non-symbolic language. Then, it is not straightforward to encode the previous formulas and relations in order to obtain the model.
 
