@@ -269,6 +269,32 @@ end
 #   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
 #   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
+# NB: This isn't actually quite right in general, because we also may include time-reversed
+#     hoppings which could have the roles of `q` and `w` reversed. So, in general, what's
+#     "inside" `t(δᵢ)` is just whatever is specified by `h_orbit.hoppings[i]` (with
+#     repetitions over the irrep partner functions)
+# FIXME: What does this strange "ordering" of `t` imply more generally and are we internally
+#        consistent? 
+#        To elaborate, it seems we currently assume that `t` is a kind of vector-flattened
+#        tensor `T`, with the following "indexing convention" for `T`:
+#        1. The elements `T[i]` give a vector of hoppings corresponding to the `i`th orbit
+#           `δᵢ = h_orbit.orbit[i]`. 
+#        2. The elements `T[i][j]` give a vector of hoppings corresponding to the `j`th
+#           possible spatial hopping with displacement `δᵢ`, associated with
+#           `hᵢⱼ = h_orbit.hoppings[i][j]`.
+#           This describes hoppings from site an "origin" `hᵢⱼ[1]` to a "destination"
+#           `hᵢⱼ[2] + hᵢⱼ[3]` (where `hᵢⱼ[3]` is an integer "R" translation).
+#           Notably, it is *not* generally true that `hᵢⱼ[1]` is a site in orbit(q) - it
+#           could in fact be a site in orbit(w), if it is a time-reversed term.
+#        3. Finally, `T[i][j][k][m]` is a _single_ hopping term from the `k`th partner
+#           function of `hᵢⱼ[1]` site to the `m`th partner function of `hᵢⱼ[2]` site.
+#        But... this last thing is quite tricky: it means we iterate sometimes as (1) first
+#        over the site-symmetry irreps of q (A above) then over w (B above), but for time-
+#        reversed terms, we go (2) first over w (B) then over q (A). 
+#        This is quite a tricky convention, and I don't think we actually account for this
+#        when it comes to assembling the Hamiltonian eventually. Long story short, I don't
+#        think we get this quite right in general.
+
 # ---------------------------------------------------------------------------- #
 
 """
@@ -366,9 +392,17 @@ function construct_M_matrix(
                 q′, w′ = hop[1], hop[2]
                 if (isapprox(q′, q, nothing, false; atol = VEC_CMP_ATOL) &&
                     isapprox(w′, w, nothing, false; atol = VEC_CMP_ATOL))
+                    # an "ordinary" hopping, from `q` to `w`
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
+                elseif (isapprox(q′, w, nothing, false; atol = VEC_CMP_ATOL) &&
+                        isapprox(w′, q, nothing, false; atol = VEC_CMP_ATOL))
+                    # a time-reversed hopping, from `w` to `q`: note that this means we
+                    # must swap the indices α ↔ β, i ↔ j & also Q1 → Q2
+                    offset1 = (x - 1) * Q
+                    c = offset0 + offset1 + (i - 1) * Q2 + j
+                    Mm[r, c, β, α] = 1
                 end
             end
         end
