@@ -351,7 +351,7 @@ where we have used how the Bloch functions transform under reciprocal lattice tr
 
 !!! note "Acting with representation matrices: to transpose or not to transpose"
     A subtly suprising feature may stand out from the above result: unlike previously, the representation matrix $𝐃_𝐤(g)$ is acting "directly", i.e., untransposed, on the "state" $w_{J,n𝐤}$. Although this may appear to be at odds with the earlier approach of the representation matrix acting via its transpose, it is entirely consistent.
-    The key point is that previously, we defined the representation matrix to act via its transpose on _basis vectors_ (e.g., $\ket{φ_{J,𝐤}}$). However, here, the representation matrix is acting on a _coefficient vector_.
+    The key point is that we previously defined the representation matrix as acting via its transpose on _basis vectors_ (e.g., $\ket{φ_{J,𝐤}}$). However, here, the representation matrix is acting on a _coefficient vector_.
 
     It's easy to see by example that the action on these two different kinds of vectors must be different. In particular, if we define the action of $ĝ$ on a _basis_ $𝐯_i$ as $ĝ 𝐯_i = \sum_{j} D_{ji} 𝐯_j$, then any general vector $ψ = \sum_i c_i 𝐯_i$ (specified by a basis $\{𝐯_i\}$ and a corresponding set of expansion coefficients $\{c_i\}$) must transform as:
 
@@ -364,8 +364,8 @@ where we have used how the Bloch functions transform under reciprocal lattice tr
 
     The latter expression can be interpreted equivalently as either
 
-    1. $𝐜^T [𝐃^T 𝐯]$: i.e., 𝐃 acting transposed on the "vector of basis vectors" $𝐯 = [𝐯_1, 𝐯_2, …]$, or as 
-    2. $[𝐃 𝐜]^T 𝐯$: i.e., 𝐃 acting un-transposed on the coefficient vector $𝐜 = [c_1, c_2, …]$.
+    1. ``𝐜^T (𝐃^T 𝐯)``: i.e., 𝐃 acting transposed on the "vector of basis vectors" $𝐯 = [𝐯_1, 𝐯_2, …]$, or as 
+    2. ``(𝐃 𝐜)^T 𝐯``: i.e., 𝐃 acting un-transposed on the coefficient vector $𝐜 = [c_1, c_2, …]$.
 
     I.e., the general rule is that the representation matrix acts transposed on basis vectors, and untransposed on coefficient vectors.
 
@@ -377,19 +377,21 @@ This expression for $\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = \sum_{IJ} (w_{I,n𝐤})
 \boxed{\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = (Θ_𝐆 𝐰_{n𝐤})^\dagger (𝐃_𝐤(g) 𝐰_{n𝐤}).}
 ```
 
-Note that the $[Θ_𝐆]_[II] = e^{-i𝐆·𝐪_α}$  matrix has been placed in the conjugated part of the dot product, reflecting the minus sign in its definition.
+Note that the $[Θ_𝐆]_{II} = e^{-i𝐆·𝐪_α}$  matrix is placed in the conjugated part of the dot product, consistent with the minus sign in the definition of Θ_𝐆.[^1]
 
-We have now developed the theory needed to explore the most important parts of the package. However, we have not tickle one important point: the package is implemented in Julia, a non-symbolic language. Then, it is not straightforward to encode the previous formulas and relations in order to obtain the model.
+[^1]: An equivalent casting of the same result is $\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = 𝐰_{n𝐤}^\dagger (Θ_{-𝐆} 𝐃_𝐤(g) 𝐰_{n𝐤})$, showing that $Θ_{-𝐆}𝐃_𝐤(g)$ acts as the representation in the coefficient basis.
 
-In the following section, we are going to present the strategy we have followed to surpass this apparent issue. The main idea will be based in storing the different nits of information in different structures which we can use to perform all relation and constraints.
+We have now developed the theory needed to explore the most important parts of the package. However, we have not tackled one important point: implementing these constraints and algebraic structures in a conventional programming language, such as Julia, which lacks symbolic manipulation capabilities. To overcome this, we must develop a way to encode the preceding formulas and algebraic structures.
+
+In the following section, we present the strategy we have developed for this problem. The main idea is to express the structure of the Hamiltonian in a form that is amenable to both linear algebra and enforcement of the symmetry constraints.
 
 ## Implementing Symbolic Hamiltonians in Non-Symbolic Environments
 
-In this section we aim to introduce our strategy to encode the symbolic structures and formulas we have presented in a non-symbolic environments, such as Julia.
+In this section we aim to introduce our strategy to encode the symbolic structures and formulas we have presented in a non-symbolic programming language, such as Julia.
 
-Let us consider a term in a general Hamiltonian which describes the hopping term between two EBRs. For the sake of simplicity let us call them $α: (𝐪|A)$ and $β: (𝐰|B)$, where $𝐪$ and $𝐰$ represent two certain WP in the SG and $A$ and $B$ are two site-symmetry irreps of any dimension.
+Let us consider a term in a general Hamiltonian which describes the hopping term between two EBRs. For the sake of simplicity let us call them $α: (𝐪|A)$ and $β: (𝐰|B)$, where $𝐪$ and $𝐰$ represent two particular Wyckoff positions in the space group and $A$ and $B$ are two associated site-symmetry irreps of arbitrary dimension.
 
-For the sake of notation, we will denote each point in the WPs and each term in the site-symmetry irreps in a similar fashion:
+Additionally, we will distinguish each point in the Wyckoff positions's orbit and each orbital in the site-symmetry irreps by subscripting $𝐪$, $𝐰$, $A$, and $B$:
 
 ```math
 𝐪: q_1, q_2, …, q_N \\
@@ -397,6 +399,8 @@ For the sake of notation, we will denote each point in the WPs and each term in 
 A: A_1, A_2, …, A_J \\
 B: B_1, B_2, …, B_K
 ```
+
+such that e.g., $(q_2, A_3)$ denotes an orbital transforming like the third partner function of the $A$-irrep, placed at the second position in the orbit of $\mathbf{q}$.
 
 As we have discussed previously, in reciprocal space the Hamiltonian term involving those EBRs, $𝐇_𝐤$ can be written as a matrix where each row denote an orbital from the "arriving" EBR and the column an orbital from the "departing" EBR. Each of its components will be a complex number which depend on the vector 𝐤 and on some free-parameters that later on we will adjust to obtain the band structure.
 
