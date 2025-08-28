@@ -3,7 +3,7 @@
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
         brᵦ::NewBandRep{D};
-        hermiticity::Bool = true,
+        diagonal_block::Bool = true,
     ) --> Vector{HoppingOrbit{D}}
 
 Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
@@ -21,15 +21,16 @@ compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
     and repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-Additionally, if we have time-reversal symmetry or/and hermiticity , we check if orbits that
-relate `δ` and `-δ` are present; if not, we add them. The presence or absence of time-reversal
-symmetry is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
+Additionally, if we have time-reversal symmetry or/and we are considering a diagonal block
+(which must be Hermitian or anti-Hermitian), we check if orbits that relate `δ` and `-δ` are
+present; if not, we add them. The presence or absence of time-reversal symmetry is automatically
+inferred from `brₐ` and `brᵦ` (which must be identical).
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D};
-    hermiticity::Bool = true, # whether to include "reversed" hopping terms. This is also 
+    diagonal_block::Bool = true, # whether to include "reversed" hopping terms. This is also 
     #                         # enforced if timereversal symmetry is present
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
@@ -76,8 +77,12 @@ function obtain_symmetry_related_hoppings(
     # hopping orbits at this point; if so, we must merge them
 
     # since the code is always considering hermiticity or anti-hermiticity, this terms will
-    # always be added, so we skip any possible `if` statement
-    add_reversed_orbits!(h_orbits)
+    # always be added if the term is a diagonal block or if timereversal is imposed
+    if diagonal_block || timereversal
+        # we only need to do this if we have time-reversal symmetry or if we are 
+        # constructing a diagonal block (which must be Hermitian or anti-Hermitian)
+        add_reversed_orbits!(h_orbits)
+    end
 
     return h_orbits
 end
@@ -162,11 +167,12 @@ function _maybe_add_hoppings!(
             # δ′ already in `orbit(δ_orbit)` but hopping term might not be:
             # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
             # approximate equality comparison
-            bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+            bool =
+                !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
                     (
                         isapprox(qₐ′, qₐ′′, nothing, false; atol = VEC_CMP_ATOL) &&
                         isapprox(qᵦ′, qᵦ′′, nothing, false; atol = VEC_CMP_ATOL) &&
-                        isapprox(R′,  R′′,  nothing, false; atol = VEC_CMP_ATOL)
+                        isapprox(R′, R′′, nothing, false; atol = VEC_CMP_ATOL)
                     )
                 end
             if bool
@@ -390,14 +396,18 @@ function construct_M_matrix(
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(hops)
                 q′, w′ = hop[1], hop[2]
-                if (isapprox(q′, q, nothing, false; atol = VEC_CMP_ATOL) &&
-                    isapprox(w′, w, nothing, false; atol = VEC_CMP_ATOL))
+                if (
+                    isapprox(q′, q, nothing, false; atol = VEC_CMP_ATOL) &&
+                    isapprox(w′, w, nothing, false; atol = VEC_CMP_ATOL)
+                )
                     # an "ordinary" hopping, from `q` to `w`
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
-                elseif (isapprox(q′, w, nothing, false; atol = VEC_CMP_ATOL) &&
-                        isapprox(w′, q, nothing, false; atol = VEC_CMP_ATOL))
+                elseif (
+                    isapprox(q′, w, nothing, false; atol = VEC_CMP_ATOL) &&
+                    isapprox(w′, q, nothing, false; atol = VEC_CMP_ATOL)
+                )
                     # a time-reversed hopping, from `w` to `q`: note that this means we
                     # must swap the indices α ↔ β, i ↔ j & also Q1 → Q2
                     offset1 = (x - 1) * Q
@@ -893,7 +903,8 @@ function tb_hamiltonian(
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits =
+                obtain_symmetry_related_hoppings(Rs, br1, br2; diagonal_block = d == 0)
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit,
