@@ -21,10 +21,8 @@ compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
     and repeat step 2.
 4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
 
-Additionally, if we have time-reversal symmetry or/and we are considering a diagonal block
-(which must be Hermitian or anti-Hermitian), we check if orbits that relate `δ` and `-δ` are
-present; if not, we add them. The presence or absence of time-reversal symmetry is automatically
-inferred from `brₐ` and `brᵦ` (which must be identical).
+Additionally, if we are considering a diagonal block (which must be Hermitian or anti-Hermitian),
+we check if orbits that relate `δ` and `-δ` are present; if not, we add them.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
@@ -38,7 +36,6 @@ function obtain_symmetry_related_hoppings(
         error("both band representations must belong to the same space group")
     brₐ.timereversal == brᵦ.timereversal ||
         error("input band representations must have identical time-reversal symmetry")
-    timereversal = brₐ.timereversal
 
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
@@ -301,6 +298,34 @@ end
 #        when it comes to assembling the Hamiltonian eventually. Long story short, I don't
 #        think we get this quite right in general.
 
+# FIXME: this is a good point and I agree we didn't get ir right before. Let me cast a question:
+#        does TRS imply that if we have a hopping from q to w, we must also have a hopping
+#        from w to q?
+#        After thinking about it, I think the answer is no. For example, consider a simple
+#        system with two sites, one at [0,0] and another ar [2/3, 1/3]. Let me call `a` to 
+#        an orbital placed at [0,0] and `c` to an orbital placed at [2/3, 1/3]. Then, a
+#        potential Hamiltonian for 1st nearest neighbors is: 
+#           `H = \sum_𝐤 (α e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
+#        where `±` accounts for hermiticity or anti-hermiticity. Let me prove that this
+#        Hamiltonian is TRS, iff `α` is real. Let me assume that the time-reversal operator
+#        acts on the operators as: 𝒯 c_𝐤 𝒯⁻¹ = c_-𝐤, 𝒯 c_𝐤† 𝒯⁻¹ = c_-𝐤†; and the same for
+#        `a_𝐤`. Then, applying the TRS operator to the Hamiltonian we find:
+#           `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{-i2π 𝐤·[-2/3, -1/3]} c_-𝐤† a_-𝐤 ± h.c.)`
+#        Changing the summation variable 𝐤 → -𝐤, we find:
+#           `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
+#        Then, the only requirement for it to be TRS is that `α = α*`, i.e., `α` is real.
+
+#        This means that, in general, if we have a hopping from q to w, we don't need to
+#        have a hopping from w to q. However, we were adding them when constructing the
+#        hopping orbits. So, I think we should remove the addition of reversed orbits
+#        when considering TRS, since they are not needed.
+
+#        If this is true, the only terms that we need to consider the reversed hoppings is
+#        in the case of hermiticity or anti-hermiticity, i.e., when constructing diagonal
+#        blocks. In that case, if we have a hopping from q to w, we must also have a hopping
+#        from w to q, but in this case they both correspond to the same Wyckoff position and
+#        site-symmetry irrep, so the former discussion is no longer an issue.
+
 # ---------------------------------------------------------------------------- #
 
 """
@@ -404,15 +429,6 @@ function construct_M_matrix(
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
-                elseif (
-                    isapprox(q′, w, nothing, false; atol = VEC_CMP_ATOL) &&
-                    isapprox(w′, q, nothing, false; atol = VEC_CMP_ATOL)
-                )
-                    # a time-reversed hopping, from `w` to `q`: note that this means we
-                    # must swap the indices α ↔ β, i ↔ j & also Q1 → Q2
-                    offset1 = (x - 1) * Q
-                    c = offset0 + offset1 + (i - 1) * Q2 + j
-                    Mm[r, c, β, α] = 1
                 end
             end
         end
