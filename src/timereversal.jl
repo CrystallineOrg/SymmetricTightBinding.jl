@@ -26,7 +26,7 @@
 
 # we are going to assume for now that the transform as real irreps of the site-symmetry 
 # group. TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
-# `D(𝒯)H(k)D(𝒯)⁻¹ = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)⁻¹ = H(-k)`, where `D` is the whole 
+# `D(𝒯)H(k)D(𝒯)† = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)† = H(-k)`, where `D` is the whole 
 # operator and `Γ` is only the unitary part, so `D(𝒯) = Γ(𝒯)𝒯`
 # If the site-symmetry irrep is real, `Γ(𝒯) = I -> H*(k) = H(-k)`.
 
@@ -36,13 +36,22 @@
 # we have that `Hᵢⱼ(k) = vᵀ(k) Mᵢⱼ t`. Then, we need to make the following change:
 # `Hᵢⱼ(k) = vᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)]`
 
-# Then applying TRS will be:
+# Then, applying TRS will be:
 
 # 1. `H(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)] = (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] 
-# [real(t); imag(t)] = vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [real(t); imag(t)]`
+# [real(t); imag(t)]`
 
 # 2. `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); -imag(t) -imag(im*t)] = (Pv)ᵀ(k) 
-# [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)] = vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [real(t); imag(t)]`
+# [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)]`
+
+# Imposing the condition `H(-k) = H*(k)` we get:
+# `(Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)] = (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)]`
+# which can be rewritten as:
+# `(Pv)ᵀ(k) [0 2Mᵢⱼ] [real(t); imag(t)] = 0`
+
+# NOTE: This way of casting the problem allows us to not use the "extended" 𝐯-vector with 
+# the reversed hopping in non-diagonal blocks, which could potentially enforce extra 
+# symmetries in the system.
 
 """
     obtain_basis_free_parameters_TRS(
@@ -75,16 +84,12 @@ function obtain_basis_free_parameters_TRS(
     # Step 1: compute the Z tensor, encoding time-reversal constraints on H for the k-space
     # part. This is done by `Hᵢⱼ(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
     # `= (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
-    # `= vᵀ(k) [Pᵀ Mᵢⱼ Pᵀ Mᵢⱼ] [tᴿ; tᴵ]`
-    Z = reciprocal_constraints_trs(Mm, h_orbit)
-    # QUESTION: in the above assume that we have ±δ in v. Is this true? why? it is ok
-    #           physically and in here we will see if they are equal or not.
+    Z = [Mm Mm]
 
     # Step 2: compute the Q tensor, encoding time-reversal constraints on H for the free-
     # parameter part. This is done by `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; -itᴵ]`
     # `= (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [tᴿ; tᴵ]`
-    # `= vᵀ(k) [Pᵀ Mᵢⱼ -Pᵀ Mᵢⱼ] [tᴿ; tᴵ]`
-    Q = representation_constraint_trs(Mm, h_orbit)
+    Q = [Mm -Mm]
 
     # Step 3: build an constraint matrix acting on the doubled hopping coefficient vector
     # `[tᴿ; itᴵ]` associated with `h_orbit`; each row is a constraint
@@ -92,53 +97,4 @@ function obtain_basis_free_parameters_TRS(
     tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 
     return tₐᵦ_basis_matrix
-end
-
-"""
-    reciprocal_constraints_trs(Mm::AbstractArray{Int,4}, h_orbit::HoppingOrbit{D}) 
-    --> Array{ComplexF64,4}
-
-Time reversal symmetry action on reciprocal space. It is given by the association 
-`k -> -k => H(k) -> H(-k)`.
-"""
-function reciprocal_constraints_trs(
-    Mm::AbstractArray{Int, 4},
-    h_orbit::HoppingOrbit{D},
-) where {D}
-    Z = similar(Mm)
-    opI = inversion(Val(D)) # inversion operation
-    Pᵀ =
-        transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
-    for s in axes(Mm, 3)
-        for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
-            Z[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
-        end
-    end
-    return [Z Z]
-end
-
-"""
-    representation_constraint_trs(Mm::AbstractArray{Int,4}, h_orbit::HoppingOrbit{D})
-    --> Array{ComplexF64,4}
-
-Time reversal symmetry action on the Hamiltonian. It is given by the association δ -> -δ and 
-the complex conjugation in the free-parameter part:
-``tⱼ -> tⱼ* ⇒ [tⱼᴿ, itⱼᴵ] -> [tⱼᴿ, -itⱼᴵ] ⇒ H(k) -> H*(k)``.
-"""
-function representation_constraint_trs(
-    Mm::AbstractArray{<:Number, 4},
-    h_orbit::HoppingOrbit{D},
-) where {D}
-    Q = zeros(Int, size(Mm))
-    opI = inversion(Val(D)) # inversion operation
-    # TODO: We are doing exactly the same here as in `representation_constraint_trs`: the
-    #       only difference is we return `[Q -Q]` at the end instead of `[Z Z]` (but Q = Z).
-    Pᵀ =
-        transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
-    for s in axes(Mm, 3)
-        for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
-            Q[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
-        end
-    end
-    return [Q -Q]
 end

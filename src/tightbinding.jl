@@ -78,7 +78,7 @@ function obtain_symmetry_related_hoppings(
 
     # since the code is always considering hermiticity or anti-hermiticity, this terms will
     # always be added if the term is a diagonal block or if timereversal is imposed
-    if diagonal_block || timereversal
+    if diagonal_block
         # we only need to do this if we have time-reversal symmetry or if we are 
         # constructing a diagonal block (which must be Hermitian or anti-Hermitian)
         add_reversed_orbits!(h_orbits)
