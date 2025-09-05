@@ -1,57 +1,35 @@
-# Now we need to take care of what is real or complex to properly apply TRS.
 
-# the vector `t` could be multiplied by a complex number. We want now to make 
-# everything real. For this, we do the following extra step to the one above:
-# `αt = (a + im*b)t = at + b (im*t) = [a; b] [t im*t]`
-# where `α∈ℂ` and `a,b∈ℝ`. This way we duplicate the dimensionality of the problem,
-# but we keep everything real.
-
-# NOTE: this is implemented in the code just by expanding the basis of the nullspace 
-# from `{tᵢ}ᵢ -> {tᵢ, im*tᵢ}ᵢ`, so for each complex variable `α` we now have two 
-# real variables `a` and `b`.
-
-# but in that way, `t∈ℂ`. If we want it to be real also, we can separated it into 
-# its real and imaginary part in the following way: `t -> [real(t); imag(t)] = 
-# [tᴿ; tᴵ].`
-
-# so joining everything together, we have: αt -> [a; b] [t im*t] -> 
-# [a; b] [real(t) real(im*t); imag(t) imag(im*t)]
-
-# again note that we are just expanding the basis of the nullspace in the following 
-# way `{tᵢ}ᵢ -> {tᵢ, im*tᵢ}ᵢ`, so for each complex variable `α` we now have two 
-# real variables `a` and `b`.
-
-# now, what happens with the irreps assuming that we are working with real numbers 
-# only?
-
-# we are going to assume for now that the transform as real irreps of the site-symmetry 
-# group. TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
-# `D(𝒯)H(k)D(𝒯)† = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)† = H(-k)`, where `D` is the whole 
+# TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
+#   `D(𝒯)H(k)D(𝒯)† = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)† = H(-k)`, where `D` is the whole 
 # operator and `Γ` is only the unitary part, so `D(𝒯) = Γ(𝒯)𝒯`
-# If the site-symmetry irrep is real, `Γ(𝒯) = I -> H*(k) = H(-k)`.
+# If the basis of the representation is real, `Γ(𝒯) = I -> H*(k) = H(-k)`. We are going to
+# assume this is the case from now on.
 
-# we have made the following decomposition: `t -> [real(t); imag(t)]`.
-# how does this affect the Hamiltonian representation?
+# NB: The "realification" of the representation is performed in Crystalline.jl, when 
+# time reversal symmetry is present.
 
-# we have that `Hᵢⱼ(k) = vᵀ(k) Mᵢⱼ t`. Then, we need to make the following change:
-# `Hᵢⱼ(k) = vᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)]`
+# we have that `Hᵢⱼ(k) = vᵀ(k) Mᵢⱼ t`. Remember that we split `t` into real and imaginary
+# parts: `t = real(t) + i imag(t)`, and `Mm` acts as `[Mm Mm]`. Then, we can rewrite
+# the Hamiltonian as:
+#   `Hᵢⱼ(k) = vᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); i*imag(t)]`
 
 # Then, applying TRS will be:
 
-# 1. `H(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)] = (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] 
-# [real(t); imag(t)]`
+# 1. `H(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); i*imag(t)]`
 
-# 2. `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); -imag(t) -imag(im*t)] = (Pv)ᵀ(k) 
-# [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)]`
+# 2. `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); -i*imag(t)] = (v*)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [real(t); i*imag(t)]
+# = `vᵀ(-k) [Mᵢⱼ -Mᵢⱼ] [real(t); i*imag(t)]`
+
+# where we make use of the fact that `v*(k) = v(-k)`.
 
 # Imposing the condition `H(-k) = H*(k)` we get:
-# `(Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); imag(t)] = (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [real(t); imag(t)]`
+#   `vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [real(t); i*imag(t)] = vᵀ(-k) [Mᵢⱼ -Mᵢⱼ] [real(t); i*imag(t)]`
 # which can be rewritten as:
-# `(Pv)ᵀ(k) [0 2Mᵢⱼ] [real(t); imag(t)] = 0`
+#   `vᵀ(-k) [0 2Mᵢⱼ] [real(t); i*imag(t)] = 0`
 
-# NOTE: This way of casting the problem allows us to not use the "extended" 𝐯-vector with 
-# the reversed hopping in non-diagonal blocks, which could potentially enforce extra 
-# symmetries in the system.
+# This way of casting the problem is very convenient, as we don't need to modify the `v` vectors,
+# to include reversed hoppings, which might not be present due to lack of inversion symmetry.
+# We just need to compute the nullspace of `[0 2Mᵢⱼ]`.
 
 """
     obtain_basis_free_parameters_TRS(
@@ -77,22 +55,17 @@ function obtain_basis_free_parameters_TRS(
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
     Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
-    # To add time-reversal constraints, we duplicate the `M` matrix so that we can transfer
-    # the conjugation from `t` to `M`. We exploit the following splitting:
-    #    `Hᵢⱼ = vᵀ Mᵢⱼ t = vᵀ Mᵢⱼ (tᴿ + itᴵ) = vᵀ [Mᵢⱼ Mᵢⱼ] [tᴿ; itᴵ]`
+    # NB: we want to keep `_aggregate_constraints` due to its efficiency in building the
+    # constraint matrix. That's why we are going to define to artificial tensors `Z` and `Q`
+    # whose subtraction will result in `[0 2Mᵢⱼ]`.
 
-    # Step 1: compute the Z tensor, encoding time-reversal constraints on H for the k-space
-    # part. This is done by `Hᵢⱼ(-k) = vᵀ(-k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
-    # `= (Pv)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; tᴵ]`
-    Z = [Mm Mm]
+    # Step 1: compute the Z tensor, which will just be `[0 2Mᵢⱼ]`
+    Z = [zeros(Int, size(Mm)) 2 * Mm]
 
-    # Step 2: compute the Q tensor, encoding time-reversal constraints on H for the free-
-    # parameter part. This is done by `H*(k) = (v*)ᵀ(k) [Mᵢⱼ Mᵢⱼ] [tᴿ; -itᴵ]`
-    # `= (Pv)ᵀ(k) [Mᵢⱼ -Mᵢⱼ] [tᴿ; tᴵ]`
-    Q = [Mm -Mm]
+    # Step 2: compute the Q tensor, which will be just a matrix of zeros 
+    Q = zeros(Int, size(Z))
 
-    # Step 3: build an constraint matrix acting on the doubled hopping coefficient vector
-    # `[tᴿ; itᴵ]` associated with `h_orbit`; each row is a constraint
+    # Step 3: make use of `_aggregate_constraints` to build the constraint matrix
     constraints = _aggregate_constraints(Q, Z)
     tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 

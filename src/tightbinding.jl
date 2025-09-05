@@ -272,13 +272,8 @@ end
 #   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
 #   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
-# NB: This isn't actually quite right in general, because we also may include time-reversed
-#     hoppings which could have the roles of `q` and `w` reversed. So, in general, what's
-#     "inside" `t(δᵢ)` is just whatever is specified by `h_orbit.hoppings[i]` (with
-#     repetitions over the irrep partner functions)
-# FIXME: What does this strange "ordering" of `t` imply more generally and are we internally
-#        consistent? 
-#        To elaborate, it seems we currently assume that `t` is a kind of vector-flattened
+
+# NB: The ordering of `t` is a bit subtle: `t` is a kind of vector-flattened
 #        tensor `T`, with the following "indexing convention" for `T`:
 #        1. The elements `T[i]` give a vector of hoppings corresponding to the `i`th orbit
 #           `δᵢ = h_orbit.orbit[i]`. 
@@ -287,44 +282,37 @@ end
 #           `hᵢⱼ = h_orbit.hoppings[i][j]`.
 #           This describes hoppings from site an "origin" `hᵢⱼ[1]` to a "destination"
 #           `hᵢⱼ[2] + hᵢⱼ[3]` (where `hᵢⱼ[3]` is an integer "R" translation).
-#           Notably, it is *not* generally true that `hᵢⱼ[1]` is a site in orbit(q) - it
-#           could in fact be a site in orbit(w), if it is a time-reversed term.
-#        3. Finally, `T[i][j][k][m]` is a _single_ hopping term from the `k`th partner
-#           function of `hᵢⱼ[1]` site to the `m`th partner function of `hᵢⱼ[2]` site.
-#        But... this last thing is quite tricky: it means we iterate sometimes as (1) first
-#        over the site-symmetry irreps of q (A above) then over w (B above), but for time-
-#        reversed terms, we go (2) first over w (B) then over q (A). 
-#        This is quite a tricky convention, and I don't think we actually account for this
-#        when it comes to assembling the Hamiltonian eventually. Long story short, I don't
-#        think we get this quite right in general.
+#        3. Finally, `T[i][j][k][m]` is a _single_ hopping term from the `k`-th partner
+#           function of `hᵢⱼ[1]` site to the `m`-th partner function of `hᵢⱼ[2]` site.
+#        If we are considering a diagonal block, i.e., `brₐ == brᵦ`, then we also have
+#        to include the hermitian or anti-hermitian counterparts of each hopping term,
+#        i.e., for each hopping term from `hᵢⱼ[1]` to `hᵢⱼ[2] + hᵢⱼ[3]`, we also have
+#        to include the hopping term from `hᵢⱼ[2]` to `hᵢⱼ[1] - hᵢⱼ[3]`.
 
-# FIXME: this is a good point and I agree we didn't get ir right before. Let me cast a question:
-#        does TRS imply that if we have a hopping from q to w, we must also have a hopping
-#        from w to q?
-#        After thinking about it, I think the answer is no. For example, consider a simple
-#        system with two sites, one at [0,0] and another ar [2/3, 1/3]. Let me call `a` to 
-#        an orbital placed at [0,0] and `c` to an orbital placed at [2/3, 1/3]. Then, a
-#        potential Hamiltonian for 1st nearest neighbors is: 
-#           `H = \sum_𝐤 (α e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
-#        where `±` accounts for hermiticity or anti-hermiticity. Let me prove that this
-#        Hamiltonian is TRS, iff `α` is real. Let me assume that the time-reversal operator
-#        acts on the operators as: 𝒯 c_𝐤 𝒯⁻¹ = c_-𝐤, 𝒯 c_𝐤† 𝒯⁻¹ = c_-𝐤†; and the same for
-#        `a_𝐤`. Then, applying the TRS operator to the Hamiltonian we find:
-#           `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{-i2π 𝐤·[-2/3, -1/3]} c_-𝐤† a_-𝐤 ± h.c.)`
-#        Changing the summation variable 𝐤 → -𝐤, we find:
-#           `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
-#        Then, the only requirement for it to be TRS is that `α = α*`, i.e., `α` is real.
+# NB: time reversal symmetry does NOT imply that if we have a hopping from q to w, we must
+#     also have a hopping from w to q. This is a common misconception, but it is not true.
 
-#        This means that, in general, if we have a hopping from q to w, we don't need to
-#        have a hopping from w to q. However, we were adding them when constructing the
-#        hopping orbits. So, I think we should remove the addition of reversed orbits
-#        when considering TRS, since they are not needed.
+#     As an example, consider a simple system with two sites, one at [0,0] and another ar 
+#     [2/3, 1/3]. Let me call `a` to an orbital placed at [0,0] and `c` to an orbital placed
+#     at [2/3, 1/3]. Then, a potential Hamiltonian for 1st nearest neighbors is: 
+#        `H = \sum_𝐤 (α e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
+#     where `±` accounts for hermiticity or anti-hermiticity. Let me prove that this
+#     Hamiltonian is TRS, iff `α` is real. Let me assume that the time-reversal operator
+#     acts on the operators as: 𝒯 c_𝐤 𝒯⁻¹ = c_-𝐤, 𝒯 c_𝐤† 𝒯⁻¹ = c_-𝐤†; and the same for
+#     `a_𝐤`. Then, applying the TRS operator to the Hamiltonian we find:
+#        `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{-i2π 𝐤·[-2/3, -1/3]} c_-𝐤† a_-𝐤 ± h.c.)`
+#     Changing the summation variable 𝐤 → -𝐤, we find:
+#        `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
+#     Then, the only requirement for it to be TRS is that `α = α*`, i.e., `α` is real.
 
-#        If this is true, the only terms that we need to consider the reversed hoppings is
-#        in the case of hermiticity or anti-hermiticity, i.e., when constructing diagonal
-#        blocks. In that case, if we have a hopping from q to w, we must also have a hopping
-#        from w to q, but in this case they both correspond to the same Wyckoff position and
-#        site-symmetry irrep, so the former discussion is no longer an issue.
+#     This means that, in general, if we have a hopping from q to w, we don't need to
+#     have a hopping from w to q.
+
+#     The only terms that we need to consider the reversed hoppings is in the case of
+#     hermiticity or anti-hermiticity, i.e., when constructing diagonal blocks. In that case,
+#     if we have a hopping from q to w, we must also have a hopping from w to q, but they both
+#     correspond to the same Wyckoff position and site-symmetry irrep, so the former discussion
+#     holds.
 
 # ---------------------------------------------------------------------------- #
 
