@@ -1,15 +1,15 @@
 
-# TRS can be understood as a spacial symmetry when acting on the Hamiltonian:
+# TRS can be understood as a spatial symmetry when acting on the Hamiltonian:
 #   `D(𝒯)H(k)D(𝒯)† = H(𝒯k) -> Γ(𝒯)H*(k)Γ(𝒯)† = H(-k)`, where `D` is the whole 
 # operator and `Γ` is only the unitary part, so `D(𝒯) = Γ(𝒯)𝒯`
-# If the basis of the representation is real, `Γ(𝒯) = I -> H*(k) = H(-k)`. We are going to
+# If the basis of the representation is real, `Γ(𝒯) = I -> H*(k) = H(-k)`. We will
 # assume this is the case from now on.
 
-# NB: The "realification" of the representation is performed in Crystalline.jl, when 
-# time reversal symmetry is present.
+# NB: The "realification" of the representation is performed in Crystalline.jl when 
+# time-reversal symmetry is present.
 
-# we have that `Hᵢⱼ(k) = vᵀ(k) Mᵢⱼ t`. Remember that we split `t` into real and imaginary
-# parts: `t = real(t) + i imag(t)`, and `Mm` acts as `[Mm Mm]`. Then, we can rewrite
+# We have that `Hᵢⱼ(k) = vᵀ(k) Mᵢⱼ t`. Remember that we split `t` into real and imaginary
+# parts: `t = [real(t); i imag(t)]`, and `Mm` acts as `[Mm Mm]`. Then, we can rewrite
 # the Hamiltonian as:
 #   `Hᵢⱼ(k) = vᵀ(k) [Mᵢⱼ Mᵢⱼ] [real(t); i*imag(t)]`
 
@@ -27,9 +27,10 @@
 # which can be rewritten as:
 #   `vᵀ(-k) [0 2Mᵢⱼ] [real(t); i*imag(t)] = 0`
 
-# This way of casting the problem is very convenient, as we don't need to modify the `v` vectors,
-# to include reversed hoppings, which might not be present due to lack of inversion symmetry.
-# We just need to compute the nullspace of `[0 2Mᵢⱼ]`.
+# This way of casting the problem is very convenient (and doesn't require any modification of 
+#  the `v` vectors to include "reversed" hoppings, which is not in general a necessary feature).
+# We just need to ensure that we intersect the `[real(t); i*imag(t)]` basis with the null space
+# of  `[0 2Mᵢⱼ]`.
 
 """
     obtain_basis_free_parameters_TRS(
@@ -39,13 +40,12 @@
         orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
         Mm::AbstractArray{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
-        )                             --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}}
+    )                             --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` associated
 with the hopping orbit `h_orbit` under time-reversal symmetry.
 
-Real and imaginary parts of the basis vectors are differentiated explicitly: internally,
-we consider only variables.
+Real and imaginary parts of the basis vectors are differentiated explicitly.
 """
 function obtain_basis_free_parameters_TRS(
     h_orbit::HoppingOrbit{D},
