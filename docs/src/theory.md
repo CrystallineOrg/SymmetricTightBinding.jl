@@ -472,18 +472,18 @@ Note that we are going to use here the order provided by the function `obtain_sy
 Additionally, we will need to assign a free-parameter to each orbital hopping term in the Hamiltonian matrix — the ones that afterwards we will tune to replicate the band structure. This vector then will have a length of $\text{len}(δs) × \# 𝐪 × \# 𝐰 × \text{dim}(A) × \text{dim}(B)$. In particular this vector will look like this:
 
 ```math
-𝐭^T = [t(δ_1), …, t(δ_i), …, t(δ_n)]
+𝐭^T = [𝐭(δ_1), …, 𝐭(δ_i), …, 𝐭(δ_n)]
 ```
 
-where each $t(δ_i)$ represent a collection of free-parameter, one per hopping term inside the hopping distance $δ_i$.
+where each $𝐭(δ_i)$ represent a collection of free parameters, one per hopping term inside the hopping distance $δ_i$.
 
-Notice that, the ordering of $𝐭$ is a bit subtle: $𝐭$ is a kind of vector-flattened        tensor $𝐓$, with the following "indexing convention" for $𝐓$:
+Notice that, the ordering of $𝐭$ is a bit subtle: $𝐭$ should be interpreted as a kind of vector-flattened tensor $𝐓$, with the following "indexing convention" for $𝐓$:
 
-1. The elements $𝐓[i]$ give a vector of hoppings corresponding to the $i$-th orbit $δ_i$. 
-2. The elements $T[i][j]$ give a vector of hoppings corresponding to the $j$-th possible spatial hopping with displacement $δᵢ$. This describes hoppings from site an "origin" $q_r$ to a "destination" $w_p + 𝐆$ (where $G$ is a lattice translation).
+1. The elements $𝐓[i]$ give a vector of hoppings corresponding to the $i$-th orbit $δ_i$; denoted $𝐭(δ_i)$ above). 
+2. The elements $T[i][j]$ give a vector of hoppings corresponding to the $j$-th possible spatial hopping with displacement $δᵢ$. This describes hoppings from an "origin" site $q_r$ to a "destination" site $w_p + 𝐆$ (where $G$ is a lattice translation).
 3. Finally, $𝐓[i][j][k][m]$ is a _single_ hopping term from the $k$-th partner function of $q_r$ site to the $m$-th partner function of $w_p$ site.
 
-If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we also have to include the hermitian or anti-hermitian counterparts of each hopping term, i.e., for each hopping term from $q_r$ to $w_p + 𝐆$, we also have to include the hopping term from $w_p$ to $q_r - 𝐆$.
+If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we also have to include the hermitian or anti-hermitian counterparts of each hopping term, i.e., for each hopping term from $q_r$ to $w_p + 𝐆$, we also have to include the "reversed" hopping term from $w_p$ to $q_r - 𝐆$.
 
 Then, each term of the Hamiltonian matrix $𝐇_𝐤$ can be written as bilinear form in the following way:
 

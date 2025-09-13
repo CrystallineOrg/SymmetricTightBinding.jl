@@ -67,16 +67,13 @@ function obtain_symmetry_related_hoppings(
         end
     end
 
-    # timereversal or hermiticity could link orbits that spatial symmetries alone would 
-    # categorize as distinct; in particular, if we have time reversal, a hopping vector `δ` 
-    # must have a counterpart `-δ` - but those two vectors could have fallen into distinct
-    # hopping orbits at this point; if so, we must merge them
-
-    # since the code is always considering hermiticity or anti-hermiticity, these terms will
-    # always be added if the term is a diagonal block or if time-reversal symmetry is imposed
+    # hermiticity/anti-hermicity could link orbits that spatial symmetries might not have
+    # already linked: in particular, if we are in a "diagonal block" of the Hamiltonian,
+    # then, for every hopping vector `δ`, we must have a "reversed" counterpart `-δ` in the
+    # presence of hermicity r anti-hermiticity (always the case in our implementation); but
+    # those two vectors might have fallen in distinct orbits up this point - if so, we now
+    # merge them
     if diagonal_block
-        # we only need to do this if we have time-reversal symmetry or if we are 
-        # constructing a diagonal block (which must be Hermitian or anti-Hermitian)
         add_reversed_orbits!(h_orbits)
     end
 
