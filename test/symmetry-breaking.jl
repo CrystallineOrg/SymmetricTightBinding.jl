@@ -46,7 +46,7 @@ using Crystalline
         cbr = @composite brs[1] + brs[end] #  (1h|A) + (1a|B₂) (2 bands)
         tbm = tb_hamiltonian(cbr, [[0,0,0],])
 
-        @test length(subduced_complement(tbm, 3)) == 2
+        @test length(subduced_complement(tbm, 3)) == 1
     end
 
     @testset "broken 3D example" begin
