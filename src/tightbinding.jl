@@ -632,7 +632,7 @@ end
 
 function _aggregate_constraints(
     Q::AbstractArray{<:Number, 4},
-    Z::AbstractArray{<:Number, 4},
+    Z::Union{AbstractArray{<:Number, 4}, <:Number},
     row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
@@ -661,7 +661,7 @@ end
 function _aggregate_constraints!( # modifies `constraint_vs` in place
     constraint_vs::Vector{<:Number},
     Q::AbstractArray{<:Number, 4},
-    Z::AbstractArray{<:Number, 4},
+    Z::Union{AbstractArray{<:Number, 4}, <:Number},
     row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
@@ -681,7 +681,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
     # aggregate constraints into `constraint_vs`
     for i in axes(Q, 1), s in axes(Q, 3), t in axes(Q, 4)
         q = @view Q[i, :, s, t]
-        z = @view Z[i, :, s, t]
+        z = Z isa Number ? Z : @view Z[i, :, s, t]
         c .= q .- z
 
         # don't add empty or near-empty constraints
@@ -714,10 +714,10 @@ end
 
 """
     reciprocal_constraints_matrices(
-                                    Mm::AbstractArray{Int,4}, 
-                                    gens::AbstractVector{SymOperation{D}}, 
-                                    h_orbit::HoppingOrbit{D}
-                                    ) --> Vector{Array{Int,4}}
+        Mm::AbstractArray{Int,4}, 
+        gens::AbstractVector{SymOperation{D}}, 
+        h_orbit::HoppingOrbit{D}
+    ) --> Vector{Array{Int,4}}
 
 Compute the reciprocal constraints matrices for the generators of the SG. This is done by
 permuting the rows of the M matrix according to the symmetry operation acting on k-space.

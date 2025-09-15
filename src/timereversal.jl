@@ -56,16 +56,21 @@ function obtain_basis_free_parameters_TRS(
     Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
     # NB: we want to keep `_aggregate_constraints` due to its efficiency in building the
-    # constraint matrix. That's why we are going to define to artificial tensors `Z` and `Q`
-    # whose subtraction will result in `[0 2Mᵢⱼ]`.
+    # constraint matrix. So, although seemingly unnecessary, we stick with its Q & Z tensor
+    # structure, to implement the [0 Mᵢⱼ] tensor as Q = [0 Mᵢⱼ] and Z = 0, with the final
+    # constraints being a row-wise aggregation of Q-Z
 
-    # Step 1: compute the Z tensor, which will just be `[0 2Mᵢⱼ]`
-    Z = [zeros(Int, size(Mm)) 2 * Mm]
+    # Step 1: compute the Z tensor (zero-valued tensor)
+    Z = 0 # stand-in for a zero-tensor (but no need to allocate it explicitly)
 
-    # Step 2: compute the Q tensor, which will be just a matrix of zeros 
-    Q = zeros(Int, size(Z))
+    # Step 2: compute the Q tensor (the block tensor "[0 Mm]" = `[zeros(Int, size(Mm)) Mm]`)
+    sMm = size(Mm)
+    Q = zeros(Int, (sMm[1], 2sMm[2], sMm[3], sMm[4]))
+    dst_indices = CartesianIndices((1:sMm[1], (sMm[2]+1):2sMm[2], 1:sMm[3], 1:sMm[4]))
+    copyto!(Q, dst_indices, Mm, CartesianIndices(axes(Mm))) # efficient [zeros(Int, size(Mm)) Mm]
 
-    # Step 3: make use of `_aggregate_constraints` to build the constraint matrix
+    # Step 3: use of `_aggregate_constraints` to build the constraint matrix 
+    #         ~(Q-Z)[i, :, s, t] (aggregated over i,s,t)
     constraints = _aggregate_constraints(Q, Z)
     tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 
