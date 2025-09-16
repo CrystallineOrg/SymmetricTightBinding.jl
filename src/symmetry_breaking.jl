@@ -202,7 +202,14 @@ function subduced_complement(
         # now we have the new terms - store them as `TightBindingTerm`s
         for tᴴᵪᴳ in eachcol(tₐᵦ_basis_reim_ᴴᵪᴳ′_sparsified)
             tbbᴴᵪᴳ = TightBindingBlock{D}(
-                tbb.br1, tbb.br2, tbb.ordering1, tbb.ordering2, tbb.h_orbit, tbb.Mm, tᴴᵪᴳ
+                tbb.br1,
+                tbb.br2,
+                tbb.ordering1,
+                tbb.ordering2,
+                tbb.h_orbit,
+                tbb.Mm,
+                tᴴᵪᴳ,
+                tbb.diagonal_block
             )
             h = TightBindingTerm{D}(
                 tbt.axis,
