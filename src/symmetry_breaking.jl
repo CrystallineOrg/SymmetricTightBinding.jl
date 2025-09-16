@@ -221,6 +221,7 @@ function subduced_complement(
                 tbb.h_orbit,
                 tbb.Mm,
                 tᴴᵪᴳ,
+                tbb.diagonal_block
             )
             h = TightBindingTerm{D}(
                 tbt.axis,

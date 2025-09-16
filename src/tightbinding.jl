@@ -27,8 +27,7 @@ function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D};
-    diagonal_block::Bool = true, # whether to include "reversed" hopping terms. This is also 
-    #                         # enforced if timereversal symmetry is present
+    diagonal_block::Bool = true, # whether to manually add "reversed" hoppings (if false)
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum ||
@@ -901,8 +900,8 @@ function tb_hamiltonian(
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
-            h_orbits =
-                obtain_symmetry_related_hoppings(Rs, br1, br2; diagonal_block = d == 0)
+            diagonal_block = d == 0
+            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2; diagonal_block)
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit,
@@ -910,12 +909,20 @@ function tb_hamiltonian(
                     br2,
                     ordering1,
                     ordering2;
-                    diagonal_block = d == 0,
+                    diagonal_block,
                     antihermitian,
                 )
                 for t in t_αβ_basis
-                    block =
-                        TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t)
+                    block = TightBindingBlock{D}(
+                        br1,
+                        br2,
+                        ordering1,
+                        ordering2,
+                        h_orbit,
+                        Mm,
+                        t,
+                        diagonal_block
+                    )
                     h = TightBindingTerm{D}(
                         axis,
                         (block_i, block_j),
