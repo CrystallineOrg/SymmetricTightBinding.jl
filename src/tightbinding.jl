@@ -3,33 +3,31 @@
         Rs::AbstractVector{V}, 
         brₐ::NewBandRep{D}, 
         brᵦ::NewBandRep{D};
-        hermiticity::Bool = true,
+        diagonal_block::Bool = true,
     ) --> Vector{HoppingOrbit{D}}
 
-Compute the symmetry related hopping terms from the points in WP of `brₐ` to the 
-WP of `brᵦ` displaced a set of primitive lattice vectors representatives `Rs`.
+Compute the symmetry-related hopping terms from the points in the WP of `brₐ` to the 
+WP of `brᵦ`, displaced by a set of primitive lattice-vector representatives `Rs`.
 
 ## Implementation
-1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. We 
-compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
-2. If `δ ∈ representatives` then we add `δ => (a, b, R)` to the list of hoppings 
-    of that representative and continue. If not then, we search inside of all the 
-    representatives for the one that `δ => (a, b, R)` in the list of hoppings. 
-    If not found, then we add `δ` as a new representative and add `δ => (a, b, R)` 
-    to its list of hoppings.
-3. Take `g ∈ generators` and compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
+1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. 
+    Compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+2. If `δ ∈ representatives`, add `δ => (a, b, R)` to the list of hoppings 
+    for that representative and continue. Otherwise, search all representatives for one 
+    whose list of hoppings contains `δ => (a, b, R)`. If none is found, add `δ` as a new 
+    representative and add `δ => (a, b, R)` to its list of hoppings.
+3. Take `g ∈ generators`, compute `δ' = g δ` and `(a', b', R') = (g a, g b, g R)`, 
     and repeat step 2.
-4. Repeat all steps 1 to 3 for all pair of points in the WPs of `brₐ` and `brᵦ`.
+4. Repeat steps 1–3 for all pairs of points in the WPs of `brₐ` and `brᵦ`.
 
-Additionally, if we have time-reversal symmetry or/and hermiticity , we check if orbits that
-relate `δ` and `-δ` are present; if not, we add them. The presence or absence of time-reversal
-symmetry is automatically inferred from `brₐ` and `brᵦ` (which must be identical).
+Additionally, if we are considering a diagonal block (which must be Hermitian or anti-Hermitian),
+we check whether orbits that relate `δ` and `-δ` are present; if not, we add them.
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D};
-    hermiticity::Bool = true, # whether to include "reversed" hopping terms. This is also 
+    diagonal_block::Bool = true, # whether to include "reversed" hopping terms. This is also 
     #                         # enforced if timereversal symmetry is present
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
@@ -37,9 +35,8 @@ function obtain_symmetry_related_hoppings(
         error("both band representations must belong to the same space group")
     brₐ.timereversal == brᵦ.timereversal ||
         error("input band representations must have identical time-reversal symmetry")
-    timereversal = brₐ.timereversal
 
-    # we only want to include the wyckoff positions in the primitive cell - but the default
+    # we only want to include the Wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
     # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
     # operations - but is still specified in a conventional basis. So, below, we remove
@@ -70,14 +67,15 @@ function obtain_symmetry_related_hoppings(
         end
     end
 
-    # timereversal or hermiticity could link orbits that spatial symmetries alone would 
-    # categorize as distinct; in particular, if we have timereversal, a hopping vector `δ` 
-    # must have a counterpart `-δ` - but those two vectors could have fallen into distinct
-    # hopping orbits at this point; if so, we must merge them
-
-    # since the code is always considering hermiticity or anti-hermiticity, this terms will
-    # always be added, so we skip any possible `if` statement
-    add_reversed_orbits!(h_orbits)
+    # hermiticity/anti-hermicity could link orbits that spatial symmetries might not have
+    # already linked: in particular, if we are in a "diagonal block" of the Hamiltonian,
+    # then, for every hopping vector `δ`, we must have a "reversed" counterpart `-δ` in the
+    # presence of hermicity r anti-hermiticity (always the case in our implementation); but
+    # those two vectors might have fallen in distinct orbits up this point - if so, we now
+    # merge them
+    if diagonal_block
+        add_reversed_orbits!(h_orbits)
+    end
 
     return h_orbits
 end
@@ -85,8 +83,8 @@ end
 """
     maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops) --> Vector{HoppingOrbit{D}}
 
-Checks if a hopping term `δ` is already in the list of representatives. If not, adds it
-and its symmetry-related partners. If it is, it only adds the symmetry-related partners.
+Checks whether a hopping term `δ` is already in the list of representatives. If not, adds it
+and its symmetry-related partners. If it is, only the symmetry-related partners are added.
 """
 function maybe_add_hoppings!(
     h_orbits,
@@ -128,8 +126,8 @@ function _maybe_add_hoppings!(
     for g in ops
         _qₐ′ = g * qₐ
         _qᵦ′ = g * (qᵦ + R)
-        # _qₐ′ and _qᵦ′ could include a translation part that is a multiple of the lattice
-        # translation, so we reduce it to a unit range and keep that translation part separate
+    # _qₐ′ and _qᵦ′ can include a translation part that is a multiple of the lattice
+    # translation, so we reduce it to a unit range and keep that translation part separate
         qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
         qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
         dₐ = _qₐ′ - qₐ′ # possible lattice translation part of _qₐ′
@@ -141,7 +139,7 @@ function _maybe_add_hoppings!(
 
         # several sanity checks:
         #   1. R´ is a lattice translation, i.e., it is integer
-        #   2. R´ doesn't have any free parameters - TODO: try to implement it for WPs with free parameters
+        #   2. R´ doesn't have any free parameters
         #   3. δ′ = qᵦ′ + R′ - qₐ′
         all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < VEC_CMP_ATOL, constant(R′)) ||
             error("arrived at non-integer lattice translation R′: should be impossible")
@@ -162,11 +160,12 @@ function _maybe_add_hoppings!(
             # δ′ already in `orbit(δ_orbit)` but hopping term might not be:
             # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
             # approximate equality comparison
-            bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+            bool =
+                !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
                     (
                         isapprox(qₐ′, qₐ′′, nothing, false; atol = VEC_CMP_ATOL) &&
                         isapprox(qᵦ′, qᵦ′′, nothing, false; atol = VEC_CMP_ATOL) &&
-                        isapprox(R′,  R′′,  nothing, false; atol = VEC_CMP_ATOL)
+                        isapprox(R′, R′′, nothing, false; atol = VEC_CMP_ATOL)
                     )
                 end
             if bool
@@ -181,7 +180,7 @@ end
     add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
 
 Adds the reversed hopping terms to the hopping orbits in `h_orbits`. The reversed
-hopping terms are added to the orbit of the hopping term they are related to, and if they are
+hopping terms are added to the orbit of the hopping term they are related to; if they are
 already present in another orbit, the two orbits are merged.
 """
 function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
@@ -189,14 +188,14 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
     # hopping vector `-δ` is also in the orbit; if not, we check if it is in any other
     # orbit to merge them, and, if not, we add it manually to the orbit
 
-    # below, we assume that if for some δ no counterpart is found, then no other δ in the
+    # below, we assume that if, for some δ, no counterpart is found, then no other δ in the
     # orbit has a counterpart, so we can just add it manually
 
     # determine if `h_orbit`s should be modified
     for (n, h_orbit) in enumerate(h_orbits)
         δs = orbit(h_orbit) # δs in the current orbit
 
-        # check if the orbit is already "good" (i.e., all δs have a -δ counterpart)
+    # check whether the orbit is already "good" (i.e., all δs have a -δ counterpart)
         if all(δ -> isapproxin(-δ, δs, nothing, false; atol = VEC_CMP_ATOL), δs)
             # all δs have a -δ counterpart in the orbit: orbit is good as-is
             continue
@@ -220,14 +219,14 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
             deleteat!(h_orbits, n′)
             continue
         end
-        # we now know that at least some δ doesn't have a -δ counterpart: we assume that
-        # this implies that none of the δs have a -δ counterpart, so we need to add them all
+    # we now know that at least some δ doesn't have a -δ counterpart; we assume that
+    # this implies that none of the δs have a -δ counterpart, so we need to add them all
         @assert all(δ -> !isapproxin(-δ, δs, nothing, false; atol = VEC_CMP_ATOL), δs)
 
         # first append the new δs into the orbit
         append!(δs, -δs)
 
-        # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
+    # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
         # => -δ = a - (b + R) = a - b - R = b - 2b - R -a + 2a = b + (2a - 2b - R) - a = b + R' - a
         hoppings = h_orbit.hoppings
         hoppings′ = map(hoppings) do hops
@@ -269,16 +268,58 @@ end
 #   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
 #   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
 #   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
+
+# NB: The ordering of `t` is a bit subtle: `t` is a kind of vector-flattened
+#        tensor `T`, with the following "indexing convention" for `T`:
+#        1. The elements `T[i]` give a vector of hoppings corresponding to the `i`th orbit
+#           `δᵢ = h_orbit.orbit[i]`. 
+#        2. The elements `T[i][j]` give a vector of hoppings corresponding to the `j`th
+#           possible spatial hopping with displacement `δᵢ`, associated with
+#           `hᵢⱼ = h_orbit.hoppings[i][j]`.
+#           This describes hoppings from site an "origin" `hᵢⱼ[1]` to a "destination"
+#           `hᵢⱼ[2] + hᵢⱼ[3]` (where `hᵢⱼ[3]` is an integer "R" translation).
+#        3. Finally, `T[i][j][k][m]` is a _single_ hopping term from the `k`-th partner
+#           function of `hᵢⱼ[1]` site to the `m`-th partner function of `hᵢⱼ[2]` site.
+#        If we are considering a diagonal block, i.e., `brₐ == brᵦ`, then we also have
+#        to include the Hermitian or anti-Hermitian counterparts of each hopping term,
+#        i.e., for each hopping term from `hᵢⱼ[1]` to `hᵢⱼ[2] + hᵢⱼ[3]`, we also have
+#        to include the hopping term from `hᵢⱼ[2]` to `hᵢⱼ[1] - hᵢⱼ[3]`.
+
+# NB: Time-reversal symmetry does NOT imply that if we have a hopping from q to w, we must
+#     also have a hopping from w to q. This is a natural first assumption, but a false one.
+
+#     As an example, consider a simple system with two sites, one at [0,0] and another at 
+#     [2/3, 1/3]. Let us call `a` an orbital placed at [0,0] and `c` an orbital placed
+#     at [2/3, 1/3]. Then, a possible Hamiltonian for first-nearest neighbors is: 
+#        `H = \sum_𝐤 (α e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
+#     where `±` accounts for hermiticity or anti-hermiticity. Let me prove that this
+#     Hamiltonian is TRS iff `α` is real. Assume that the time-reversal operator
+#     acts on the operators as: 𝒯 c_𝐤 𝒯⁻¹ = c_-𝐤, 𝒯 c_𝐤† 𝒯⁻¹ = c_-𝐤†; and the same for
+#     `a_𝐤`. Then, applying the TRS operator to the Hamiltonian, we find:
+#        `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{-i2π 𝐤·[-2/3, -1/3]} c_-𝐤† a_-𝐤 ± h.c.)`
+#     Changing the summation variable 𝐤 → -𝐤, we find:
+#        `𝒯 H 𝒯⁻¹ = \sum_𝐤 (α* e^{i2π 𝐤·[-2/3, -1/3]} c_𝐤† a_𝐤 ± h.c.)`
+#     Then, the only requirement for TRS is that `α = α*`, i.e., `α` is real.
+
+#     This means that, in general, if we have a hopping from q to w, we don't need to
+#     have a hopping from w to q.
+
+#     The only terms where we need to consider reversed hoppings are the cases of blocks where
+#     hermicity or anti-hermicity relates the block to itself: i.e., diagonal blocks. There,
+#     if we have a hopping from q to w, we must also have a hopping from w to q, but they both
+#     correspond to the same Wyckoff position and site-symmetry irrep, so the former discussion
+#     holds.
+
 # ---------------------------------------------------------------------------- #
 
 """
     OrbitalOrdering(br::NewBandRep{D}) --> OrbitalOrdering{D}
 
-Establishes a canonical, local ordering for the orbitals associated to a band representation
+Establishes a canonical, local ordering for the orbitals associated with a band representation
 `br`. This is the default ordering used when associating row/column indices in a
 tight-binding Hamiltonian block to specific orbitals in the associated band representations.
 
-The canonical orbital ordering is stored in `.ordering`. The `i`th elements of `ordering`,
+The canonical orbital ordering is stored in `.ordering`. The `i`th element of `ordering`,
 `ordering[i]`, is a `NamedTuple` with two fields:
 `wp` and `idx`:
 - `wp`: stores a Wyckoff position in the orbit of the Wyckoff position associated to
@@ -286,7 +327,7 @@ The canonical orbital ordering is stored in `.ordering`. The `i`th elements of `
 - `idx`: stores the index of the partner function of the site-symmetry irrep associated to
   `br` at `wp`.
 
-I.e., the `i`th orbital associated to `br` is located at `wp` and transforms as the `idx`th
+I.e., the `i`th orbital associated with `br` is located at `wp` and transforms as the `idx`th
 partner function of the site-symmetry irrep of `br.siteir`.
 The total number of orbitals associated to a band representation, and hence the length of
 `ordering`, is the product of the site-symmetry irrep dimensionality and the number of sites
@@ -320,7 +361,7 @@ end
         [ordering1, ordering2]) 
         --> Array{Int,4}
 
-Construct a set of matrices that encodes a Hamiltonian's term which resembles the hopping
+Construct a set of matrices that encode a Hamiltonian term which resembles the hopping
 from EBR `br1` to EBR `br2`.
 
 The encoding is stored as a 4D matrix. Its last two axes correspond to elements of the
@@ -359,13 +400,16 @@ function construct_M_matrix(
         q = parent(q)
         w = parent(w)
 
-        # assign a 1 to the correct position of WPs times irreps dimensionality
+        # assign a 1 to the correct position of WPs times irrep dimensionality
         for (r, hops) in enumerate(h_orbit.hoppings)
             offset0 = (r - 1) * E * Q
             for (x, hop) in enumerate(hops)
                 q′, w′ = hop[1], hop[2]
-                if (isapprox(q′, q, nothing, false; atol = VEC_CMP_ATOL) &&
-                    isapprox(w′, w, nothing, false; atol = VEC_CMP_ATOL))
+                if (
+                    isapprox(q′, q, nothing, false; atol = VEC_CMP_ATOL) &&
+                    isapprox(w′, w, nothing, false; atol = VEC_CMP_ATOL)
+                )
+                    # an "ordinary" hopping, from `q` to `w`
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
                     Mm[r, c, α, β] = 1
@@ -387,7 +431,6 @@ end
 
 Build the Q matrix for a particular symmetry operation (or, equivalently, a particular matrix
 from the site-symmetry representation), acting on the M matrix.
-Relative to our white-board notes, Q has swapped indices, in the sense we below give `Q[i,j,r,l]`.
 
 (ρₐₐ)ᵣₛ Hₛₜ (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ tⱼ,
 
@@ -407,7 +450,7 @@ function representation_constraint_matrices(
         ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
         ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
 
-        # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk).
+        # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk);
         # then, the Hamiltonian will be transformed due to symmetries as
         # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
@@ -513,7 +556,7 @@ function _obtain_basis_free_parameters(
     # point in continuing: we then return early
     isempty(tₐᵦ_basis_matrix) && return Vector{Vector{Float64}}()
 
-    # Details: we split up each potentially complex "basis" vector `t = tₐᵦ_basis[i]` into
+    # Details: we split each potentially complex "basis" vector `t = tₐᵦ_basis[i]` into
     # two real vectors `x` and `y`, such that the _real_ span of `x` and `y` is equivalent
     # to the complex span of `t`; the key is that we must interpret the lower halfs of `x`
     # and `y` as representing imaginary numbers. Crucially, this must be kept in mind
@@ -541,7 +584,7 @@ function _obtain_basis_free_parameters(
         reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
 
     ## ----------------------------------------------------------------------------------- #
-    if timereversal # "add" & "intersect" the associated TRS constraints
+    if timereversal # "add" and "intersect" the associated TRS constraints
         # now we want to construct the TRS constraints, and then intersect the allowable basis
         # terms on that constraint with those corresponding to the previously computed basis
         tₐᵦ_basis_tr_reim_matrix =
@@ -554,7 +597,7 @@ function _obtain_basis_free_parameters(
     isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
     # ------------------------------------------------------------------------------------ #
-    # "add" & "intersect" the associated hermiticity constraints if this is a diagonal block
+    # "add" and "intersect" the associated hermiticity constraints if this is a diagonal block
     if diagonal_block
         tₐᵦ_basis_herm_reim_matrix = obtain_basis_free_parameters_hermiticity(
             h_orbit,
@@ -574,7 +617,7 @@ function _obtain_basis_free_parameters(
     isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
     # ------------------------------------------------------------------------------------ #
-    # Make sure we have a reasonably pretty-looking basis in the end by sparsifying &
+    # Make sure we have a reasonably pretty-looking basis in the end by sparsifying and
     # dropping near-zero elements explicitly
 
     # convert null-space to a sparse column form
@@ -589,7 +632,7 @@ end
 
 function _aggregate_constraints(
     Q::AbstractArray{<:Number, 4},
-    Z::AbstractArray{<:Number, 4},
+    Z::Union{AbstractArray{<:Number, 4}, <:Number},
     row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
@@ -618,7 +661,7 @@ end
 function _aggregate_constraints!( # modifies `constraint_vs` in place
     constraint_vs::Vector{<:Number},
     Q::AbstractArray{<:Number, 4},
-    Z::AbstractArray{<:Number, 4},
+    Z::Union{AbstractArray{<:Number, 4}, <:Number},
     row_atol::Real = 1e-10,
 )
     # store constraints in one big vector initially; then we reshape to a matrix after
@@ -638,7 +681,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
     # aggregate constraints into `constraint_vs`
     for i in axes(Q, 1), s in axes(Q, 3), t in axes(Q, 4)
         q = @view Q[i, :, s, t]
-        z = @view Z[i, :, s, t]
+        z = Z isa Number ? Z : @view Z[i, :, s, t]
         c .= q .- z
 
         # don't add empty or near-empty constraints
@@ -671,10 +714,10 @@ end
 
 """
     reciprocal_constraints_matrices(
-                                    Mm::AbstractArray{Int,4}, 
-                                    gens::AbstractVector{SymOperation{D}}, 
-                                    h_orbit::HoppingOrbit{D}
-                                    ) --> Vector{Array{Int,4}}
+        Mm::AbstractArray{Int,4}, 
+        gens::AbstractVector{SymOperation{D}}, 
+        h_orbit::HoppingOrbit{D}
+    ) --> Vector{Array{Int,4}}
 
 Compute the reciprocal constraints matrices for the generators of the SG. This is done by
 permuting the rows of the M matrix according to the symmetry operation acting on k-space.
@@ -706,10 +749,9 @@ end
 Build the P matrix for a particular symmetry operation acting on k-space, which permutes the
 rows of the M matrix.
 
-For obtaining the P matrix, we make use that the action is on exponential of the type:
-``𝐞xp(2πk⋅δ)``, to instead act on δ ∈ `h_orbit.orbit` instead of k, which is a symbolic
-variable. Because of that, we need to use the inverse of the rotation part of the symmetry
-operation.
+To obtain the P matrix, we exploit that the action is on exponentials of the type
+``exp(2π k⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
+we need to use the inverse of the rotation part of the symmetry operation.
 
 !!! details "Sketch of proof"
     Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then
@@ -859,7 +901,8 @@ function tb_hamiltonian(
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2)
+            h_orbits =
+                obtain_symmetry_related_hoppings(Rs, br1, br2; diagonal_block = d == 0)
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit,
