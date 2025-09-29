@@ -10,18 +10,22 @@ This package heavily relies on [representation theory of groups](https://en.wiki
   - [Transformation properties of orbitals](#transformation-properties-of-orbitals)
     - [Transformation properties of induced Bloch functions](#transformation-properties-of-induced-bloch-functions)
   - [Build a tight-binding Hamiltonian from a set of symmetric orbitals](#build-a-tight-binding-hamiltonian-from-a-set-of-symmetric-orbitals)
+    - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations)
+    - [Transformation properties under time-reversal symmetry](#transformation-properties-under-time-reversal-symmetry)
     - [Transformation properties of the Bloch states](#transformation-properties-of-the-bloch-states)
       - [Transformation properties under lattice translations](#transformation-properties-under-lattice-translations)
-      - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations)
+      - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-1)
   - [Implementing Symbolic Hamiltonians in Non-Symbolic Environments](#implementing-symbolic-hamiltonians-in-non-symbolic-environments)
-    - [Symmetry constraints in the numerical matrix $𝐌$](#symmetry-constraints-in-the-numerical-matrix-𝐌)
+    - [Symmetry constraints in the numerical matrix $𝐌^{αβ}\_{ij}$](#symmetry-constraints-in-the-numerical-matrix-𝐌αβ_ij)
+    - [Time-reversal constraint in the numerical matrix $𝐌$](#time-reversal-constraint-in-the-numerical-matrix-𝐌)
   - [Appendix A](#appendix-a)
     - [Transformation properties within Convention 2](#transformation-properties-within-convention-2)
     - [Bloch Hamiltonian under Convention 2](#bloch-hamiltonian-under-convention-2)
       - [Bloch states under Convention 2](#bloch-states-under-convention-2)
         - [Transformation under lattice translations](#transformation-under-lattice-translations)
-        - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-1)
+        - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-2)
     - [Conversions between Convention 1 and 2](#conversions-between-convention-1-and-2)
+  - [Appendix B](#appendix-b)
 
 
 ## Introduction
@@ -226,6 +230,8 @@ where $Â_𝐤^† = [ â_{1,𝐤}^†, â_{2,𝐤}^†, … ]$ is a row vector 
 
 Notice that this matrix $𝐇_𝐤$ is strongly dependent on the Fourier transform chosen. As proved above, within this convention, this matrix is not invariant under reciprocal lattice translations. However, this does not hold under other conventions as exposed in [Appendix A](#appendix-a). This property is not suitable for computing some fundamental properties such as the symmetry eigenvalues, but it has some computational advantages when encoding the matrix representation $𝐇_𝐤$ in the package.
 
+### Transformation properties under symmetry operations
+
 Before proceeding, we deduce the constraints that the symmetries of the system impose on the matrix $𝐇_𝐤$. This will ensure that the model replicates the symmetry and (symmetry-indicated) topology of the system. For that purpose, first, we deduce how the creation and annihilation operators transform under the symmetry operations. Let us start with the creation operator:
 
 ```math
@@ -259,6 +265,45 @@ Expanding the Hamiltonian in terms of the creation and annihilation operator bas
 This symmetry constraint strongly restricts the functional form of $𝐇_𝐤$. Rather than being a completely general Hermitian (or anti-Hermitian) matrix, $𝐇_𝐤$ must now lie in the subspace of matrices that fulfill the previous constraints. This ensures that the model preserves all symmetries and reproduces the correct degeneracies and connectivity of the original band structure.
 
 Additionally, as explained above, the 𝐤-dependence of the representation matrices $𝐃_𝐤$ is only a global phase factor, so it can be dropped in the previous relation. This is very convenient in implementation-wise since the 𝐤-dependence in the previous relation is restricted to just the matrix $𝐇_𝐤$, making it easier to encode in non-symbolic programming languages such as Julia.
+
+### Transformation properties under time-reversal symmetry
+
+For time-reversal symmetry $𝒯$, a similar computation can be performed. The representation of the action of time reversal in our basis can be decomposed into two parts: $ρ(𝒯) = Γ(𝒯) K$, where $K$ is complex conjugation.
+
+Let us assume that our basis is real so we can pick $Γ(𝒯) = 𝕀$, i.e., the identity matrix. This choice can be made if the representations are "realified," as explained in [Appendix B](#appendix-b).
+
+Then, the action of this symmetry on the Bloch functions is:
+
+```math
+\hat{𝒯} (α \ket{φ_{I,𝐤}}) = α^* \hat{𝒯} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} \\
+= α^* \sum_𝐭 e^{-i𝐤·(𝐭+𝐪_α)} \hat{𝒯} \ket{ϕ_{I,𝐭}} \\
+= α^* \sum_𝐭 e^{-i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} \\
+= α^* \ket{φ_{I,-𝐤}}
+```
+where $α ∈ \mathbb{C}$. Notice that time reversal acts as an anti-linear operator.
+
+Following a similar strategy as before, the following relations for the creation and annihilation operators can be found:
+
+```math
+\boxed{\hat{𝒯} \hat{a}^†_{I,\mathbf{k}} \hat{𝒯}^{-1} = 
+\hat{a}^†_{I,-\mathbf{k}}; \quad \hat{𝒯} \hat{a}_{I,\mathbf{k}} 
+\hat{𝒯}^{-1} = \hat{a}_{I,-\mathbf{k}}}
+```
+
+Then, invariance under time-reversal symmetry of the Hamiltonian reduces to:
+
+$$
+\hat{𝒯} \hat{H} \hat{𝒯}^{-1} = \sum_{IJ,𝐤} \hat{𝒯} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤} \hat{𝒯}^{-1} \\
+= \sum_{IJ,𝐤} \hat{𝒯} \hat{a}^†_{I,𝐤} \hat{𝒯}^{-1} h^*_{IJ,𝐤} \hat{𝒯} \hat{a}_{J,𝐤} \hat{𝒯}^{-1} \\
+= \sum_{IJ,𝐤} \hat{a}^†_{I,-𝐤} h^*_{IJ,𝐤} \hat{a}_{J,-𝐤} = \\
+\hat{H} = \sum_{IJ,𝐤} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤}
+$$
+
+which implies the following relation:
+
+$$
+\boxed{𝐇_𝐤 = 𝐇^*_{-𝐤}}
+$$
 
 As stated previously, we are interested in diagonalizing this matrix and finding the eigenvectors and eigenvalues associated with it at each 𝐤-point. Those eigenvectors correspond to vectors of coefficients, associated with the basis set on which we built the Bloch Hamiltonian, and describe the Bloch state of the system at a particular 𝐤-point and energy. In the following section, we elaborate on this topic and develop how these Bloch states transform under the symmetry operations of the system. A sanity check is to compare the band representation of both the real system’s band structure and the tight-binding model’s band structure, which should be equal.
 
@@ -350,6 +395,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 where we have used how the Bloch functions transform under reciprocal lattice translations — a property inherit from the convention choice — and their orthogonality.
 
 !!! note "Acting with representation matrices: to transpose or not to transpose"
+
     A subtly suprising feature may stand out from the above result: unlike previously, the representation matrix $𝐃_𝐤(g)$ is acting "directly", i.e., untransposed, on the "state" $w_{J,n𝐤}$. Although this may appear to be at odds with the earlier approach of the representation matrix acting via its transpose, it is entirely consistent.
     The key point is that we previously defined the representation matrix as acting via its transpose on _basis vectors_ (e.g., $\ket{φ_{J,𝐤}}$). However, here, the representation matrix is acting on a _coefficient vector_.
 
@@ -369,12 +415,12 @@ where we have used how the Bloch functions transform under reciprocal lattice tr
 
     I.e., the general rule is that the representation matrix acts transposed on basis vectors, and untransposed on coefficient vectors.
 
-Notice that this expression has a phase factor that cannot be omitted. In Convention 2 this phase factor does not appear, producing an arguably simlper expression. Nevertheless, we stick to the current convention due to the property of the 𝐤-dependence in the representation matrices of symmetry operations. However, it is interesting to be able to change from one convention to others. Because of that, we include some functions in the package to be able to change from one convention to another one — heavily used in the literature. The relation between these two conventions can be found in [Appendix A](#appendix-a).
+Notice that this expression has a phase factor that cannot be omitted. In Convention 2 this phase factor does not appear, producing an arguably simpler expression. Nevertheless, we stick to the current convention due to the property of the 𝐤-dependence in the representation matrices of symmetry operations. However, it is interesting to be able to change from one convention to others. Because of that, we include some functions in the package to be able to change from one convention to another one — heavily used in the literature. The relation between these two conventions can be found in [Appendix A](#appendix-a).
 
 This expression for $\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = \sum_{IJ} (w_{I,n𝐤})^* w_{J,n𝐤} \braket{φ_{I,𝐤}|ĝ|φ_{J,𝐤}}$ can be rewritten in a vectorized form, convenient for implementation. To do so, we make use of the previously introduced phase-factor diagonal matrix $Θ_𝐤$, allowing:
 
 ```math
-\boxed{\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = (Θ_𝐆 𝐰_{n𝐤})^\dagger (𝐃_𝐤(g) 𝐰_{n𝐤}).}
+\boxed{\braket{ψ_{n𝐤}|ĝ|ψ_{n𝐤}} = (Θ_𝐆 𝐰_{n𝐤})^† (𝐃_𝐤(g) 𝐰_{n𝐤}).}
 ```
 
 Note that the $[Θ_𝐆]_{II} = e^{-i𝐆·𝐪_α}$  matrix is placed in the conjugated part of the dot product, consistent with the minus sign in the definition of Θ_𝐆.[^1]
@@ -402,7 +448,7 @@ B: B_1, B_2, …, B_K
 
 such that e.g., $(q_2, A_3)$ denotes an orbital transforming like the third partner function of the $A$-irrep, placed at the second position in the orbit of $\mathbf{q}$.
 
-As we have discussed previously, in reciprocal space the Hamiltonian term involving those EBRs, $𝐇_𝐤$ can be written as a matrix where each row denote an orbital from the "arriving" EBR and the column an orbital from the "departing" EBR. Each of its components will be a complex number which depend on the vector 𝐤 and on some free-parameters that later on we will adjust to obtain the band structure.
+As we have discussed previously, in reciprocal space the Hamiltonian term involving those EBRs, $𝐇^{αβ}_𝐤$ can be written as a matrix where each row denote an orbital from the "arriving" EBR and the column an orbital from the "departing" EBR. Each of its components will be a complex number which depend on the vector 𝐤 and on some free-parameters that later on we will adjust to obtain the band structure.
 
 In order to encode such Hamiltonian term, we will need to do some previous steps.
 
@@ -431,62 +477,115 @@ Note that we are going to use here the order provided by the function `obtain_sy
 Additionally, we will need to assign a free-parameter to each orbital hopping term in the Hamiltonian matrix — the ones that afterwards we will tune to replicate the band structure. This vector then will have a length of $\text{len}(δs) × \# 𝐪 × \# 𝐰 × \text{dim}(A) × \text{dim}(B)$. In particular this vector will look like this:
 
 ```math
-𝐭^T = [t(δ_1), …, t(δ_i), …, t(δ_n)]
+𝐭^T = [𝐭(δ_1), …, 𝐭(δ_i), …, 𝐭(δ_n)]
 ```
 
-where each $t(δ_i)$ represent a collection of free-parameter, one per hopping term inside the hopping distance $δ_i$.
+where each $𝐭(δ_i)$ represent a collection of free parameters, one per hopping term inside the hopping distance $δ_i$.
 
-Then, each term of the Hamiltonian matrix $𝐇_𝐤$ can be written as bilinear form in the following way:
+Notice that, the ordering of $𝐭$ is a bit subtle: $𝐭$ should be interpreted as a kind of vector-flattened tensor $𝐓$, with the following "indexing convention" for $𝐓$:
+
+1. The elements $𝐓[i]$ give a vector of hoppings corresponding to the $i$-th orbit $δ_i$; denoted $𝐭(δ_i)$ above). 
+2. The elements $T[i][j]$ give a vector of hoppings corresponding to the $j$-th possible spatial hopping with displacement $δᵢ$. This describes hoppings from an "origin" site $q_r$ to a "destination" site $w_p + 𝐆$ (where $G$ is a lattice translation).
+3. Finally, $𝐓[i][j][k][m]$ is a _single_ hopping term from the $k$-th partner function of $q_r$ site to the $m$-th partner function of $w_p$ site.
+
+If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we also have to include the hermitian or anti-hermitian counterparts of each hopping term, i.e., for each hopping term from $q_r$ to $w_p + 𝐆$, we also have to include the "reversed" hopping term from $w_p$ to $q_r - 𝐆$.
+
+Then, each term of the Hamiltonian matrix $𝐇^{αβ}_𝐤$ can be written as bilinear form in the following way:
 
 ```math
-H_{𝐤,ij}^{αβ} = 𝐯_𝐤^T 𝐌_{αβ,ij} 𝐭
+[𝐇^{αβ}_𝐤]_{ij} = 𝐯_𝐤^T 𝐌^{αβ}_{ij} 𝐭
 ```
 
-where $αβ$ indicates the two EBRs considered in the tight-binding term, and, $𝐌_{αβ,ij}$ is a numerical matrix that will relate a phase with a free-parameter present on the Hamiltonian matrix term.
+where $𝐌^{αβ}_{ij}$ is a numerical matrix that will relate a phase with a free-parameter present on the Hamiltonian matrix term.
 
-We will, then, work with a set of matrices $\{ 𝐌_{αβ,ij} \}_{ij}$, each associated to a pair of EBRs, that will encode the tight-binding Hamiltonian and will allow us to operate with it.
+We will, then, work with a set of matrices $\{ 𝐌^{αβ}_{ij} \}_{ij}$, each associated to the pair of EBRs $α$ and $β$, that will encode the tight-binding Hamiltonian block and will allow us to operate with it.
 
-In the following section, we will show how symmetry operations acts on this set of matrices and how to obtain the constraints they impose on the tight-binding Hamiltonian.
+In the following section, we will show how symmetry operations acts on this set of matrices and how to obtain the constraints they impose on the tight-binding Hamiltonian block.
 
-### Symmetry constraints in the numerical matrix $𝐌$
+### Symmetry constraints in the numerical matrix $𝐌^{αβ}_{ij}$
 
-Now we want to deduce how transformations on the Hamiltonian matrix $𝐇_𝐤^{αβ}$ translate into the numerical tensor $𝐌_{αβ}$.
+Now we want to deduce how transformations on the Hamiltonian matrix $𝐇^{αβ}_𝐤$ translate into the set of numerical tensor $𝐌^{αβ}_{ij}$.
 
 We will start from the condition imposed into the Hamiltonian term:
 
 ```math
-𝐇_{g𝗸}^{αβ} = 𝐃_𝐤^{αα}(g) 𝐇_𝗸^{αβ} 𝐃_𝐤^{ββ,†}(g)
+𝐇^{αβ}_{g𝗸} = 𝐃_𝐤^α(g) 𝐇^{αβ}_𝗸 [𝐃_𝐤^β(g)]^†,
 ```
+where $𝐃_𝐤^α$ and $𝐃_𝐤^β$ are the representation matrices of the symmetry operations in terms of the EBRs $α$ and $β$, respectively.
 
 Then,
 
 ```math
-𝘃_{g𝗸}^T 𝐌_{αβ,ij} 𝘁 = 𝐃_𝐤^{αα}(g) 𝘃_𝗸^T 𝐌_{αβ,ij} 𝘁 𝐃_𝐤^{ββ,†}(g)
+𝘃_{g𝗸}^T 𝐌^{αβ}_{ij} 𝘁 = [𝐃_𝐤^α(g)]_{ir} 𝘃_𝗸^T 𝐌^{αβ}_{rs} 𝘁 [𝐃_𝐤^β(g)]_{sj}^†
 ```
 
-Since the representation matrices act on different indices as $𝘃$ and $𝘁$, we can permute them obtaining:
+Since the representation matrices act on different indices than $𝘃$ and $𝘁$, we can permute them, obtaining:
 
 ```math
-𝘃^T_{g𝗸} 𝐌_{αβ,ij} 𝘁 = 𝘃^T_𝗸 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) 𝘁
+𝘃^T_{g𝗸} 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁
 ```
 
-In order to compare both $M$ matrices, we need to analyze what is $𝘃_{g𝗸}$. As can be seeing above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As discussed above, we defined as $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌_{αβ}$ as follows:
+In order to compare both sides of the equation, we need to analyze what is $𝘃_{g𝗸}$. As can be seeing above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As discussed above, we defined as $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌^{αβ}_{ij}$ as follows:
 
 ```math
-(σ(g) 𝘃_𝗸)^T 𝐌_{αβ,ij} 𝘁 = 𝘃^T_𝗸 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) 𝘁 \\
-𝘃^T_𝗸 σ(g)^T 𝐌_{αβ,ij} 𝘁 = 𝘃^T_𝗸 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) 𝘁
+(σ(g) 𝘃_𝗸)^T 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁 \\
+𝘃^T_𝗸 [σ(g)]^T 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁
 ```
 
 Then, performing some algebra we obtain that:
 
 ```math
-𝘃^T_𝗸 \left( σ(g)^T 𝐌_{αβ,ij} - 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ†}(g) \right) 𝘁 = 0 \\
-⇒ \boxed{\left( σ(g)^T 𝐌_{αβ,ij} - 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) \right) 𝘁 = 0}
+𝘃^T_𝗸 \left( [σ(g)]^T 𝐌^{αβ}_{ij} - [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† \right) 𝘁 = 0 \\
+⇒ \boxed{\left( [σ(g)]^T 𝐌^{αβ}_{ij} - [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† \right) 𝘁 = 0}
 ```
 
-This implies that if we compute the null-space of the previous subtraction, we will obtain a set of free-parameter vectors that will fulfill the constrains imposed by unitary operations.
+This implies that if we compute the null space of the previous subtraction, we obtain a set of free-parameter vectors that fulfill the constraints imposed by unitary operations.
 
-Notice that this set of vectors will be, in general, complex vector, since the matrices involved will have complex entries. Then, in order to avoid compilations, we will split our free-parameter vector $𝘁$ into its real and imaginary part, so we can work only with real parameters. This is performed in `split_complex`. For now on, $𝘁^T = [𝘁^T_\text{real}, i 𝘁^T_\text{imag}]$.
+Notice that this set of vectors will, in general, be complex, since the matrices involved can have complex entries. Additionally, if $𝐭$ is a solution to the null space, then $i𝐭$ is as well. To avoid working with complex-valued parameters, we split the free-parameter vector $𝘁$ into its real and imaginary parts so we can work only with real vectors, and do the same thing for $i𝐭$. In sum, this enables us to consider a term like $α 𝘁$ with $α ∈ ℂ$ and $t_i ∈ ℂ$ as a sum of strictly real and strictly imaginary vectors, each multiplied by *real* coefficients. In practice, we embed the real and imaginary vectors in a single "doubled vector" $𝘁 = \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix}$ (note that *two* such doubled vectors are produced for every original vector, corresponding to multiplication by a real or imaginary component of a complex coefficient), accompanied by a corresponding doubling of the $𝐌^{αβ}_{ij}$ tensors as $\begin{bmatrix} 𝐌^{αβ}_{ij} & -𝐌^{αβ}_{ij} \end{bmatrix}$ (the doubling and extraction of the doubled vectors is performed in `split_complex`). Then, each element of the Hamiltonian matrix is represented as:
+
+
+```math
+[𝐇^{αβ}_𝐤]_{ij} = 𝐯_{𝐤}^T \begin{bmatrix} 𝐌^{αβ}_{ij} & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix}.
+```
+
+The benefit fo this decomposition is that it greatly simplifies the taking of complex conjugates, allowing it to become structural operation that can be shifted to the doubled tensors $\begin{bmatrix} 𝐌^{αβ}_{ij} & 𝐌^{αβ}_{ij} \end{bmatrix}$:
+
+```math
+[𝐇^{αβ}_𝐤]^*_{ij} = 𝐯_{𝐤}^T \begin{bmatrix} 𝐌^{αβ}_{ij} & -𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix}.
+```
+
+### Time-reversal constraint in the numerical matrix $𝐌$
+
+We start again from the condition imposed on the Hamiltonian matrix:
+
+```math
+𝐇^{αβ}_{-𝐤} = [𝐇^{αβ}_𝐤]^*
+```
+
+Representing each element on both sides using the numerical matrices:
+
+```math
+[𝐇^{αβ}_{-𝐤}]_{ij} = 𝐯ᵀ_{-𝐤} \begin{bmatrix} 𝐌^{αβ}_{ij} & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix},
+```
+
+and
+
+```math
+[𝐇^{αβ}_𝐤]^*_{ij} = (𝐯_𝐤^*)ᵀ \begin{bmatrix} 𝐌^{αβ}_{ij} & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ -i 𝘁_\text{imag} \end{bmatrix} \\
+= (𝐯_𝐤^*)ᵀ \begin{bmatrix} 𝐌^{αβ}_{ij} & -𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} \\
+= 𝐯ᵀ_{-𝐤} \begin{bmatrix} 𝐌^{αβ}_{ij} & -𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix},
+```
+where we have used the property that $𝐯_𝐤^* = 𝐯_{-𝐤}$.
+
+The constraint then reduces to:
+
+```math
+𝐯ᵀ_{-𝐤} \begin{bmatrix} 𝐌^{αβ}_{ij} & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝐭_\text{real} \\ i𝐭_\text{imag} \end{bmatrix} = 𝐯ᵀ_{-𝐤} \begin{bmatrix} 𝐌^{αβ}_{ij} & -𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} \\
+⇒ 𝐯ᵀ_{-𝐤} \begin{bmatrix} 0 & 2𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} = 0 \\
+⇒ \boxed{\begin{bmatrix} 0 & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} = 0}
+```
+
+This implies that, in our implementation, time-reversal symmetry simply reduces to requiring that the free parameters are real.
 
 ## Appendix A
 
@@ -697,3 +796,68 @@ Finally, we are interested in deducing the conversion properties of the eigenvec
 ```
 
 With these relations we are able to go back and forth from one convention to the other, making it possible to use both depending on which is most suitable for each case.
+
+## Appendix B
+
+In this appendix we show how to build an explicitly real representation for the symmetry operations. If this is possible, we can always pick a real basis that transforms according to the explicitly real representation, i.e.:
+
+```math
+ĥ \ket{ϕ_{I,𝐭}} = ρ(h) \ket{ϕ_{I,𝐭}} \quad \hat{𝒯} \ket{ϕ_{I,𝐭}} = \ket{ϕ_{I,𝐭}}.
+```
+
+An explicitly real, or physically real, form of a set of irrep matrices is one where the associated matrices $ρ(h)$ have the following property:
+
+```math
+ρ(h) = ρ^*(h),
+```
+for all operations $h$ in the considered site-symmetry group $H$ of the orbital's position.
+
+The standard listings of irreps are not explicitly real. However, if an irrep is either intrinsically real — or has been made into a corep in the complex or pseudoreal case — it is always equivalent to an intrinsically real form. That is, there exists a unitary transform $S$ such that:
+
+```math
+S ρ(h) S^{-1} = S ρ(h) S^† = ρ^*(h).
+```
+
+Suppose we can find this unitary transformation $S$ by some means. We want to find a related transform $W$ that produces an explicitly real form of the irrep:
+
+```math
+\tilde{ρ}(h) = W ρ(h) W^{-1} = W ρ(h) W^†,
+```
+
+where $W$ is some other unitary transformation and $\tilde{ρ}(h)$ is an intrinsically real form of $ρ(h)$, i.e., where
+
+```math
+\tilde{ρ}(h) = \tilde{ρ}^*(h) \quad \forall h ∈ H.
+```
+
+Our aim is to find $W$, assuming we know $S$. First, note that $S$ is not merely a unitary matrix: rather, since, by assumption, $ρ(h)$ is a "real" matrix, what we really mean is that $S$ is also a _symmetric_ unitary matrix, i.e., $S = S^{\mathrm{T}}$ and $S^{-1} = S^†$ (implying, jointly, $S^* = S^† = S^{-1}$); this is, e.g., derived in Inui p. 74 (bottom) to 75 (top). Accordingly, $S$ is also normal, i.e., $S S^* = S^* S$.
+
+This property, in turn, implies that we can express $S$ as the square of another 
+symmetric unitary matrix, say $W$, in the sense that $S = W^2$. This follows from the following manipulations (Inui, p. 75 bottom), involving the eigendecomposition $S = V Λ V^{-1}$, where $Λ$ is a diagonal matrix with unit-modulus values and $V$ is a set of real eigenvectors (real because $S$ is symmetric unitary) and $V^{-1} = V^† = V^{\mathrm{T}}$ (since $S$ is normal).
+
+```math
+S = VΛV^{-1} = VΛ^{1/2}Λ^{1/2}V^{\mathrm{T}} = (VΛ^{1/2}V^{\mathrm{T}})
+(VΛ^{1/2}V^{\mathrm{T}}),
+```
+so we can pick $W = VΛ^{1/2}V^{\mathrm{T}}$ (note also that the square root of 
+$Λ$ must exist and is well defined since $S$ is invertible, i.e., has full 
+rank). Hence $W^* = V(Λ^{1/2})^*V^{\mathrm{T}} = VΛ^{-1/2}V^{\mathrm{T}} = W^{-1}$ and $W^{\mathrm{T}} = (VΛ^{1/2}V^{\mathrm{T}})^{\mathrm{T}} = (V^{\mathrm{T}})^{\mathrm{T}}(Λ^{1/2})^{\mathrm{T}} V^{\mathrm{T}} = VΛ^{1/2}V^{\mathrm{T}} = W$. I.e., $W$ is also unitary, symmetric, and normal.
+
+Now, let us rewrite $S ρ(h) S^{-1} = ρ^*(h)$ in terms of $W$:
+
+```math
+WW ρ(h) W^{-1}W^{-1} = ρ(h)^* \\
+```
+
+Multiply from the LHS by $W^*$ and from the RHS by $W$:
+
+```math
+W^*WW ρ(h) W^{-1}W^{-1} W = W^*ρ(h)^* W \\
+\Leftrightarrow W ρ(h) W^{-1} = W^*ρ(h)^* W \\
+\Leftrightarrow W ρ(h) W^{-1} = W^* ρ(h)^* (W^{-1})^*
+```
+where we have used properties of $W$ to reduce the expressions. 
+
+Identifying $\tilde{ρ}(h) = W ρ(h) W^{-1}$, we obtain the desired invariance under complex conjugation since $\tilde{ρ}^*(h) = (W ρ(h) W^{-1})^* = W^* ρ(h)^* (W^{-1})^* = W ρ(h) W^{-1} = \tilde{ρ}(h)$.
+
+Then, when using an explicitly real representation we can assume our basis functions are also real, and the previous property under time reversal holds. This "realification" of the representations is performed inside the package Crystalline.jl when we ask for a band representation with time-reversal symmetry enforced.
