@@ -466,23 +466,23 @@ Since the representation matrices act on different indices as $𝘃$ and $𝘁$,
 𝘃^T_{g𝗸} 𝐌_{αβ,ij} 𝘁 = 𝘃^T_𝗸 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) 𝘁
 ```
 
-In order to compare both $M$ matrices, we need to analyze what is $𝘃_{g𝗸}$. As can be seeing above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As discussed above, we defined as $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌_{αβ}$ as follows:
+To compare both sides of the equation, we start by analyzing what $𝘃_{g𝗸}$ means. We remind that the $𝘃_𝐤$ vector is constructed as $𝘃_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Similarly, $𝘃_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As mentioned earlier, we define the action of $g$ on $𝗸$ by $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$. Accordingly, $𝘃_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Finally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌^{αβ}_{ij}$ as follows:
 
 ```math
 (σ(g) 𝘃_𝗸)^T 𝐌_{αβ,ij} 𝘁 = 𝘃^T_𝗸 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) 𝘁 \\
 𝘃^T_𝗸 σ(g)^T 𝐌_{αβ,ij} 𝘁 = 𝘃^T_𝗸 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) 𝘁
 ```
 
-Then, performing some algebra we obtain that:
+Then, performing some algebra we obtain:
 
 ```math
 𝘃^T_𝗸 \left( σ(g)^T 𝐌_{αβ,ij} - 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ†}(g) \right) 𝘁 = 0 \\
 ⇒ \boxed{\left( σ(g)^T 𝐌_{αβ,ij} - 𝐃_𝐤^{αα}(g) 𝐌_{αβ,ij} 𝐃_𝐤^{ββ,†}(g) \right) 𝘁 = 0}
 ```
 
-This implies that if we compute the null-space of the previous subtraction, we will obtain a set of free-parameter vectors that will fulfill the constrains imposed by unitary operations.
+This implies that if we compute the null-space of the previous subtraction, we will obtain a set of free-parameter vectors that will fulfill the constraints imposed by unitary operations.
 
-Notice that this set of vectors will be, in general, complex vector, since the matrices involved will have complex entries. Then, in order to avoid compilations, we will split our free-parameter vector $𝘁$ into its real and imaginary part, so we can work only with real parameters. This is performed in `split_complex`. For now on, $𝘁^T = [𝘁^T_\text{real}, i 𝘁^T_\text{imag}]$.
+Notice that this set of vectors will be, in general, complex vectors, since the matrices involved have complex entries. In order to avoid complications, we split our free-parameter vector $𝘁$ into its real and imaginary part, so we can work with strictly real parameters. This is performed in `split_complex`. From now on, $𝘁^T = [𝘁^T_\text{real}, i 𝘁^T_\text{imag}]$.
 
 ## Appendix A
 
