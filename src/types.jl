@@ -95,16 +95,37 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     # we include `MmtC` as an optimization: we want `Mm` for structural information (e.g.
     # for plotting), but for computing the block matrix elements, we actually only need
     # the (column-)contracted matrix `MmtC` (see `evaluate_tight_binding_term!`)
+    diagonal_block::Bool # whether this is a diagonal block in the overall Hamiltonian
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
-function TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t) where D
+function TightBindingBlock{D}(
+    br1, 
+    br2, 
+    ordering1, 
+    ordering2, 
+    h_orbit, 
+    Mm, 
+    t, 
+    diagonal_block
+) where D
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
     MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
     for i in axes(Mm, 3), j in axes(Mm, 4)
         MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
     end
-    return TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t, MmtC)
+    tbb = TightBindingBlock{D}(
+        br1, 
+        br2, 
+        ordering1, 
+        ordering2, 
+        h_orbit, 
+        Mm, 
+        t, 
+        MmtC, 
+        diagonal_block
+    )
+    return tbb
 end
 
 @enum Hermiticity::UInt8 begin
