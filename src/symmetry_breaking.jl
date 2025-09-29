@@ -96,7 +96,7 @@ function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) w
     end
     t = ts[something(i)]  # note: `t` = (P|p) will take G to H - we want the opposite
     Pᴴ²ᴳ = inv(t.P)       # opposite transform: (Pᴴ²ᴳ|pᴴ²ᴳ) = (P|p)⁻¹
-    pᴴ²ᴳ = -Pᴴ²ᴳ*t.p
+    pᴴ²ᴳ = -Pᴴ²ᴳ * t.p
 
     _gensᴴ = generators(sgnumᴴ, SpaceGroup{D}) # in H setting
     gensᴴ = transform.(_gensᴴ, Ref(Pᴴ²ᴳ), Ref(pᴴ²ᴳ))
@@ -111,7 +111,9 @@ function subduced_complement(
 ) where D
     timereversalᴳ = first(tbm.cbr.brs).timereversal
     if timereversalᴳ == false && timereversal == true
-        error("requested subgroup `timereversal = false`, but original model was built with time-reversal present; input for H must maintain or reduce symmetry")
+        error(
+            "requested subgroup `timereversal = true`, but original model was built without time-reversal present; input for H must maintain or reduce symmetry",
+        )
     end
 
     # we need to go through the terms of `tbm` in "groups of the same orbit" - each orbit
@@ -119,14 +121,15 @@ function subduced_complement(
     # we figure out the groupings into these orbits by just looking at `tbt.block.h_orbit`
     grouped_orbits_idxs = UnitRange{Int}[]
     current_h_orbit = first(tbm.terms).block.h_orbit
-    i₁ = 1; i₂ = 0
+    i₁ = 1
+    i₂ = 0
     for tbt in tbm.terms
         if current_h_orbit == tbt.block.h_orbit
             i₂ += 1
         else
             push!(grouped_orbits_idxs, i₁:i₂)
             current_h_orbit = tbt.block.h_orbit
-            i₁ = i₂ = i₂+1
+            i₁ = i₂ = i₂ + 1
         end
     end
     i₂ == length(tbm.terms) && push!(grouped_orbits_idxs, i₁:i₂)
@@ -142,20 +145,22 @@ function subduced_complement(
             tbb.h_orbit,
             tbb.br1,
             tbb.br2,
-            tbb.ordering1, 
-            tbb.ordering2, 
+            tbb.ordering1,
+            tbb.ordering2,
             tbb.Mm,
             gensᴴ,
             timereversal,
-            tbt.block_ij[1] == tbt.block_ij[2], #= .diagonal_block =# 
-            tbt.hermiticity == ANTIHERMITIAN,   #= .antihermitian =# 
+            tbt.block_ij[1] == tbt.block_ij[2], #= .diagonal_block =#
+            tbt.hermiticity == ANTIHERMITIAN,   #= .antihermitian =#
         )
         # check output dimensions
         if length(tₐᵦ_basis_reimᴴ_vs) < length(idxs)
-            error("unexpectedly found lower-dimensional basis space for model in subduced \
-                   group; unexpected and unhandled - make sure the generators are a subset \
-                   of the original generators (i.e., that fewer constraints apply than \
-                   originally)")
+            error(
+                "unexpectedly found lower-dimensional basis space for model in subduced \
+                 group; unexpected and unhandled - make sure the generators are a subset \
+                 of the original generators (i.e., that fewer constraints apply than \
+                 originally)",
+            )
         elseif length(tₐᵦ_basis_reimᴴ_vs) == length(idxs)
             continue # basis must then be unchanged; nothing to add for this index group
         end
@@ -165,7 +170,7 @@ function subduced_complement(
         tₐᵦ_basis_reimᴳ = Matrix{Float64}(undef, length(tbb.t), length(idxs))
         for (n, i) in enumerate(idxs)
             tbbᵢ = tbm.terms[i].block
-            tₐᵦ_basis_reimᴳ[:,n] .= tbbᵢ.t
+            tₐᵦ_basis_reimᴳ[:, n] .= tbbᵢ.t
         end
 
         # find the orthogonal complement of the span of `tₐᵦ_basis_reimᴴ` relative to
@@ -187,12 +192,19 @@ function subduced_complement(
             n > Nᴴ && continue # there should be exactly Nᴴ non-zero singular values
             if σ < NULLSPACE_ATOL_DEFAULT
                 # make sure we don't have any surprises & verify our assumption above
-                error(LazyString("unexpectedly found near-zero singular value for a SVD \
-                      column vector that ought to have been a proper basis vector (Nᴴ = ",
-                      Nᴴ, " σs = ", σs, ")"))
+                error(
+                    LazyString(
+                        "unexpectedly found near-zero singular value for a SVD \
+             column vector that ought to have been a proper basis vector (Nᴴ = ",
+                        Nᴴ,
+                        " σs = ",
+                        σs,
+                        ")",
+                    ),
+                )
             end
             # keep this vector
-            tₐᵦ_basis_reim_ᴴᵪᴳ′[:,n] .= u
+            tₐᵦ_basis_reim_ᴴᵪᴳ′[:, n] .= u
         end
 
         # finally, make the basis vectors we have now "pretty"
@@ -202,7 +214,13 @@ function subduced_complement(
         # now we have the new terms - store them as `TightBindingTerm`s
         for tᴴᵪᴳ in eachcol(tₐᵦ_basis_reim_ᴴᵪᴳ′_sparsified)
             tbbᴴᵪᴳ = TightBindingBlock{D}(
-                tbb.br1, tbb.br2, tbb.ordering1, tbb.ordering2, tbb.h_orbit, tbb.Mm, tᴴᵪᴳ
+                tbb.br1,
+                tbb.br2,
+                tbb.ordering1,
+                tbb.ordering2,
+                tbb.h_orbit,
+                tbb.Mm,
+                tᴴᵪᴳ,
             )
             h = TightBindingTerm{D}(
                 tbt.axis,
@@ -216,4 +234,3 @@ function subduced_complement(
     end
     return TightBindingModel{D}(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
 end
-
