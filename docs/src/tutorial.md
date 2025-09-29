@@ -40,7 +40,10 @@ With this in hand, we can finally use SymmetricTightBinding.jl. In particular, w
 tbm = tb_hamiltonian(cbr)
 ```
 
-The output lists the "basis terms" of the tight-binding Bloch Hamiltonian, each implicitly parameterized by a free on-site energy or hopping amplitude. The notation `𝕖(δᵢ)` is introduced for brevity, a short-hand for the complex momentum-dependent exponential $\mathrm{e}^{\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$. Here $\boldsymbol{\delta}_i$ denotes a hopping vector; in turn, these vectors are expressed above as `δᵢ`, given in the basis of the primitive direct lattice $\{\mathbf{a}_i\}$. I.e., a term like `δ₁ = [-1/3, 1/3]` really means $\boldsymbol{\delta}_1 = -\tfrac{1}{3}\mathbf{a}_1 + \tfrac{1}{3}\mathbf{a}_2$.
+The output lists the "basis terms" of the tight-binding Bloch Hamiltonian, each implicitly parameterized by a free on-site energy or hopping amplitude.
+
+!!! note "The short-hand notation 𝕖(δᵢ)"
+    The notation `𝕖(δᵢ)` is used for brevity in the above output, to short-hand the complex momentum-dependent exponential $\mathrm{e}^{\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$. Here $\boldsymbol{\delta}_i$ denotes a hopping vector; in turn, these vectors are expressed above as `δᵢ`, given in the basis of the primitive direct lattice $\{\mathbf{a}_i\}$. A term like `δ₁ = [-1/3, 1/3]` consequently represents $\boldsymbol{\delta}_1 = -\tfrac{1}{3}\mathbf{a}_1 + \tfrac{1}{3}\mathbf{a}_2$.
 
 
 ## Visualization
