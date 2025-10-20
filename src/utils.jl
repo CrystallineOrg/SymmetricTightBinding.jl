@@ -157,7 +157,6 @@ function primitivized_orbit(br::NewBandRep{D}) where D
     return wps′_pts
 end
 
-
 # ---------------------------------------------------------------------------------------- #
 
 """
@@ -181,7 +180,7 @@ See also [`pin_free`](@ref) for non-mutated input.
 """
 function pin_free!(
     brs::Collection{<:NewBandRep},
-    idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
+    idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}},
 )
     foreach(Base.Fix1(pin_free!, brs), idx2αβγs)
     return brs
@@ -189,7 +188,7 @@ end
 
 function pin_free!(
     brs::Collection{<:NewBandRep},
-    idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
+    idx2αβγ::Pair{Int, <:AbstractVector{<:Real}},
 )
     idx, αβγ = idx2αβγ
     checkbounds(Bool, brs, idx) || error("index $idx out of bounds for `brs`")
@@ -202,15 +201,17 @@ end
     pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
 
 Pin the free parameters of the Wyckoff position associated with the band representation `br`
-to the values in `αβγ`. 
+to the values in `αβγ`.
 
 Returns a new band representation with all other properties, apart from the Wyckoff
 position, identical to (and sharing memory with) `br`.
+
+Note that the associated orbit of the Wyckoff position will be automatically adjusted to
+ensure that each position in the orbit lies within the primitive unit cell [0,1)ᴰ. That is,
+if a choice of αβγ sends a position in the orbit outside the primitive unit cell, the
+position will be adjusted by integer lattice translations to lie within.
 """
-function pin_free(
-    br::NewBandRep{D},
-    αβγ::AbstractVector{<:Real}
-) where D
+function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
     length(αβγ) == D || error(DimensionMismatch("length(αβγ) ≠ D"))
     if iszero(free(position(br)))
         error("attempting to pin a band representation without any free parameters")
@@ -218,14 +219,44 @@ function pin_free(
 
     wp = position(br)
     rv = parent(wp)
-    rv_pin = RVec{3}(rv(αβγ))
+    rv_pin = RVec{D}(rv(αβγ))
     wp_pin = WyckoffPosition(wp.mult, wp.letter, rv_pin)
 
     siteir = br.siteir
     siteg = group(siteir)
     siteg_pin = SiteGroup{D}(siteg.num, wp_pin, siteg.operations, siteg.cosets)
-    siteir_pin = SiteIrrep{D}(siteir.cdml, siteg_pin, siteir.matrices, siteir.reality,
-                              siteir.iscorep, siteir.pglabel)
+
+    # if the Wyckoff position that was picked is not in the primitive unit cell - or even if
+    # a position in its orbit is not - we need to adjust the Wyckoff positions to lie inside
+    # the primitive cell [0, 1)ᴰ: generally, this entails adjusting the choice of cosets
+    # (which generate the orbit) and potentially also the site group operations for the
+    # representative Wyckoff position
+    orbit_pin = orbit(siteg_pin)
+    cntr = centering(num(br), D)
+    in_primitive_cell = all(orbit_pin) do rv_pin′
+        rv_pin′_primitive = primitivize(rv_pin′, cntr)
+        all(rᵢ -> 0 ≤ rᵢ < 1, constant(rv_pin′_primitive))
+    end
+    if !in_primitive_cell
+        siteg_pin, _ = Crystalline.reduce_orbits_and_cosets(siteg_pin)
+    end
+
+    siteir_pin = SiteIrrep{D}(
+        siteir.cdml,
+        siteg_pin,
+        siteir.matrices,
+        siteir.reality,
+        siteir.iscorep,
+        siteir.pglabel,
+    )
 
     return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
+end
+
+function reciprocal_translation_phase(
+    positions::AbstractVector{DirectPoint{D}},
+    k::ReciprocalPointLike{D},
+) where D
+    expsv = cispi.(-dot.(Ref(2k), positions))
+    return Diagonal(expsv)
 end

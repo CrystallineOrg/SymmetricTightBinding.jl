@@ -3,13 +3,15 @@ module SymmetricTightBindingMakieExt
 ## --------------------------------------------------------------------------------------- #
 
 using SymmetricTightBinding
-using SymmetricTightBinding: TightBindingTerm
+using SymmetricTightBinding: TightBindingTerm, PRUNE_ATOL_DEFAULT
 using Crystalline: DirectBasis, crystal, constant, isapproxin
 using Makie
 
 ## --------------------------------------------------------------------------------------- #
 
-@recipe(HoppingOrbitPlot, h, Rs) do Scene
+const MaybeCoefficient = Union{Nothing, <:AbstractVector{<:Number}}
+
+@recipe(HoppingOrbitPlot, h, Rs, t, offdiag) do Scene
     Attributes(;
         origins = Attributes(; color = :firebrick2, label = "Origins (a)"),
         destinations = Attributes(; color = :royalblue1, label = "Destinations (b+R)"),
@@ -34,29 +36,24 @@ Origin atoms and destination atoms are shown, as well as hoppings between them. 
 direction is always from an origin atom to a destination atom, with direction indicated by
 an arrow.
 
-The `Rs` argument should be a _primitive` basis associated with the lattice underlying `h`.
+The `Rs` argument should be a _primitive_ basis associated with the lattice underlying `h`.
 If omitted, a cubic basis is used.
 """
 function Makie.plot!(
-    p::HoppingOrbitPlot{<:Tuple{HoppingOrbit{D}, <:DirectBasis{D}}},
+    p::HoppingOrbitPlot{<:Tuple{
+        HoppingOrbit{D},    # h
+        DirectBasis{D},     # Rs
+        <:MaybeCoefficient, # t
+        Bool                # offdiag
+    }},
 ) where {D}
     h = p.h[]   # TODO: actually do the Observables updates; just so tedious...
     Rs = p.Rs[]
+    t = p.t[]
+    offdiag = p.offdiag[] # implies that (anti-)hermicity requires adding reversed hoppings
 
     P, V = Point{D, Float32}, Vec{D, Float32}
     Rm = stack(Rs)
-    origins = mapreduce(vcat, h.hoppings) do hs
-        map(hs) do h
-            a = Rm * constant(h[1])
-            P(a)
-        end
-    end
-    destinations = mapreduce(vcat, h.hoppings) do hs
-        map(hs) do h
-            b_plus_R = Rm * (constant(h[2]) + constant(h[3]))
-            P(b_plus_R)
-        end
-    end
 
     # plot parallepiped unit cell (with lower left corner at origin)
     rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
@@ -71,30 +68,50 @@ function Makie.plot!(
     else
         error("unsupported dimension $D")
     end
-    D == 2 && poly!(pts; color=p.unitcell.patchcolor)
+    D == 2 && poly!(pts; color=p.unitcell[].patchcolor)
     lines!(
         p,
         unitcell;
-        color = p.unitcell.color,
-        linewidth = p.unitcell.linewidth,
-        label = p.unitcell.label,
+        color = p.unitcell[].color,
+        linewidth = p.unitcell[].linewidth,
+        label = p.unitcell[].label,
     )
+
+    origins, destinations = if isnothing(t)
+        _origins_and_destinations_from_hoppingorbit(h, Rm)
+    else
+        _origins_and_destinations_from_coefficients(h, t, Rm)
+    end
 
 
     # plot bonds
     if destinations ≠ origins # skip self-energies
+        arrows2d_kws = (;
+            argmode = :endpoint, # interpret inputs as start/end points, not start/direction
+            color = p.bonds[].color, # grayish
+            shaftwidth = 3,
+            tipwidth = 9,
+            tiplength = 10,
+            label = p.bonds[].label
+        )
         arrows_dir = V.(destinations .- origins)
         arrows2d!(
             p,
             origins .+ arrows_dir * .11,
             destinations .- arrows_dir * .09;
-            argmode = :endpoint, # interpret inputs as start/end points, not start/direction
-            color = p.bonds.color, # grayish
-            shaftwidth = 3,
-            tipwidth = 9,
-            tiplength = 10,
-            label = p.bonds.label,
+            arrows2d_kws...
         )
+        
+        # if we're looking at an off-diagonal "block" term, we must also add "reversed"
+        # hoppings explicitly, corresponding to the transposed block
+        if offdiag
+            arrows2d!(
+                p,
+                destinations .- arrows_dir * 0.11,
+                origins .+ arrows_dir .* 0.09;
+                arrows2d_kws...
+            )
+        end
     end
 
     # plot atoms
@@ -103,8 +120,8 @@ function Makie.plot!(
         unique(destinations);
         marker = :circle,
         markersize = 14,
-        color = p.destinations.color,
-        label = p.destinations.label,
+        color = p.destinations[].color,
+        label = p.destinations[].label,
         depth_shift = -0.1,
     )
     scatter!(
@@ -112,13 +129,13 @@ function Makie.plot!(
         unique(origins);
         marker = :circle,
         markersize = 14,
-        color = p.origins.color,
-        label = p.origins.label,
+        color = p.origins[].color,
+        label = p.origins[].label,
         depth_shift = -0.1,
     )
 
     # set square axis limits, centered around unit cell center
-    bbox = if isnothing(p.context.limits[])
+    bbox = if isnothing(p.context[].limits[])
         bbox_coords = Makie.GeometryBasics.coordinates(data_limits(p))
         cntr = sum(Rs) ./ 2
         max_dist = maximum(abs,
@@ -128,11 +145,11 @@ function Makie.plot!(
         width = max_dist + pad*0.1
         Rect{D, Float32}(cntr-V(width), V(2*width))
     else
-        p.context.limits[] :: Rect{D, Float32}
+        p.context[].limits[] :: Rect{D, Float32}
     end
 
     # include symmetry-related sites, that we didn't hop to
-    if p.context.include[]
+    if p.context[].include[]
         i_lower = Rm \ (bbox.origin)
         i_lower = ntuple(d->floor(Int, i_lower[d])-1, Val(D))
         i_upper = Rm \ (bbox.origin .+ bbox.widths)
@@ -152,14 +169,14 @@ function Makie.plot!(
             D == 3 && continue # doesn't look nice for 3D
             unitcell′ = unitcell .+ Ref(R)
             any(in(bbox), unitcell′) || continue
-            lines!(unitcell′; color=p.context.linecolor, linewidth=0.5, depth_shift=0)
+            lines!(unitcell′; color=p.context[].linecolor, linewidth=0.5, depth_shift=0)
         end
         scatter!(
             p,
             rs,
             marker = :circle,
             markersize = 11,
-            color = p.context.color,
+            color = p.context[].color,
         )
     end
     limits!(bbox)
@@ -168,20 +185,79 @@ function Makie.plot!(
 end
 
 function Makie.convert_arguments(::Type{<:HoppingOrbitPlot}, h::HoppingOrbit{D}) where D
-    return (h, _cubic_basis(Val(D)))
+    return (h, _cubic_basis(Val(D)), nothing)
 end
 
 _cubic_basis(::Val{3}) = crystal(1, 1, 1, π / 2, π / 2, π / 2)
 _cubic_basis(::Val{2}) = crystal(1, 1, π / 2)
 _cubic_basis(::Val{1}) = crystal(1)
 _cubic_basis(::Val{D}) where {D} = error("Unsupported dimension: $D")
+## --------------------------------------------------------------------------------------- #
 
+# simple case: take no account of a coefficient vector, just plot all hoppings in `h`
+function _origins_and_destinations_from_hoppingorbit(
+    h::HoppingOrbit{D},
+    Rm::AbstractMatrix{<:Real}
+) where D
+    P = Point{D, Float32}
+    origins = mapreduce(vcat, h.hoppings) do hs
+        map(hs) do h
+            a = Rm * constant(h[1])
+            P(a)
+        end
+    end
+    destinations = mapreduce(vcat, h.hoppings) do hs
+        map(hs) do h
+            b_plus_R = Rm * (constant(h[2]) + constant(h[3]))
+            P(b_plus_R)
+        end
+    end
+    return origins, destinations
+end
+
+# complicated case: account for a coefficient vector `t`, which may mean that some hoppings
+# in `h` actually do not appear
+function _origins_and_destinations_from_coefficients(
+    h::HoppingOrbit{D},
+    t::AbstractVector{<:Number},
+    Rm::AbstractMatrix{<:Real}
+) where D
+    # reshape `t` to a tensor version `T` with [k, j, i] indices, and `i` denoting `i`th
+    # orbit, `j` denoting `j`th hopping in that orbit, and `k` denoting a multi-index into
+    # the possible site-irrep-to-site-irrep hoppings associated with `j`
+    N = length(t) ÷ 2
+    @assert N * 2 == length(t) # storage as [real ..., imag ...]
+    I = length(h.hoppings)
+    J = length(first(h.hoppings))
+    K = N ÷ (I * J)
+    @assert I * J * K == N
+    Tr = reshape((@view t[1:N]), (K, J, I))
+    Ti = reshape((@view t[(N+1):(2N)]), (K, J, I))
+
+    P = Point{D, Float32}
+    origins, destinations = Vector{P}(), Vector{P}()
+    for (i, hs) in enumerate(h.hoppings)
+        # key aim: only add a hopping term if any of its associated coefficients are nonzero
+        for (j, h) in enumerate(hs)
+            has_hop = (any(x -> abs(x) > PRUNE_ATOL_DEFAULT, @view Tr[:, j, i]) ||
+                       any(x -> abs(x) > PRUNE_ATOL_DEFAULT, @view Ti[:, j, i]))
+            has_hop || continue
+            a = P(Rm * constant(h[1]))
+            b_plus_R = P(Rm * (constant(h[2]) + constant(h[3])))
+            push!(origins, a)
+            push!(destinations, b_plus_R)
+        end
+    end
+    return origins, destinations
+end
 ## --------------------------------------------------------------------------------------- #
 # hack overload to set default axis attributes
 
 function Makie.plot(
     h::HoppingOrbit{D},
-    Rs::DirectBasis{D} = _cubic_basis(Val(D));
+    Rs::DirectBasis{D} = _cubic_basis(Val(D)),
+    t::MaybeCoefficient = nothing,
+    offdiag::Bool = false;
     axis = NamedTuple(),
     figure = NamedTuple(),
     kws...,
@@ -198,17 +274,21 @@ function Makie.plot(
     D == 3 && (ax.protrusions[] = 0) # cf. https://github.com/MakieOrg/Makie.jl/issues/2259
 
     # plot the hopping orbit
-    p = hoppingorbitplot!(ax, h, Rs; kws...)
+    p = hoppingorbitplot!(ax, h, Rs, t, offdiag; kws...)
 
     return Makie.FigureAxisPlot(f, ax, p)
 end
 
 Makie.plottype(::HoppingOrbit) = HoppingOrbitPlot
 Makie.plottype(::HoppingOrbit{D}, ::DirectBasis{D}) where D = HoppingOrbitPlot
+Makie.plottype(::HoppingOrbit{D}, ::DirectBasis{D}, ::MaybeCoefficient) where D = HoppingOrbitPlot
+Makie.plottype(::HoppingOrbit{D}, ::DirectBasis{D}, ::MaybeCoefficient, ::Bool) where D = HoppingOrbitPlot
 function Makie.args_preferred_axis(
     ::Type{<:HoppingOrbitPlot},
     ::HoppingOrbit{D},
     ::DirectBasis{D},
+    ::MaybeCoefficient,
+    ::Bool
 ) where D
     return D == 3 ? Axis3 : Axis
 end
@@ -223,7 +303,7 @@ function Makie.convert_arguments(
     tbt_or_tbb::Union{TightBindingTerm{D}, TightBindingBlock{D}},
     Rs::DirectBasis{D} = _cubic_basis(Val(D)),
 ) where D
-    (_orbit(tbt_or_tbb), Rs)
+    (_orbit(tbt_or_tbb), Rs, _coefficients(tbt_or_tbb), _offdiag(tbt_or_tbb))
 end
 
 function Makie.plot(
@@ -231,11 +311,15 @@ function Makie.plot(
     Rs::DirectBasis{D} = _cubic_basis(Val(D));
     kws...,
 ) where D
-    plot(_orbit(tbt_or_tbb), Rs; kws...)
+    plot(_orbit(tbt_or_tbb), Rs, _coefficients(tbt_or_tbb), _offdiag(tbt_or_tbb); kws...)
 end
 _orbit(tbt::TightBindingTerm) = _orbit(tbt.block)
 _orbit(tbb::TightBindingBlock) = _orbit(tbb.h_orbit)
 _orbit(h::HoppingOrbit) = h
+_coefficients(tbt::TightBindingTerm) = _coefficients(tbt.block)
+_coefficients(tbb::TightBindingBlock) = tbb.t
+_offdiag(tbt::TightBindingTerm) = _offdiag(tbt.block)
+_offdiag(tbb::TightBindingBlock) = !tbb.diagonal_block
 
 ## --------------------------------------------------------------------------------------- #
 # Plotting entire tight-binding models by tiling their hopping terms
@@ -261,7 +345,8 @@ function Makie.convert_arguments(
     for idx in LinearIndices(axs)
         if idx ≤ length(tbm)
             tbt = tbm[idx]
-            plots = [S.HoppingOrbitPlot(_orbit(tbt), Rs; context = (; limits = bbox))]
+            plots = [S.HoppingOrbitPlot(_orbit(tbt), Rs, _coefficients(tbt), _offdiag(tbt);
+                                        context = (; limits = bbox))]
         else
             plots = PlotSpec[]
         end

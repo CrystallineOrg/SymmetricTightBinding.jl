@@ -11,6 +11,7 @@ using RowEchelon: rref, rref!           # for `poormans_sparsification`
 
 # --- Constants -------------------------------------------------------------------------- #
 
+const VEC_CMP_ATOL = 1e-11 # for `isapprox` comparison of RVecs / KVecs
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
@@ -47,6 +48,8 @@ export gradient_wrt_momentum
 export TightBindingModelMomentumGradient
 include("berry.jl")
 export berrycurvature
+include("symmetry_breaking.jl")
+export subduced_complement
 
 # --- Re-exports ------------------------------------------------------------------------- #
 

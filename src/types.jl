@@ -70,7 +70,7 @@ end
 
 A structure for storing information about a matrix block of a tight-binding Hamiltonian.
 
-A block will represent a hopping terms between two band representations `br1` and `br2`. 
+A block will represent a hopping terms from band representation `br2` to `br1`. 
 For this hopping we store:
 
 ## Fields
@@ -95,16 +95,37 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     # we include `MmtC` as an optimization: we want `Mm` for structural information (e.g.
     # for plotting), but for computing the block matrix elements, we actually only need
     # the (column-)contracted matrix `MmtC` (see `evaluate_tight_binding_term!`)
+    diagonal_block::Bool # whether this is a diagonal block in the overall Hamiltonian
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
-function TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t) where D
+function TightBindingBlock{D}(
+    br1, 
+    br2, 
+    ordering1, 
+    ordering2, 
+    h_orbit, 
+    Mm, 
+    t, 
+    diagonal_block
+) where D
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
     MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
     for i in axes(Mm, 3), j in axes(Mm, 4)
         MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
     end
-    return TightBindingBlock{D}(br1, br2, ordering1, ordering2, h_orbit, Mm, t, MmtC)
+    tbb = TightBindingBlock{D}(
+        br1, 
+        br2, 
+        ordering1, 
+        ordering2, 
+        h_orbit, 
+        Mm, 
+        t, 
+        MmtC, 
+        diagonal_block
+    )
+    return tbb
 end
 
 @enum Hermiticity::UInt8 begin
@@ -263,8 +284,17 @@ struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
 end
 Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
 Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
-Base.setindex!(::TightBindingModel, v, i::Int) = error("setindex! is not supported")
+Base.setindex!(tbm::TightBindingModel, v, i::Int) = setindex!(tbm.terms, v, i)
 Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
+function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
+    tbm::TightBindingModel{D},
+    ::Type{TightBindingTerm{D}}, # element_type
+    dims::Tuple{Int} = size(tbm),
+) where {D}
+    similar_terms = similar(tbm.terms, TightBindingTerm{D}, dims)
+    return TightBindingModel{D}(similar_terms, tbm.cbr, tbm.positions, tbm.N)
+end
+
 orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
 
@@ -272,8 +302,8 @@ function TightBindingModel(
     terms::Vector{TightBindingTerm{D}},
     cbr::CompositeBandRep{D},
 ) where {D}
-    length(terms) == 0 && return TightBindingModel{D}(terms, 0)
     positions = orbital_positions(cbr)
+    length(terms) == 0 && return TightBindingModel{D}(terms, cbr, positions, 0)
     N = last(first(terms).axis)
     return TightBindingModel{D}(terms, cbr, positions, N)
 end
@@ -389,11 +419,11 @@ function evaluate_tight_binding_term!(
     v_conj = cispi.(-dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
     # NB: ↑ this is `v` conjugated: we do this because the `dot`-product below conjugates
     #     its first argument; so by conjugating twice we get the unconjugated result.
-    # NB: ↑ each term in the hamiltonian is associated to an annihilation/creation operator
-    # such as `aᵢ† aⱼ`. As we use convention 1 for the fourier transform, we have that 
-    # aᵢ† = e^{-ik·(t + rᵢ)} aₖ†, then each term will be multiplied by the phase 
-    # e^{ik·δ}, where δ = R + r\ᵢ - rⱼ, i.e., the hopping vector in the orbit.
-    # Note that we store those hopping vectors in the orbit.
+    # NB: ↑ each term in the Hamiltonian is associated to an annihilation+creation operator
+    #     pair `aᵢ† aⱼ`. Since we use Convention 1 for the Fourier transform, we have
+    #     aᵢ† = ∑ₖ e^{-ik·(tᵢ + rᵢ)} aₖ†, such that each term will be multiplied by a phase 
+    #     e^{ik·δᵢⱼ} with δᵢⱼ ≡ Rᵢⱼ + rᵢ - rⱼ, i.e., the hopping vector in the orbit; this
+    #     is what `orbit(block.h_orbit)` gives us above
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
             Hᵢⱼ = @inbounds dot(v_conj, @view MmtC[:, local_i, local_j])
@@ -417,7 +447,7 @@ end
 function solve(
     ptbm::ParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D};
-    bloch_phase::Union{Val{true}, Val{false}} = Val(true),
+    bloch_phase::Union{Val{true}, Val{false}} = Val(false),
     eigen_kws...,
 ) where D
     length(k) == D || error("dimension mismatch")
@@ -427,14 +457,13 @@ function solve(
     H = Hermitian(ptbm(k))
     es, vs = eigen(H; eigen_kws...)
     if bloch_phase === Val(true)
-        phases = cispi.(dot.(Ref(-2 .* k), orbital_positions(ptbm)))
-        # ↑ we used convention 1 for the Fourier transform, so the Bloch phase is
-        # e^{ik·(t+rᵢ)}. Then, the eigenfuncitons can be associated to the bloch 
-        # periodic functions. Sometimes we want to use the bloch functions which are 
-        # associated to the phases e^{ik·t}. Then, if we want to transform from one to 
-        # the other, we need to multiply the eigenvectors by the phases e^{-ik·rᵢ}.
-        # For more details, see notes on `devdocs/fourier.md`.
-        vs = Diagonal(phases) * vs # add Bloch phases
+        Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
+        # NB: we start in convention 1 for the returned eigenfunctions `vs`, so the Bloch 
+        # periodic functions ψ(rᵢ + t) are e^{ik·(t+rᵢ)} * vᵢ (with vᵢ denoting the ith element
+        # a vector `v` in `vs`, corresponding to the ith position rᵢ); this then returns ψ(rᵢ)
+        # This is equivalent to convert the eigenfunctions to the convention 2 Fourier transform,
+        # see Appendix A in `docs/scr/theory.md`.
+        vs = Θₖ' * vs # add Bloch phases
         return es, vs
     else
         return es, vs
