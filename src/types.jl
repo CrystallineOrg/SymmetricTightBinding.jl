@@ -416,7 +416,7 @@ function evaluate_tight_binding_term!(
     MmtC = block.MmtC # contracted product of `Mm` and (complexified) `t`
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
-    v_conj = cispi.(-dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
+    v_conj = cispi.(dot.(Ref(-2 .* k), constant.(orbit(block.h_orbit))))
     # NB: ↑ this is `v` conjugated: we do this because the `dot`-product below conjugates
     #     its first argument; so by conjugating twice we get the unconjugated result.
     # NB: ↑ each term in the Hamiltonian is associated to an annihilation+creation operator
@@ -455,7 +455,7 @@ function solve(
         error("ANTIHERMITIAN model solve not implemented") # TODO: cf. `Hermitian` use below
     end
     H = Hermitian(ptbm(k))
-    es, vs = eigen(H; eigen_kws...)
+    es, vs = eigen!(H; eigen_kws...)
     if bloch_phase === Val(true)
         Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
         # NB: we start in convention 1 for the returned eigenfunctions `vs`, so the Bloch 

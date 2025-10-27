@@ -229,15 +229,21 @@ function evaluate_tight_binding_momentum_gradient_term!(
 
     all(∈(1:D), components) || error(lazy"components must be in 1:$D; got $components")
 
-    # NB: ↓ one more case of assuming no free parameters in `δ`
-    δs = constant.(orbit(block.h_orbit))
-    v_conj = cispi.(-dot.(Ref(2 .* k), δs))
+    # NB: ↓ one more case of assuming no free parameters in 
+    #     `δs = constant.(orbit(block.h_orbit))` (we don't materialize `δs` though)
+    δs = orbit(block.h_orbit)
+    v_conj = cispi.(dot.(Ref(-2 .* k), constant.(δs)))
+    δ_mult_v_conj = similar(v_conj) # preallocate for reuse below
     for (idx, component) in enumerate(components)
         ∇H = ∇Hs[idx]
-        δ_mult_v_conj = (- 2im * π) .* getindex.(δs, component) .* v_conj
+        # compute `δ[component]` multiplied by `v_conj` efficiently; equivalent to
+        # `v_conj .* getindex.(constant.(δs), component)` but without repeated allocations
+        unsafe_copyto!(δ_mult_v_conj, 1, v_conj, 1, length(v_conj))
+        δ_mult_v_conj .*= getindex.(constant.(δs), component) # not yet including (-2πi) factor
         for (local_i, i) in enumerate(is)
             for (local_j, j) in enumerate(js)
                 ∇Hᵢⱼ = @inbounds dot(δ_mult_v_conj, @view MmtC[:, local_i, local_j])
+                ∇Hᵢⱼ *= 2im * π # include (-2πi) factor; now no minus sign (outside `dot`)
                 isnothing(c) || (∇Hᵢⱼ *= c) # multiply by coefficient if provided
                 ∇H[i, j] += ∇Hᵢⱼ
                 i == j && continue # don't add diagonal elements twice
