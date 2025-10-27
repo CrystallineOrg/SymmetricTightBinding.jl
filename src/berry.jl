@@ -38,7 +38,7 @@ band and ``E_n`` denoting the energy of the `n`th band. The Berry curvature pseu
 ``\\Omega_2 = \\Omega_{31}``, and ``\\Omega_3 = \\Omega_{12}``.
 
 !!! note
-    The sum-over-states formula is of course equivalent to the more commmonly found
+    The sum-over-states formula is of course equivalent to the more commonly found
     definition involving derivatives of the Berry connection. In particular, the above
     expression corresponds to a definition of the Berry curvature tensor as:
 

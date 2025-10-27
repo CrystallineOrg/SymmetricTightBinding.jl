@@ -34,7 +34,7 @@ haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), t₂*sin(ϕ), -m, t₂*
 
 This realizes the Haldane Hamiltonian with nearest-neighbor hopping $t_1$, a staggered mass term $m$, and a complex next-nearest-neighbor hopping $t_2 \exp(\pm\mathrm{i}\phi)$ with Haldane's zero-flux pattern. The model is gapless for $m/t_2 = 3\sqrt{3}|\sin\phi|$ and otherwise gapped when $|t_2 / t_1| < 1/3$.
 
-Thee Berry curvature is nonzero at generic **k**-points and generic values of `t₁, m, t₂, ϕ`, as we can verify with the [`berrycurvature`](@ref) method:
+The Berry curvature is nonzero at generic **k**-points and generic values of `t₁, m, t₂, ϕ`, as we can verify with the [`berrycurvature`](@ref) method:
 
 ```@example berry
 ptbm = haldane_model(1.0, 0.1, 0.1, π/2)
@@ -159,7 +159,7 @@ f
 ```
 
 !!! note "Computing phase maps more efficiently"
-    Phase maps can be constructed much more efficiently than by the brute-force grid-exploration adopted above (which scales with the phase map area). E.g., the [PhaseMap](https://github.com/greschd/PhaseMap) Python package uses a recursive exploration strategy that scales with the phase map boundary length. An example of interface with PhaseMap is given in [https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/examples/phasemap.jl][`examples/phase.jl`].
+    Phase maps can be constructed much more efficiently than by the brute-force grid-exploration adopted above (which scales with the phase map area). E.g., the [PhaseMap](https://github.com/greschd/PhaseMap) Python package uses a recursive exploration strategy that scales with the phase map boundary length. An example of interface with PhaseMap is given in [`examples/phasemap.jl`](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/examples/phasemap.jl).
 
 ## Berry curvature in three-dimensional models
 

@@ -104,7 +104,7 @@ end
         # `t₂ exp(±iϕ)`
         haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), t₂*sin(ϕ), -m, t₂*cos(ϕ), -t₂*sin(ϕ), t₁, 0])
 
-        # below is a manual version of the Hadane model Hamiltonian, for testing that 
+        # below is a manual version of the Haldane model Hamiltonian, for testing that 
         # `haldane_model` indeed is the correct parameterization (taken from my notes on the
         # Haldane model, Eq. (4))
         function manual_haldane_model(k, t₁, m, t₂, ϕ)
