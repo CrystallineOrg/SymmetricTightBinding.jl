@@ -1,6 +1,6 @@
 name = "SymmetricTightBinding"
 uuid = "793e0360-0e47-4c52-9513-43d75d53c7d0"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Antonio Morales Perez <antonio.morales@dipc.org>, Thomas Christensen <thomas@dtu.dk>, and contributors"]
 
 [deps]
