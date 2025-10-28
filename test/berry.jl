@@ -161,6 +161,8 @@ end
         # test non-Abelian Fukui method
         @test chern_fukui(ptbm1, [1:1, 2:2], Nk) == [1, -1]
         @test chern_fukui(ptbm1, [1:2], Nk) == [0]
+        @test chern_fukui(ptbm1, [1, 2], Nk) == chern_fukui(ptbm1, 1:2, Nk) == only(chern_fukui(ptbm1, [1:2], Nk)) == 0
+        @test chern_fukui(ptbm2, [1], Nk) == chern_fukui(ptbm2, 1, Nk)
     end
 
     @testset "An example in p4" begin

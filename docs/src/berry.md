@@ -159,7 +159,7 @@ f
 ```
 
 !!! note "Computing phase maps more efficiently"
-    Phase maps can be constructed much more efficiently than by the brute-force grid-exploration adopted above (which scales with the phase map area). E.g., the [PhaseMap](https://github.com/greschd/PhaseMap) Python package uses a recursive exploration strategy that scales with the phase map boundary length. An example of interface with PhaseMap is given in [`examples/phasemap.jl`](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/examples/phasemap.jl).
+    Phase maps can be constructed much more efficiently than by the brute-force grid-exploration adopted above (which scales with the phase map area). E.g., the [PhaseMap](https://github.com/greschd/PhaseMap) Python package uses a recursive exploration strategy that scales with the phase map boundary length. An example of interfacing with PhaseMap is provided in [`examples/phasemap.jl`](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/examples/phasemap.jl).
 
 ## Berry curvature in three-dimensional models
 

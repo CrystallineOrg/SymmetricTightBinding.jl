@@ -276,7 +276,7 @@ end
 
 """
     chern(
-        ptbm::ptbm::ParameterizedTightBindingModel{2},
+        ptbm::ParameterizedTightBindingModel{2},
         n::Integer,
         Nk::Integer,
     ) --> Float64
@@ -309,14 +309,25 @@ end
 
 """
     chern_fukui(
-        ptbm::ptbm::ParameterizedTightBindingModel{2},
-        n::Integer,
+        ptbm::ParameterizedTightBindingModel{2},
+        bands::Union{T, AbstractVector{T}, AbstractVector{<:AbstractVector{T}}} where T<:Integer,
         Nk::Integer,
-    ) --> Int
+    ) --> C where C <: Union{Int, Vector{Int}}
 
-Evaluate the Chern number of the `n`th band of the 2D model `ptbm`, using the link-variable
-integration approach of Fukui et al. [^1] and `Nk` linear sample points per **k**-space
-dimension.
+Evaluate the Chern number of the specified `bands` of the 2D model `ptbm`, using the
+link-variable integration approach of Fukui et al. [^1] and `Nk` linear sample points per
+**k**-space dimension.
+
+The `bands` argument can specify either:
+
+1. a single band index `n`, returning then the Abelian Chern number of the `n`th band, or
+2. an abstract vector of band indices `ns`, returning then the non-Abelian Chern number of
+   the corresponding band multiplet, or
+3. an abstract vector of abstract vectors `nsv`, returning then a vector of non-Abelian
+   Chern numbers, one for each band multiplet specified in `nsv`.
+
+!!! note
+    In cases 2 and 3, the band multiplet indices must be non-overlapping.
 
 The returned value is guaranteed to be an integer (but will only converge to the correct
 Chern number for sufficiently high `Nk`).
@@ -325,9 +336,9 @@ Chern number for sufficiently high `Nk`).
      Method of Computing (Spin) Hall Conductances*,
      [J. Phys. Soc. Jpn. **74**, 1674 (2005)](https://doi.org/10.1143/JPSJ.74.1674).
      
-See also [`chern`](@ref) for an alternative approach based on direct integration of the
-Berry curvature, evaluated from a sum-over-states formula. The Fukui approach is usually
-more performant for Chern number evaluation.
+See also [`chern`](@ref) for an alternative approach (applicable to the Abelian case) based
+on direct integration of the Berry curvature, evaluated from a sum-over-states formula.
+The Fukui approach is usually more performant for Chern number evaluation.
 
 ## Definition
 
@@ -423,9 +434,9 @@ end
 
 function chern_fukui(
     ptbm::ParameterizedTightBindingModel{2},
-    nsv::AbstractVector{T},
+    nsv::AbstractVector{<:AbstractVector{<:Integer}},
     Nk::Integer
-) where T<:Union{Integer, AbstractRange{<:Integer}}
+)
     # exactly the same idea as single-band (Abelian) Fukui approach, but now for non-Abelian
     # case and possibly with multiple bands
 
@@ -434,7 +445,7 @@ function chern_fukui(
 
     nsv_flat = Iterators.flatten(nsv)
     allunique(nsv_flat) || error("requested band multiplets `nsv` have overlapping band indices")
-    Nb = sum(length, nsv_flat; init = 0)
+    Nb = sum(length, nsv_flat; init = 0) :: Int
 
     eigen_storeⱼ = Array{ComplexF64}(undef, ptbm.tbm.N, Nb, length(ks)) # eigvecs of the `j`th row
     k₁ = ks[1]
@@ -489,7 +500,15 @@ function chern_fukui(
         eigen_storeⱼ, eigen_storeⱼ₊₁ = eigen_storeⱼ₊₁, eigen_storeⱼ
     end
 
-    Cs /= 2π
+    Cs ./= 2π
 
     return round.(Int, Cs)
+end
+
+function chern_fukui(
+    ptbm::ParameterizedTightBindingModel{2},
+    ns::AbstractVector{<:Integer},
+    Nk::Integer
+)
+    return only(chern_fukui(ptbm, [ns], Nk))
 end
