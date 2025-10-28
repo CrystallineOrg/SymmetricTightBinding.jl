@@ -20,7 +20,6 @@ ptbm = tbm([0, 1, -1, 1])
     using GLMakie
     plot(tbm, directbasis(11, Val(2)))
     ```
-    While terms 3 and 4 appear identical in this visualization, they are not (cf. [issue #75](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/issues/75)): in term 3, horizontal hoppings (δ₁ and δ₂) are associated to the first Wyckoff position (at `[1/2, 0]`) and vertical hoppings to the second Wyckoff position (at `[0, 1/2]`), and vice versa for term 4.
 
 The parameterized model has a quadratic degeneracy at M, associated with the M₅ irrep:
 
