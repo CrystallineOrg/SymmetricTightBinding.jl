@@ -257,6 +257,6 @@ function reciprocal_translation_phase(
     positions::AbstractVector{DirectPoint{D}},
     k::ReciprocalPointLike{D},
 ) where D
-    expsv = cispi.(-dot.(Ref(2k), positions))
+    expsv = cispi.(dot.(Ref(-2 .* k), positions))
     return Diagonal(expsv)
 end

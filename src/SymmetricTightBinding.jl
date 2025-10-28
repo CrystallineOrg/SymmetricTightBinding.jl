@@ -8,6 +8,7 @@ using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices,
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
+using StaticArrays: SVector
 
 # --- Constants -------------------------------------------------------------------------- #
 
@@ -42,7 +43,14 @@ include("spectrum.jl")
 export spectrum
 include("gradients.jl")
 export gradient_wrt_hopping
+export TightBindingModelHoppingGradient
 export energy_gradient_wrt_hopping
+export gradient_wrt_momentum
+export TightBindingModelMomentumGradient
+include("berry.jl")
+export berrycurvature
+export chern
+export chern_fukui
 include("symmetry_breaking.jl")
 export subduced_complement
 
