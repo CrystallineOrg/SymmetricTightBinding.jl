@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Berry curvature &amp; Chern numbers · SymmetricTightBinding.jl</title><meta name="title" content="Berry curvature &amp; Chern numbers · SymmetricTightBinding.jl"/><meta property="og:title" content="Berry curvature &amp; Chern numbers · SymmetricTightBinding.jl"/><meta property="twitter:title" content="Berry curvature &amp; Chern numbers · SymmetricTightBinding.jl"/><meta name="description" content="Documentation for SymmetricTightBinding.jl."/><meta property="og:description" content="Documentation for SymmetricTightBinding.jl."/><meta property="twitter:description" content="Documentation for SymmetricTightBinding.jl."/><meta property="og:url" content="https://CrystallineOrg.github.io/SymmetricTightBinding.jl/berry/"/><meta property="twitter:url" content="https://CrystallineOrg.github.io/SymmetricTightBinding.jl/berry/"/><link rel="canonical" href="https://CrystallineOrg.github.io/SymmetricTightBinding.jl/berry/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">SymmetricTightBinding.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../band-symmetry/">Band symmetry</a></li><li class="is-active"><a class="tocitem" href>Berry curvature &amp; Chern numbers</a><ul class="internal"><li><a class="tocitem" href="#Haldane-model"><span>Haldane model</span></a></li><li><a class="tocitem" href="#Phase-diagrams"><span>Phase diagrams</span></a></li><li><a class="tocitem" href="#Berry-curvature-in-three-dimensional-models"><span>Berry curvature in three-dimensional models</span></a></li></ul></li><li><a class="tocitem" href="../symmetry-breaking/">Symmetry breaking</a></li><li><a class="tocitem" href="../api/">API</a></li><li><a class="tocitem" href="../internal-api/">Internal API</a></li><li><a class="tocitem" href="../theory/">Theory</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Berry curvature &amp; Chern numbers</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Berry curvature &amp; Chern numbers</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/CrystallineOrg/SymmetricTightBinding.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/docs/src/berry.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="berry"><a class="docs-heading-anchor" href="#berry">Berry curvature and Chern numbers</a><a id="berry-1"></a><a class="docs-heading-anchor-permalink" href="#berry" title="Permalink"></a></h1><p>SymmetricTightBinding.jl implements some functionalities to compute the Berry curvature and associated Chern numbers of parameterized tight-binding models via <a href="../api/#SymmetricTightBinding.berrycurvature-Union{Tuple{D}, Tuple{ParameterizedTightBindingModel{D}, Union{NTuple{D, var&quot;#s38&quot;} where var&quot;#s38&quot;&lt;:Real, AbstractVector{&lt;:Real}}, Integer}, Tuple{ParameterizedTightBindingModel{D}, Union{NTuple{D, var&quot;#s38&quot;} where var&quot;#s38&quot;&lt;:Real, AbstractVector{&lt;:Real}}, Integer, NTuple{D, Matrix{ComplexF64}}}} where D"><code>berrycurvature</code></a>, <a href="../api/#SymmetricTightBinding.chern-Tuple{ParameterizedTightBindingModel{2}, Integer, Integer}"><code>chern</code></a>, and <a href="../api/#SymmetricTightBinding.chern_fukui-Tuple{ParameterizedTightBindingModel{2}, Integer, Integer}"><code>chern_fukui</code></a>. We illustrate the functionality here, with the canonical example of the Haldane model.</p><h2 id="Haldane-model"><a class="docs-heading-anchor" href="#Haldane-model">Haldane model</a><a id="Haldane-model-1"></a><a class="docs-heading-anchor-permalink" href="#Haldane-model" title="Permalink"></a></h2><p>The Haldane model <sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>, featuring both an inversion-breaking mass term and a time-reversal breaking next-nearest-neighbor complex hopping, has <em>p</em>3 symmetry (plane group ⋕13). The model is built from two <em>s</em>-like orbitals (i.e., with site-symmetry irrep A) placed at the 1b and 1c Wyckoff positions.<sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup></p><pre><code class="language-julia hljs">using Crystalline, SymmetricTightBinding
+sgnum = 13 # p3
+brs = calc_bandreps(sgnum, Val(2); timereversal = false)
+brs[4], brs[1] = brs[1], brs[4]; # see below
+# (↑) We manually swap the positions of the (1b|A) and (1c|A) EBRs in `brs` above.
+#     Without this adjustment, the model we construct below would place the 1b
+#     position in the &quot;second orbital slot&quot; and the 1c position in the &quot;first slot&quot;,
+#     with the ordering being inherited from the sorting in `brs`. But Haldane places
+#     the 1b position as the first orbital (A sites) and the 1c position as the
+#     second orbital (B sites): aligning the two simply makes the comparison easier
+cbr = @composite brs[1] + brs[4] # (1b|A) + (1c|A)
+
+tbm = tb_hamiltonian(cbr, [[0,0], [0,1]])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-term 2×2 TightBindingModel{2} over (1b|A)⊕(1c|A):
+<span class="sgr90">┌─</span>
+<span class="sgr1">1. </span>⎡ <span class="sgr34">1</span>  │  <span class="sgr90">0</span> ⎤
+<span class="sgr90">│  </span>⎢ ───┼─── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span> ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1b|A)</span><span class="sgr90"> self-term</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">2. </span>⎡ <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)+𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆)</span>  │  <span class="sgr90">0</span> ⎤
+<span class="sgr90">│  </span>⎢ ─────────────────────────────────────┼─── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>                                    │  <span class="sgr90">0</span> ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1b|A)</span><span class="sgr90"> self-term:  δ₁=[0,1/1], δ₂=[-1/1,-1/1], δ₃=[1/1,0], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">3. </span>⎡ <span class="sgr34">i𝕖(δ₁)+i𝕖(δ₂)+i𝕖(δ₃)-i𝕖(δ₄)-i𝕖(δ₅)-i𝕖(δ₆)</span>  │  <span class="sgr90">0</span> ⎤
+<span class="sgr90">│  </span>⎢ ───────────────────────────────────────────┼─── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>                                          │  <span class="sgr90">0</span> ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1b|A)</span><span class="sgr90"> self-term:  δ₁=[0,1/1], δ₂=[-1/1,-1/1], δ₃=[1/1,0], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">4. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span> ⎤
+<span class="sgr90">│  </span>⎢ ───┼─── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr34">1</span> ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1c|A)</span><span class="sgr90"> self-term</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">5. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>                                   ⎤
+<span class="sgr90">│  </span>⎢ ───┼───────────────────────────────────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)+𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆)</span> ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1c|A)</span><span class="sgr90"> self-term:  δ₁=[0,1], δ₂=[-1,-1], δ₃=[1,0], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">6. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>                                         ⎤
+<span class="sgr90">│  </span>⎢ ───┼─────────────────────────────────────────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr34">i𝕖(δ₁)+i𝕖(δ₂)+i𝕖(δ₃)-i𝕖(δ₄)-i𝕖(δ₅)-i𝕖(δ₆)</span> ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1c|A)</span><span class="sgr90"> self-term:  δ₁=[0,1], δ₂=[-1,-1], δ₃=[1,0], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">7. </span>⎡ <span class="sgr90">0</span>                     │  <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)</span> ⎤
+<span class="sgr90">│  </span>⎢ ──────────────────────┼─────────────────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃)</span>  │  <span class="sgr90">0</span>                 ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1b|A)</span>↔<span class="sgr34">(1c|A)</span><span class="sgr90">:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">8. </span>⎡ <span class="sgr90">0</span>                         │  <span class="sgr34">i𝕖(δ₁)+i𝕖(δ₂)+i𝕖(δ₃)</span> ⎤
+<span class="sgr90">│  </span>⎢ ──────────────────────────┼────────────────────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr34">-i𝕖(-δ₁)-i𝕖(-δ₂)-i𝕖(-δ₃)</span>  │  <span class="sgr90">0</span>                    ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1b|A)</span>↔<span class="sgr34">(1c|A)</span><span class="sgr90">:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]</span></code></pre><p>The terms in <code>tbm</code> form a basis for many possible Hamiltonians, including for the Haldane model. By comparing term by term with Haldane&#39;s expressions, the correct parameterization can be determined to be:</p><pre><code class="language-julia hljs">haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), t₂*sin(ϕ), -m, t₂*cos(ϕ), -t₂*sin(ϕ), t₁, 0])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">haldane_model (generic function with 1 method)</code></pre><p>This realizes the Haldane Hamiltonian with nearest-neighbor hopping <span>$t_1$</span>, a staggered mass term <span>$m$</span>, and a complex next-nearest-neighbor hopping <span>$t_2 \exp(\pm\mathrm{i}\phi)$</span> with Haldane&#39;s zero-flux pattern. The model is gapless for <span>$m/t_2 = 3\sqrt{3}|\sin\phi|$</span> and otherwise gapped when <span>$|t_2 / t_1| &lt; 1/3$</span>.</p><p>The Berry curvature is nonzero at generic <strong>k</strong>-points and generic values of <code>t₁, m, t₂, ϕ</code>, as we can verify with the <a href="../api/#SymmetricTightBinding.berrycurvature-Union{Tuple{D}, Tuple{ParameterizedTightBindingModel{D}, Union{NTuple{D, var&quot;#s38&quot;} where var&quot;#s38&quot;&lt;:Real, AbstractVector{&lt;:Real}}, Integer}, Tuple{ParameterizedTightBindingModel{D}, Union{NTuple{D, var&quot;#s38&quot;} where var&quot;#s38&quot;&lt;:Real, AbstractVector{&lt;:Real}}, Integer, NTuple{D, Matrix{ComplexF64}}}} where D"><code>berrycurvature</code></a> method:</p><pre><code class="language-julia hljs">ptbm = haldane_model(1.0, 0.1, 0.1, π/2)
+berrycurvature(ptbm, [.2, .3], 1)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6.155322378740026</code></pre><p>We can use this to e.g., visualize the Berry curvature distribution over the Brillouin zone:</p><pre><code class="language-julia hljs"># compute the Berry curvature over the parallelipiped Brillouin zone
+Gs = dualbasis(directbasis(sgnum, Val(2)))
+ks = range(-0.5, 0.5, 100) # k-points&#39; range in reciprocal basis coordinates
+k12s = (ReciprocalPoint(k1, k2) for k1 in ks, k2 in ks)
+Ω = [berrycurvature(ptbm, k12, 1) for k12 in k12s] # Berry curvatures of first band
+
+# use Brillouin.jl and GLMakie.jl to visualize the Berry curvature
+using Brillouin, GLMakie
+c = wignerseitz(Gs)
+
+kxys = [cartesianize(k12, Gs) for k12 in k12s] # k-points in Cartesian coordinates
+kxs = getindex.(kxys, 1)
+kys = getindex.(kxys, 2)
+
+f = Figure()
+ax = Axis(f[1,1]; aspect=Makie.DataAspect())
+
+Ωz = Ω ./ Crystalline.Bravais.volume(Gs) # transform from reduced to Cartesian setting
+maxΩ = maximum(abs, Ωz)
+colormap_kws = (; colormap = Reverse(:RdBu), colorrange=(-maxΩ, maxΩ))
+for s1 in -1:1, s2 in -1:1 # map across adjacent parallelipiped BZs
+    G = s1 * Gs[1] + s2 * Gs[2]
+    kxys′ = kxys .+ Ref(G)
+    surface!(ax, getindex.(kxys′, 1), getindex.(kxys′, 2), zeros(size(Ωz));
+             color = Ωz, shading = NoShading, colormap_kws...)
+end
+plot!(c)
+ax.limits = (-1.45π, 1.45π, -1.35π, 1.35π)
+ax.xlabel = rich(&quot;k&quot;, subscript(&quot;x&quot;); font=:italic)
+ax.ylabel = rich(&quot;k&quot;, subscript(&quot;y&quot;); font=:italic)
+
+cb = Colorbar(f[1,2]; label=&quot;Berry curvature&quot;, colormap_kws...)
+f</code></pre><img src="46245e0e.png" alt="Example block output"/><p>Of course, we can also compute the Chern number <span>$C_n = \frac{\mathrm{i}}{2\pi} \int_{\text{BZ}} \nabla_{\mathbf{k}} \times \langle u_{n\mathbf{k}} | \nabla_{\mathbf{k}} | u_{n\mathbf{k}} \rangle \, \mathrm{d}^2 \mathbf{k}$</span> by integrating (i.e., summing up) the Berry curvature over the Brillouin zone. The convenience method <a href="../api/#SymmetricTightBinding.chern-Tuple{ParameterizedTightBindingModel{2}, Integer, Integer}"><code>chern</code></a> does exactly this:</p><pre><code class="language-julia hljs">Nk = 21 # number of k-point samples per BZ direction
+chern(ptbm, 1, Nk) # Chern number of first band</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.9999892090186546</code></pre><p>Generally, however, it will be faster and more accurate to use the <a href="../api/#SymmetricTightBinding.chern_fukui-Tuple{ParameterizedTightBindingModel{2}, Integer, Integer}"><code>chern_fukui</code></a> method, which uses the approach of Fukui <em>et al.</em> <sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup> to obtain a manifestly quantized Chern number:</p><pre><code class="language-julia hljs">chern_fukui(ptbm, 1, Nk)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>The Fukui method is also applicable in non-Abelian settings, i.e., for degenerate band multiplets.</p><h2 id="Phase-diagrams"><a class="docs-heading-anchor" href="#Phase-diagrams">Phase diagrams</a><a id="Phase-diagrams-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-diagrams" title="Permalink"></a></h2><p>We can use e.g., the <code>chern_fukui</code> approach to reproduce the classical phase diagram of the Haldane model. In particular, we show below the Chern number of the Haldane model with <span>$t_2 = t_1 / 5$</span> for varying <span>$M / t_2$</span> and hopping phase <span>$\phi$</span>:</p><pre><code class="language-julia hljs">const t₁ = 1.0
+const t₂ = t₁ / 5
+haldane_model(m_div_t₂, ϕ) = haldane_model(t₁, m_div_t₂ * t₂, t₂, ϕ)
+
+Nk = 21
+N = 151
+Mdivt2s = range(-3√3, 3√3, N)
+ϕs = range(-π, π, N)
+Cs = [SymmetricTightBinding.chern_fukui(haldane_model(Mdivt2, ϕ), 1, Nk) for ϕ in ϕs, Mdivt2 in Mdivt2s]
+
+f, ax, p = contourf(ϕs, Mdivt2s, Cs; levels = (-1:2) .- 1/2, colormap=Reverse(:RdBu_5))
+lines!(ϕs, 3√3*sin.(ϕs); color=:gray, linestyle=:dash, linewidth=4) # add analytical phase boundaries
+lines!(ϕs, 3√3*sin.(.-ϕs); color=:gray, linestyle=:dash, linewidth=4)
+
+ax.limits = (-π, π, -3√3, 3√3)
+ax.xticks = ([-π, 0, π], [&quot;-π&quot;, &quot;0&quot;, &quot;π&quot;])
+ax.yticks = ([-3√3, 0, 3√3], [&quot;-3√3&quot;, &quot;0&quot;, &quot;3√3&quot;])
+ax.xlabel = &quot;Hopping phase (TR breaking), ϕ&quot;
+ax.ylabel = &quot;Mass term (inversion breaking), M/t₂&quot;
+ax.title = &quot;Haldane model phase diagram&quot;
+
+cb = Colorbar(f[1,2], p)
+cb.ticks = -1:1
+cb.label = &quot;Chern number&quot;
+
+f</code></pre><img src="71085a70.png" alt="Example block output"/><p>We could also have obtained a similar-looking phase diagram by using topological quantum chemistry:</p><pre><code class="language-julia hljs">νs = Matrix{Int}(undef, N, N)
+F = smith(stack(brs)) # Smith decomposition of `brs`; precomputed for efficiency
+for (i, ϕ) in enumerate(ϕs), (j, Mdivt2) in enumerate(Mdivt2s)
+    ptbm = haldane_model(Mdivt2, ϕ)
+    n = first(collect_compatible(ptbm)) # get first symmetry vector
+    ν = only(symmetry_indicators(n, F))
+    νs[i, j] = ν
+end
+
+f, ax, p = contourf(ϕs, Mdivt2s, νs; levels = (0:3) .- 1/2, colormap=Reverse(:sunset))
+lines!(ϕs, 3√3*sin.(ϕs); color=:gray, linestyle=:dash, linewidth=4) # add analytical phase boundaries
+lines!(ϕs, 3√3*sin.(.-ϕs); color=:gray, linestyle=:dash, linewidth=4)
+
+ax.limits = (-π, π, -3√3, 3√3)
+ax.xticks = ([-π, 0, π], [&quot;-π&quot;, &quot;0&quot;, &quot;π&quot;])
+ax.yticks = ([-3√3, 0, 3√3], [&quot;-3√3&quot;, &quot;0&quot;, &quot;3√3&quot;])
+ax.xlabel = &quot;Hopping phase (TR breaking), ϕ&quot;
+ax.ylabel = &quot;Mass term (inversion breaking), M/t₂&quot;
+ax.title = &quot;Haldane model phase diagram&quot;
+
+cb = Colorbar(f[1,2], p)
+cb.ticks = 0:2
+cb.label = &quot;Symmetry indicator ν&quot;
+
+f</code></pre><img src="b60b42b4.png" alt="Example block output"/><div class="admonition is-info" id="Computing-phase-maps-more-efficiently-d0b89cb4018156e0"><header class="admonition-header">Computing phase maps more efficiently<a class="admonition-anchor" href="#Computing-phase-maps-more-efficiently-d0b89cb4018156e0" title="Permalink"></a></header><div class="admonition-body"><p>Phase maps can be constructed much more efficiently than by the brute-force grid-exploration adopted above (which scales with the phase map area). E.g., the <a href="https://github.com/greschd/PhaseMap">PhaseMap</a> Python package uses a recursive exploration strategy that scales with the phase map boundary length. An example of interfacing with PhaseMap is provided in <a href="https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/examples/phasemap.jl"><code>examples/phasemap.jl</code></a>.</p></div></div><h2 id="Berry-curvature-in-three-dimensional-models"><a class="docs-heading-anchor" href="#Berry-curvature-in-three-dimensional-models">Berry curvature in three-dimensional models</a><a id="Berry-curvature-in-three-dimensional-models-1"></a><a class="docs-heading-anchor-permalink" href="#Berry-curvature-in-three-dimensional-models" title="Permalink"></a></h2><div class="admonition is-info" id="Note-a0ecbc854636b000"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-a0ecbc854636b000" title="Permalink"></a></header><div class="admonition-body"><p>The <code>berrycurvature</code> method is also applicable to 3D models. An interface for the <code>chern</code> and <code>chern_fukui</code> methods, however, has not yet been added. However, it is still possible to do so manually, e.g., to analyze the existence of Weyl points. For instance, one may compute the Chern number associated with a given <span>$k_3$</span> slice by:</p><pre><code class="language-jl hljs">k3 = 0.1 # pick a k₃ plane
+Nk = 101 # number of integration points
+k12s = range(-0.5, 0.5, Nk+1)[2:end] # integration points in plane
+
+# compute flux of Ω₃ through k₃ plane (for first band)
+Φ = sum(berrycurvature(ptbm, [k1, k2, k3], 1)[3] for k1 in k12s, k2 in k12s; init=0.0) / Nk^2
+
+# normalize by 2π to obtain associated Chern number
+C₃ = Φ / (2π)</code></pre></div></div><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>F.D.M. Haldane, <em>Model for a Quantum Hall Effect without Landau Levels: Condensed-Matter Realization of the &quot;Parity Anomaly&quot;</em>, <a href="https://doi.org/10.1103/PhysRevLett.61.2015">Phys. Rev. Lett. <strong>61</strong>, 2015 (1988)</a>.</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>While it is natural to think of the Haldane model as associated with 6-fold symmetry and a graphene-like model, and hence with plane groups <em>p</em>6 or <em>p</em>6mm, the presence of the staggered mass term reduces the model&#39;s symmetry to <em>p</em>3. Thus, the orbitals do not associate with the 2b Wyckoff position of <em>p</em>6(mm), as is usually the case for graphene-like models, but with the two distinct Wyckoff positions that the <em>p</em>6(mm) 2b Wyckoff position subduces to when inversion symmetry is broken: this is precisely the 2b and 2c positions in <em>p</em>3.</li><li class="footnote" id="footnote-3"><a class="tag is-link" href="#citeref-3">3</a>Fukui, Hatsugai, &amp; Suzuki, <em>Chern Numbers in Discretized Brillouin Zone: Efficient Method of Computing (Spin) Hall Conductances</em>, <a href="https://doi.org/10.1143/JPSJ.74.1674">J. Phys. Soc. Jpn. <strong>74</strong>, 1674 (2005)</a>.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../band-symmetry/">« Band symmetry</a><a class="docs-footer-nextpage" href="../symmetry-breaking/">Symmetry breaking »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Wednesday 29 October 2025 09:25">Wednesday 29 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
