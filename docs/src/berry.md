@@ -46,7 +46,7 @@ We can use this to e.g., visualize the Berry curvature distribution over the Bri
 ```@example berry
 # compute the Berry curvature over the parallelipiped Brillouin zone
 Gs = dualbasis(directbasis(sgnum, Val(2)))
-ks = range(-0.5, 0.5, 100) # coordinate range in reciprocal basis
+ks = range(-0.5, 0.5, 100) # k-points' range in reciprocal basis coordinates
 k12s = (ReciprocalPoint(k1, k2) for k1 in ks, k2 in ks)
 Ω = [berrycurvature(ptbm, k12, 1) for k12 in k12s] # Berry curvatures of first band
 
@@ -54,7 +54,7 @@ k12s = (ReciprocalPoint(k1, k2) for k1 in ks, k2 in ks)
 using Brillouin, GLMakie
 c = wignerseitz(Gs)
 
-kxys = [cartesianize(k12, Gs) for k12 in k12s] # k-points in Cartesian coords
+kxys = [cartesianize(k12, Gs) for k12 in k12s] # k-points in Cartesian coordinates
 kxs = getindex.(kxys, 1)
 kys = getindex.(kxys, 2)
 
@@ -110,7 +110,7 @@ Mdivt2s = range(-3√3, 3√3, N)
 ϕs = range(-π, π, N)
 Cs = [SymmetricTightBinding.chern_fukui(haldane_model(Mdivt2, ϕ), 1, Nk) for ϕ in ϕs, Mdivt2 in Mdivt2s]
 
-f, ax, p = contourf(ϕs, Mdivt2s, Cs; levels = -1:1:2, colormap=Reverse(:RdBu_5))
+f, ax, p = contourf(ϕs, Mdivt2s, Cs; levels = (-1:2) .- 1/2, colormap=Reverse(:RdBu_5))
 lines!(ϕs, 3√3*sin.(ϕs); color=:gray, linestyle=:dash, linewidth=4) # add analytical phase boundaries
 lines!(ϕs, 3√3*sin.(.-ϕs); color=:gray, linestyle=:dash, linewidth=4)
 
@@ -122,7 +122,7 @@ ax.ylabel = "Mass term (inversion breaking), M/t₂"
 ax.title = "Haldane model phase diagram"
 
 cb = Colorbar(f[1,2], p)
-cb.ticks = ([-1, 0, 1] .+ 1/2, ["-1", "0", "+1"])
+cb.ticks = -1:1
 cb.label = "Chern number"
 
 f
@@ -140,7 +140,7 @@ for (i, ϕ) in enumerate(ϕs), (j, Mdivt2) in enumerate(Mdivt2s)
     νs[i, j] = ν
 end
 
-f, ax, p = contourf(ϕs, Mdivt2s, νs; levels = 0:1:3, colormap=Reverse(:sunset))
+f, ax, p = contourf(ϕs, Mdivt2s, νs; levels = (0:3) .- 1/2, colormap=Reverse(:sunset))
 lines!(ϕs, 3√3*sin.(ϕs); color=:gray, linestyle=:dash, linewidth=4) # add analytical phase boundaries
 lines!(ϕs, 3√3*sin.(.-ϕs); color=:gray, linestyle=:dash, linewidth=4)
 
@@ -152,7 +152,7 @@ ax.ylabel = "Mass term (inversion breaking), M/t₂"
 ax.title = "Haldane model phase diagram"
 
 cb = Colorbar(f[1,2], p)
-cb.ticks = ([0, 1, 2] .+ 1/2, ["0", "1", "2"])
+cb.ticks = 0:2
 cb.label = "Symmetry indicator ν"
 
 f
