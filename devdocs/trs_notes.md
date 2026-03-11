@@ -228,11 +228,58 @@ $$
 > we want to include fermionic TRS we will need to add a minus sing, consequently.
 
 > [!NOTE]
-> Do we need to compute this for a general $\mathcal{B} \in \Theta\mathcal{G}$ or 
-> are we just fine with $\Theta$?
+> Do we need to compute this for a general $\mathcal{B} \in \Theta\mathcal{G}$ or are we just fine with $\Theta$?
 >
-> Since we are interested only on a generator set of $\mathcal{M}$, I think we are 
-> good with only considering $\Theta$.
+> Since we are interested only on a generator set of $\mathcal{M}$, I think we are good with only considering $\Theta$.
+
+#### Three scenarios for the co-representation
+
+Given the co-representation $\Gamma$ constructed above, three scenarios arise
+depending on the relationship between $\Psi$ and $\Theta\Psi$:
+
+1. **Real representation:** $\Theta\Psi$ reproduces the same set as $\Psi$.
+   The co-representation coincides with the original representation $\Delta$
+   and no new degeneracy is introduced.
+2. **Pseudo-real representation:** $\Theta\Psi \neq \Psi$ but $\Theta\Psi$
+   also forms a basis for $\Delta$. The co-representation corresponds to
+   $\Delta$ with doubled dimension. This case does not occur for
+   site-symmetry groups (it requires even-dimensional representations).
+3. **Complex representation:** $\Theta\Psi$ forms a basis for a
+   representation $\Delta'$ inequivalent to $\Delta$. The co-representation
+   pairs $\Delta$ and $\Delta'$, forcing them to become degenerate.
+
+To work uniformly in scenario 1 (the most convenient case), we realify
+the representations beforehand using `realify` in Crystalline.jl, which
+constructs explicit co-representations in cases 2 and 3 so that the
+combined basis transforms under a single real representation.
+
+## Quantization of TRS action on creation and annihilation operators
+
+Assuming a physically real basis (achieved via `physically_realify` in
+Crystalline.jl), $\Theta$ acts trivially on the real-space orbitals and
+therefore simply conjugates the Bloch phases. The action on creation
+operators follows directly:
+
+$$
+\hat{\Theta} \hat{a}^\dagger_{I,\mathbf{k}} \hat{\Theta}^{-1} =
+\hat{a}^\dagger_{I,-\mathbf{k}}
+$$
+
+For annihilation operators, we cannot use $\hat{\Theta}^\dagger =
+\hat{\Theta}^{-1}$ since $\Theta$ is anti-unitary. Instead, we use
+$\hat{\Theta}^2 = +1 \Rightarrow \hat{\Theta} = \hat{\Theta}^{-1}$ and act on a
+general single-particle state:
+
+$$
+\hat{\Theta} \hat{a}_{I,\mathbf{k}} \hat{\Theta}^{-1}
+\ket{\varphi_{J,\mathbf{k}'}} =
+\hat{\Theta} \hat{a}_{I,\mathbf{k}} \ket{\varphi_{J,-\mathbf{k}'}} =
+\hat{\Theta} \left( \delta_{\mathbf{k},-\mathbf{k}'} \delta_{IJ} \ket{0}
+\right) = \delta_{\mathbf{k},-\mathbf{k}'} \delta_{IJ} \ket{0} =
+\hat{a}_{I,-\mathbf{k}} \ket{\varphi_{J,\mathbf{k}'}} \\
+\Rightarrow \boxed{\hat{\Theta} \hat{a}_{I,\mathbf{k}} \hat{\Theta}^{-1} =
+\hat{a}_{I,-\mathbf{k}}}
+$$
 
 ## Finding an explicitly real form of irrep matrices
 

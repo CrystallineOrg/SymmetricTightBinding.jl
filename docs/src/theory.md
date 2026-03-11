@@ -587,6 +587,11 @@ The constraint then reduces to:
 
 This implies that, in our implementation, time-reversal symmetry simply reduces to requiring that the free parameters are real.
 
+> [!NOTE]
+> The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_timereversal_related_orbits!`.
+
+Finally, to obtain the full set of symmetry-allowed free parameters, we must intersect the null space from the spatial symmetry constraints (derived in the [previous section](#symmetry-constraints-in-the-numerical-matrix-mathbfm_ijalphabeta)) with the TRS constraint derived above. This intersection is computed using the [Zassenhaus algorithm](https://en.wikipedia.org/wiki/Zassenhaus_algorithm), implemented in `zassenhaus_intersection`.
+
 ## Appendix A
 
 In this appendix we aim to present, develop and compare two of the main conventions present on the literature for Fourier transforms. The two Fourier transform conventions we are going to analyze are:
