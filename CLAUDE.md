@@ -1,0 +1,150 @@
+# SymmetricTightBinding.jl
+
+## Overview
+
+A Julia package for constructing symmetry-constrained tight-binding Hamiltonians in any
+crystallographic space group (1D, 2D, 3D). Built on the framework of topological quantum
+chemistry (TQC) and the theory of band representations.
+
+Given a set of elementary band representations (EBRs) from Crystalline.jl and a list of
+hopping ranges, the package:
+1. Enumerates symmetry-related hopping orbits
+2. Constructs the M-matrix encoding all allowed Hamiltonian terms
+3. Enforces spatial symmetry, time-reversal, and hermiticity constraints via nullspace +
+   Zassenhaus intersection
+4. Returns a `TightBindingModel` whose free parameters can be tuned to produce concrete
+   Hamiltonians
+
+**Repository:** https://github.com/CrystallineOrg/SymmetricTightBinding.jl
+**Depends on:** [Crystalline.jl](https://github.com/thchr/Crystalline.jl) (local copy at `../Crystalline`)
+**Authors:** Antonio Morales Perez, Thomas Christensen
+
+## Key types and API
+
+### Core pipeline
+- `tb_hamiltonian(cbr, Rs; antihermitian)` — top-level entry point; returns `TightBindingModel`
+- `obtain_symmetry_related_hoppings(Rs, br_a, br_b)` — enumerates hopping orbits
+- `sgrep_induced_by_siteir(br, op)` — site-symmetry induced space group representation
+
+### Types (defined in `src/types.jl`)
+- `HoppingOrbit{D}` — orbit of symmetry-related hopping vectors {delta_i}
+- `TightBindingBlock{D}` — single block of the Hamiltonian (br1 -> br2 hopping)
+- `TightBindingTerm{D}` — block embedded in full matrix, with hermiticity info
+- `TightBindingModel{D}` — collection of terms; functor `tbm(cs)` -> parameterized model
+- `ParameterizedTightBindingModel{D}` — model with coefficients; functor `ptbm(k)` -> H(k)
+
+### Analysis tools
+- `spectrum(ptbm, ks)` — band eigenvalues over k-path (`src/spectrum.jl`)
+- `symmetry_eigenvalues(ptbm, ops, k, sgreps)` — irrep content at high-symmetry k (`src/symmetry_analysis.jl`)
+- `collect_compatible(ptbm)` / `collect_irrep_annotations(ptbm)` — band symmetry labels
+- `berrycurvature(ptbm, k, n)` / `chern(ptbm, n, Nk)` / `chern_fukui(ptbm, n, Nk)` (`src/berry.jl`)
+- `gradient_wrt_hopping` / `gradient_wrt_momentum` (`src/gradients.jl`)
+- `subduced_complement(tbm, sgnum_H)` — new terms from symmetry breaking (`src/symmetry_breaking.jl`)
+
+### Utilities
+- `pin_free!(brs, idx2abc)` — fix free Wyckoff parameters (`src/utils.jl`)
+- `solve(ptbm, k; bloch_phase)` — eigenvalues + eigenvectors (in `src/types.jl`)
+- `fit(tbm, E_ref, ks)` — least-squares fitting via Optim.jl extension
+
+### Extensions
+- `SymmetricTightBindingMakieExt` — Makie recipes for hopping orbits and band structures
+- `SymmetricTightBindingOptimExt` — model fitting via Optim.jl (multi-start LBFGS)
+
+## Fourier convention
+
+The package uses **Convention 1** (PythTB-style) throughout: the Bloch basis includes
+position phases, i.e., `exp(ik*(t + q_alpha))`. This differs from much of the literature
+(Convention 2, lattice-phase only). See `docs/src/theory.md` Appendix A and
+`devdocs/fourier.md`. The `solve(...; bloch_phase=Val(true))` option converts eigenvectors
+to Convention 2.
+
+## Project structure
+
+```
+src/
+  SymmetricTightBinding.jl  # module definition, exports, constants
+  types.jl                  # core data structures + evaluation functors
+  tightbinding.jl           # constraint pipeline: M-matrix, nullspace, sparsification
+  site_representations.jl   # coset-decomposition-based induced representations
+  symmetry_analysis.jl      # irrep content at high-symmetry k-points
+  spectrum.jl               # band eigenvalue computation
+  berry.jl                  # Berry curvature, Chern numbers (Kubo + Fukui)
+  gradients.jl              # dH/dc_i and dH/dk_i
+  hermiticity.jl            # hermiticity/anti-hermiticity constraint intersection
+  timereversal.jl           # TRS constraint: H(k) = H*(-k)
+  zassenhaus.jl             # Zassenhaus algorithm for subspace intersection
+  symmetry_breaking.jl      # subduced complement for translationengleiche subgroups
+  utils.jl                  # orbital positions, pin_free!, split_complex, etc.
+  show.jl                   # pretty-printing for all types
+ext/
+  SymmetricTightBindingMakieExt.jl   # Makie visualization recipes
+  SymmetricTightBindingOptimExt.jl   # Optim.jl fitting
+test/
+  runtests.jl               # test runner
+  pg_tb_hamiltonian.jl      # plane group tests (graphene only)
+  sg_tb_hamiltonian.jl      # space group tests (empty / TODO)
+  site_representations.jl   # representation matrix tests
+  symmetry-breaking.jl      # subduced complement tests
+  symmetry_analysis.jl      # commented out in runtests.jl (broken)
+  berry.jl                  # Berry curvature + Chern number tests
+docs/src/
+  tutorial.md               # graphene walkthrough
+  theory.md                 # mathematical framework (polished)
+  band-symmetry.md          # symmetry analysis example
+  symmetry-breaking.md      # symmetry reduction example
+  berry.md                  # Haldane model, Chern numbers
+devdocs/
+  devdocs.md                # early developer notes (partially outdated)
+  docs.md                   # detailed derivations (superset of devdocs.md)
+  fourier.md                # Convention 1 vs 2 explanation
+  trs_notes.md              # time-reversal symmetry derivations
+```
+
+## Running tests
+
+```bash
+cd /path/to/SymmetricTightBinding
+julia --project -e 'using Pkg; Pkg.test()'
+```
+
+Or interactively:
+```julia
+using Pkg; Pkg.activate(".")
+include("test/runtests.jl")
+```
+
+Tests take ~1-2 minutes. The `symmetry_analysis.jl` tests are commented out in
+`runtests.jl` because they currently fail (see "Known issues" below).
+
+## Known issues
+
+1. **Symmetry analysis failures (PR #89 / treat as issue):** `collect_compatible` returns
+   incorrect irrep labels for many space groups, especially at K/KA/H/HA points with
+   3-fold symmetry. Root cause: unresolved phase convention ambiguity in the Theta_G factor
+   within `symmetry_eigenvalues`. Conjugating the phase fixes some cases but breaks others.
+   Related to Crystalline.jl issue #12 (sign in `calc_bandreps`).
+
+2. **ANTIHERMITIAN `solve` not implemented** (`src/types.jl:455`).
+
+3. **Performance** (issue #44): `tb_hamiltonian` is slow for high space group numbers
+   (SG ~200+ can take minutes per EBR).
+
+4. **Test coverage at 55%:** No tests for extensions, `show` methods, `spectrum`, or
+   `symmetry_analysis` (the latter is commented out). `sg_tb_hamiltonian.jl` is empty.
+
+## Improvement plan
+
+See `PLAN.md` for the phased work plan (TODO audit, devdocs restructuring, tests,
+refactoring, symmetry analysis fix).
+
+## Code conventions and preferences
+
+- Follow existing docstring style (see e.g. `HoppingOrbit`, `TightBindingBlock` in `types.jl`)
+- Use Unicode math where it improves readability (e.g., `δ`, `ρ`, `Θ`)
+- Numeric tolerances are defined as module-level constants (`NULLSPACE_ATOL_DEFAULT`, etc.)
+- The codebase uses Convention 1 Fourier transform everywhere; be careful with phases
+- Prefer using Crystalline.jl's API over reimplementing group-theoretic operations
+- Don't add new functionality without tests
+- Always run tests after making changes
+- Keep comments brief but include enough detail for non-obvious physics/math
+- Work in separate branches for each groupable change (for PR review with collaborators)
