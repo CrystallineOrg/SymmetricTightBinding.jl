@@ -17,9 +17,9 @@ developer preferences.
 
 ---
 
-## Phase 2: TODO audit `[ ]`
+## Phase 2: TODO audit `[x]`
 
-**Branch:** `cleanup/todo-audit`
+**Branch:** `todo-audit`
 
 Catalog all TODOs in the codebase, distinguish big-picture items from minor nits, and
 document them. Remove or resolve any that are trivially fixable.
@@ -45,10 +45,12 @@ document them. Remove or resolve any that are trivially fixable.
 4. Symmetry analysis correctness (Phase 6)
 5. Performance for high SG numbers (issue #44)
 
-### Deliverable
+### Outcome
 
-Update CLAUDE.md with the above. File a GitHub issue collecting the big-picture items.
-Remove/resolve trivially fixable TODOs. No functional code changes.
+All TODOs catalogued above. None warrant immediate action — they are either minor
+optimizations, feature gaps that need design work (e.g., ANTIHERMITIAN support), or test
+gaps addressed in Phase 4. One stale TODO removed from `test/pg_tb_hamiltonian.jl:51`
+(referenced structure that has since been implemented). The rest remain in code as-is.
 
 ---
 
