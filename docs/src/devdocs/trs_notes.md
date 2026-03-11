@@ -4,7 +4,7 @@ I am going to follow - mainly - Chapter 12 of
 [Wooten's book](https://www.cambridge.org/core/books/symmetry-and-condensed-matter-physics/218B3D7B149076E63A618D4584E3379B). 
 Firstly, I am going to present a general way to introduce a non-unitary 
 transformation into the formalism which could be thought as TRS. Secondly, I am 
-going to particularize it into TRS symmetry and, particularly, to bosonic TRS: 
+going to specialize to TRS and, particularly, to bosonic TRS:
 $\Theta² = +\mathbb{I}$.
 
 ## How TRS Acts in the Presence of Another Spatial Symmetry?
@@ -24,7 +24,7 @@ proof:
 
 ---
 
-We right the system wave function as 
+We write the system wave function as 
 
 $$
 \psi(\mathbf{r}) = \psi_\mathcal{R}(\mathbf{r}) + i \psi_\mathcal{I}(\mathbf{r})
@@ -56,7 +56,7 @@ consider the action of TRS on a more abstract representation basis set?
 
 ## Time-Reversed Representation: Theory of Corepresentations
 
-Let me start considering how the combined action of $\Theta$ with other linear 
+Let me start by considering the combined action of $\Theta$ with another linear
 or non-linear operator $\mathcal{O}$.
 
 > [!NOTE] 
@@ -69,7 +69,7 @@ $$
 \Sigma_\lambda\nu(\Theta) \Gamma^*_{\nu\mu}(\mathcal{O})
 $$
 
-This demonstrate that the product of the two operators does not lead to just a 
+This demonstrates that the product of the two operators does not lead to just a 
 product of the corresponding matrix representatives, but leads, in addition, to 
 a c-conjugation of the matrix representative of $\mathcal{O}$.
 
@@ -124,8 +124,7 @@ $$
 where $\Delta(S⁻¹ R S)$ is an Irrep conjugate to $\Delta(R)$, since $\mathcal{N}$ 
 is a normal subgroup.
 
-We now construct the Rep $\Gamma$ engendered by the combined basis $\mathbf{F} = 
-[\Psi, \mathcal{A}\Psi]$, namely,
+We now construct the rep $\Gamma$ engendered by the combined basis $\mathbf{F} = [\Psi, \mathcal{A}\Psi]$, namely,
 
 $$
 \boxed{R \mathbf{F} = \mathbf{F} \Gamma(R) = [\Psi \mathcal{A} \Psi] 
@@ -135,11 +134,7 @@ $$
 \end{pmatrix}, \qquad \forall R \in \mathcal{N}.}
 $$
 
-We now construct the Rep $\Gamma$ engendered byt the combined basis $\mathbf{F} 
-= [\Psi, \mathcal{A}\Psi]$, namely,
-
-Next we apply an operation $\mathcal{B} = \mathcal{A} T \in \mathcal{AN}$, and 
-obtain
+Next we apply an operation $\mathcal{B} = \mathcal{A} T \in \mathcal{AN}$, and obtain
 
 $$
 \mathcal{B} \Psi = \mathcal{A} T \Psi = \mathcal{A} \Psi \Delta(T) = (\mathcal{A} 
@@ -170,7 +165,7 @@ $$
 > \Gamma^*(\mathcal{C}) = \Gamma(\mathcal{BC}).
 > $$
 
-The set of unitary matrices obtained form a *corepresentation* (CoRep) of 
+The set of unitary matrices obtained forms a *corepresentation* (CoRep) of 
 $\mathcal{M}$, derived from the unitary Irrep $\Delta$ of its normal subgroup 
 $\mathcal{N}$.
 
@@ -186,7 +181,7 @@ $$
 \Theta\}.
 $$
 
-If you construct the Rep $\Gamma$ for a transformation $R \in \mathcal{G}$, you 
+If you construct the rep $\Gamma$ for a transformation $R \in \mathcal{G}$, you 
 obtain
 
 $$
@@ -205,7 +200,7 @@ $$
 > What is the difference here with the statement at the beginning? Why are we not
 > able to impose the conditions where $R$ and $\Theta$ commute?
 >
-> In my opinion it all due to th fact that $\Psi \not = \Phi = \Theta \Psi$. If 
+> In my opinion it all due to the fact that $\Psi \not = \Phi = \Theta \Psi$. If 
 > that was the case the previous statement could be applied.
 
 Next we do it for any element $\mathcal{B} = \Theta T \in \Theta\mathcal{G}$, and 
@@ -225,7 +220,7 @@ $$
 
 > [!IMPORTANT]
 > Notice that we are using the bosonic TRS, i.e., $\Theta² = +\mathbb{I}$. If 
-> we want to include fermionic TRS we will need to add a minus sing, consequently.
+> we want to include fermionic TRS we will need to add a minus sign, consequently.
 
 > [!NOTE]
 > Do we need to compute this for a general $\mathcal{B} \in \Theta\mathcal{G}$ or are we just fine with $\Theta$?
@@ -369,11 +364,11 @@ Here I am going to explain how to present a general Hamiltonian using a basis
 and what is the behavior of this representation under symmetries. First of all, 
 we will study the action of a symmetry transformation over a basis set in 
 $k$-space, and, secondly, the constraints the Hamiltonian matrix, written using
-such basis set, will fullfil due to symmetry.
+such basis set, will fulfill due to symmetry.
 
 ### Representation of symmetry operators using a basis
 
-Following the deductions made by Barry in Ref. [1].
+Following the deductions made by Bradlyn *et al.* in Ref. [1].
 
 Let us start with a basis set in real space $\{ψ_{iα}
 (\mathbf{r})\}$, where $i$ indicates the internal degrees of freedom of 
@@ -578,7 +573,7 @@ e^{i\mathbf{k·(t+q_β-q_α)}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf
 = \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} 
 \hat{a}_{J,\mathbf{k}},
 $$
-where he have defined: $h_{IJ,\mathbf{k}} = \sum_\mathbf{t} h_{IJ,\mathbf{t}}
+where we have defined: $h_{IJ,\mathbf{k}} = \sum_\mathbf{t} h_{IJ,\mathbf{t}}
 e^{i\mathbf{k·(t+q_β-q_α)}}$.
 
 #### Quantization of the representations

@@ -10,7 +10,7 @@ $a_0$ will be placed at $x=0$, while $b_1$ will be placed at $x=3/2$ or $a_{-1}$
 
 ## Deduction by inspection
 
-This orbitals will transform under inversion symmetry in the following way:
+These orbitals will transform under inversion symmetry in the following way:
 
 $$
 \mathcal{I} a_n = a_{-n}; \quad \mathcal{I} b_n = -b_{-n-1}
