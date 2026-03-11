@@ -28,6 +28,12 @@ makedocs(;
         "API" => "api.md",
         "Internal API" => "internal-api.md",
         "Theory" => "theory.md",
+        "Developer notes" => [
+            "devdocs/README.md",
+            "devdocs/trs_notes.md",
+            "devdocs/fourier.md",
+            "devdocs/1d_example.md",
+        ],
     ],
     warnonly = Documenter.except(
         :autodocs_block,
