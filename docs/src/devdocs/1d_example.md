@@ -5,7 +5,7 @@ inversion-even orbital at the origin denoted by (1a|A); and an inversion-odd orb
 denoted by (1b|B).
 
 **Notation:** for simplicity we will denote orbitals (1a|A) as $a$ and (1b|B) as $b$.
-Additionally, we will indicate with a subindex the unit cell it belongs to. For example,
+Additionally, we will indicate with a subscript the unit cell it belongs to. For example,
 $a_0$ will be placed at $x=0$, while $b_1$ will be placed at $x=3/2$ or $a_{-1}$ at $x=-1$.
 
 ## Deduction by inspection
@@ -16,7 +16,7 @@ $$
 \mathcal{I} a_n = a_{-n}; \quad \mathcal{I} b_n = -b_{-n-1}
 $$
 
-Then the most general inversion-symmetric Hamiltonian for 1-st nearest neighbors will be:
+Then the most general inversion-symmetric Hamiltonian for first nearest neighbors is:
 
 $$
 \mathcal{H} = \sum_n t (a_n^\dagger b_n - a_n^\dagger b_{n-1}) + \text{c.c.}
@@ -34,7 +34,7 @@ $$
 
 ## Deduction from our method
 
-First, let me consider the translation $t=0$. Then, remember that $\Delta_{\alpha\to\beta+R} =
+First, consider the translation $t=0$. Then, remember that $\Delta_{\alpha\to\beta+R} =
 \mathbf{q}_\beta + \mathbf{R} - \mathbf{q}_\alpha$.
 
 - Possible $\Delta$'s: $\Delta_{a\to a} = \Delta_{b\to b} = 0; \quad \Delta_{a\to b} =
@@ -56,7 +56,7 @@ $$
 \rho(\mathcal{I}) = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}
 $$
 
-Then, that constraint impose that: $\left\{ \begin{matrix} t_{b\to a}^1 = -t_{b\to a}^2 \\
+Then, that constraint imposes that: $\left\{ \begin{matrix} t_{b\to a}^1 = -t_{b\to a}^2 \\
 t_{a\to b}^1 = -t_{a\to b}^2 \end{matrix} \right.$, so the Hamiltonian will look like:
 
 $$
