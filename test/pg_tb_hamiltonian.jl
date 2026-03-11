@@ -48,7 +48,7 @@ using LinearAlgebra
             # dimensions of the hamiltonian should be equal to the number of orbitals
             @test size(tb_onsite) == (occupation(br), occupation(br))
 
-            # TODO: finish this when the proper `tb_hamiltonian` structure is implemented
+            # TODO: add more Hamiltonian assertions (evaluation, hermiticity, etc.)
         end # @testset "Hamiltonian"
 
     end # @testset "Graphene"
