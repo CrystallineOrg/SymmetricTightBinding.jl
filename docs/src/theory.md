@@ -108,14 +108,14 @@ Using the translational invariance of the orbitals, we can formally define a Fou
 As mentioned before, there is a gauge freedom in the choice of the Fourier transform. Here, we choose the following one:
 
 ```math
-φ_{I,𝐤}(𝐫) ≡ \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭)
+φ_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭)
 ```
 
 The main reason behind this choice is the fact that, with this gauge, the 𝐤-space dependence of the representation of space-group transformations enters as a global phase, as we will see. This is convenient for computational purposes, which is why we chose it. However, this convention implies that the Bloch functions are not periodic in reciprocal space:
 
 ```math
-φ_{I,𝐤+𝐆} = \sum_𝐭 e^{i(𝐤+𝐆)·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭) \\
-= \sum_𝐭 e^{i𝐆·(𝐭+𝐪_α)} e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭) \\
+φ_{I,𝐤+𝐆} = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i(𝐤+𝐆)·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭) \\
+= \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐆·(𝐭+𝐪_α)} e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭) \\
 = e^{i𝐆·𝐪_α} φ_{I,𝐤}
 ```
 
@@ -183,13 +183,13 @@ Notice that since $φ_{I,𝐤+𝐆}(𝐫) = e^{i𝐆·𝐪_α} φ_{I,𝐤}(𝐫)
 Considering this, we can rewrite the tight-binding Hamiltonian in reciprocal space as:
 
 ```math
-Ĥ = \frac{1}{N} \sum_{IJ,𝐑𝐭'} h_{IJ,𝐑} \sum_{𝐤𝐤'} e^{i𝐤·(𝐑+𝐭'+𝐪_α)} e^{-i𝐤'·(𝐭'+𝐪_β)} â_{I,𝐤}^† â_{J,𝐤'} \\
-= \frac{1}{N} \sum_{IJ,𝐑𝐭',𝐤𝐤'} h_{IJ,𝐑} e^{i𝐤·(𝐑+𝐪_α)} e^{i(𝐤-𝐤')·𝐭'} e^{-𝐤'·𝐪_β} â_{I,𝐤}^† â_{J,𝐤'} \\
-= \sum_{IJ,𝐑,𝐤} h_{IJ,𝐑} e^{i𝐤·(𝐑+𝐪_α-𝐪_β)} â_{I,𝐤}^† â_{J,𝐤},
+Ĥ = \frac{1}{N} \sum_{IJ,𝐑𝐭'} h_{IJ,𝐑} \sum_{𝐤𝐤'} e^{-i𝐤·(𝐑+𝐭'+𝐪_α)} e^{i𝐤'·(𝐭'+𝐪_β)} â_{I,𝐤}^† â_{J,𝐤'} \\
+= \frac{1}{N} \sum_{IJ,𝐑𝐭',𝐤𝐤'} h_{IJ,𝐑} e^{-i𝐤·(𝐑+𝐪_α)} e^{-i(𝐤-𝐤')·𝐭'} e^{i𝐤'·𝐪_β} â_{I,𝐤}^† â_{J,𝐤'} \\
+= \sum_{IJ,𝐑,𝐤} h_{IJ,𝐑} e^{-i𝐤·(𝐑+𝐪_α-𝐪_β)} â_{I,𝐤}^† â_{J,𝐤},
 ```
-where we have used the property of exponential functions: $\sum_{𝐭'} e^{i(𝐤-𝐤')·𝐭'} = N δ_{𝐤𝐤'}$.
+where we have used the inverse Fourier transform $ĉ_{I,𝐭}^† = \frac{1}{\sqrt{N}} \sum_𝐤 e^{-i𝐤·(𝐭+𝐪_α)} â_{I,𝐤}^†$ (and its adjoint for the annihilation operator), together with $\sum_{𝐭'} e^{-i(𝐤-𝐤')·𝐭'} = N δ_{𝐤𝐤'}$.
 
-Finally, if we define $h_{IJ,𝐤} = \sum_𝐑 h_{IJ,𝐑} e^{i𝐤·(𝐑+𝐪_α-𝐪_β)}$, we obtain the usual expression for a tight-binding Hamiltonian in reciprocal space:
+Finally, if we define $h_{IJ,𝐤} = \sum_𝐑 h_{IJ,𝐑} e^{-i𝐤·(𝐑+𝐪_α-𝐪_β)}$, we obtain the usual expression for a tight-binding Hamiltonian in reciprocal space:
 
 ```math
 Ĥ = \sum_{IJ,𝐤} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤}
@@ -206,8 +206,8 @@ As can be seen, the tight-binding Hamiltonian is diagonal in reciprocal space. T
 Some general properties must be fulfilled independent of its representation, such as periodicity in reciprocal space. However, as shown above, the creation and annihilation operators are not periodic under reciprocal lattice translations and we also have that:
 
 ```math
-h_{IJ,𝐤+𝐆} = \sum_𝐑 h_{IJ,𝐑} e^{i(𝐤+𝐆)·(𝐑+𝐪_β-𝐪_α)} \\
-= e^{i𝐆·(𝐪_β-𝐪_α)} \sum_𝐑 h_{IJ,𝐑} \cancel{e^{i𝐆·𝐑}} e^{i𝐤·(𝐑+𝐪_β-𝐪_α)} \\
+h_{IJ,𝐤+𝐆} = \sum_𝐑 h_{IJ,𝐑} e^{-i(𝐤+𝐆)·(𝐑+𝐪_α-𝐪_β)} \\
+= e^{-i𝐆·(𝐪_α-𝐪_β)} \sum_𝐑 h_{IJ,𝐑} \cancel{e^{-i𝐆·𝐑}} e^{-i𝐤·(𝐑+𝐪_α-𝐪_β)} \\
 = e^{i𝐆·(𝐪_β-𝐪_α)} h_{IJ,𝐤}
 ```
 
@@ -596,8 +596,8 @@ Finally, to obtain the full set of symmetry-allowed free parameters, we must int
 
 In this appendix we aim to present, develop and compare two of the main conventions present on the literature for Fourier transforms. The two Fourier transform conventions we are going to analyze are:
 
-1. **Convention 1:** $φ^{(1)}_{I,𝐤}(𝐫) ≡ \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭)$
-2. **Convention 2:** $φ^{(2)}_{I,𝐤}(𝐫) ≡ \sum_𝐭 e^{i𝐤·𝐭} ϕ_I(𝐫-𝐭)$
+1. **Convention 1:** $φ^{(1)}_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭)$
+2. **Convention 2:** $φ^{(2)}_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·𝐭} ϕ_I(𝐫-𝐭)$
 
 where Convention 1 is the one we have been using in the theory notes and Convention 2 is another one commonly used in the literature and other packages such as [Bradlyn *et al.*](https://www.nature.com/articles/nature23268). This second convention does not include the position of the orbital $𝐪_α$ in the phase factor of the Fourier transform.
 
@@ -709,7 +709,7 @@ Before studying the transformation properties of the Bloch states, we want to me
 Let us now jump into the transformation properties of the Bloch states. The Bloch states are represented using the basis obtained by Convention 2 as:
 
 ```math
-\ket{ψ_{n𝐤}} = \sum_I w^{(2)}_{I,n𝐤} \ket{φ^{(2)}_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}}
+\ket{ψ_{n𝐤}} = \sum_I w^{(2)}_{I,n𝐤} \ket{φ^{(2)}_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·𝐭} \ket{ϕ_{I,𝐭}}
 ```
 
 Let us first study how the Bloch states transform under lattice translations in real and reciprocal space and, then, deduce how they transform under more complex symmetry operations.
