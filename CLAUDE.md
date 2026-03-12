@@ -55,7 +55,7 @@ hopping ranges, the package:
 The package uses **Convention 1** (PythTB-style) throughout: the Bloch basis includes
 position phases, i.e., `exp(ik*(t + q_alpha))`. This differs from much of the literature
 (Convention 2, lattice-phase only). See `docs/src/theory.md` Appendix A and
-`devdocs/fourier.md`. The `solve(...; bloch_phase=Val(true))` option converts eigenvectors
+`docs/src/devdocs/fourier.md`. The `solve(...; bloch_phase=Val(true))` option converts eigenvectors
 to Convention 2.
 
 ## Project structure
@@ -93,11 +93,11 @@ docs/src/
   band-symmetry.md          # symmetry analysis example
   symmetry-breaking.md      # symmetry reduction example
   berry.md                  # Haldane model, Chern numbers
-devdocs/
-  devdocs.md                # early developer notes (partially outdated)
-  docs.md                   # detailed derivations (superset of devdocs.md)
-  fourier.md                # Convention 1 vs 2 explanation
-  trs_notes.md              # time-reversal symmetry derivations
+  devdocs/
+    README.md               # index of developer docs
+    trs_notes.md            # co-representation theory, TRS quantization, realification
+    fourier.md              # Convention 1 vs 2 quick reference
+    1d_example.md           # worked 1D bipartite lattice example
 ```
 
 ## Running tests
