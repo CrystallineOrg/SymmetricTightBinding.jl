@@ -7,50 +7,6 @@ transformation into the formalism that can be identified with TRS. Then, we
 specialize to TRS and, particularly, to bosonic TRS:
 $\Theta² = +\mathbb{I}$.
 
-## How TRS Acts in the Presence of Another Spatial Symmetry
-
-A key question is how TRS interacts with other spatial symmetries. In general,
-and in particular for this section, the TRS operator $\Theta$ commutes with
-any element $R$ of a point group or a space group, i.e.,
-
-$$
-R \Theta = \Theta R 
-$$
-
-and therefore have *real representations*. This is important for our
-setting. Here is a sketch of the proof:
-
----
-
-We write the system wave function as 
-
-$$
-\psi(\mathbf{r}) = \psi_\mathcal{R}(\mathbf{r}) + i \psi_\mathcal{I}(\mathbf{r})
-$$
-
-where $\psi_\mathcal{R}(\mathbf{r})$ and $\psi_\mathcal{I}(\mathbf{r})$ are 
-real functions. Operating with $\Theta R$ and later with $R \Theta$, we 
-obtain
-
-$$
-\Theta R \psi(\mathbf{r}) = \Theta \psi(R⁻¹\mathbf{r}) = 
-(\psi_\mathcal{R}(R⁻¹\mathbf{r}) + i \psi_\mathcal{I}(R⁻¹\mathbf{r}))^* \\
-
-R \Theta \psi(\mathbf{r}) = \Theta \psi(R⁻¹\mathbf{r}) = 
-\psi_\mathcal{R}(R⁻¹\mathbf{r}) - i \psi_\mathcal{I}(R⁻¹\mathbf{r})
-$$
-
-The two results are equal since $R$ is orthogonal, which implies that the
-representations are also real.
-
----
-
-> [!NOTE]
-> This argument is only valid for spinless systems.
-
-However, this is a simple case involving state kets. What happens when we
-consider the action of TRS on a more abstract representation basis set?
-
 ## Time-Reversed Representation: Theory of Corepresentations
 
 We start by considering the combined action of $\Theta$ with another linear
