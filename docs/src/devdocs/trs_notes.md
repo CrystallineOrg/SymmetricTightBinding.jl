@@ -7,50 +7,6 @@ transformation into the formalism that can be identified with TRS. Then, we
 specialize to TRS and, particularly, to bosonic TRS:
 $\Theta² = +\mathbb{I}$.
 
-## How TRS Acts in the Presence of Another Spatial Symmetry
-
-A key question is how TRS interacts with other spatial symmetries. In general,
-and in particular for this section, the TRS operator $\Theta$ commutes with
-any element $R$ of a point group or a space group, i.e.,
-
-$$
-R \Theta = \Theta R 
-$$
-
-and therefore have *real representations*. This is important for our
-setting. Here is a sketch of the proof:
-
----
-
-We write the system wave function as 
-
-$$
-\psi(\mathbf{r}) = \psi_\mathcal{R}(\mathbf{r}) + i \psi_\mathcal{I}(\mathbf{r})
-$$
-
-where $\psi_\mathcal{R}(\mathbf{r})$ and $\psi_\mathcal{I}(\mathbf{r})$ are 
-real functions. Operating with $\Theta R$ and later with $R \Theta$, we 
-obtain
-
-$$
-\Theta R \psi(\mathbf{r}) = \Theta \psi(R⁻¹\mathbf{r}) = 
-(\psi_\mathcal{R}(R⁻¹\mathbf{r}) + i \psi_\mathcal{I}(R⁻¹\mathbf{r}))^* \\
-
-R \Theta \psi(\mathbf{r}) = \Theta \psi(R⁻¹\mathbf{r}) = 
-\psi_\mathcal{R}(R⁻¹\mathbf{r}) - i \psi_\mathcal{I}(R⁻¹\mathbf{r})
-$$
-
-The two results are equal since $R$ is orthogonal, which implies that the
-representations are also real.
-
----
-
-> [!NOTE]
-> This argument is only valid for spinless systems.
-
-However, this is a simple case involving state kets. What happens when we
-consider the action of TRS on a more abstract representation basis set?
-
 ## Time-Reversed Representation: Theory of Corepresentations
 
 We start by considering the combined action of $\Theta$ with another linear
@@ -81,8 +37,9 @@ where $\mathcal{N}$ is a unitary subgroup of index 2 (normal subgroup), and
 $\mathcal{A} \notin \mathcal{N}$ an anti-unitary element of $\mathcal{M}$.
 
 > [!NOTE]
-> For our purposes, $\mathcal{N}$ is the space group and $\mathcal{A}$ is TRS,
-> since we are interested in grey groups.
+> This formalism is quite general and can be applied to all kind of magnetic
+> space groups. However, since we are interested in space groups, $\mathcal{N}$
+> can be identified as the space group and $\mathcal{A}$ as TRS.
 
 > [!IMPORTANT] 
 > **Notation:** We denote elements of $\mathcal{N}$ by $R$, $S$, $T$, etc., and 
@@ -219,8 +176,9 @@ $$
 > we want to include fermionic TRS we will need to add a minus sign, consequently.
 
 > [!NOTE]
-> Since we are interested only in a generating set of $\mathcal{M}$, it suffices
-> to consider $\Theta$ alone rather than a general $\mathcal{B} \in \Theta\mathcal{G}$.
+> In the implementation, we only consider $\Theta$ to include new constraints.
+> This can be justified by the fact that grey groups can be decomposed as 
+> $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$.
 
 #### Three scenarios for the co-representation
 
@@ -415,6 +373,8 @@ where $h \in G_\mathbf{q}$ and $t_{αβ} \equiv g\mathbf{q}_α -
 
 > [!NOTE]
 > This follows from the coset decomposition; see, e.g., Bradlyn *et al.* [1].
+> Note that this reference does not include an explicit proof of the above equation.
+> **TODO**: Consider adding a proof as an appendix in the future.
 
 Taking all of this into consideration, we can deduce how our basis set will 
 transform under the action of every $g \in G$:
@@ -683,15 +643,30 @@ $Θ g = g Θ$:
 
 $$
 g Θ φ_{I,\mathbf{k}} = Θ (g φ_{I,\mathbf{k}}) = Θ (Ρ_{JI}(g) φ_{J,g\mathbf{k}}) 
-= Ρ^*_{JI}(g) (Θ φ_{I,\mathbf{k}}) = Ρ_{JI}(g) (Θ φ_{I,\mathbf{k}}).
+= Ρ^*_{JI}(g) (Θ φ_{I,g \mathbf{k}}) = Ρ_{JI}(g) (Θ φ_{I,g\mathbf{k}}).
 $$
 
-Then $Θ φ_{I,\mathbf{k}}$ yields the same representation as $φ_{I,\mathbf{k}} $ 
-so they can be chosen such that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$
+Then $Θ φ_{I,\mathbf{k}}$ yields the same representation as $φ_{I,\mathbf{k}}$ 
+so they can be chosen such that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$.
 
-> [!CAUTION]
-> This argument assumes that Schur's lemma applies, which requires the
-> representation to be irreducible.
+> [!WARNING]
+> The previous argument holds for irreducible representations. In fact, since
+> both $\{φ_{I,𝐤}\}$ and $\{Θ φ_{I,𝐤}\}$ are orthonormal bases for the same irrep
+> space $V$, there exist a unitary mapping $U : V \to V$ with $Uφ_{I,𝐤} =  Θφ_{I,𝐤}$.
+> Checking $G$-equivariance:
+> $$
+> P(g)Uφ_{I,𝐤} = P_{JI}(g)Θφ_{J,g𝐤} = U(P_{Ji}(g)φ_{I,g𝐤}) = UP(g)φ_{I,𝐤},
+> $$
+> so $[U, P(g)] = 0$ for all $g$. By Schur's lemma (applied to the linear operator 
+> $U$ on a irreducible space), $U = e^{iα}$, giving:
+> $$
+> Θφ_{I,𝐤} = e^{iα}φ_{I,𝐤}.
+> $$
+> The phase is removable, since we can redefine $\tilde{φ}_{I,𝐤} = e^{iα/2} φ_{I,𝐤}$.
+> Then, using the antilinearity of $Θ$,
+> $$
+> Θ \tilde{φ}_{I,𝐤} = e^{-iα/2} Θφ_{I,𝐤} = e^{-iα/2} e^{iα} φ_{I,𝐤} = e^{iα/2} φ_{I,𝐤} 
+> = \tilde{φ}_{I,𝐤}.
 
 ## Appendix A
 
