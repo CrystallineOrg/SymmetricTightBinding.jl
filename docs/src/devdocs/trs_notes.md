@@ -37,8 +37,9 @@ where $\mathcal{N}$ is a unitary subgroup of index 2 (normal subgroup), and
 $\mathcal{A} \notin \mathcal{N}$ an anti-unitary element of $\mathcal{M}$.
 
 > [!NOTE]
-> For our purposes, $\mathcal{N}$ is the space group and $\mathcal{A}$ is TRS,
-> since we are interested in grey groups.
+> This formalism is quite general and can be applied to all kind of magnetic
+> space groups. However, since we are interested in space groups, $\mathcal{N}$
+> can be identified as the space group and $\mathcal{A}$ as TRS.
 
 > [!IMPORTANT] 
 > **Notation:** We denote elements of $\mathcal{N}$ by $R$, $S$, $T$, etc., and 
@@ -175,8 +176,10 @@ $$
 > we want to include fermionic TRS we will need to add a minus sign, consequently.
 
 > [!NOTE]
-> Since we are interested only in a generating set of $\mathcal{M}$, it suffices
-> to consider $\Theta$ alone rather than a general $\mathcal{B} \in \Theta\mathcal{G}$.
+> In the implementation, we only consider $\Theta$ to include new constraints.
+> This can be justified by the fact that grey groups can be decomposed as 
+> $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$.
+> **Important**: this is an assumption that must be verified.
 
 #### Three scenarios for the co-representation
 
@@ -371,6 +374,8 @@ where $h \in G_\mathbf{q}$ and $t_{αβ} \equiv g\mathbf{q}_α -
 
 > [!NOTE]
 > This follows from the coset decomposition; see, e.g., Bradlyn *et al.* [1].
+> Note that this reference does not include an explicit proof of the above equation.
+> **TODO**: Consider adding a proof as an appendix in the future.
 
 Taking all of this into consideration, we can deduce how our basis set will 
 transform under the action of every $g \in G$:
@@ -645,9 +650,11 @@ $$
 Then $Θ φ_{I,\mathbf{k}}$ yields the same representation as $φ_{I,\mathbf{k}} $ 
 so they can be chosen such that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$
 
-> [!CAUTION]
-> This argument assumes that Schur's lemma applies, which requires the
-> representation to be irreducible.
+> [!WARNING]
+> This argument assumes that if two representations are identical, their bases
+> can be chosen to be identical.
+> **TODO**: Verify whether this holds in general. Schur's lemma may provide
+> a useful framework for this.
 
 ## Appendix A
 
