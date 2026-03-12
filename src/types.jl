@@ -99,14 +99,14 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function TightBindingBlock{D}(
-    br1, 
-    br2, 
-    ordering1, 
-    ordering2, 
-    h_orbit, 
-    Mm, 
-    t, 
-    diagonal_block
+    br1,
+    br2,
+    ordering1,
+    ordering2,
+    h_orbit,
+    Mm,
+    t,
+    diagonal_block,
 ) where D
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
@@ -115,15 +115,15 @@ function TightBindingBlock{D}(
         MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
     end
     tbb = TightBindingBlock{D}(
-        br1, 
-        br2, 
-        ordering1, 
-        ordering2, 
-        h_orbit, 
-        Mm, 
-        t, 
-        MmtC, 
-        diagonal_block
+        br1,
+        br2,
+        ordering1,
+        ordering2,
+        h_orbit,
+        Mm,
+        t,
+        MmtC,
+        diagonal_block,
     )
     return tbb
 end
@@ -416,13 +416,13 @@ function evaluate_tight_binding_term!(
     MmtC = block.MmtC # contracted product of `Mm` and (complexified) `t`
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
-    v_conj = cispi.(dot.(Ref(-2 .* k), constant.(orbit(block.h_orbit))))
+    v_conj = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
     # NB: ↑ this is `v` conjugated: we do this because the `dot`-product below conjugates
     #     its first argument; so by conjugating twice we get the unconjugated result.
     # NB: ↑ each term in the Hamiltonian is associated to an annihilation+creation operator
     #     pair `aᵢ† aⱼ`. Since we use Convention 1 for the Fourier transform, we have
     #     aᵢ† = ∑ₖ e^{-ik·(tᵢ + rᵢ)} aₖ†, such that each term will be multiplied by a phase 
-    #     e^{ik·δᵢⱼ} with δᵢⱼ ≡ Rᵢⱼ + rᵢ - rⱼ, i.e., the hopping vector in the orbit; this
+    #     e^{-ik·δᵢⱼ} with δᵢⱼ ≡ Rᵢⱼ + rᵢ - rⱼ, i.e., the hopping vector in the orbit; this
     #     is what `orbit(block.h_orbit)` gives us above
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
