@@ -22,7 +22,6 @@ const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 
 include("types.jl")
 export HoppingOrbit
-export TightBindingElementString
 export TightBindingBlock
 export TightBindingModel
 export ParameterizedTightBindingModel
