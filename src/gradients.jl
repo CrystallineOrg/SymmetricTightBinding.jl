@@ -232,7 +232,7 @@ function evaluate_tight_binding_momentum_gradient_term!(
     # NB: ↓ one more case of assuming no free parameters in 
     #     `δs = constant.(orbit(block.h_orbit))` (we don't materialize `δs` though)
     δs = orbit(block.h_orbit)
-    v_conj = cispi.(dot.(Ref(-2 .* k), constant.(δs)))
+    v_conj = cispi.(dot.(Ref(2 .* k), constant.(δs)))
     δ_mult_v_conj = similar(v_conj) # preallocate for reuse below
     for (idx, component) in enumerate(components)
         ∇H = ∇Hs[idx]

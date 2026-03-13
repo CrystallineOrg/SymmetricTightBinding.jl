@@ -248,7 +248,7 @@ end
 # δs = [δ1, δ2, ..., δn]
 #   δ1: qi₁¹ -> wj₁¹, qi₁² -> wj₁², ...
 #   δ2: qi₂¹ -> wj₂¹, qi₂² -> wj₂², ...
-# v = [exp(ik⋅δ1), exp(ik⋅δ2), ..., exp(ik⋅δn)]
+# v = [exp(-ik⋅δ1), exp(-ik⋅δ2), ..., exp(-ik⋅δn)]
 # t = [[t(δ1) ...], [t(δ2) ...], ..., [t(δn) ...]]
 #   t(δ1): [t(qi₁ᵅ -> wj₁ᵅ, A_f -> B_g) ...]
 
@@ -749,7 +749,7 @@ Build the P matrix for a particular symmetry operation acting on k-space, which 
 rows of the M matrix.
 
 To obtain the P matrix, we exploit that the action is on exponentials of the type
-``exp(2π k⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
+``exp(-2πik⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
 we need to use the inverse of the rotation part of the symmetry operation.
 
 !!! details "Sketch of proof"
