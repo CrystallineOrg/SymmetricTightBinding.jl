@@ -5,8 +5,11 @@ include("sg_tb_hamiltonian.jl")    # space groups
 include("site_representations.jl") # site representations
 include("symmetry-breaking.jl")    # symmetry breaking
 include("berry.jl")                # berry curvature and chern numbers
-#include("symmetry_analysis.jl")    # check that each tb model is symmetry compatible with
-#                                    the constituents EBRs 
+include("spectrum.jl")             # spectrum evaluation
+include("show.jl")                 # show/display methods
+include("gradients.jl")            # hopping and momentum gradients
+#include("symmetry_analysis.jl")    # each tb model is symmetry compatible w/ its constituent EBRs (not yet working)
+include("symmetry_analysis_stopgap.jl") # paired-down version of above (interim; see PR #89)
 
 @testset "AbstractArray interface" begin
     brs = calc_bandreps(16, Val(2))
