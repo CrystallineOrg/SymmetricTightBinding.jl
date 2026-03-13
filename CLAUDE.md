@@ -55,7 +55,7 @@ hopping ranges, the package:
 The package uses **Convention 1** (PythTB-style) throughout: the Bloch basis includes
 position phases, i.e., `exp(ik*(t + q_alpha))`. This differs from much of the literature
 (Convention 2, lattice-phase only). See `docs/src/theory.md` Appendix A and
-`devdocs/fourier.md`. The `solve(...; bloch_phase=Val(true))` option converts eigenvectors
+`docs/src/devdocs/fourier.md`. The `solve(...; bloch_phase=Val(true))` option converts eigenvectors
 to Convention 2.
 
 ## Project structure
@@ -81,23 +81,27 @@ ext/
   SymmetricTightBindingOptimExt.jl   # Optim.jl fitting
 test/
   runtests.jl               # test runner
-  pg_tb_hamiltonian.jl      # plane group tests (graphene only)
-  sg_tb_hamiltonian.jl      # space group tests (empty / TODO)
+  pg_tb_hamiltonian.jl      # plane group tests (graphene, p4mm, p3, p2)
+  sg_tb_hamiltonian.jl      # space group tests (SG 2, 16, 47, 225; 1D SG 2)
   site_representations.jl   # representation matrix tests
   symmetry-breaking.jl      # subduced complement tests
-  symmetry_analysis.jl      # commented out in runtests.jl (broken)
+  symmetry_analysis.jl      # comprehensive symmetry tests (commented out; see PR #89)
+  symmetry_analysis_stopgap.jl # interim symmetry vector tests (see PR #89)
   berry.jl                  # Berry curvature + Chern number tests
+  spectrum.jl               # band eigenvalue tests
+  show.jl                   # regression tests for show/summary methods
+  gradients.jl              # hopping/momentum gradient tests
 docs/src/
   tutorial.md               # graphene walkthrough
   theory.md                 # mathematical framework (polished)
   band-symmetry.md          # symmetry analysis example
   symmetry-breaking.md      # symmetry reduction example
   berry.md                  # Haldane model, Chern numbers
-devdocs/
-  devdocs.md                # early developer notes (partially outdated)
-  docs.md                   # detailed derivations (superset of devdocs.md)
-  fourier.md                # Convention 1 vs 2 explanation
-  trs_notes.md              # time-reversal symmetry derivations
+  devdocs/
+    README.md               # index of developer docs
+    trs_notes.md            # co-representation theory, TRS quantization, realification
+    fourier.md              # Convention 1 vs 2 quick reference
+    1d_example.md           # worked 1D bipartite lattice example
 ```
 
 ## Running tests
@@ -113,8 +117,7 @@ using Pkg; Pkg.activate(".")
 include("test/runtests.jl")
 ```
 
-Tests take ~1-2 minutes. The `symmetry_analysis.jl` tests are commented out in
-`runtests.jl` because they currently fail (see "Known issues" below).
+Tests take ~2 minutes.
 
 ## Known issues
 
@@ -129,8 +132,8 @@ Tests take ~1-2 minutes. The `symmetry_analysis.jl` tests are commented out in
 3. **Performance** (issue #44): `tb_hamiltonian` is slow for high space group numbers
    (SG ~200+ can take minutes per EBR).
 
-4. **Test coverage at 55%:** No tests for extensions, `show` methods, `spectrum`, or
-   `symmetry_analysis` (the latter is commented out). `sg_tb_hamiltonian.jl` is empty.
+4. **Test coverage gaps:** No tests for extensions (Optim, Makie). Interim symmetry analysis
+   tests exist (`symmetry_analysis_stopgap.jl`) but comprehensive tests await PR #89.
 
 ## Improvement plan
 
@@ -148,3 +151,13 @@ refactoring, symmetry analysis fix).
 - Always run tests after making changes
 - Keep comments brief but include enough detail for non-obvious physics/math
 - Work in separate branches for each groupable change (for PR review with collaborators)
+
+## Gotchas
+
+- **`ptbm(k)` returns mutable scratch:** `ParameterizedTightBindingModel` reuses an internal
+  buffer. When comparing evaluations at different k-points, `copy()` the result.
+- **`@composite` macro hygiene:** The `@composite` macro evaluates in Crystalline's module
+  scope, so loop variables are not visible. Use `CompositeBandRep(coefs, brs)` constructor
+  in programmatic contexts (loops, comprehensions).
+- **`TightBindingElementString` is not exported:** import explicitly if needed in tests via
+  `using SymmetricTightBinding: TightBindingElementString`.

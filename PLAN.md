@@ -54,9 +54,9 @@ gaps addressed in Phase 4. One stale TODO removed from `test/pg_tb_hamiltonian.j
 
 ---
 
-## Phase 3: Devdocs restructuring `[ ]`
+## Phase 3: Devdocs restructuring `[x]`
 
-**Branch:** `docs/devdocs-restructure`
+**Branch:** `devdocs-restructure`
 
 ### Current state
 
@@ -90,23 +90,36 @@ user-facing docs but remain developer-oriented.
 **Principle:** `docs/src/theory.md` = interested-user-facing exposition;
 `docs/src/devdocs/` = developer reference for conventions, derivations, and physics details.
 
+### Outcome
+
+Devdocs restructured in 6 commits (3a–3f):
+- Deleted `devdocs/devdocs.md` (superseded); removed photonic framing from remaining files
+- Extracted 1D bipartite lattice example into standalone `1d_example.md`
+- Deleted old `devdocs/docs.md`, transferring unique content to `trs_notes.md` and `theory.md`
+- Moved `devdocs/` to `docs/src/devdocs/`; added `README.md` index
+- Fixed typos, grammar, and math errors (sign error in theory.md Fourier derivation,
+  missing 1/√N normalizations)
+- Polished prose for public readability: neutral voice, removed intimate discussion notes,
+  fixed non-standard constructions
+
 ---
 
-## Phase 4: Tests & coverage `[ ]`
+## Phase 4: Tests & coverage `[x]`
 
 **Branch:** `tests/coverage-improvements`
 
-Current coverage: 55%. One branch for all test improvements.
+Starting coverage: 55%, 116 tests. One branch for all test improvements.
 
 ### 4A: `spectrum` tests (easy win)
 - `spectrum(ptbm, ks)` returns correct shape (Nk x N)
 - Eigenvalues at Gamma match direct `eigvals(Hermitian(ptbm([0,0])))`
 - Use existing graphene model from `pg_tb_hamiltonian.jl`
 
-### 4B: `show` method tests
-- `sprint(show, obj)` for `HoppingOrbit`, `TightBindingBlock`, `TightBindingTerm`,
-  `TightBindingModel`, `ParameterizedTightBindingModel`
-- Verify no errors and basic content presence (e.g., check for expected substrings)
+### 4B: `show` method regression tests
+- Full output regression tests for `HoppingOrbit`, `TightBindingTerm`,
+  `TightBindingModel`, `ParameterizedTightBindingModel`, `TightBindingElementString`
+- Uses DeepDiffs.jl for readable failure diffs (pattern from Crystalline.jl's test/show.jl)
+- Tests `TightBindingElementString` ANSI color output for active/inactive/zero states
 
 ### 4C: Symmetry analysis tests
 - Add the two graphene examples from PR #89 (plane group 17) as proper `@test` assertions
@@ -134,6 +147,33 @@ Current coverage: 55%. One branch for all test improvements.
 - Add 2-3 more plane group cases to `pg_tb_hamiltonian.jl` (e.g., p4mm, p3)
 - Add at least one 3D space group case to `sg_tb_hamiltonian.jl` (e.g., SG 221 / Pm-3m,
   which already has handwritten reps in `test/site_representations.jl`)
+
+### Outcome
+
+Tests expanded from 116 to 293 (281 passing, plus 12 expected `@test_broken`).
+Coverage improved from 55% to 95% (measured on `src/` files). New files and changes:
+
+- **`test/spectrum.jl`** (4A): 18 tests covering single/multi-k evaluation, shape,
+  correctness vs direct `eigvals`, transform keyword, Dirac degeneracy at K
+- **`test/show.jl`** (4B): 13 regression tests for `show`/`summary` of all core types
+  (`HoppingOrbit`, `TightBindingTerm`, `TightBindingModel`,
+  `ParameterizedTightBindingModel`, `TightBindingElementString`), using DeepDiffs.jl for
+  readable failure output (pattern from Crystalline.jl)
+- **`test/symmetry_analysis_stopgap.jl`** (4C): 114 tests (104 pass, 10 broken) covering
+  all 2D plane groups with special Wyckoff positions. Interim/stopgap tests until PR #89 is
+  resolved. Systematic scan identified failures at SG 13 (1b/1c), SG 14 (1b/1c), and
+  SG 16 (3c) — all involving K-point 3-fold symmetry phase issue. SG 16 3c EBRs are flaky
+  (coefficient-dependent) so are skipped rather than marked broken.
+- **`test/gradients.jl`** (new, not in original plan): 18 tests for
+  `gradient_wrt_hopping`, `gradient_wrt_momentum`, `energy_gradient_wrt_hopping`, including
+  finite-difference validation and degenerate-band handling
+- **`test/pg_tb_hamiltonian.jl`** (4F): added p4mm (C₄ spectrum symmetry), p3 (Hermiticity),
+  p2 (TRS H(k)=H*(-k)); removed stale TODO, added Hermiticity checks to graphene
+- **`test/sg_tb_hamiltonian.jl`** (4F): populated with SG 2 (P-1, Hermiticity), SG 16
+  (P222, TRS), SG 225 (Fm-3m), 1D SG 2 (periodicity), SG 47 (Pmmm, multi-EBR composite)
+- **`test/runtests.jl`**: added includes for spectrum, show, gradients, symmetry_analysis_stopgap
+
+Deferred to future work: 4E (extension tests — requires adding Optim/Makie to test deps)
 
 ---
 
