@@ -1,5 +1,7 @@
 using Test
+using Crystalline
 using SymmetricTightBinding
+using LinearAlgebra: dot
 
 @testset "Berry curvature" begin
     @testset "Berry phase of π around a perturbatively gapped Dirac point" begin
@@ -134,7 +136,9 @@ end
             H_ptbm = haldane_model(t₁, m, t₂, ϕ)(k)
             H_original = manual_haldane_model(k, t₁, m, t₂, ϕ)
 
-            # @test isapprox(H_ptbm, H_original)
+            # TODO: the hardcoded coefficients in `manual_haldane_model` use the old
+            #       Hamiltonian phase convention; update after correcting (cf. PR #89)
+            @test_broken isapprox(H_ptbm, H_original)
         end
 
         # test that we also get the right Chern numbers

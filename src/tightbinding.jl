@@ -749,7 +749,7 @@ Build the P matrix for a particular symmetry operation acting on k-space, which 
 rows of the M matrix.
 
 To obtain the P matrix, we exploit that the action is on exponentials of the type
-``exp(-2πik⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
+``exp(-2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
 we need to use the inverse of the rotation part of the symmetry operation.
 
 !!! details "Sketch of proof"

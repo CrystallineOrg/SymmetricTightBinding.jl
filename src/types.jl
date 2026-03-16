@@ -221,8 +221,8 @@ function _getindex(
         if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(2πi𝐤⋅δ)
             print(io, "𝕖(")
             # TODO: could do a little better here, since we know that `-δ` is in the orbit?
-            conjugate && print(io, "+")
-            print(io, "-δ", Crystalline.subscriptify(string(n)), ")")
+            conjugate || print(io, "-")
+            print(io, "δ", Crystalline.subscriptify(string(n)), ")")
         else
             print(io, "1")
         end
@@ -421,7 +421,7 @@ function evaluate_tight_binding_term!(
     #     its first argument; so by conjugating twice we get the unconjugated result.
     # NB: ↑ each term in the Hamiltonian is associated to an annihilation+creation operator
     #     pair `aᵢ† aⱼ`. Since we use Convention 1 for the Fourier transform, we have
-    #     aᵢ† = ∑ₖ e^{-ik·(tᵢ + rᵢ)} aₖ†, such that each term will be multiplied by a phase 
+    #     aᵢ† = ∑ₖ e^{-ik·(tᵢ + rᵢ)} aₖ†, such that each term will be multiplied by a phase
     #     e^{-ik·δᵢⱼ} with δᵢⱼ ≡ Rᵢⱼ + rᵢ - rⱼ, i.e., the hopping vector in the orbit; this
     #     is what `orbit(block.h_orbit)` gives us above
     for (local_i, i) in enumerate(is)
