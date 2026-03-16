@@ -109,12 +109,24 @@ function symmetry_eigenvalues(
         g = sgrep.op
         gk = compose(g, ReciprocalPoint{D}(k)) # NB: for k ∈ Gₖ, there exist G st g∘k = k+G
         G = gk - k # the possible reciprocal vector-difference G between k & g∘k; for Θᴳ
-        Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G) # TODO: preallocate & fill
-        ρ = sgrep(k)
+        # NB: we use -G (i.e., `conj(Θᴳ)`) rather than G because the symmetry eigenvalue
+        #     formula `⟨ψ|ĝ|ψ⟩ = w† Θ_G† D_k w` uses the physical Convention 1 result with
+        #     Θ_G†; but `calc_bandreps` in Crystalline.jl (following Cano et al.) computes
+        #     characters as `Tr(Θ_G D_k)` (not Θ_G†). To match, we compute `w† Θ_G D_k w`,
+        #     achieved by placing `conj(Θ_G)` in the conjugated slot of the dot product.
+        Θᴳ_conj = reciprocal_translation_phase(orbital_positions(ptbm), -G) # = conj(Θᴳ)
+        # NB: the `sgrep` functor computes `D_k(g) = e^{-2πi(gk)·v} ρ(h)` (physical Conv 1),
+        #     but `calc_bandreps` in Crystalline.jl uses the conjugated global phase
+        #     `e^{+2πi(gk)·v}` (cf. Crystalline.jl issue #12). To match, we conjugate the
+        #     global phase by multiplying by `e^{+4πi(gk)·v}` (flipping the sign of the
+        #     exponent).
+        v_g = translation(g)
+        phase_correction = cispi(4dot(gk, v_g))
+        ρ = phase_correction * sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
-            v_kpG = Θᴳ * v # correct the phase factor
-            symeigs[j, n] = dot(v_kpG, ρ, v)
-            # TODO: preallocate and `mul!` the `Θᴳ * v` term to avoid allocations
+            v_kpG = Θᴳ_conj * v
+            symeigs[j, n] = dot(v_kpG, ρ, v) # = v† Θᴳ conj(D_k) v
+            # TODO: preallocate and `mul!` the `Θᴳ_conj * v` term to avoid allocations
         end
     end
     return symeigs

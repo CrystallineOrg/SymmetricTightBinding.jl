@@ -243,7 +243,7 @@ function evaluate_tight_binding_momentum_gradient_term!(
         for (local_i, i) in enumerate(is)
             for (local_j, j) in enumerate(js)
                 ∇Hᵢⱼ = @inbounds dot(δ_mult_v_conj, @view MmtC[:, local_i, local_j])
-                ∇Hᵢⱼ *= 2im * π # include (-2πi) factor; now no minus sign (outside `dot`)
+                ∇Hᵢⱼ *= -2im * π # (-2πi) factor from ∂/∂kᵢ of e^{-2πik·δ}
                 isnothing(c) || (∇Hᵢⱼ *= c) # multiply by coefficient if provided
                 ∇H[i, j] += ∇Hᵢⱼ
                 i == j && continue # don't add diagonal elements twice
