@@ -88,15 +88,18 @@ and are otherwise initialized by the function.
 
 The symmetry eigenvalues are returned as a matrix, with rows running over the elements of
 `ops` and columns running over the bands of `ptbm`.
+
+!!! note
+    The inputs `ops`, `k`, and `lg` must be provided in a primitive setting. See
+    Crystalline.jl's `primitivize`.
 """
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
     ops::AbstractVector{SymOperation{D}},
     k::ReciprocalPointLike{D},
-    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
-        Ref(ptbm.tbm.cbr),
-        ops,
-    ),
+    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = begin
+        sgrep_induced_by_siteir.(Ref(ptbm.tbm.cbr), ops)
+    end,
 ) where D
     length(k) == D || error("dimension mismatch")
     length(sgreps) == length(ops) || error("length of `sgreps` must match length of `ops`")

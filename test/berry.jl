@@ -117,7 +117,7 @@ end
             b₁ = -[cos(ξ₁), sin(ξ₁)]; b₂ = -[cos(ξ₂), sin(ξ₂)]; b₃ = -[cos(ξ₃), sin(ξ₃)]
 
             # convert input k-point to cartesian coords
-            kc = cartesianize(k, reciprocalbasis(directbasis(13, Val(2))))
+            kc = cartesianize(k, dualbasis(directbasis(13, Val(2))))
 
             H = (
                 t₁ * (cos(dot(kc, a₁)) + cos(dot(kc, a₂)) + cos(dot(kc, a₃))) .* [0 1; 1 0] +
