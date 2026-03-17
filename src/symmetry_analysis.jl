@@ -39,8 +39,9 @@ function Crystalline.collect_compatible(
     isempty(tbm.terms) && error("`ptbm` is an empty tight-binding model")
     cbr = CompositeBandRep(tbm)
 
-    lgirsv = irreps(cbr) # get irreps associated to the EBRs
-    lgs = [primitivize(group(first(lgirs))) for lgirs in lgirsv]
+    clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting operations)
+    lgirsv = primitivize.(clgirsv)
+    lgs = group.(lgirsv)  # little groups associated to the EBRs (primitive setting)
     ops = unique(Iterators.flatten(lgs))
 
     # determine the induced space group rep associated with `cbr` across all `ops`
