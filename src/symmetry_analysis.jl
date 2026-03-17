@@ -1,3 +1,7 @@
+# Note [⚠️ phase]: Several phase choices in this file intentionally deviate from the physical
+#   Convention 1 formulas derived in `docs/src/theory.md` to match Crystalline.jl's
+#   `calc_bandreps` convention. See `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
+
 """
     collect_compatible(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
 
@@ -40,7 +44,7 @@ function Crystalline.collect_compatible(
     cbr = CompositeBandRep(tbm)
 
     clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting operations)
-    lgirsv = primitivize.(clgirsv)
+    lgirsv = primitivize.(clgirsv) # [⚠️ phase]: must use `modw=false` (via Collection method)
     lgs = group.(lgirsv)  # little groups associated to the EBRs (primitive setting)
     ops = unique(Iterators.flatten(lgs))
 
@@ -110,14 +114,14 @@ function symmetry_eigenvalues(
         g = sgrep.op
         gk = compose(g, ReciprocalPoint{D}(k)) # NB: for k ∈ Gₖ, there exist G st g∘k = k+G
         G = gk - k # the possible reciprocal vector-difference G between k & g∘k; for Θᴳ
-        # NB: we use -G (i.e., `conj(Θᴳ)`) rather than G because the symmetry eigenvalue
-        #     formula `⟨ψ|ĝ|ψ⟩ = w† Θ_G† D_k w` uses the physical Convention 1 result with
-        #     Θ_G†; but `calc_bandreps` in Crystalline.jl (following Cano et al.) computes
+        # [⚠️ phase]: we use -G (i.e., `conj(Θᴳ)`) rather than G because the symmetry
+        #     eigenvalue formula `⟨ψ|ĝ|ψ⟩ = w† Θ_G† D_k w` uses the physical Conv 1 result
+        #     with Θ_G†; but `calc_bandreps` in Crystalline.jl (following Cano et al.) computes
         #     characters as `Tr(Θ_G D_k)` (not Θ_G†). To match, we compute `w† Θ_G D_k w`,
         #     achieved by placing `conj(Θ_G)` in the conjugated slot of the dot product.
         Θᴳ_conj = reciprocal_translation_phase(orbital_positions(ptbm), -G) # = conj(Θᴳ)
-        # NB: the `sgrep` functor computes `D_k(g) = e^{-2πi(gk)·v} ρ(h)` (physical Conv 1),
-        #     but `calc_bandreps` in Crystalline.jl uses the conjugated global phase
+        # [⚠️ phase]: the `sgrep` functor computes `D_k(g) = e^{-2πi(gk)·v} ρ(h)` (physical
+        #     Conv 1), but `calc_bandreps` in Crystalline.jl uses the conjugated global phase
         #     `e^{+2πi(gk)·v}` (cf. Crystalline.jl issue #12). To match, we conjugate the
         #     global phase by multiplying by `e^{+4πi(gk)·v}` (flipping the sign of the
         #     exponent).

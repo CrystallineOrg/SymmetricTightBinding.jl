@@ -195,14 +195,46 @@ In this option, `theory.md` should also gain a note (or a new devdoc section) ex
 Since `symmetry_eigenvalues` must match Crystalline.jl's irreps for subduction to work, we
 adopt the conjugated convention for $\mathbf{D}_\mathbf{k}$."
 
-## Test results with the fix
+## The centering fix: `primitivize` with `modw=false`
+
+Beyond the phase convention mismatch, a separate bug affected all centered lattices (C- and
+I-centered space groups: SG 68, 88, 141, 142, 214, 220, 230). The original
+`collect_compatible` primitivized little groups via `primitivize(group(first(lgirs)))`, which
+calls `primitivize(g::LittleGroup)` with the default `modw=true`, reducing translations
+modulo the primitive lattice. For centered lattices, the primitivization transforms
+conventional translations $\mathbf{v}_\text{conv}$ to primitive translations
+$P^{-1}\mathbf{v}_\text{conv}$, then reduces mod 1. The discarded lattice vector
+$\mathbf{R}$ changes the phase $e^{2\pi i(g\mathbf{k})\cdot\mathbf{v}}$ by a factor
+$e^{2\pi i(g\mathbf{k})\cdot\mathbf{R}} \neq 1$ at non-$\Gamma$ high-symmetry points.
+
+**Concrete example:** SG 88 ($I4_1/a$), operation $\{-4^+_{001}|\frac{1}{4},\frac{3}{4},\frac{3}{4}\}$ at the P-point $[\frac{1}{2},\frac{1}{2},\frac{1}{2}]$:
+- Conventional translation: $\mathbf{v} = [\frac{1}{4}, \frac{3}{4}, \frac{3}{4}]$
+- Primitivized (full): $P^{-1}\mathbf{v} = [\frac{3}{2}, 1, 1]$
+- Primitivized (reduced mod 1): $[\frac{1}{2}, 0, 0]$ — discards lattice vector $\mathbf{R} = [1, 1, 0]$
+- $g\mathbf{k} \cdot \mathbf{R} = -\frac{1}{4}$, giving phase error $e^{2\pi i \times 0.25} = i$
+
+The fix uses `primitivize(::Collection{LGIrrep})`, which internally passes `modw=false`,
+preserving full (unreduced) translations:
+
+```julia
+clgirsv = irreps(cbr)
+lgirsv = primitivize.(clgirsv)
+lgs = group.(lgirsv)
+```
+
+## Note: the Hamiltonian Fourier phase is independent
+
+The Hamiltonian evaluation phase ($e^{-2\pi i \mathbf{k}\cdot\boldsymbol{\delta}}$ in
+`evaluate_tight_binding_term!`) does **not** affect symmetry analysis results. This was
+verified during the investigation: the phase sign only transposes $H(\mathbf{k}) \to H(-\mathbf{k})$,
+and eigenvectors at the high-symmetry $\mathbf{k}$-points used by `symmetry_eigenvalues` are
+obtained from `solve(ptbm, k)` which always uses the actual $\mathbf{k}$. Changing the
+Hamiltonian phase sign is therefore not a route to fixing symmetry analysis.
+
+## Test results with all fixes
 
 Across all 230 3D space groups (and all 1D and 2D space groups):
 
 - **All 1D:** pass
 - **All 2D:** pass (including p3, p6, which previously failed at the K-point)
-- **3D:** 223/230 pass; 7 fail (SG 68, 88, 141, 142, 214, 220, 230)
-- The 7 remaining failures are **pre-existing** bugs (present in the original code before
-  the fix), all in centered lattices (C or I centering). These are a separate class of issue,
-  likely originating in Crystalline.jl's orbit/position handling for non-primitive lattices.
-  The fix actually *improves* some of these (SG 214: 10→8 failures; SG 220: 6→4; SG 230: 9→4).
+- **All 3D:** pass (including all centered lattices)
