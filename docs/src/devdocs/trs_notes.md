@@ -635,38 +635,50 @@ $$
 \boxed{H_\mathbf{k} = H^*_{-\mathbf{k}}}
 $$
 
-## Proof that physically real representations need a real basis
+## Proof that physically real representations admit a real basis 
 
-If the representation is real then $Ρ(g) = Ρ^*(g)$. On one side we have that: 
-$g φ_{I,\mathbf{k}} = Ρ_{JI}(g) φ_{J,g\mathbf{k}}$. On the other hand, since 
-$Θ g = g Θ$:
+In the presence of time-reversal symmetry, i.e., $Θ g = g Θ$, and for an explicitly
+real representation $Ρ(g) = Ρ^*(g)$, we now show that this implies the existence of
+a real basis for the representation.
+First, we recall the definition of the representation as it acts on a basis
+element $φ_{I,\mathbf{k}}$: $g φ_{I,\mathbf{k}} = Ρ_{JI}(g) φ_{J,g\mathbf{k}}$.
+On the other hand, in the presence of time-reversal symmetry, we also have
+$Θ g = g Θ$. Accordingly:
 
 $$
 g Θ φ_{I,\mathbf{k}} = Θ (g φ_{I,\mathbf{k}}) = Θ (Ρ_{JI}(g) φ_{J,g\mathbf{k}}) 
-= Ρ^*_{JI}(g) (Θ φ_{I,g \mathbf{k}}) = Ρ_{JI}(g) (Θ φ_{I,g\mathbf{k}}).
+= Ρ^*_{JI}(g) (Θ φ_{J,g \mathbf{k}}) = Ρ_{JI}(g) (Θ φ_{J,g\mathbf{k}}).
 $$
 
-Then $Θ φ_{I,\mathbf{k}}$ yields the same representation as $φ_{I,\mathbf{k}}$ 
-so they can be chosen such that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$.
+Then $Θ φ_{I,\mathbf{k}}$ is another basis element for the _same_ (i.e., identical)
+representation $Ρ_{JI}(g)$ as $φ_{I,\mathbf{k}}$. As a result, they can be chosen such
+that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$.
 
-> [!WARNING]
+> [!NOTE]
 > The previous argument holds for irreducible representations. In fact, since
 > both $\{φ_{I,𝐤}\}$ and $\{Θ φ_{I,𝐤}\}$ are orthonormal bases for the same irrep
-> space $V$, there exist a unitary mapping $U : V \to V$ with $Uφ_{I,𝐤} =  Θφ_{I,𝐤}$.
-> Checking $G$-equivariance:
+> space $V$, there exists a unitary mapping $U : V \to V$ with $Uφ_{I,𝐤} = Θφ_{I,𝐤}$.
+> To apply Schur's lemma, we need to show that $U$ commutes with the group elements $g$.
+> Therefore, we act with $g$ on both sides of $Uφ_{I,𝐤} = Θφ_{I,𝐤}$:
 > $$
-> P(g)Uφ_{I,𝐤} = P_{JI}(g)Θφ_{J,g𝐤} = U(P_{Ji}(g)φ_{I,g𝐤}) = UP(g)φ_{I,𝐤},
+> gUφ_{I,𝐤} = gΘφ_{I,𝐤} = P_{JI}(g)(Θφ_{J,g𝐤}) = P_{JI}(g)(Uφ_{J,g𝐤}) = U(gφ_{I,𝐤}),
 > $$
-> so $[U, P(g)] = 0$ for all $g$. By Schur's lemma (applied to the linear operator 
-> $U$ on a irreducible space), $U = e^{iα}$, giving:
+> so $[U, g] = 0$ for all $g$. By Schur's lemma (applied to the linear operator 
+> $U$ on an irreducible space), $U = e^{iα}𝟏$, giving:
 > $$
 > Θφ_{I,𝐤} = e^{iα}φ_{I,𝐤}.
 > $$
-> The phase is removable, since we can redefine $\tilde{φ}_{I,𝐤} = e^{iα/2} φ_{I,𝐤}$.
+> I.e., $φ_{I,𝐤}$ and $Θφ_{I,𝐤}$ differ only by a phase. This phase is removable, since
+> we can introduce a new, real basis element by defining $\tilde{φ}_{I,𝐤} = e^{iα/2} φ_{I,𝐤}$.
 > Then, using the antilinearity of $Θ$,
 > $$
 > Θ \tilde{φ}_{I,𝐤} = e^{-iα/2} Θφ_{I,𝐤} = e^{-iα/2} e^{iα} φ_{I,𝐤} = e^{iα/2} φ_{I,𝐤} 
-> = \tilde{φ}_{I,𝐤}.
+> = \tilde{φ}_{I,𝐤},
+> $$
+> showing that $\tilde{φ}_{I,𝐤}$ is a real function.
+> Although this argument assumed irreducible representations (via its invocation of Schur's
+> lemma), it can be extended to general representations by simply considering them brought
+> to block-diagonal form, where the argument then applies to each block individually.
 
 ## Appendix A
 
