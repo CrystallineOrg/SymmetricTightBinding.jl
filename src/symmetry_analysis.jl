@@ -39,8 +39,9 @@ function Crystalline.collect_compatible(
     isempty(tbm.terms) && error("`ptbm` is an empty tight-binding model")
     cbr = CompositeBandRep(tbm)
 
-    lgirsv = irreps(cbr) # get irreps associated to the EBRs
-    lgs = [primitivize(group(first(lgirs))) for lgirs in lgirsv]
+    clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting operations)
+    lgirsv = primitivize.(clgirsv)
+    lgs = group.(lgirsv)  # little groups associated to the EBRs (primitive setting)
     ops = unique(Iterators.flatten(lgs))
 
     # determine the induced space group rep associated with `cbr` across all `ops`
@@ -156,7 +157,8 @@ Useful for annotating irrep labels in band structure plots (via the Makie extens
 `plot(ks, energies; annotations=collect_irrep_annotations(ptbm))`)
 """
 function Crystalline.collect_irrep_annotations(ptbm::ParameterizedTightBindingModel; kws...)
-    lgirsv = irreps(ptbm.tbm.cbr) # get irreps associated to the EBRs
-    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, primitivize(group(lgirs)))) for lgirs in lgirsv]
+    clgirsv = irreps(ptbm.tbm.cbr) # irreps associated to the EBRs (conventional setting)
+    lgirsv = primitivize.(clgirsv) # convert associated groups & irreps to primitive setting
+    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, group(lgirs))) for lgirs in lgirsv]
     return collect_irrep_annotations(symeigsv, lgirsv; kws...)
 end

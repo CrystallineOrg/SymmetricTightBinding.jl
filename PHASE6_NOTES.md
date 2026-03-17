@@ -163,13 +163,55 @@ Also added `using LinearAlgebra: dot` to berry.jl for the Haldane model comparis
 - Chern number tests: 27/27 PASS (including Haldane model comparison)
 - Symmetry analysis: same results as before (all pass except pre-existing centered failures)
 
-### Next steps
+### Attempt 3: Fix centered-lattice failures via `primitivize(::Collection{LGIrrep})`
 
-1. The pre-existing centered-lattice failures (SG 68, 88, 141, 142, 214, 220, 230) should
-   be investigated separately — likely a Crystalline.jl issue with orbit/position handling
-   for non-primitive lattices
-2. Consider whether the `SiteInducedSGRepElement` functor itself should be fixed (and
-   constraint building updated) vs keeping the correction localized to `symmetry_eigenvalues`
-3. Run the full test suite to verify nothing else is broken
-4. Prepare a clean commit with just the `symmetry_analysis.jl` fix + test changes
+The remaining 7 failing SGs (68, 88, 141, 142, 214, 220, 230) were NOT pre-existing
+Crystalline.jl bugs — they were caused by a second bug in `collect_compatible`.
 
+**Root cause:** `collect_compatible` primitivized the little groups via
+`primitivize(group(first(lgirs)))`, which calls `primitivize(g::LittleGroup)` with the
+default `modw=true`. This reduces translations modulo the primitive lattice. For centered
+lattices, the primitivization transforms conventional translations `v_conv` to primitive
+translations `P⁻¹ v_conv`, then reduces mod 1. The discarded lattice vector `R` changes
+the phase `e^{2πi(gk)·v}` by a factor `e^{2πi(gk)·R}`, which is ≠ 1 when `gk` is not an
+integer vector (i.e., at most non-Γ high-symmetry points).
+
+**Concrete example:** SG 88, operation `{-4⁺₀₀₁|¼,¾,¾}` at the P-point `[½,½,½]`:
+- Conventional translation: `v = [1/4, 3/4, 3/4]`
+- Primitivized (full): `P⁻¹ v = [3/2, 1, 1]`
+- Primitivized (reduced mod 1): `[1/2, 0, 0]` — discards lattice vector `R = [1, 1, 0]`
+- `gk · R = -1/4`, giving phase error `exp(2πi × 0.25) = i`
+
+**Fix:** Use Crystalline's `primitivize(::Collection{LGIrrep})` which internally calls
+`primitivize(g::LittleGroup, false)` with `modw=false`, preserving full (unreduced)
+translations. Changed `collect_compatible` from:
+```julia
+lgirsv = irreps(cbr)
+lgs = [primitivize(group(first(lgirs))) for lgirs in lgirsv]
+```
+to:
+```julia
+clgirsv = irreps(cbr)
+lgirsv = primitivize.(clgirsv)
+lgs = group.(lgirsv)
+```
+
+**Result: all 230 SGs pass, all dimensions, all EBRs. Zero failures.**
+
+## Summary of error classes and fixes
+
+The symmetry analysis bug (PR #89) had three distinct error classes:
+
+1. **Θ_G sign** — Used `Θ_G` instead of `conj(Θ_G)` to match `calc_bandreps`' trace
+   convention. Fix: use `-G` in `reciprocal_translation_phase`. Resolved all 2D failures.
+
+2. **Global phase** — The `SiteInducedSGRepElement` functor computes `e^{-2πi(gk)·v}`
+   (physical Convention 1), but `calc_bandreps` uses `e^{+2πi(gk)·v}` (Crystalline.jl
+   issue #12). Fix: multiply by `cispi(4dot(gk, v))` in `symmetry_eigenvalues`. Resolved
+   3D failures at k-points with non-symmorphic operations.
+
+3. **Translation reduction under primitivization** — `primitivize(::LittleGroup)` with
+   default `modw=true` discards lattice vectors from translations, corrupting phase factors
+   `e^{2πi(gk)·v}` at non-Γ k-points in centered lattices. Fix: use
+   `primitivize(::Collection{LGIrrep})` which passes `modw=false`. Resolved all remaining
+   centered-lattice failures (SG 68, 88, 141, 142, 214, 220, 230).
