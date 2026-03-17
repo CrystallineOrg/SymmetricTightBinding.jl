@@ -121,24 +121,24 @@ Tests take ~2 minutes.
 
 ## Known issues
 
-1. **Symmetry analysis failures (PR #89 / treat as issue):** `collect_compatible` returns
-   incorrect irrep labels for many space groups, especially at K/KA/H/HA points with
-   3-fold symmetry. Root cause: unresolved phase convention ambiguity in the Theta_G factor
-   within `symmetry_eigenvalues`. Conjugating the phase fixes some cases but breaks others.
-   Related to Crystalline.jl issue #12 (sign in `calc_bandreps`).
+1. **ANTIHERMITIAN `solve` not implemented** (`src/types.jl:455`).
 
-2. **ANTIHERMITIAN `solve` not implemented** (`src/types.jl:455`).
-
-3. **Performance** (issue #44): `tb_hamiltonian` is slow for high space group numbers
+2. **Performance** (issue #44): `tb_hamiltonian` is slow for high space group numbers
    (SG ~200+ can take minutes per EBR).
 
-4. **Test coverage gaps:** No tests for extensions (Optim, Makie). Interim symmetry analysis
-   tests exist (`symmetry_analysis_stopgap.jl`) but comprehensive tests await PR #89.
+3. **Test coverage gaps:** No tests for extensions (Optim, Makie).
+
+4. **Symmetry eigenvalue convention mismatch (workaround in place):**
+   `symmetry_eigenvalues` monkey-patches two phase corrections to match Crystalline.jl's
+   `calc_bandreps` convention (Crystalline.jl issue #12). Code locations are marked with
+   `[⚠️ phase]`. See `docs/src/devdocs/symmetry_eigenvalue_conventions.md` for details and
+   recommended future cleanup (Option C: change `SiteInducedSGRepElement` convention).
 
 ## Improvement plan
 
-See `PLAN.md` for the phased work plan (TODO audit, devdocs restructuring, tests,
-refactoring, symmetry analysis fix).
+See `PLAN.md` for the phased work plan. Completed: Phase 1 (CLAUDE.md), Phase 2 (TODO
+audit), Phase 3 (devdocs restructuring), Phase 4 (tests/coverage), Phase 6 (symmetry
+analysis fix). Remaining: Phase 5 (refactoring).
 
 ## Code conventions and preferences
 
