@@ -1,32 +1,13 @@
-# Theory Notes
+# Theory notes
 
 This package heavily relies on [representation theory of groups](https://en.wikipedia.org/wiki/Representation_theory_of_finite_groups) and on [band theory](https://en.wikipedia.org/wiki/Electronic_band_structure) of crystals. Most of this theory was introduced in [Bradley & Cracknell](https://academic.oup.com/book/54787) and later developed by [Bradlyn *et al.*](https://www.nature.com/articles/nature23268). Here, we aim to provide a practical introduction to the main concepts and derive the essential functions and relations that we need for the implementation of this package. Additionally, we generalize some of the previously derived results and make them more accessible to the general public.
 
 ## Table of contents
 
-- [Theory Notes](#theory-notes)
-  - [Table of contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Transformation properties of orbitals](#transformation-properties-of-orbitals)
-    - [Transformation properties of induced Bloch functions](#transformation-properties-of-induced-bloch-functions)
-  - [Build a tight-binding Hamiltonian from a set of symmetric orbitals](#build-a-tight-binding-hamiltonian-from-a-set-of-symmetric-orbitals)
-    - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations)
-    - [Transformation properties under time-reversal symmetry](#transformation-properties-under-time-reversal-symmetry)
-    - [Transformation properties of the Bloch states](#transformation-properties-of-the-bloch-states)
-      - [Transformation properties under lattice translations](#transformation-properties-under-lattice-translations)
-      - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-1)
-  - [Implementing Symbolic Hamiltonians in Non-Symbolic Environments](#implementing-symbolic-hamiltonians-in-non-symbolic-environments)
-    - [Symmetry constraints in the numerical matrix $𝐌^{αβ}\_{ij}$](#symmetry-constraints-in-the-numerical-matrix-𝐌αβ_ij)
-    - [Time-reversal constraint in the numerical matrix $𝐌$](#time-reversal-constraint-in-the-numerical-matrix-𝐌)
-  - [Appendix A](#appendix-a)
-    - [Transformation properties within Convention 2](#transformation-properties-within-convention-2)
-    - [Bloch Hamiltonian under Convention 2](#bloch-hamiltonian-under-convention-2)
-      - [Bloch states under Convention 2](#bloch-states-under-convention-2)
-        - [Transformation under lattice translations](#transformation-under-lattice-translations)
-        - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-2)
-    - [Conversions between Convention 1 and 2](#conversions-between-convention-1-and-2)
-  - [Appendix B](#appendix-b)
-
+```@contents
+Pages = ["theory.md"]
+Depth = 3
+```
 
 ## Introduction
 

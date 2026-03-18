@@ -1,14 +1,15 @@
-# Example: 1D bipartite lattice with inversion
+## Example: 1D bipartite lattice with inversion
 
 Assume we have two sites in a one dimensional lattice of parameter $a=1$ where we place an
 inversion-even orbital at the origin denoted by (1a|A); and an inversion-odd orbital at $x=1/2$
 denoted by (1b|B).
 
-**Notation:** for simplicity we will denote orbitals (1a|A) as $a$ and (1b|B) as $b$.
-Additionally, we will indicate with a subscript the unit cell it belongs to. For example,
-$a_0$ will be placed at $x=0$, while $b_1$ will be placed at $x=3/2$ or $a_{-1}$ at $x=-1$.
+!!! note "Notation"
+    For brevity we will denote orbitals (1a|A) as $a$ and (1b|B) as $b$.
+    Additionally, we will indicate with a subscript the unit cell it belongs to.
+    For example, $a_0$ will be placed at $x=0$, while $b_1$ will be placed at $x=3/2$ or $a_{-1}$ at $x=-1$.
 
-## Deduction by inspection
+### Derivation by inspection
 
 These orbitals will transform under inversion symmetry in the following way:
 
@@ -32,7 +33,7 @@ then the Hamiltonian in $k$-space will look like:
 \mathcal{H} = \sum_k 2it \sin(k/2) a_k^\dagger b_k + \text{c.c}.
 ```
 
-## Deduction from our method
+### Derivation from our method
 
 First, consider the translation $t=0$. Then, remember that $\Delta_{\alpha\to\beta+R} =
 \mathbf{q}_\beta + \mathbf{R} - \mathbf{q}_\alpha$.

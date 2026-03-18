@@ -1,4 +1,4 @@
-# Fourier transforms conventions
+## Fourier transforms conventions
 
 This document presents a brief overview of Fourier transforms in the tight-binding setting, focusing on two conventions that have been used during the development of this codebase.
 
@@ -10,7 +10,7 @@ Specifically, we distinguish between two common conventions for the Fourier tran
 
 In the following sections, we will carefully examine both conventions and demonstrate how they are related to each other.
 
-## Convention 1
+### Convention 1
 
 This convention defines the Fourier transform as:
 
@@ -45,7 +45,7 @@ and similarly:
 ĉ_{I,𝐭}^† = \frac{1}{\sqrt{N}} \sum_𝐤 e^{-i𝐤·(𝐭+𝐪_α)} â_{I,𝐤}^†
 ```
 
-## Convention 2
+### Convention 2
 
 This convention defines the Fourier transform as:
 
@@ -80,7 +80,7 @@ and similarly:
 ĉ_{I,𝐭}^† = \frac{1}{\sqrt{N}} \sum_𝐤 e^{-i𝐤·𝐭} \hat{\tilde{a}}_{I,𝐤}^†
 ```
 
-## How they relate to each other
+### How they relate to each other
 
 - **Convention 1:** $\ket{φ_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} \ket{ψ_{I,𝐭}}$
 - **Convention 2:** $\ket{\tilde{φ}_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·𝐭} \ket{ψ_{I,𝐭}}$
