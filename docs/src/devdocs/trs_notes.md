@@ -1,4 +1,4 @@
-## Time-reversal symmetry in tight-binding models
+# Time-reversal symmetry in tight-binding models
 
 This document follows — mainly — Chapter 12 of
 [Wooten's book](https://www.cambridge.org/core/books/symmetry-and-condensed-matter-physics/218B3D7B149076E63A618D4584E3379B).
@@ -12,7 +12,7 @@ Pages = ["trs_notes.md"]
 Depth = 4
 ```
 
-### Time-reversal representation: theory of corepresentations
+## Time-reversal representation: theory of corepresentations
 
 We start by considering the combined action of anti-unitary operator $\Theta$ with another linear
 or nonlinear operator $\mathcal{O}$.
@@ -30,7 +30,7 @@ This demonstrates that the product of the two operators does not lead to just a
 product of the corresponding matrix representatives, but leads, in addition, to 
 a c-conjugation of the matrix representative of $\mathcal{O}$.
 
-#### Construction of corepresentations (corep)
+### Construction of corepresentations (corep)
 
 We consider a magnetic space group $\mathcal{M}$ which we write as
 
@@ -128,7 +128,7 @@ $\mathcal{N}$.
     \Gamma^*(\mathcal{C}) = \Gamma(\mathcal{BC}).
     ```
 
-##### Specialization to grey groups
+#### Specialization to grey groups
 
 We now specialize to grey groups (type II), the case relevant to us.
 Here $\mathcal{A} = \Theta$ and $\mathcal{N} = \mathcal{G}$, where $\mathcal{G}$
@@ -184,7 +184,7 @@ obtain
     In the implementation, we assume that it sufficient to consider only $\Theta$ to incorporate the all constraints associated with the anti-unitary elements of the group.
     This is justified by our focus on gray groups, which can always decomposed as $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$; i.e., $\Theta$ is a generator of the anti-unitary parts of $\mathcal{M}.
 
-##### Three scenarios for the co-representation
+#### Three scenarios for the co-representation
 
 Given the co-representation $\Gamma$ constructed above, three scenarios arise
 depending on the relationship between $\Psi$ and $\Theta\Psi$:
@@ -205,7 +205,7 @@ the representations beforehand using `realify` in Crystalline.jl, which
 constructs explicit co-representations in cases 2 and 3 so that the
 combined basis transforms under a single real representation.
 
-### Quantization of TRS action on creation and annihilation operators
+## Quantization of TRS action on creation and annihilation operators
 
 Assuming a physically real basis (achieved via `physically_realify` in
 Crystalline.jl), $\Theta$ acts trivially on the real-space orbitals and
@@ -233,7 +233,7 @@ general single-particle state:
 \hat{a}_{I,-\mathbf{k}}}
 ```
 
-### Finding an explicitly real form of irrep matrices
+## Finding an explicitly real form of irrep matrices
 
 An explicit real, or physically real, form of a set of irrep matrices is one 
 where the associated matrices $D(g)$ have the following property:
@@ -316,14 +316,14 @@ Identifying $\tilde{D}(g) = W D(g) W^{-1}$ we clearly obtain the desired
 invariance under complex conjugation since $\tilde{D}^*(g) = (W D_g W^{-1})^* = 
 W^* D_g^* (W^{-1})^* = W D_g W^{-1} = \tilde{D}(g)$.
 
-### Theory of representations in crystalline systems
+## Theory of representations in crystalline systems
 
 This section describes how to express a general Hamiltonian in a symmetry-adapted
 basis and derives the resulting symmetry constraints. We first study the action
 of a symmetry transformation on a basis set in $k$-space, and then derive the
 constraints that the Hamiltonian matrix must satisfy.
 
-#### Representation of symmetry operators using a basis
+### Representation of symmetry operators using a basis
 
 Following the deductions made by Bradlyn *et al.* in Ref. [1].
 
@@ -502,7 +502,7 @@ e^{-i(g\mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji}
     \Rightarrow \boxed{Ρ(g₁g₂) = Ρ(g₁) Ρ(g₂)}
     ```
 
-#### Action of symmetry operators on a Hamiltonian
+### Action of symmetry operators on a Hamiltonian
 
 Let us start with the most general non-interacting Hamiltonian:
 
@@ -545,7 +545,7 @@ e^{i\mathbf{k}·(\mathbf{t}+\mathbf{q}_β-\mathbf{q}_α)} \hat{a}^\dagger_{I,\ma
 where we have defined: $h_{IJ,\mathbf{k}} = \sum_\mathbf{t} h_{IJ,\mathbf{t}}
 e^{i\mathbf{k}·(\mathbf{t}+\mathbf{q}_β-\mathbf{q}_α)}$.
 
-##### Quantization of the representations
+#### Quantization of the representations
 
 The quantization of the previous (classical) theory of representations can be 
 written using "braket" notation as:
@@ -619,7 +619,7 @@ relation for the Hamiltonian to be invariant under symmetries:
 
     which is the more familiar form.
 
-#### Time reversal symmetry
+### Time reversal symmetry
 
 For TRS, a similar computation can be performed. Let us assume that the action of
 TRS over our basis is the following:
@@ -655,7 +655,7 @@ Obtaining the following relation:
 \boxed{H_\mathbf{k} = H^*_{-\mathbf{k}}}
 ```
 
-### Proof that physically real representations admit a real basis 
+## Proof that physically real representations admit a real basis 
 
 In the presence of time-reversal symmetry, i.e., $Θ g = g Θ$, and for an explicitly
 real representation $Ρ(g) = Ρ^*(g)$, we now show that this implies the existence of
@@ -706,7 +706,7 @@ that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$.
     lemma), it can be extended to general representations by simply considering them brought
     to block-diagonal form, where the argument then applies to each block individually.
 
-### Appendix A
+## Appendix A
 
 For completeness, we derive the commutatation relations of a symmetry $g ∈ G$ with
 the creation and annihilation operators, as an alternative to the conjugation
@@ -752,7 +752,7 @@ h_{IJ,\mathbf{k}} \left( [\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}]
     The resulting expression is not straightforwardly useful; one would need to
     relate $\hat{a}_{J,\mathbf{k}}$ to $\hat{a}_{J,g\mathbf{k}}$ to simplify further.
 
-### References
+## References
 
 [1] Band Representations and Topological Quantum Chemistry by Bradlyn *et al.*
 (2021) https://doi.org/10.1146/annurev-conmatphys-041720-124134 

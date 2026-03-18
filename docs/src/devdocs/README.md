@@ -1,4 +1,4 @@
-# Developer documentation
+# Developer notes overview
 
 These notes are for developers working on the SymmetricTightBinding.jl internals. For the
 user-facing theory exposition, see [`theory.md`](../theory.md).
