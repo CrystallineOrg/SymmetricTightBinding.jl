@@ -168,7 +168,7 @@ function Base.getindex(H::TightBindingTerm, i::Int, j::Int)
             antihermitian = H.hermiticity == ANTIHERMITIAN,
         )
     else # not a stored block
-        return TightBindingElementString("0", false) #=active=#
+        return TightBindingElementString("0", #=active=# false)
     end
 end
 
@@ -188,7 +188,7 @@ function _getindex(
     io = IOBuffer()
     MⁱʲtC = tbb.MmtC[:, i, j] # = `tbb.Mm[:,:,i,j] * "complexified"(tbb.t)`
     if all(v -> abs(v) < SPARSIFICATION_ATOL_DEFAULT, MⁱʲtC)
-        return TightBindingElementString("0", true) #=active=#
+        return TightBindingElementString("0", #=active=# true)
     end
 
     first = true
@@ -231,7 +231,7 @@ function _getindex(
     end
 
     s = String(take!(io))
-    return TightBindingElementString(s, true) #=active=#
+    return TightBindingElementString(s, #=active=# true)
 end
 
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)

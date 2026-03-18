@@ -48,11 +48,61 @@ using LinearAlgebra
             # dimensions of the hamiltonian should be equal to the number of orbitals
             @test size(tb_onsite) == (occupation(br), occupation(br))
 
-            # TODO: add more Hamiltonian assertions (evaluation, hermiticity, etc.)
+            # evaluate H(k) at a few k-points and check hermiticity
+            ptbm = tb_model([0.0, 1.0])
+            for k in [[0.0, 0.0], [0.1, 0.2], [1/3, 1/3]]
+                H = ptbm(k)
+                @test H ≈ H'
+            end
         end # @testset "Hamiltonian"
 
     end # @testset "Graphene"
 
-    # TODO: add more cases apart from Graphene
+    @testset "Square lattice (PG 10, p4mm)" begin
+        sgnum = 11 # p4mm
+        brs = calc_bandreps(sgnum, Val(2))
+        cbr = @composite brs[1]
+        tbm = tb_hamiltonian(cbr, [[0, 0]])
+
+        cs = [0.3*cospi(0.73*n) for n in 1:length(tbm)] # deterministic "random" coefficients
+        ptbm = tbm(cs)
+        # C₄ symmetry: H(k₁,k₂) and H(k₂,-k₁) should have same spectrum
+        k = [0.1, 0.3]
+        k_rot = [0.3, -0.1] # C₄ rotation in reciprocal space
+        es = spectrum(ptbm, k)
+        es_rot = spectrum(ptbm, k_rot)
+        @test es ≈ es_rot  atol=1e-10
+    end
+
+    @testset "Triangular lattice (PG 13, p3)" begin
+        sgnum = 13 # p3
+        brs = calc_bandreps(sgnum, Val(2))
+        cbr = @composite brs[1]
+        tbm = tb_hamiltonian(cbr, [[0, 0]])
+        @test length(tbm) ≥ 1
+
+        if length(tbm) > 0
+            cs = [0.3*cospi(0.73*n) for n in 1:length(tbm)]
+            ptbm = tbm(cs)
+            H = ptbm([-0.1, 0.3])
+            @test H ≈ H'
+        end
+    end
+
+    @testset "Oblique lattice (PG 2, p2)" begin
+        sgnum = 2 # p2
+        brs = calc_bandreps(sgnum, Val(2))
+        cbr = @composite brs[1]
+        tbm = tb_hamiltonian(cbr, [[0, 0], [1, 0]])
+        @test length(tbm) > 0
+
+        cs = [0.3*cospi(0.73*n) for n in 1:length(tbm)]
+        ptbm = tbm(cs)
+        # TRS: H(k) = H*(-k)
+        k = [0.1, 0.2]
+        H_k₊ = copy(ptbm(k))
+        H_k₋ = copy(ptbm(-k))
+        @test H_k₊ ≈ conj.(H_k₋)
+    end
 
 end # @testset "TB examples in plane groups"
