@@ -292,18 +292,18 @@ Following a similar strategy as before, the following relations for the creation
 
 Then, invariance under time-reversal symmetry of the Hamiltonian reduces to:
 
-$$
+```math
 \hat{𝒯} \hat{H} \hat{𝒯}^{-1} = \sum_{IJ,𝐤} \hat{𝒯} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤} \hat{𝒯}^{-1} \\
 = \sum_{IJ,𝐤} \hat{𝒯} \hat{a}^†_{I,𝐤} \hat{𝒯}^{-1} h^*_{IJ,𝐤} \hat{𝒯} \hat{a}_{J,𝐤} \hat{𝒯}^{-1} \\
 = \sum_{IJ,𝐤} \hat{a}^†_{I,-𝐤} h^*_{IJ,𝐤} \hat{a}_{J,-𝐤} = \\
 \hat{H} = \sum_{IJ,𝐤} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤}
-$$
+```
 
 which implies the following relation:
 
-$$
+```math
 \boxed{𝐇_𝐤 = 𝐇^*_{-𝐤}}
-$$
+```
 
 As stated previously, we are interested in diagonalizing this matrix and finding the eigenvectors and eigenvalues associated with it at each 𝐤-point. Those eigenvectors correspond to vectors of coefficients, associated with the basis set on which we built the Bloch Hamiltonian, and describe the Bloch state of the system at a particular 𝐤-point and energy. In the following section, we elaborate on this topic and develop how these Bloch states transform under the symmetry operations of the system. A sanity check is to compare the band representation of both the real system’s band structure and the tight-binding model’s band structure, which should be equal.
 
