@@ -3,14 +3,14 @@
 This document follows — mainly — Chapter 12 of
 [Wooten's book](https://www.cambridge.org/core/books/symmetry-and-condensed-matter-physics/218B3D7B149076E63A618D4584E3379B).
 First, we present a general way to introduce a non-unitary
-transformation into the formalism that can be identified with TRS. Then, we
-specialize to TRS and, particularly, to bosonic TRS:
+transformation into the formalism that can be identified with TRS. 
+Then, we specialize to TRS and, particularly, to bosonic TRS:
 $\Theta² = +\mathbb{I}$.
 
 ## Time-reversal representation: theory of corepresentations
 
-We start by considering the combined action of $\Theta$ with another linear
-or non-linear operator $\mathcal{O}$.
+We start by considering the combined action of anti-unitary operator $\Theta$ with another linear
+or nonlinear operator $\mathcal{O}$.
 
 !!! note
     Here $\Theta$ could be any anti-unitary operator. For our purposes it will be the TRS operator.
@@ -36,18 +36,18 @@ We consider a magnetic space group $\mathcal{M}$ which we write as
 where $\mathcal{N}$ is a unitary subgroup of index 2 (normal subgroup), and 
 $\mathcal{A} \notin \mathcal{N}$ an anti-unitary element of $\mathcal{M}$.
 
-!!! note
-    This formalism is quite general and can be applied to all kind of magnetic space groups. However, since we are interested in space groups, $\mathcal{N}$ can be identified as the space group and $\mathcal{A}$ as TRS.
+!!! note "Magnetic vs. gray space groups"
+    This formalism is quite general and can be applied generally to all magnetic space groups. 
+    However, since we are interested in space groups, $\mathcal{N}$ can be identified as the space group and $\mathcal{A}$ as TRS.
 
 !!! note "Notation"
-    We denote elements of $\mathcal{N}$ by $R$, $S$, $T$, etc., and those of $\mathcal{AN}$ by $\mathcal{A}$, $\mathcal{B}$, etc..
+    We denote elements of $\mathcal{N}$ by $R$, $S$, $T$, etc., and those of $\mathcal{AN}$ by $\mathcal{A}$, $\mathcal{B}$, etc.
 
 We start with applying $\Theta$ to a basis set $\{\psi_\mu\} \equiv \Psi$ 
 which engenders an irrep $\Delta$ of $\mathcal{N}$, namely,
 
 ```math
 R \psi_\mu = \sum_\nu \psi_\nu \Delta_{\nu\mu}(R), \\
-
 R \Psi = \Psi \Delta(R).
 ```
 
@@ -108,8 +108,12 @@ We then find
 \end{pmatrix}, \qquad \forall \mathcal{B} \in \mathcal{AN}.}
 ```
 
-!!! danger
-    The matrix representatives $\Gamma$ do not obey the ordinary multiplication 
+The set of unitary matrices obtained forms a *corepresentation* (corep) of 
+$\mathcal{M}$, derived from the unitary irrep $\Delta$ of its normal subgroup 
+$\mathcal{N}$.
+
+!!! note "Corep composition rules"
+    The matrix representatives $\Gamma$ of the coreps do not obey the ordinary multiplication 
     relations associated with unitary groups, but rather obey
 
     ```math
@@ -118,10 +122,6 @@ We then find
     \Gamma(\mathcal{B}) \Gamma^*(R) = \Gamma(\mathcal{B}R), \qquad \Gamma(\mathcal{B})
     \Gamma^*(\mathcal{C}) = \Gamma(\mathcal{BC}).
     ```
-
-The set of unitary matrices obtained forms a *corepresentation* (corep) of 
-$\mathcal{M}$, derived from the unitary irrep $\Delta$ of its normal subgroup 
-$\mathcal{N}$.
 
 #### Specialization to grey groups
 
@@ -149,7 +149,7 @@ obtain
     The time-reversed representation $^\mathcal{A}\Delta$ is **identical** to the 
     complex conjugate representation $\Delta^*$.
 
-!!! warning
+!!! question
     What is the difference here with the statement at the beginning? Why are we not
     able to impose the conditions where $R$ and $\Theta$ commute?
 
@@ -171,13 +171,13 @@ obtain
 \end{pmatrix}}
 ```
 
-!!! danger
+!!! note "Bosonic vs. fermionic time-reversal symmetry"
     Notice that we are using the bosonic TRS, i.e., $\Theta^2 = +\mathbb{I}$.
     To generalize this to fermionic TRS, a minus sign is needed.
 
 !!! note
-    In the implementation, we only consider $\Theta$ to include new constraints.
-    This can be justified by the fact that grey groups can be decomposed as $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$.
+    In the implementation, we assume that it sufficient to consider only $\Theta$ to incorporate the all constraints associated with the anti-unitary elements of the group.
+    This is justified by our focus on gray groups, which can always decomposed as $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$; i.e., $\Theta$ is a generator of the anti-unitary parts of $\mathcal{M}.
 
 #### Three scenarios for the co-representation
 
@@ -356,11 +356,11 @@ G = \bigcup_{α=1}^n g_α (G_\mathbf{q} \ltimes T).
 By extension, translated counterparts in other unit cells can be defined by:
 
 ```math
-\{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = ψ_{iα}(\mathbf{r-t}),
+\{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = ψ_{iα}(\mathbf{r}-\mathb{t}),
 ```
 
 where $\mathbf{t}$ is a lattice translation. The set of $n \times \text{dim}(ρ)
-\times \mathcal{N}$ functions $ψ_{iα}(\mathbf{r-t})$, where $\mathcal{N}$ is
+\times \mathcal{N}$ functions $ψ_{iα}(\mathbf{r}-\mathb{t})$, where $\mathcal{N}$ is
 the number of unit cells of the system, will be the basis set on which the induced 
 representation $D$ will act.
 
@@ -385,14 +385,14 @@ Taking all of this into consideration, we can deduce how our basis set will
 transform under the action of every $g \in G$:
 
 ```math
-g ψ_{iα}(\mathbf{r-t}) = g \{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = \\
+g ψ_{iα}(\mathbf{r}-\mathbf{t}) = g \{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = \\
 \{E|R\mathbf{t}\} g ψ_{iα}(\mathbf{r}) = \\
 \{E|R\mathbf{t}\} \{E|\mathbf{t}_{αβ}\} g_β h ψ_{i1}(\mathbf{r}) = \\
 \{E|R\mathbf{t}\} \{E|\mathbf{t}_{αβ}\} g_β [ρ(h)]_{ji} 
 ψ_{j1}(\mathbf{r}) = \\
 \{E|R\mathbf{t}\} \{E|\mathbf{t}_{αβ}\} [ρ(h)]_{ji} 
 ψ_{jβ}(\mathbf{r}) = \\
-\{E|R\mathbf{t}\} [ρ(h)]_{ji} ψ_{jβ}(\mathbf{r-\mathbf{t}_{αβ}}) = \\
+\{E|R\mathbf{t}\} [ρ(h)]_{ji} ψ_{jβ}(\mathbf{r}-\mathbf{t}_{αβ}) = \\
 [ρ(h)]_{ji} ψ_{jβ}(\mathbf{r}-R\mathbf{\mathbf{t}-\mathbf{t}_{αβ}})
 ```
 
@@ -401,8 +401,8 @@ useful to view it in reciprocal space. This is more evident when $\mathcal{N}
 \to \infty$. To this end, we define the Fourier transform of our basis:
 
 ```math
-φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} 
-ψ_{iα}(\mathbf{r-t}),
+φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_\mathbf{t} e^{i\mathbf{k}\cdot(\mathbf{t}+\mathbf{q}_α)}
+ψ_{iα}(\mathbf{r}-\mathbf{t}),
 ```
 
 where the sum is over all lattice vectors $\mathbf{t} \in T$.
@@ -416,20 +416,20 @@ action of $g \in G$ in reciprocal space becomes:
 
 ```math
 g φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_\mathbf{t} e^{i\mathbf{k}\cdot(\mathbf{t}+\mathbf{q}_α)} g
-ψ_{iα}(\mathbf{r-t}) = \\
-\sum_\mathbf{t} e^{i\mathbf{k\cdot(t+q_α)}} [ρ(h)]_{ji} 
+ψ_{iα}(\mathbf{r}-\mathbf{t}) = \\
+\sum_\mathbf{t} e^{i\mathbf{k}\cdot(\mathbf{t}+\mathbf{q}_α)} [ρ(h)]_{ji} 
 ψ_{jβ}(\mathbf{r}-R\mathbf{\mathbf{t}-\mathbf{t}_{αβ}}) = \\
-\sum_\mathbf{t}' e^{i\mathbf{k}\cdot R^{-1}(\mathbf{t}'+\mathbf{q}_β-\mathbf{v})}} [ρ(h)]_{ji} 
+\sum_\mathbf{t}' e^{i\mathbf{k}\cdot R^{-1}(\mathbf{t}'+\mathbf{q}_β-\mathbf{v})} [ρ(h)]_{ji} 
 ψ_{jβ}(\mathbf{r}-\mathbf{t}') = \\
-e^{-i([R⁻¹]ᵀ \mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji} \sum_\mathbf{t'} 
-e^{i([R⁻¹]ᵀ \mathbf{k}) \cdot (\mathbf{t}'+\mathbf{q}_β)} ψ_{jβ}(\mathbf{r-t'}) = \\
+e^{-i([R⁻¹]ᵀ \mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji} \sum_\mathbf{t}' 
+e^{i([R⁻¹]ᵀ \mathbf{k}) \cdot (\mathbf{t}'+\mathbf{q}_β)} ψ_{jβ}(\mathbf{r}-\mathbf{t}') = \\
 e^{-i([R⁻¹]ᵀ \mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji} φ_{jβ,[R⁻¹]ᵀ\mathbf{k}}(\mathbf{r}),
 ```
 
 where we have made the substitution: $\mathbf{t}' = R\mathbf{t} + \mathbf{t}_{αβ}
-= R\mathbf{t} + g\mathbf{q_α - q_β} = R\mathbf{t} + R\mathbf{q_α + v - q_β} =
-R(\mathbf{t+q_α}) + \mathbf{v - q_β} \Rightarrow (\mathbf{t+q_α}) = R^{-1}
-(\mathbf{t'+q_β-v})$.
+= R\mathbf{t} + g\mathbf{q}_α - \mathbf{q}_β = R\mathbf{t} + R\mathbf{q}_α + \mathbf{v} - \mathbf{q}_β =
+R(\mathbf{t}+\mathbf{q}_α) + \mathbf{v} - \mathbf{q}_β \Rightarrow (\mathbf{t}+\mathbf{q}_α) = R^{-1}
+(\mathbf{t}'+\mathbf{q}_β-\mathbf{v})$.
 
 !!! note
     We used the identity $\mathbf{k}·(R⁻¹\mathbf{r}) \equiv (g \mathbf{k})·\mathbf{r}$, which follows from:
@@ -441,30 +441,28 @@ R(\mathbf{t+q_α}) + \mathbf{v - q_β} \Rightarrow (\mathbf{t+q_α}) = R^{-1}
 
 In reciprocal space, the matrix representation can be interpreted as a $\mathcal{N}
 \times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
-be labeled by $\mathbf{k,k'}$. Most of the blocks are zero: given $g = \{R|
+be labeled by $\mathbf{k},\mathb{k}'$. Most of the blocks are zero: given $g = \{R|
 \mathbf{v}\} \in G$, there is only one non-zero block in each row and column, 
-corresponding to $\mathbf{k'} = R\mathbf{k}$. Mathematically, we can express this
+corresponding to $\mathbf{k}' = R\mathbf{k}$. Mathematically, we can express this
 as:
 
 ```math
-g φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_{jβ\mathbf{k'}} D_{jβ\mathbf{k'},iα\mathbf{k}}(g)
+g φ_{iα,\mathbf{k}}(\mathbf{r}) = \sum_{jβ\mathbf{k}'} D_{jβ\mathbf{k}',iα\mathbf{k}}(g)
 φ_{jβ,\mathbf{k}'}(\mathbf{r}),
 ```
 
 where we have that:
 
 ```math
-D_{jβ\mathbf{k'},iα\mathbf{k}}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h)
-\delta_{g\mathbf{k,k'}} \delta_{g\mathbf{q_α - q_β} \mod \tau},
+D_{jβ\mathbf{k}',iα\mathbf{k}}(g) = e^{-i(g\mathbf{k}) \cdot \mathbf{v}} ρ_{ji}(h)
+\delta_{g\mathbf{k},\mathb{k}'} \delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T},
 ```
-
-where $\tau \in T$.
 
 We will use the following notation:
 
 ```math
-Ρ_{jβ,iα}(g) = e^{-i(g\mathbf{k) \cdot v}} ρ_{ji}(h) 
-\delta_{g\mathbf{q_α - q_β} \mod \tau},
+Ρ_{jβ,iα}(g) = e^{-i(g\mathbf{k}) \cdot \mathbf{v}} ρ_{ji}(h) 
+\delta_{g\mathbf{q}_α - \mathb{q}_β \mod T},
 ```
 
 where the dependence on $\mathbf{k}$ is left implicit.
@@ -476,20 +474,21 @@ We can vectorize the previous equation as:
 ```
 
 where $Φ_\mathbf{k}(\mathbf{r})$ is a column vector formed by 
-$\{φ_{iα,\mathbf{k}}(\mathbf{r})\}$, and, $Ρ(g)$ is a $n \times n$ matrix of 
+$\{φ_{iα,\mathbf{k}}(\mathbf{r})\}$, and, $Ρ(g)$ is an $n \times n$ matrix of 
 $\dim(ρ) \times \dim(ρ)$ blocks, each of them can be labelled by $α,β$. Most of 
 the blocks are zero: given $g \in G$, there is only one non-zero block in each 
-row and column, corresponding to $g q_α - q_β = 0 \mod \tau$ with $\tau \in T$, 
+row and column, corresponding to g\mathbf{q}_α - \mathbf{q}_β = 0 \mod T$, 
 and is equal to:
 
 ```math
-Ρ_{jβ,iα}(g)= e^{-i(g\mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji} 
-\delta_{g\mathbf{q}_α - \mathbf{q}_β} \mod \tau}
+Ρ_{jβ,iα}(g)
+=
+e^{-i(g\mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji} 
+\delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T}
 ```
 
 !!! note
-    We pick the previous definition of the matrix in order to have good properties of composition.
-    This is due to the fact that:
+    Picking this definition of $Ρ_{jβ,iα}(g)$ ensures simple composition properties, cf.:
 
     ```math
     g₁ g₂ Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g₁g₂) Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\
@@ -508,7 +507,7 @@ Let us start with the most general non-interacting Hamiltonian:
 ```
 
 where $I,J$ collect the internal degrees of freedom of the orbitals and the sites
-of the WP, i.e., $I = (i, α)$; and $\mathbf{R,R}'$ run over the lattice translations.
+of the WP, i.e., $I = (i, α)$; and $\mathbf{R},\mathbf{R}'$ run over the lattice translations.
 
 !!! note
     We have here assumed that hopping terms depend only on relative distances.
@@ -523,17 +522,17 @@ To be consistent with the Fourier transform convention above, the creation opera
 obtaining:
 
 ```math
-\hat{H} = \frac{1}{N} \sum_{IJ,\mathbf{RR}'} h_{IJ,\mathbf{t}} \sum_{\mathbf{kk}'}
-e^{-i\mathbf{k·(R+q_α)}} e^{i\mathbf{k'·(R'+q_β)}} \hat{a}^\dagger_{I,\mathbf{k}} 
+\hat{H} = \frac{1}{N} \sum_{IJ,\mathbf{R}\mathbf{R}'} h_{IJ,\mathbf{t}} \sum_{\mathbf{k}\mathbf{k}'}
+e^{-i\mathbf{k}·(\mathbf{R}+\mathbf{q}_α)} e^{i\mathbf{k}'·(R'+\mathbf{q}_β)} \hat{a}^\dagger_{I,\mathbf{k}} 
 \hat{a}_{J,\mathbf{k}'} \\
-= \frac{1}{N} \sum_{IJ,\mathbf{t},\mathbf{kk}'} h_{IJ,\mathbf{t}} 
-\left[ \sum_{\mathbf{R}'} e^{i\mathbf{(k'-k)·R}} \right] e^{i\mathbf{k·(t-q_α)}} 
-e^{i\mathbf{k'·q_β}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
-= \sum_{IJ,\mathbf{t},\mathbf{kk}'} h_{IJ,\mathbf{t}} 
-\delta_{\mathbf{k,k'}} e^{i\mathbf{k·(t-q_α)}} e^{i\mathbf{k'·q_β}} 
+= \frac{1}{N} \sum_{IJ,\mathbf{t},\mathbf{k}\mathbf{k}'} h_{IJ,\mathbf{t}} 
+\left[ \sum_{\mathbf{R}'} e^{i\mathbf{(k'-k)·R}} \right] e^{i\mathbf{k}·(\mathbf{t}-\mathbf{q}_α)}
+e^{i\mathbf{k}'·\mathbf{q}_β} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
+= \sum_{IJ,\mathbf{t},\mathbf{k}\mathbf{k}'} h_{IJ,\mathbf{t}} 
+\delta_{\mathbf{k},\mathb{k}'} e^{i\mathbf{k}·(\mathbf{t}-\mathbf{q}_α)} e^{i\mathbf{k}'·\mathbf{q}_β} 
 \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
 = \sum_{IJ,\mathbf{t},\mathbf{k}} h_{IJ,\mathbf{t}} 
-e^{i\mathbf{k·(t+q_β-q_α)}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \\
+e^{i\mathbf{k}·(\mathbf{t}+\mathbf{q}_β-\mathbf{q}_α)} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \\
 = \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} 
 \hat{a}_{J,\mathbf{k}},
 ```
@@ -613,7 +612,7 @@ relation for the Hamiltonian to be invariant under symmetries:
     \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ⁻¹(g)},
     ```
 
-    which is the more common form.
+    which is the more familiar form.
 
 ### Time reversal symmetry
 
@@ -704,7 +703,7 @@ that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$.
 
 ## Appendix A
 
-For completeness, we derive the commutators of a symmetry $g ∈ G$ with
+For completeness, we derive the commutatation relations of a symmetry $g ∈ G$ with
 the creation and annihilation operators, as an alternative to the conjugation
 relations used above.
 
@@ -726,7 +725,7 @@ general single-particle state $\ket{φ_{I',\mathbf{k}'}}$:
 ```math
 \left[\hat{g}, \hat{a}_{I,\mathbf{k}} \right] \ket{φ_{I',\mathbf{k}'}} = \hat{g} 
 \hat{a}_{I,\mathbf{k}} \ket{φ_{I',\mathbf{k}'}} - \hat{a}_{I,\mathbf{k}} \hat{g} 
-\ket{φ_{I',\mathbf{k}'}} = δ_{II'} δ_{\mathbf{kk}'} \hat{g} \ket{0} - P_{JI'}(g)
+\ket{φ_{I',\mathbf{k}'}} = δ_{II'} δ_{\mathbf{k}\mathbf{k}'} \hat{g} \ket{0} - P_{JI'}(g)
 \hat{a}_{I,\mathbf{k}} \ket{φ_{J,\mathbf{gk}}} \\
 \Rightarrow \boxed{\left[\hat{g}, \hat{a}_{I,\mathbf{k}} \right] = 0}.
 ```
