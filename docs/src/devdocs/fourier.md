@@ -1,6 +1,6 @@
-# Notes on Fourier Transforms and Different Conventions
+# Fourier transforms conventions
 
-This document presents a brief overview of Fourier transforms, focusing on two conventions that have been used during the development of this codebase.
+This document presents a brief overview of Fourier transforms in the tight-binding setting, focusing on two conventions that have been used during the development of this codebase.
 
 Specifically, we distinguish between two common conventions for the Fourier transform. For lack of standard terminology, we will refer to them as:
 

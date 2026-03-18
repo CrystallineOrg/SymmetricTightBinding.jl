@@ -50,8 +50,8 @@ Now that the basic framework has been established, in the following sections we 
 
 Let us assume we have identified a set of orbitals that describe the band structure of a trivial set of bands. This can be achieved through a TQC analysis of the bands, and several tools exist to perform such a decomposition. For example, the package [PhotonicTightBinding.jl](https://github.com/AntonioMoralesPerez/PhotonicTightBinding.jl) provides this functionality for photonic bands.
 
-> [!NOTE]
-> For instance, Graphene's two *p*<sub>*z*</sub> orbitals sit at the 2b Wyckoff position. Although these orbitals are odd (i.e., changing sign) under mirror in the out-of-plane direction, they are even (i.e., invariant) under all in-plane symmetries, including rotations and mirrors. The corresponding site-symmetry irrep is the A₁ irrep of the 2b Wyckoff position. Thus, these orbitals can be expressed as (2b|A₁). However, take into account that not all band representations can be induced from a set of atomic (electronic) orbitals. Some might correspond to a hybridization or a complex mixture of them.
+!!! note
+    For instance, Graphene's two *p*<sub>*z*</sub> orbitals sit at the 2b Wyckoff position. Although these orbitals are odd (i.e., changing sign) under mirror in the out-of-plane direction, they are even (i.e., invariant) under all in-plane symmetries, including rotations and mirrors. The corresponding site-symmetry irrep is the A₁ irrep of the 2b Wyckoff position. Thus, these orbitals can be expressed as (2b|A₁). However, take into account that not all band representations can be induced from a set of atomic (electronic) orbitals. Some might correspond to a hybridization or a complex mixture of them.
 
 Let us denote by $α$ the site in the Wyckoff position where the orbital is located, and let $i$ label the orbitals associated with that site. Then, the orbital $i$ at site $α$ can be denoted as $ϕ_I(𝐫)$, where we introduce the compound index $I=(α,i)$. The complete set of orbitals needed to describe the system is obtained by considering all orbitals at all sites and all lattice translations of them, i.e., $\{ϕ_I(𝐫-𝐭)\}_{I𝐭}$, where $𝐭$ is a lattice translation vector.
 
@@ -63,11 +63,12 @@ h ϕ_{1i}(𝐫) = [ρ(h)]_{ji} ϕ_{1j}(𝐫)
 
 Since the orbitals are localized at a Wyckoff position, there exists a coset decomposition of the space group $G$ relating each site in the Wyckoff position, i.e., $𝐪_α = g_α 𝐪_1$ with $g_α ∈ G$.
 
-> [!NOTE]
-> The set of $\{g_α\}$, in combination with translations $T$, will generate a decomposition of $G$ with respect to $G_𝐪$:
-> ```math
-> G = \bigcup_α g_α (G_{𝐪_1} \ltimes T)
-> ```
+!!! note
+    The set of $\{g_α\}$, in combination with translations $T$, will generate a decomposition of $G$ with respect to $G_𝐪$:
+
+    ```math
+    G = \bigcup_α g_α (G_{𝐪_1} \ltimes T).
+    ```
 
 Thus, each function in the unit cell can be built from the ones at site $𝐪_1$ as follows:
 
@@ -587,8 +588,8 @@ The constraint then reduces to:
 
 This implies that, in our implementation, time-reversal symmetry simply reduces to requiring that the free parameters are real.
 
-> [!NOTE]
-> The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_timereversal_related_orbits!`.
+!!! note
+    The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_timereversal_related_orbits!`.
 
 Finally, to obtain the full set of symmetry-allowed free parameters, we must intersect the null space from the spatial symmetry constraints (derived in the [previous section](#symmetry-constraints-in-the-numerical-matrix-mathbfm_ijalphabeta)) with the TRS constraint derived above. This intersection is computed using the [Zassenhaus algorithm](https://en.wikipedia.org/wiki/Zassenhaus_algorithm), implemented in `zassenhaus_intersection`.
 

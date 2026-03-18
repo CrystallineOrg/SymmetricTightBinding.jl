@@ -1,4 +1,4 @@
-# Notes on How to Implement TRS in TB Models
+# Time-reversal symmetry in tight-binding models
 
 This document follows — mainly — Chapter 12 of
 [Wooten's book](https://www.cambridge.org/core/books/symmetry-and-condensed-matter-physics/218B3D7B149076E63A618D4584E3379B).
@@ -7,14 +7,13 @@ transformation into the formalism that can be identified with TRS. Then, we
 specialize to TRS and, particularly, to bosonic TRS:
 $\Theta² = +\mathbb{I}$.
 
-## Time-Reversed Representation: Theory of Corepresentations
+## Time-reversal representation: theory of corepresentations
 
 We start by considering the combined action of $\Theta$ with another linear
 or non-linear operator $\mathcal{O}$.
 
-> [!NOTE]
-> Here $\Theta$ could be any anti-unitary operator. For our purposes it will be
-> the TRS operator.
+!!! note
+    Here $\Theta$ could be any anti-unitary operator. For our purposes it will be the TRS operator.
 
 ```math
 \Theta \mathcal{O} \psi_\mu = \Theta \sum \psi_\nu \Gamma_{\nu\mu}(\mathcal{O})
@@ -26,7 +25,7 @@ This demonstrates that the product of the two operators does not lead to just a
 product of the corresponding matrix representatives, but leads, in addition, to 
 a c-conjugation of the matrix representative of $\mathcal{O}$.
 
-### Construction of Corepresentations (CoRep)
+### Construction of corepresentations (corep)
 
 We consider a magnetic space group $\mathcal{M}$ which we write as
 
@@ -37,14 +36,11 @@ We consider a magnetic space group $\mathcal{M}$ which we write as
 where $\mathcal{N}$ is a unitary subgroup of index 2 (normal subgroup), and 
 $\mathcal{A} \notin \mathcal{N}$ an anti-unitary element of $\mathcal{M}$.
 
-> [!NOTE]
-> This formalism is quite general and can be applied to all kind of magnetic
-> space groups. However, since we are interested in space groups, $\mathcal{N}$
-> can be identified as the space group and $\mathcal{A}$ as TRS.
+!!! note
+    This formalism is quite general and can be applied to all kind of magnetic space groups. However, since we are interested in space groups, $\mathcal{N}$ can be identified as the space group and $\mathcal{A}$ as TRS.
 
-> [!IMPORTANT] 
-> **Notation:** We denote elements of $\mathcal{N}$ by $R$, $S$, $T$, etc., and 
-> those of $\mathcal{AN}$ by $\mathcal{A}$, $\mathcal{B}$, etc..
+!!! note "Notation"
+    We denote elements of $\mathcal{N}$ by $R$, $S$, $T$, etc., and those of $\mathcal{AN}$ by $\mathcal{A}$, $\mathcal{B}$, etc..
 
 We start with applying $\Theta$ to a basis set $\{\psi_\mu\} \equiv \Psi$ 
 which engenders an irrep $\Delta$ of $\mathcal{N}$, namely,
@@ -112,21 +108,22 @@ We then find
 \end{pmatrix}, \qquad \forall \mathcal{B} \in \mathcal{AN}.}
 ```
 
-> [!WARNING]
-> The matrix representatives $\Gamma$ do not obey the ordinary multiplication 
-> relations associated with unitary groups, but rather obey
-> ```math
-> \Gamma(R) \Gamma(S) = \Gamma(RS), \qquad \Gamma(R) \Gamma(\mathcal{B}) = 
-> \Gamma(R\mathcal{B}), \\
-> \Gamma(\mathcal{B}) \Gamma^*(R) = \Gamma(\mathcal{B}R), \qquad \Gamma(\mathcal{B})
-> \Gamma^*(\mathcal{C}) = \Gamma(\mathcal{BC}).
-> ```
+!!! danger
+    The matrix representatives $\Gamma$ do not obey the ordinary multiplication 
+    relations associated with unitary groups, but rather obey
 
-The set of unitary matrices obtained forms a *corepresentation* (CoRep) of 
+    ```math
+    \Gamma(R) \Gamma(S) = \Gamma(RS), \qquad \Gamma(R) \Gamma(\mathcal{B}) = 
+    \Gamma(R\mathcal{B}), \\
+    \Gamma(\mathcal{B}) \Gamma^*(R) = \Gamma(\mathcal{B}R), \qquad \Gamma(\mathcal{B})
+    \Gamma^*(\mathcal{C}) = \Gamma(\mathcal{BC}).
+    ```
+
+The set of unitary matrices obtained forms a *corepresentation* (corep) of 
 $\mathcal{M}$, derived from the unitary irrep $\Delta$ of its normal subgroup 
 $\mathcal{N}$.
 
-#### Specialization into Grey Groups
+#### Specialization to grey groups
 
 We now specialize to grey groups (type II), the case relevant to us.
 Here $\mathcal{A} = \Theta$ and $\mathcal{N} = \mathcal{G}$, where $\mathcal{G}$
@@ -148,16 +145,16 @@ obtain
 \end{pmatrix}.}
 ```
 
-> [!IMPORTANT]
-> The time-reversed representation $^\mathcal{A}\Delta$ is **identical** to the 
-> complex conjugate representation $\Delta^*$.
+!!! note
+    The time-reversed representation $^\mathcal{A}\Delta$ is **identical** to the 
+    complex conjugate representation $\Delta^*$.
 
-> [!CAUTION]
-> What is the difference here with the statement at the beginning? Why are we not
-> able to impose the conditions where $R$ and $\Theta$ commute?
->
-> The distinction is due to the fact that $\Psi \not = \Phi = \Theta \Psi$. If
-> that were the case, the previous statement could be applied.
+!!! warning
+    What is the difference here with the statement at the beginning? Why are we not
+    able to impose the conditions where $R$ and $\Theta$ commute?
+
+    The distinction is due to the fact that $\Psi \not = \Phi = \Theta \Psi$. If
+    that were the case, the previous statement could be applied.
 
 Next we do it for any element $\mathcal{B} = \Theta T \in \Theta\mathcal{G}$, and 
 obtain
@@ -174,14 +171,13 @@ obtain
 \end{pmatrix}}
 ```
 
-> [!IMPORTANT]
-> Notice that we are using the bosonic TRS, i.e., $\Theta² = +\mathbb{I}$. If 
-> we want to include fermionic TRS we will need to add a minus sign, consequently.
+!!! danger
+    Notice that we are using the bosonic TRS, i.e., $\Theta^2 = +\mathbb{I}$.
+    To generalize this to fermionic TRS, a minus sign is needed.
 
-> [!NOTE]
-> In the implementation, we only consider $\Theta$ to include new constraints.
-> This can be justified by the fact that grey groups can be decomposed as 
-> $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$.
+!!! note
+    In the implementation, we only consider $\Theta$ to include new constraints.
+    This can be justified by the fact that grey groups can be decomposed as $\mathcal{M} = \mathcal{G} \otimes \{E, \Theta\}$.
 
 #### Three scenarios for the co-representation
 
@@ -378,10 +374,12 @@ g g_α = \{E|\mathbf{t}_{αβ}\} g_β h,
 where $h \in G_\mathbf{q}$ and $t_{αβ} \equiv g\mathbf{q}_α - 
 \mathbf{q}_β$.
 
-> [!NOTE]
-> This follows from the coset decomposition; see, e.g., Bradlyn *et al.* [1].
-> Note that this reference does not include an explicit proof of the above equation.
-> **TODO**: Consider adding a proof as an appendix in the future.
+!!! note
+    This follows from the coset decomposition; see, e.g., Bradlyn *et al.* [1].
+    Note that this reference does not include an explicit proof of the above equation.
+
+!!! todo
+    Consider adding a proof as an appendix in the future.
 
 Taking all of this into consideration, we can deduce how our basis set will 
 transform under the action of every $g \in G$:
@@ -409,9 +407,8 @@ useful to view it in reciprocal space. This is more evident when $\mathcal{N}
 
 where the sum is over all lattice vectors $\mathbf{t} \in T$.
 
-> [!NOTE]
-> Notice that this is just convention but for building a tight-binding Hamiltonian
-> this choice is better since we will eliminate all local phases.
+!!! note
+    Notice that this is just convention but for building a tight-binding Hamiltonian this choice is better since we will eliminate all local phases.
 
 The Fourier transform amounts to a unitary transformation that exchanges 
 $\mathcal{N}$ unit cells for $\mathcal{N}$ distinct $\mathbf{k}$ points. The 
@@ -434,14 +431,13 @@ where we have made the substitution: $\mathbf{t}' = R\mathbf{t} + \mathbf{t}_{α
 R(\mathbf{t+q_α}) + \mathbf{v - q_β} \Rightarrow (\mathbf{t+q_α}) = R^{-1}
 (\mathbf{t'+q_β-v})$.
 
-> [!NOTE]
-> We used the identity $\mathbf{k}·(R⁻¹\mathbf{r}) \equiv
-> (g \mathbf{k})·\mathbf{r}$, which follows from:
->
-> ```math
-> \mathbf{k}·(R⁻¹\mathbf{r}) = \sum_{ij} k_i (R⁻¹_{ij} r_j) = \sum_{ij} (R⁻¹_{ij} k_i)
-> r_j = ([R⁻¹]ᵀ \mathbf{k}) · \mathbf{r} \equiv (g \mathbf{k}) · \mathbf{r},
-> ```
+!!! note
+    We used the identity $\mathbf{k}·(R⁻¹\mathbf{r}) \equiv (g \mathbf{k})·\mathbf{r}$, which follows from:
+
+    ```math
+    \mathbf{k}·(R⁻¹\mathbf{r}) = \sum_{ij} k_i (R⁻¹_{ij} r_j) = \sum_{ij} (R⁻¹_{ij} k_i)
+    r_j = ([R⁻¹]ᵀ \mathbf{k}) · \mathbf{r} \equiv (g \mathbf{k}) · \mathbf{r},
+    ```
 
 In reciprocal space, the matrix representation can be interpreted as a $\mathcal{N}
 \times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
@@ -491,16 +487,16 @@ and is equal to:
 \delta_{g\mathbf{q}_α - \mathbf{q}_β} \mod \tau}
 ```
 
-> [!NOTE]
-> We pick the previous definition of the matrix in order to have good properties
-> of composition. This is due to the fact that:
-> 
-> ```math
-> g₁ g₂ Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g₁g₂) Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\
-> = g₁ Ρ^T(g₂) Φ_{g₂\mathbf{k}}(\mathbf{r}) = Ρ^T(g₂) Ρ^T(g₁) 
-> Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\ 
-> \Rightarrow \boxed{Ρ(g₁g₂) = Ρ(g₁) Ρ(g₂)}
-> ```
+!!! note
+    We pick the previous definition of the matrix in order to have good properties of composition.
+    This is due to the fact that:
+
+    ```math
+    g₁ g₂ Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g₁g₂) Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\
+    = g₁ Ρ^T(g₂) Φ_{g₂\mathbf{k}}(\mathbf{r}) = Ρ^T(g₂) Ρ^T(g₁) 
+    Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\ 
+    \Rightarrow \boxed{Ρ(g₁g₂) = Ρ(g₁) Ρ(g₂)}
+    ```
 
 ### Action of symmetry operators on a Hamiltonian
 
@@ -514,9 +510,9 @@ Let us start with the most general non-interacting Hamiltonian:
 where $I,J$ collect the internal degrees of freedom of the orbitals and the sites
 of the WP, i.e., $I = (i, α)$; and $\mathbf{R,R}'$ run over the lattice translations.
 
-> [!WARNING]
-> We have assumed that hopping terms depend only on relative distances.
-> We denote $\mathbf{t \equiv R' - R}$.
+!!! note
+    We have here assumed that hopping terms depend only on relative distances.
+    We denote $\mathbf{t} \equiv \mathbf{R}' - \mathbf{R}$.
 
 To be consistent with the Fourier transform convention above, the creation operator transforms as:
 
@@ -564,9 +560,8 @@ where $\ket{φ_{I,\mathbf{k}}} \equiv a^\dagger_{I,\mathbf{k}} \ket{0}$. Then:
 \hat{a}^\dagger_{J,g\mathbf{k}}}
 ```
 
-> [!WARNING]
-> We use that $\hat{g}^{-1} \ket{0} = \ket{0}$, i.e., symmetries act trivially
-> on the vacuum.
+!!! note
+    In the above, we used that $\hat{g}^{-1} \ket{0} = \ket{0}$, i.e., symmetries act trivially on the vacuum.
 
 Consequently: 
 
@@ -577,8 +572,8 @@ Consequently:
 \hat{a}_{J,g\mathbf{k}}}
 ```
 
-> [!WARNING]
-> This step assumes that $\hat{g}$ is unitary, i.e., $\hat{g}^\dagger = \hat{g}^{-1}$.
+!!! note
+    This step assumes that $\hat{g}$ is unitary, i.e., $\hat{g}^\dagger = \hat{g}^{-1}$.
 
 
 Then, if we want the Hamiltonian to be invariant under the symmetries, we must 
@@ -611,15 +606,14 @@ relation for the Hamiltonian to be invariant under symmetries:
 \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ^\dagger(g)}
 ```
 
-> [!NOTE]
-> Notice that the representations of spatial operations are unitary, so we end up 
-> with:
-> 
-> ```math
-> \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ⁻¹(g)},
-> ```
->
-> which is the more common form.
+!!! note
+    Notice that the representations of spatial operations are unitary, so we end up with:
+
+    ```math
+    \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ⁻¹(g)},
+    ```
+
+    which is the more common form.
 
 ### Time reversal symmetry
 
@@ -676,37 +670,37 @@ Then $Θ φ_{I,\mathbf{k}}$ is another basis element for the _same_ (i.e., ident
 representation $Ρ_{JI}(g)$ as $φ_{I,\mathbf{k}}$. As a result, they can be chosen such
 that $φ_{I,\mathbf{k}} = Θ φ_{I,\mathbf{k}}$.
 
-> [!NOTE]
-> The previous argument holds for irreducible representations. Specifically, since
-> both $\{φ_{I,𝐤}\}$ and $\{Θ φ_{I,𝐤}\}$ are orthonormal bases for the same irrep
-> space $V$, there exists a unitary mapping $U : V \to V$ with $Uφ_{I,𝐤} = Θφ_{I,𝐤}$.
-> To apply Schur's lemma, we need to show that $U$ commutes with the group elements $g$.
-> Therefore, we act with $g$ on both sides of $Uφ_{I,𝐤} = Θφ_{I,𝐤}$:
->
-> ```math
-> gUφ_{I,𝐤} = gΘφ_{I,𝐤} = P_{JI}(g)(Θφ_{J,g𝐤}) = P_{JI}(g)(Uφ_{J,g𝐤}) = U(gφ_{I,𝐤}),
-> ```
->
-> so $[U, g] = 0$ for all $g$. By Schur's lemma (applied to the linear operator 
-> $U$ on an irreducible space), $U = e^{iα}𝟏$, giving:
->
-> ```math
-> Θφ_{I,𝐤} = e^{iα}φ_{I,𝐤}.
-> ```
->
-> I.e., $φ_{I,𝐤}$ and $Θφ_{I,𝐤}$ differ only by a phase. This phase is removable, since
-> we can introduce a new, real basis element by defining $\tilde{φ}_{I,𝐤} = e^{iα/2} φ_{I,𝐤}$.
-> Then, using the antilinearity of $Θ$,
->
-> ```math
-> Θ \tilde{φ}_{I,𝐤} = e^{-iα/2} Θφ_{I,𝐤} = e^{-iα/2} e^{iα} φ_{I,𝐤} = e^{iα/2} φ_{I,𝐤} 
-> = \tilde{φ}_{I,𝐤},
-> ```
->
-> showing that $\tilde{φ}_{I,𝐤}$ is a real function.
-> Although this argument assumed irreducible representations (via its invocation of Schur's
-> lemma), it can be extended to general representations by simply considering them brought
-> to block-diagonal form, where the argument then applies to each block individually.
+!!! note
+    The previous argument holds for irreducible representations. Specifically, since
+    both $\{φ_{I,𝐤}\}$ and $\{Θ φ_{I,𝐤}\}$ are orthonormal bases for the same irrep
+    space $V$, there exists a unitary mapping $U : V \to V$ with $Uφ_{I,𝐤} = Θφ_{I,𝐤}$.
+    To apply Schur's lemma, we need to show that $U$ commutes with the group elements $g$.
+    Therefore, we act with $g$ on both sides of $Uφ_{I,𝐤} = Θφ_{I,𝐤}$:
+
+    ```math
+    gUφ_{I,𝐤} = gΘφ_{I,𝐤} = P_{JI}(g)(Θφ_{J,g𝐤}) = P_{JI}(g)(Uφ_{J,g𝐤}) = U(gφ_{I,𝐤}),
+    ```
+
+    so $[U, g] = 0$ for all $g$. By Schur's lemma (applied to the linear operator 
+    $U$ on an irreducible space), $U = e^{iα}𝟏$, giving:
+
+    ```math
+    Θφ_{I,𝐤} = e^{iα}φ_{I,𝐤}.
+    ```
+
+    I.e., $φ_{I,𝐤}$ and $Θφ_{I,𝐤}$ differ only by a phase. This phase is removable, since
+    we can introduce a new, real basis element by defining $\tilde{φ}_{I,𝐤} = e^{iα/2} φ_{I,𝐤}$.
+    Then, using the antilinearity of $Θ$,
+
+    ```math
+    Θ \tilde{φ}_{I,𝐤} = e^{-iα/2} Θφ_{I,𝐤} = e^{-iα/2} e^{iα} φ_{I,𝐤} = e^{iα/2} φ_{I,𝐤} 
+    = \tilde{φ}_{I,𝐤},
+    ```
+
+    showing that $\tilde{φ}_{I,𝐤}$ is a real function.
+    Although this argument assumed irreducible representations (via its invocation of Schur's
+    lemma), it can be extended to general representations by simply considering them brought
+    to block-diagonal form, where the argument then applies to each block individually.
 
 ## Appendix A
 
@@ -750,9 +744,9 @@ h_{IJ,\mathbf{k}} \left( [\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}]
 \hat{a}_{J,\mathbf{k}}
 ```
 
-> [!CAUTION]
-> The resulting expression is not straightforwardly useful; one would need to
-> relate $\hat{a}_{J,\mathbf{k}}$ to $\hat{a}_{J,g\mathbf{k}}$ to simplify further.
+!!! warning
+    The resulting expression is not straightforwardly useful; one would need to
+    relate $\hat{a}_{J,\mathbf{k}}$ to $\hat{a}_{J,g\mathbf{k}}$ to simplify further.
 
 ## References
 
