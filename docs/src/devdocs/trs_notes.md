@@ -96,8 +96,8 @@ Next we apply an operation $\mathcal{B} = \mathcal{A} T \in \mathcal{AN}$, and o
 
 ```math
 \mathcal{B} \Psi = \mathcal{A} T \Psi = \mathcal{A} \Psi \Delta(T) = (\mathcal{A} 
-\Psi) \Delta^*(T) = (\mathcal{A} \Psi) \Delta^*(\mathcal{A}⁻¹ \mathcal{B}), \\
-
+\Psi) \Delta^*(T) = (\mathcal{A} \Psi) \Delta^*(\mathcal{A}⁻¹ \mathcal{B}),
+\\
 \mathcal{B} (\mathcal{A} \Psi) = \mathcal{B} \mathcal{A} \Psi = \Psi 
 \Delta(\mathcal{B} \mathcal{A}), \qquad \mathcal{BA} \in \mathcal{N}.
 ```
@@ -173,7 +173,7 @@ obtain
 \begin{pmatrix}
     \mathbf{0} & \Delta(T) \\
     \Delta^*(T) & \mathbf{0}
-\end{pmatrix}}
+\end{pmatrix}.}
 ```
 
 !!! note "Bosonic vs. fermionic time-reversal symmetry"
@@ -230,7 +230,7 @@ general single-particle state:
 \right) = \delta_{\mathbf{k},-\mathbf{k}'} \delta_{IJ} \ket{0} =
 \hat{a}_{I,-\mathbf{k}} \ket{\varphi_{J,\mathbf{k}'}} \\
 \Rightarrow \boxed{\hat{\Theta} \hat{a}_{I,\mathbf{k}} \hat{\Theta}^{-1} =
-\hat{a}_{I,-\mathbf{k}}}
+\hat{a}_{I,-\mathbf{k}}.}
 ```
 
 ## Finding an explicitly real form of irrep matrices
@@ -361,11 +361,11 @@ G = \bigcup_{α=1}^n g_α (G_\mathbf{q} \ltimes T).
 By extension, translated counterparts in other unit cells can be defined by:
 
 ```math
-\{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = ψ_{iα}(\mathbf{r}-\mathb{t}),
+\{E|\mathbf{t}\} ψ_{iα}(\mathbf{r}) = ψ_{iα}(\mathbf{r}-\mathbf{t}),
 ```
 
 where $\mathbf{t}$ is a lattice translation. The set of $n \times \text{dim}(ρ)
-\times \mathcal{N}$ functions $ψ_{iα}(\mathbf{r}-\mathb{t})$, where $\mathcal{N}$ is
+\times \mathcal{N}$ functions $ψ_{iα}(\mathbf{r}-\mathbf{t})$, where $\mathcal{N}$ is
 the number of unit cells of the system, will be the basis set on which the induced 
 representation $D$ will act.
 
@@ -446,7 +446,7 @@ R(\mathbf{t}+\mathbf{q}_α) + \mathbf{v} - \mathbf{q}_β \Rightarrow (\mathbf{t}
 
 In reciprocal space, the matrix representation can be interpreted as a $\mathcal{N}
 \times \mathcal{N}$ matrix of $n\dim(ρ) \times n\dim(ρ)$ blocks, each block can 
-be labeled by $\mathbf{k},\mathb{k}'$. Most of the blocks are zero: given $g = \{R|
+be labeled by $\mathbf{k},\mathbf{k}'$. Most of the blocks are zero: given $g = \{R|
 \mathbf{v}\} \in G$, there is only one non-zero block in each row and column, 
 corresponding to $\mathbf{k}' = R\mathbf{k}$. Mathematically, we can express this
 as:
@@ -460,14 +460,14 @@ where we have that:
 
 ```math
 D_{jβ\mathbf{k}',iα\mathbf{k}}(g) = e^{-i(g\mathbf{k}) \cdot \mathbf{v}} ρ_{ji}(h)
-\delta_{g\mathbf{k},\mathb{k}'} \delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T},
+\delta_{g\mathbf{k},\mathbf{k}'} \delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T},
 ```
 
 We will use the following notation:
 
 ```math
 Ρ_{jβ,iα}(g) = e^{-i(g\mathbf{k}) \cdot \mathbf{v}} ρ_{ji}(h) 
-\delta_{g\mathbf{q}_α - \mathb{q}_β \mod T},
+\delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T},
 ```
 
 where the dependence on $\mathbf{k}$ is left implicit.
@@ -475,21 +475,21 @@ where the dependence on $\mathbf{k}$ is left implicit.
 We can vectorize the previous equation as:
 
 ```math
-\boxed{g Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g) Φ_{g\mathbf{k}}(\mathbf{r})},
+\boxed{g Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g) Φ_{g\mathbf{k}}(\mathbf{r}),}
 ```
 
 where $Φ_\mathbf{k}(\mathbf{r})$ is a column vector formed by 
 $\{φ_{iα,\mathbf{k}}(\mathbf{r})\}$, and, $Ρ(g)$ is an $n \times n$ matrix of 
 $\dim(ρ) \times \dim(ρ)$ blocks, each of them can be labelled by $α,β$. Most of 
 the blocks are zero: given $g \in G$, there is only one non-zero block in each 
-row and column, corresponding to g\mathbf{q}_α - \mathbf{q}_β = 0 \mod T$, 
+row and column, corresponding to $g\mathbf{q}_α - \mathbf{q}_β = 0 \mod T$, 
 and is equal to:
 
 ```math
 Ρ_{jβ,iα}(g)
 =
 e^{-i(g\mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji} 
-\delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T}
+\delta_{g\mathbf{q}_α - \mathbf{q}_β \mod T}.
 ```
 
 !!! note
@@ -499,7 +499,7 @@ e^{-i(g\mathbf{k}) \cdot \mathbf{v}} [ρ(h)]_{ji}
     g₁ g₂ Φ_\mathbf{k}(\mathbf{r}) = Ρ^T(g₁g₂) Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\
     = g₁ Ρ^T(g₂) Φ_{g₂\mathbf{k}}(\mathbf{r}) = Ρ^T(g₂) Ρ^T(g₁) 
     Φ_{g₁g₂\mathbf{k}}(\mathbf{r}) \\ 
-    \Rightarrow \boxed{Ρ(g₁g₂) = Ρ(g₁) Ρ(g₂)}
+    \Rightarrow \boxed{Ρ(g₁g₂) = Ρ(g₁) Ρ(g₂).}
     ```
 
 ### Action of symmetry operators on a Hamiltonian
@@ -527,19 +527,20 @@ To be consistent with the Fourier transform convention above, the creation opera
 obtaining:
 
 ```math
-\hat{H} = \frac{1}{N} \sum_{IJ,\mathbf{R}\mathbf{R}'} h_{IJ,\mathbf{t}} \sum_{\mathbf{k}\mathbf{k}'}
-e^{-i\mathbf{k}·(\mathbf{R}+\mathbf{q}_α)} e^{i\mathbf{k}'·(R'+\mathbf{q}_β)} \hat{a}^\dagger_{I,\mathbf{k}} 
+\hat{H}
+=
+\frac{1}{N} \sum_{IJ,\mathbf{R}\mathbf{R}'} h_{IJ,\mathbf{t}} \sum_{\mathbf{k}\mathbf{k}'}
+e^{-i\mathbf{k}·(\mathbf{R}+\mathbf{q}_α)} e^{i\mathbf{k}'·(R'+\mathbf{q}_β)} \hat{a}^\dagger_{I,\mathbf{k}}
 \hat{a}_{J,\mathbf{k}'} \\
-= \frac{1}{N} \sum_{IJ,\mathbf{t},\mathbf{k}\mathbf{k}'} h_{IJ,\mathbf{t}} 
-\left[ \sum_{\mathbf{R}'} e^{i\mathbf{(k'-k)·R}} \right] e^{i\mathbf{k}·(\mathbf{t}-\mathbf{q}_α)}
+= \frac{1}{N} \sum_{IJ,\mathbf{t},\mathbf{k}\mathbf{k}'} h_{IJ,\mathbf{t}}
+\left[ \sum_{\mathbf{R}'} e^{i(\mathbf{k}'-\mathbf{k})·\mathbf{R}} \right] e^{i\mathbf{k}·(\mathbf{t}-\mathbf{q}_α)}
 e^{i\mathbf{k}'·\mathbf{q}_β} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
 = \sum_{IJ,\mathbf{t},\mathbf{k}\mathbf{k}'} h_{IJ,\mathbf{t}} 
-\delta_{\mathbf{k},\mathb{k}'} e^{i\mathbf{k}·(\mathbf{t}-\mathbf{q}_α)} e^{i\mathbf{k}'·\mathbf{q}_β} 
+\delta_{\mathbf{k},\mathbf{k}'} e^{i\mathbf{k}·(\mathbf{t}-\mathbf{q}_α)} e^{i\mathbf{k}'·\mathbf{q}_β}
 \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}'} \\
-= \sum_{IJ,\mathbf{t},\mathbf{k}} h_{IJ,\mathbf{t}} 
+= \sum_{IJ,\mathbf{t},\mathbf{k}} h_{IJ,\mathbf{t}}
 e^{i\mathbf{k}·(\mathbf{t}+\mathbf{q}_β-\mathbf{q}_α)} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \\
-= \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} 
-\hat{a}_{J,\mathbf{k}},
+= \sum_{IJ,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} \hat{a}_{J,\mathbf{k}},
 ```
 
 where we have defined: $h_{IJ,\mathbf{k}} = \sum_\mathbf{t} h_{IJ,\mathbf{t}}
@@ -561,7 +562,7 @@ where $\ket{φ_{I,\mathbf{k}}} \equiv a^\dagger_{I,\mathbf{k}} \ket{0}$. Then:
 \hat{a}^\dagger_{I,\mathbf{k}} \ket{0} = Ρ_{JI}(g) 
 \hat{a}^\dagger_{J,g\mathbf{k}} \ket{0} \\
 \Rightarrow \boxed{\hat{g} \hat{a}^\dagger_{I,\mathbf{k}} \hat{g}^{-1} = Ρ_{JI}(g) 
-\hat{a}^\dagger_{J,g\mathbf{k}}}
+\hat{a}^\dagger_{J,g\mathbf{k}}.}
 ```
 
 !!! note
@@ -573,31 +574,32 @@ Consequently:
 \hat{g} \hat{a}_{I,\mathbf{k}} \hat{g}^\dagger = Ρ^*_{JI}(g)
 \hat{a}_{J,g\mathbf{k}}
 \Rightarrow \boxed{\hat{g} \hat{a}_{I,\mathbf{k}} \hat{g}^{-1} = Ρ^*_{JI}(g) 
-\hat{a}_{J,g\mathbf{k}}}
+\hat{a}_{J,g\mathbf{k}}.}
 ```
 
 !!! note
     This step assumes that $\hat{g}$ is unitary, i.e., $\hat{g}^\dagger = \hat{g}^{-1}$.
 
 
-Then, if we want the Hamiltonian to be invariant under the symmetries, we must 
-impose that:
+If the Hamiltonian is invariant under a symmetries $\{g\}$, we must require that:
 
 ```math
-\hat{H} = \hat{g} \hat{H} \hat{g}^{-1}
+\hat{H} = \hat{g} \hat{H} \hat{g}^{-1},
 ```
 
-Then we obtain that:
+for every $g$.
+Then, recalling that $\hat{H} = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}_{J,\mathbf{k}}$, this requirement can be translated to a requirement on the Bloch Hamiltonian $H_{\mathbf{k}}$ associated with $\hat{H}$:
 
 ```math
-\hat{H} = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}}
-\hat{a}_{J,\mathbf{k}} = \\
 \hat{g} \hat{H} \hat{g}^{-1} = \sum_{IJ,\mathbf{k}} \hat{g}
-\hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1} \\
+\hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1}
+\\
 = \sum_{IJ,\mathbf{k}} \hat{g} \hat{a}^\dagger_{I,\mathbf{k}} \hat{g}^{-1} 
-h_{IJ,\mathbf{k}} \hat{g} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1} \\
+h_{IJ,\mathbf{k}} \hat{g} \hat{a}_{J,\mathbf{k}} \hat{g}^{-1}
+\\
 = \sum_{IJ,\mathbf{k},I'J'} \hat{a}^\dagger_{I',g\mathbf{k}} Ρ_{I'I}(g) h_{IJ,\mathbf{k}}
-Ρ^*_{J'J}(g) \hat{a}_{J',g\mathbf{k}} \\
+Ρ^*_{J'J}(g) \hat{a}_{J',g\mathbf{k}}
+\\
 = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,g\mathbf{k}} \left[ Ρ(g) H_{\mathbf{k}}
 Ρ^\dagger(g) \right]_{IJ} \hat{a}_{J,g\mathbf{k}},
 ```
@@ -607,14 +609,14 @@ $I',J' \to I,J$. Comparing the first and final rows we obtain the following
 relation for the Hamiltonian to be invariant under symmetries:
 
 ```math
-\boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ^\dagger(g)}
+\boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ^\dagger(g).}
 ```
 
 !!! note
     Notice that the representations of spatial operations are unitary, so we end up with:
 
     ```math
-    \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ⁻¹(g)},
+    \boxed{H_\mathbf{k} = Ρ(g) H_{g^{-1}\mathbf{k}} Ρ⁻¹(g),}
     ```
 
     which is the more familiar form.
@@ -631,9 +633,13 @@ TRS over our basis is the following:
 then, we obtain the following relations:
 
 ```math
-\boxed{\hat{Θ} \hat{a}^\dagger_{I,\mathbf{k}} \hat{Θ}^{-1} = 
-\hat{a}^\dagger_{I,-\mathbf{k}}; \quad \hat{Θ} \hat{a}_{I,\mathbf{k}} 
-\hat{Θ}^{-1} = \hat{a}_{I,-\mathbf{k}}}
+\boxed{\hat{Θ} \hat{a}^\dagger_{I,\mathbf{k}} \hat{Θ}^{-1}
+=
+\hat{a}^\dagger_{I,-\mathbf{k}},
+\qquad
+\hat{Θ} \hat{a}_{I,\mathbf{k}} \hat{Θ}^{-1}
+=
+\hat{a}_{I,-\mathbf{k}}.}
 ```
 
 Then, the invariance under TRS of the Hamiltonian is simply reduced to:
@@ -646,13 +652,13 @@ h^*_{IJ,\mathbf{k}} \hat{Θ} \hat{a}_{J,\mathbf{k}} \hat{Θ}^{-1} \\
 = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,-\mathbf{k}} h^*_{IJ,\mathbf{k}} 
 \hat{a}_{J,-\mathbf{k}} = \\
 \hat{H} = \sum_{IJ,\mathbf{k}} \hat{a}^\dagger_{I,\mathbf{k}} h_{IJ,\mathbf{k}} 
-\hat{a}_{J,\mathbf{k}}
+\hat{a}_{J,\mathbf{k}}.
 ```
 
 Obtaining the following relation:
 
 ```math
-\boxed{H_\mathbf{k} = H^*_{-\mathbf{k}}}
+\boxed{H_\mathbf{k} = H^*_{-\mathbf{k}}.}
 ```
 
 ## Proof that physically real representations admit a real basis 
@@ -720,7 +726,7 @@ relations used above.
 \left( Ρ_{JI}(g) \hat{a}^\dagger_{J,g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}} 
 \right) \ket{0} \\
 \Rightarrow \boxed{[\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}] = 
-Ρ_{JI}(g) \hat{a}^\dagger_{J,g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}}}
+Ρ_{JI}(g) \hat{a}^\dagger_{J,g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}}.}
 ```
 
 Now we want to do a similar computation for the annihilation operator. However, 
@@ -732,7 +738,7 @@ general single-particle state $\ket{φ_{I',\mathbf{k}'}}$:
 \hat{a}_{I,\mathbf{k}} \ket{φ_{I',\mathbf{k}'}} - \hat{a}_{I,\mathbf{k}} \hat{g} 
 \ket{φ_{I',\mathbf{k}'}} = δ_{II'} δ_{\mathbf{k}\mathbf{k}'} \hat{g} \ket{0} - P_{JI'}(g)
 \hat{a}_{I,\mathbf{k}} \ket{φ_{J,\mathbf{gk}}} \\
-\Rightarrow \boxed{\left[\hat{g}, \hat{a}_{I,\mathbf{k}} \right] = 0}.
+\Rightarrow \boxed{\left[\hat{g}, \hat{a}_{I,\mathbf{k}} \right] = 0.}
 ```
 
 Then:
@@ -745,7 +751,7 @@ h_{IJ,\mathbf{k}} \left( [\hat{g}, \hat{a}^\dagger_{I,\mathbf{k}}]
 \hat{a}_{J,\mathbf{k}}] \right) \\
 = \sum_{IJ,\mathbf{k}, I'} h_{IJ,\mathbf{k}} \left[ Ρ_{I'I}(g) 
 \hat{a}^\dagger_{I',g\mathbf{k}} - \hat{a}^\dagger_{I,\mathbf{k}} \right] 
-\hat{a}_{J,\mathbf{k}}
+\hat{a}_{J,\mathbf{k}}.
 ```
 
 !!! warning
