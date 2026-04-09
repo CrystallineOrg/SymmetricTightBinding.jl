@@ -44,7 +44,7 @@ function Crystalline.collect_compatible(
     cbr = CompositeBandRep(tbm)
 
     clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting operations)
-    lgirsv = primitivize.(clgirsv) # [⚠️ phase]: must use `modw=false` (via Collection method)
+    lgirsv = primitivize.(clgirsv) # must be `modw=false` (default for Collection dispatch)
     lgs = group.(lgirsv)  # little groups associated to the EBRs (primitive setting)
     ops = unique(Iterators.flatten(lgs))
 
@@ -123,13 +123,13 @@ function symmetry_eigenvalues(
         #     characters as `Tr(Θ_G D_k)` (not Θ_G†). To match, we compute `w† Θ_G D_k w`,
         #     achieved by placing `conj(Θ_G)` in the conjugated slot of the dot product.
         Θᴳ_conj = reciprocal_translation_phase(orbital_positions(ptbm), -G) # = conj(Θᴳ)
-        # [⚠️ phase]: the `sgrep` functor computes `D_k(g) = e^{-2πi(gk)·v} ρ(h)` (physical
+        # [⚠️ phase]: the `sgrep` functor computes `D_k(g) = e^{-2πi(gk)·t} ρ(h)` (physical
         #     Conv 1), but `calc_bandreps` in Crystalline.jl uses the conjugated global phase
-        #     `e^{+2πi(gk)·v}` (cf. Crystalline.jl issue #12). To match, we conjugate the
-        #     global phase by multiplying by `e^{+4πi(gk)·v}` (flipping the sign of the
+        #     `e^{+2πi(gk)·t}` (cf. Crystalline.jl issue #12). To match, we conjugate the
+        #     global phase by multiplying by `e^{+4πi(gk)·t}` (flipping the sign of the
         #     exponent).
-        v_g = translation(g)
-        phase_correction = cispi(4dot(gk, v_g))
+        t = translation(g)
+        phase_correction = cispi(4dot(gk, t))
         ρ = phase_correction * sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
             v_kpG = Θᴳ_conj * v

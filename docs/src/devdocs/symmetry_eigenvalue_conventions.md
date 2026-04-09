@@ -159,18 +159,14 @@ Crystalline.jl.
   different; the correction factor (`cispi(4dot(gk, v_g))`) is a wart that's easy to get
   confused about
 
-### Option B: Fix the root cause in Crystalline.jl
+### Option B: Fix the root cause in Crystalline.jl (best, but harder)
 
-Change `calc_bandreps` to use `cis(-2π*dot(kv′, tα′α′))` (matching the Elcoro paper).
+Change to use active-convention irreps with minus sign in exponential factors. Flip all associated phase factor signs in Crystalline. Basically, fix https://github.com/thchr/Crystalline.jl/issues/12 and then see if the issues here can be dropped.
 
 - **Pro:** Everything matches the physics and the literature
-- **Con:** The comment in `calc_bandreps` warns that "flipping the sign causes problems for
-  the calculation of some subductions to `LGIrrep`s." This means the `LGIrrep` matrices in
-  Crystalline.jl are also in the conjugated convention. Fixing `calc_bandreps` alone would
-  break the subduction machinery; you'd need to also fix the `LGIrrep` phase conventions.
-  This is a **large, risky change** to a foundational package with high regression risk.
+- **Con:** It is not clear to me what fixing #12 means for the labels of irreps.
 
-### Option C: Change the `SiteInducedSGRepElement` convention (recommended)
+### Option C: Change the `SiteInducedSGRepElement` convention
 
 The key observation is that **the functor's global phase is only used in
 `symmetry_analysis.jl`** — the constraint-building code in `tightbinding.jl` uses
@@ -195,33 +191,6 @@ In this option, `theory.md` should also gain a note (or a new devdoc section) ex
 Since `symmetry_eigenvalues` must match Crystalline.jl's irreps for subduction to work, we
 adopt the conjugated convention for $\mathbf{D}_\mathbf{k}$."
 
-## The centering fix: `primitivize` with `modw=false`
-
-Beyond the phase convention mismatch, a separate bug affected all centered lattices (C- and
-I-centered space groups: SG 68, 88, 141, 142, 214, 220, 230). The original
-`collect_compatible` primitivized little groups via `primitivize(group(first(lgirs)))`, which
-calls `primitivize(g::LittleGroup)` with the default `modw=true`, reducing translations
-modulo the primitive lattice. For centered lattices, the primitivization transforms
-conventional translations $\mathbf{v}_\text{conv}$ to primitive translations
-$P^{-1}\mathbf{v}_\text{conv}$, then reduces mod 1. The discarded lattice vector
-$\mathbf{R}$ changes the phase $e^{2\pi i(g\mathbf{k})\cdot\mathbf{v}}$ by a factor
-$e^{2\pi i(g\mathbf{k})\cdot\mathbf{R}} \neq 1$ at non-$\Gamma$ high-symmetry points.
-
-**Concrete example:** SG 88 ($I4_1/a$), operation $\{-4^+_{001}|\frac{1}{4},\frac{3}{4},\frac{3}{4}\}$ at the P-point $[\frac{1}{2},\frac{1}{2},\frac{1}{2}]$:
-- Conventional translation: $\mathbf{v} = [\frac{1}{4}, \frac{3}{4}, \frac{3}{4}]$
-- Primitivized (full): $P^{-1}\mathbf{v} = [\frac{3}{2}, 1, 1]$
-- Primitivized (reduced mod 1): $[\frac{1}{2}, 0, 0]$ — discards lattice vector $\mathbf{R} = [1, 1, 0]$
-- $g\mathbf{k} \cdot \mathbf{R} = -\frac{1}{4}$, giving phase error $e^{2\pi i \times 0.25} = i$
-
-The fix uses `primitivize(::Collection{LGIrrep})`, which internally passes `modw=false`,
-preserving full (unreduced) translations:
-
-```julia
-clgirsv = irreps(cbr)
-lgirsv = primitivize.(clgirsv)
-lgs = group.(lgirsv)
-```
-
 ## Note: the Hamiltonian Fourier phase is independent
 
 The Hamiltonian evaluation phase ($e^{-2\pi i \mathbf{k}\cdot\boldsymbol{\delta}}$ in
@@ -230,11 +199,3 @@ verified during the investigation: the phase sign only transposes $H(\mathbf{k})
 and eigenvectors at the high-symmetry $\mathbf{k}$-points used by `symmetry_eigenvalues` are
 obtained from `solve(ptbm, k)` which always uses the actual $\mathbf{k}$. Changing the
 Hamiltonian phase sign is therefore not a route to fixing symmetry analysis.
-
-## Test results with all fixes
-
-Across all 230 3D space groups (and all 1D and 2D space groups):
-
-- **All 1D:** pass
-- **All 2D:** pass (including p3, p6, which previously failed at the K-point)
-- **All 3D:** pass (including all centered lattices)
