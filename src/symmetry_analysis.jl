@@ -133,7 +133,7 @@ function symmetry_eigenvalues(
         ρ = phase_correction * sgrep(k)
         for (n, v) in enumerate(eachcol(vs))
             v_kpG = Θᴳ_conj * v
-            symeigs[j, n] = dot(v_kpG, ρ, v) # = v† Θᴳ conj(D_k) v
+            symeigs[j, n] = dot(v_kpG, ρ, v) # = v† Θᴳ (D_k w/ phase_correction) v
             # TODO: preallocate and `mul!` the `Θᴳ_conj * v` term to avoid allocations
         end
     end
