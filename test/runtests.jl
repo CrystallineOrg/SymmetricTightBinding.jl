@@ -8,8 +8,8 @@ include("berry.jl")                # berry curvature and chern numbers
 include("spectrum.jl")             # spectrum evaluation
 include("show.jl")                 # show/display methods
 include("gradients.jl")            # hopping and momentum gradients
-#include("symmetry_analysis.jl")    # each tb model is symmetry compatible w/ its constituent EBRs (not yet working)
-include("symmetry_analysis_stopgap.jl") # paired-down version of above (interim; see PR #89)
+include("symmetry_analysis.jl")    # each tb model is symmetry compatible w/ its constituent EBRs
+include("symmetry_analysis_manual.jl") # paired-down, manual version of above, testing individual cases
 
 @testset "AbstractArray interface" begin
     brs = calc_bandreps(16, Val(2))

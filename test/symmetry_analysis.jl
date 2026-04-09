@@ -11,7 +11,7 @@ using Crystalline: free
     sgnum = 17                         # plane group p6mm
     brs = calc_bandreps(sgnum, Val(2)) # band representations
     cbr = @composite brs[5]            # (2b|A₁) EBR
-    tbm = tb_hamiltonian(cbr)          # tight-binding model (nearest neigbors)
+    tbm = tb_hamiltonian(cbr)          # tight-binding model (nearest neighbors)
     ptbm = tbm([0, 1])                 # zero self-energy, nonzero nearest-neighbor hopping
     ns = collect_compatible(ptbm)
     @test only(ns) == SymmetryVector(cbr) == SymmetryVector(CompositeBandRep(ptbm))
