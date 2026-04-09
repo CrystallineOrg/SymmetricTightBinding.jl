@@ -29,7 +29,7 @@ makedocs(;
         "Internal API" => "internal-api.md",
         "Theory" => "theory.md",
         "Developer notes" => [
-            "devdocs/README.md",
+            "Overview" => "devdocs/README.md",
             "devdocs/trs_notes.md",
             "devdocs/fourier.md",
             "devdocs/1d_example.md",

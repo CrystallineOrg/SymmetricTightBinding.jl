@@ -1,32 +1,13 @@
-# Theory Notes
+# Theory notes
 
 This package heavily relies on [representation theory of groups](https://en.wikipedia.org/wiki/Representation_theory_of_finite_groups) and on [band theory](https://en.wikipedia.org/wiki/Electronic_band_structure) of crystals. Most of this theory was introduced in [Bradley & Cracknell](https://academic.oup.com/book/54787) and later developed by [Bradlyn *et al.*](https://www.nature.com/articles/nature23268). Here, we aim to provide a practical introduction to the main concepts and derive the essential functions and relations that we need for the implementation of this package. Additionally, we generalize some of the previously derived results and make them more accessible to the general public.
 
 ## Table of contents
 
-- [Theory Notes](#theory-notes)
-  - [Table of contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Transformation properties of orbitals](#transformation-properties-of-orbitals)
-    - [Transformation properties of induced Bloch functions](#transformation-properties-of-induced-bloch-functions)
-  - [Build a tight-binding Hamiltonian from a set of symmetric orbitals](#build-a-tight-binding-hamiltonian-from-a-set-of-symmetric-orbitals)
-    - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations)
-    - [Transformation properties under time-reversal symmetry](#transformation-properties-under-time-reversal-symmetry)
-    - [Transformation properties of the Bloch states](#transformation-properties-of-the-bloch-states)
-      - [Transformation properties under lattice translations](#transformation-properties-under-lattice-translations)
-      - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-1)
-  - [Implementing Symbolic Hamiltonians in Non-Symbolic Environments](#implementing-symbolic-hamiltonians-in-non-symbolic-environments)
-    - [Symmetry constraints in the numerical matrix $𝐌^{αβ}\_{ij}$](#symmetry-constraints-in-the-numerical-matrix-𝐌αβ_ij)
-    - [Time-reversal constraint in the numerical matrix $𝐌$](#time-reversal-constraint-in-the-numerical-matrix-𝐌)
-  - [Appendix A](#appendix-a)
-    - [Transformation properties within Convention 2](#transformation-properties-within-convention-2)
-    - [Bloch Hamiltonian under Convention 2](#bloch-hamiltonian-under-convention-2)
-      - [Bloch states under Convention 2](#bloch-states-under-convention-2)
-        - [Transformation under lattice translations](#transformation-under-lattice-translations)
-        - [Transformation properties under symmetry operations](#transformation-properties-under-symmetry-operations-2)
-    - [Conversions between Convention 1 and 2](#conversions-between-convention-1-and-2)
-  - [Appendix B](#appendix-b)
-
+```@contents
+Pages = ["theory.md"]
+Depth = 3
+```
 
 ## Introduction
 
@@ -50,8 +31,8 @@ Now that the basic framework has been established, in the following sections we 
 
 Let us assume we have identified a set of orbitals that describe the band structure of a trivial set of bands. This can be achieved through a TQC analysis of the bands, and several tools exist to perform such a decomposition. For example, the package [PhotonicTightBinding.jl](https://github.com/AntonioMoralesPerez/PhotonicTightBinding.jl) provides this functionality for photonic bands.
 
-> [!NOTE]
-> For instance, Graphene's two *p*<sub>*z*</sub> orbitals sit at the 2b Wyckoff position. Although these orbitals are odd (i.e., changing sign) under mirror in the out-of-plane direction, they are even (i.e., invariant) under all in-plane symmetries, including rotations and mirrors. The corresponding site-symmetry irrep is the A₁ irrep of the 2b Wyckoff position. Thus, these orbitals can be expressed as (2b|A₁). However, take into account that not all band representations can be induced from a set of atomic (electronic) orbitals. Some might correspond to a hybridization or a complex mixture of them.
+!!! note
+    For instance, Graphene's two *p*<sub>*z*</sub> orbitals sit at the 2b Wyckoff position. Although these orbitals are odd (i.e., changing sign) under mirror in the out-of-plane direction, they are even (i.e., invariant) under all in-plane symmetries, including rotations and mirrors. The corresponding site-symmetry irrep is the A₁ irrep of the 2b Wyckoff position. Thus, these orbitals can be expressed as (2b|A₁). However, take into account that not all band representations can be induced from a set of atomic (electronic) orbitals. Some might correspond to a hybridization or a complex mixture of them.
 
 Let us denote by $α$ the site in the Wyckoff position where the orbital is located, and let $i$ label the orbitals associated with that site. Then, the orbital $i$ at site $α$ can be denoted as $ϕ_I(𝐫)$, where we introduce the compound index $I=(α,i)$. The complete set of orbitals needed to describe the system is obtained by considering all orbitals at all sites and all lattice translations of them, i.e., $\{ϕ_I(𝐫-𝐭)\}_{I𝐭}$, where $𝐭$ is a lattice translation vector.
 
@@ -63,11 +44,12 @@ h ϕ_{1i}(𝐫) = [ρ(h)]_{ji} ϕ_{1j}(𝐫)
 
 Since the orbitals are localized at a Wyckoff position, there exists a coset decomposition of the space group $G$ relating each site in the Wyckoff position, i.e., $𝐪_α = g_α 𝐪_1$ with $g_α ∈ G$.
 
-> [!NOTE]
-> The set of $\{g_α\}$, in combination with translations $T$, will generate a decomposition of $G$ with respect to $G_𝐪$:
-> ```math
-> G = \bigcup_α g_α (G_{𝐪_1} \ltimes T)
-> ```
+!!! note
+    The set of $\{g_α\}$, in combination with translations $T$, will generate a decomposition of $G$ with respect to $G_𝐪$:
+
+    ```math
+    G = \bigcup_α g_α (G_{𝐪_1} \ltimes T).
+    ```
 
 Thus, each function in the unit cell can be built from the ones at site $𝐪_1$ as follows:
 
@@ -133,7 +115,7 @@ g φ_{iα,𝐤}(𝐫) = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} g
 where we have defined $𝐭' = R𝐭 + 𝐭_{βα} ⇒ 𝐭 = R^{-1} (𝐭'-𝐭_{βα})$, and we have used the following property: $𝐤·(R 𝐫) = (R^T 𝐤)·𝐫$. Finally, if we define the action of a symmetry operation $g = \{R|𝐯\}$ on a reciprocal space vector 𝐤 as: $g𝐤 ≡ [R^{-1}]^T 𝐤$, we can rewrite the previous relation as:
 
 ```math
-g φ_{I,𝐤}(𝐫) = e^{-i(g 𝐤)·𝐯} \sum_J [ρ(h)]_{JI} φ_{J,g 𝐤}(𝐫)
+g φ_{I,𝐤}(𝐫) = e^{-i(g 𝐤)·𝐯} \sum_J [ρ(h)]_{JI} φ_{J,g 𝐤}(𝐫).
 ```
 
 This relation is crucial in the implementation of the package, since it states the band representation of the system. If a tight-binding model is built from this set of functions, its band structure will, by construction, replicate that of the original system. In other words, the tight-binding model will inherit all symmetries of the system, forcing the same degeneracies the system has, and exhibit the same symmetry-indicated topology.
@@ -141,7 +123,7 @@ This relation is crucial in the implementation of the package, since it states t
 For the sake of simplicity, we define a matrix $𝐃_𝐤(g)$ whose entries are given by the previous operation, i.e., $[𝐃_𝐤(g)]_{JI} = e^{-i(g 𝐤)·𝐯} [ρ(h)]_{JI}$, where $I = (α,i)$, $J = (β,j)$ and $𝐭_{βα} = g 𝐪_α - 𝐪_β$. Then, we can rewrite the previous relation as:
 
 ```math
-\boxed{g φ_{I,𝐤}(𝐫) = \sum_J [𝐃_𝐤(g)]_{JI} φ_{J,g 𝐤}(𝐫)}
+\boxed{g φ_{I,𝐤}(𝐫) = \sum_J [𝐃_𝐤(g)]_{JI} φ_{J,g 𝐤}(𝐫).}
 ```
 
 It is important to notice that the dependence on 𝐤 of the representation $𝐃_𝐤$ is a global phase factor. This is convenient for computational purposes when imposing the symmetry constraints in the Hamiltonian.
@@ -155,19 +137,19 @@ Second quantization rephrases quantum mechanics in terms of fields and occupatio
 In order to do so, we need to introduce creation and annihilation operators. Since we want to use the basis of orbitals previously introduced, we can define them as:
 
 ```math
-\ket{ϕ_{I,𝐭}} ≡ ĉ^†_{I,𝐭} \ket{\text{vac}}
+\ket{ϕ_{I,𝐭}} ≡ ĉ^†_{I,𝐭} \ket{\text{vac}}.
 ```
 
 Then, the most general tight-binding Hamiltonian can be written using those operators as:
 
 ```math
-Ĥ = \sum_{IJ,𝐭𝐭'} h_{IJ,𝐭-𝐭'} ĉ^†_{I,𝐭} ĉ_{J,𝐭'}
+Ĥ = \sum_{IJ,𝐭𝐭'} h_{IJ,𝐭-𝐭'} ĉ^†_{I,𝐭} ĉ_{J,𝐭'}.
 ```
 
 This Hamiltonian states that the probability amplitude of "hopping" from an orbital $\ket{ϕ_{J,𝐭'}}$ to an orbital $\ket{ϕ_{I,𝐭}}$ is given by the amplitude term $h_{IJ,𝐭-𝐭'}$. Notice that we have assumed that the hopping amplitude depends only on the relative distance between both orbitals. This implies that the Hamiltonian is translation invariant, as it should be. In the following, we refer to that distance as $𝐑 = 𝐭-𝐭'$. Note that it must be a lattice translation. Using this definition we can rewrite the previous Hamiltonian as:
 
 ```math
-Ĥ = \sum_{IJ,𝐑𝐭'} h_{IJ,𝐑} ĉ^†_{I,𝐑+𝐭'} ĉ_{J,𝐭'}
+Ĥ = \sum_{IJ,𝐑𝐭'} h_{IJ,𝐑} ĉ^†_{I,𝐑+𝐭'} ĉ_{J,𝐭'}.
 ```
 
 In order to be consistent with the previous choice of the Fourier transform, the creation operator in reciprocal space must be related to $ĉ^†_{I,𝐭}$ by:
@@ -175,7 +157,7 @@ In order to be consistent with the previous choice of the Fourier transform, the
 ```math
 \ket{φ_{I,𝐤}} = â_{I,𝐤}^† \ket{\text{vac}} \\
 = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ĉ_{I,𝐭}^† \ket{\text{vac}} \\
-⇒ â_{I,𝐤}^† = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ĉ_{I,𝐭}^†
+⇒ â_{I,𝐤}^† = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ĉ_{I,𝐭}^†.
 ```
 
 Notice that since $φ_{I,𝐤+𝐆}(𝐫) = e^{i𝐆·𝐪_α} φ_{I,𝐤}(𝐫)$, we also have $â_{I,𝐤+𝐆}^† = e^{i𝐆·𝐪_α} â_{I,𝐤}^†$, consistently.
@@ -192,7 +174,7 @@ where we have used the inverse Fourier transform $ĉ_{I,𝐭}^† = \frac{1}{\sq
 Finally, if we define $h_{IJ,𝐤} = \sum_𝐑 h_{IJ,𝐑} e^{-i𝐤·(𝐑+𝐪_α-𝐪_β)}$, we obtain the usual expression for a tight-binding Hamiltonian in reciprocal space:
 
 ```math
-Ĥ = \sum_{IJ,𝐤} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤}
+Ĥ = \sum_{IJ,𝐤} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤}.
 ```
 
 As shown, the hopping amplitude in reciprocal space is computed from a sum of the real-space hopping amplitudes for all lattice translations 𝐑. Usually, such a sum is truncated with some "arbitrary" (subjective) cutoff. One common approach is to consider a certain number of nearest neighbors. Since we are interested in building a symmetry-constrained tight-binding model and symmetry-related terms might not coincide with $n$-th nearest neighbors, we consider a different approach. As we will develop later, our strategy focuses on asking the user to provide a set of 𝐑-vectors where to look, at least, for hopping terms, and then search for all symmetry-related terms starting from that initial, but potentially not complete, set.
@@ -200,7 +182,7 @@ As shown, the hopping amplitude in reciprocal space is computed from a sum of th
 As can be seen, the tight-binding Hamiltonian is diagonal in reciprocal space. This is due to the assumption that the Hamiltonian is translation invariant. Then, it is natural to define what is usually called the *Bloch Hamiltonian* $Ĥ_𝐤$, which consists of the diagonal blocks in reciprocal space of the tight-binding Hamiltonian:
 
 ```math
-Ĥ_𝐤 = \sum_{IJ} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤}
+Ĥ_𝐤 = \sum_{IJ} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤}.
 ```
 
 Some general properties must be fulfilled independent of its representation, such as periodicity in reciprocal space. However, as shown above, the creation and annihilation operators are not periodic under reciprocal lattice translations and we also have that:
@@ -208,7 +190,7 @@ Some general properties must be fulfilled independent of its representation, suc
 ```math
 h_{IJ,𝐤+𝐆} = \sum_𝐑 h_{IJ,𝐑} e^{-i(𝐤+𝐆)·(𝐑+𝐪_α-𝐪_β)} \\
 = e^{-i𝐆·(𝐪_α-𝐪_β)} \sum_𝐑 h_{IJ,𝐑} \cancel{e^{-i𝐆·𝐑}} e^{-i𝐤·(𝐑+𝐪_α-𝐪_β)} \\
-= e^{i𝐆·(𝐪_β-𝐪_α)} h_{IJ,𝐤}
+= e^{i𝐆·(𝐪_β-𝐪_α)} h_{IJ,𝐤}.
 ```
 
 However, all these phase factors cancel out in the Bloch Hamiltonian, so it is translationally invariant in reciprocal space, as can be seen:
@@ -216,7 +198,7 @@ However, all these phase factors cancel out in the Bloch Hamiltonian, so it is t
 ```math
 Ĥ_{𝐤+𝐆} = \sum_{IJ} h_{IJ,𝐤+𝐆} â_{I,𝐤+𝐆}^† â_{J,𝐤+𝐆} \\
 = \sum_{IJ} e^{i𝐆·(𝐪_β-𝐪_α)} h_{IJ,𝐤} e^{i𝐆·𝐪_α} â_{I,𝐤}^† e^{-i𝐆·𝐪_β} â_{J,𝐤} \\
-= \sum_{IJ} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤} = Ĥ_𝐤
+= \sum_{IJ} h_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤} = Ĥ_𝐤.
 ```
 
 Then, we obtain the important translational invariance in reciprocal space of the Bloch Hamiltonian: $Ĥ_{𝐤+𝐆} = Ĥ_𝐤$. This property allows us to consider only the first Brillouin zone when we examine the Bloch Hamiltonian.
@@ -237,19 +219,19 @@ Before proceeding, we deduce the constraints that the symmetries of the system i
 ```math
 ĝ â_{I,𝐤}^† ĝ^{-1} \ket{\text{vac}} = ĝ â_{I,𝐤}^† \ket{\text{vac}} = ĝ \ket{φ_{I,𝐤}} \\
 = \sum_J [𝐃_𝐤(g)]_{JI} \ket{φ_{J,g𝐤}} = \sum_J [𝐃_𝐤(g)]_{JI} â_{J,g𝐤}^† \ket{\text{vac}} \\
-⇒ ĝ â_{I,𝐤}^† ĝ^{-1} = \sum_J [𝐃_𝐤(g)]_{JI} â_{J,g𝐤}^†
+⇒ ĝ â_{I,𝐤}^† ĝ^{-1} = \sum_J [𝐃_𝐤(g)]_{JI} â_{J,g𝐤}^†.
 ```
 
 Since the symmetry operations $ĝ$ are unitary, i.e., $ĝ^{-1} = ĝ^†$, we can deduce the transformation properties of the annihilation operator from those of the creation operator, resulting in the relation:
 
 ```math
-ĝ â_{I,𝐤} ĝ^{-1} = \sum_J [𝐃_𝐤^*(g)]_{JI} â_{J,g𝐤}
+ĝ â_{I,𝐤} ĝ^{-1} = \sum_J [𝐃_𝐤^*(g)]_{JI} â_{J,g𝐤}.
 ```
 
 Considering these two transformation properties of the operators, we can deduce the set of relations that the symmetry operations enforce on the Bloch Hamiltonian. The invariance of the Hamiltonian under symmetry operations reads as:
 
 ```math
-Ĥ = ĝ Ĥ ĝ^{-1}
+Ĥ = ĝ Ĥ ĝ^{-1}.
 ```
 
 Expanding the Hamiltonian in terms of the creation and annihilation operator basis leads us to:
@@ -259,7 +241,7 @@ Expanding the Hamiltonian in terms of the creation and annihilation operator bas
 = \sum_{IJ,𝐤} ĝ â_{I,𝐤}^† ĝ^{-1} h_{IJ,𝐤} ĝ â_{J,𝐤} ĝ^{-1} \\
 = \sum_{IJ,𝐤,I'J'} [𝐃_𝐤(g)]_{I'I} â_{I',g𝐤}^†  h_{IJ,𝐤} [𝐃_𝐤^*(g)]_{J'J} â_{J',g𝐤} \\
 = \sum_{𝐤,I'J'} â_{I',g𝐤}^† [𝐃_𝐤(g) 𝐇_𝐤 𝐃_𝐤^†(g)]_{I'J'} â_{J',g𝐤} \\
-⇒ \boxed{𝐇_{g𝐤} = 𝐃_𝐤(g) 𝐇_𝐤 𝐃_𝐤^†(g)}
+⇒ \boxed{𝐇_{g𝐤} = 𝐃_𝐤(g) 𝐇_𝐤 𝐃_𝐤^†(g).}
 ```
 
 This symmetry constraint strongly restricts the functional form of $𝐇_𝐤$. Rather than being a completely general Hermitian (or anti-Hermitian) matrix, $𝐇_𝐤$ must now lie in the subspace of matrices that fulfill the previous constraints. This ensures that the model preserves all symmetries and reproduces the correct degeneracies and connectivity of the original band structure.
@@ -278,7 +260,7 @@ Then, the action of this symmetry on the Bloch functions is:
 \hat{𝒯} (α \ket{φ_{I,𝐤}}) = α^* \hat{𝒯} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} \\
 = α^* \sum_𝐭 e^{-i𝐤·(𝐭+𝐪_α)} \hat{𝒯} \ket{ϕ_{I,𝐭}} \\
 = α^* \sum_𝐭 e^{-i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} \\
-= α^* \ket{φ_{I,-𝐤}}
+= α^* \ket{φ_{I,-𝐤}},
 ```
 where $α ∈ \mathbb{C}$. Notice that time reversal acts as an anti-linear operator.
 
@@ -287,23 +269,23 @@ Following a similar strategy as before, the following relations for the creation
 ```math
 \boxed{\hat{𝒯} \hat{a}^†_{I,\mathbf{k}} \hat{𝒯}^{-1} = 
 \hat{a}^†_{I,-\mathbf{k}}; \quad \hat{𝒯} \hat{a}_{I,\mathbf{k}} 
-\hat{𝒯}^{-1} = \hat{a}_{I,-\mathbf{k}}}
+\hat{𝒯}^{-1} = \hat{a}_{I,-\mathbf{k}}}.
 ```
 
 Then, invariance under time-reversal symmetry of the Hamiltonian reduces to:
 
-$$
+```math
 \hat{𝒯} \hat{H} \hat{𝒯}^{-1} = \sum_{IJ,𝐤} \hat{𝒯} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤} \hat{𝒯}^{-1} \\
 = \sum_{IJ,𝐤} \hat{𝒯} \hat{a}^†_{I,𝐤} \hat{𝒯}^{-1} h^*_{IJ,𝐤} \hat{𝒯} \hat{a}_{J,𝐤} \hat{𝒯}^{-1} \\
 = \sum_{IJ,𝐤} \hat{a}^†_{I,-𝐤} h^*_{IJ,𝐤} \hat{a}_{J,-𝐤} = \\
-\hat{H} = \sum_{IJ,𝐤} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤}
-$$
+\hat{H} = \sum_{IJ,𝐤} \hat{a}^†_{I,𝐤} h_{IJ,𝐤} \hat{a}_{J,𝐤},
+```
 
 which implies the following relation:
 
-$$
-\boxed{𝐇_𝐤 = 𝐇^*_{-𝐤}}
-$$
+```math
+\boxed{𝐇_𝐤 = 𝐇^*_{-𝐤}}.
+```
 
 As stated previously, we are interested in diagonalizing this matrix and finding the eigenvectors and eigenvalues associated with it at each 𝐤-point. Those eigenvectors correspond to vectors of coefficients, associated with the basis set on which we built the Bloch Hamiltonian, and describe the Bloch state of the system at a particular 𝐤-point and energy. In the following section, we elaborate on this topic and develop how these Bloch states transform under the symmetry operations of the system. A sanity check is to compare the band representation of both the real system’s band structure and the tight-binding model’s band structure, which should be equal.
 
@@ -319,7 +301,7 @@ Let us start by defining the eigenvalue problem from which we start:
 where $\{E_{n𝐤}\}$ is the set of eigenvalues (energies) at each 𝐤-point and $\{𝐰_{n,𝐤}\}$ the set of eigenvectors associated with them. Each eigenvector is a vector of coefficients which corresponds to a particular Bloch state in the basis used for describing the Bloch Hamiltonian, i.e.:
 
 ```math
-\ket{ψ_{n𝐤}} = \sum_I w_{I,n𝐤} \ket{φ_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{I,n𝐤} e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}}
+\ket{ψ_{n𝐤}} = \sum_I w_{I,n𝐤} \ket{φ_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{I,n𝐤} e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}}.
 ```
 
 Now that the Bloch states have been defined, we can deduce their transformation properties. First, we analyze their transformation properties under lattice translations in real and reciprocal space and, subsequently, their transformation properties under symmetry operation of the space group.
@@ -333,7 +315,7 @@ Let us first consider lattice translations in real space:
 = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{I,n𝐤} e^{i𝐤·(𝐭+𝐪_α)} \braket{𝐫+𝐑|ϕ_{n,𝐭}} \\
 = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{I,n𝐤} e^{i𝐤·(𝐭+𝐪_α)} \braket{𝐫|ϕ_{n,𝐭-𝐑}} \\
 = e^{i𝐤·𝐑} \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{I,n𝐤} e^{i𝐤·(𝐭-𝐑+𝐪_α)} \braket{𝐫|ϕ_{n,𝐭-𝐑}} \\
-= e^{i𝐤·𝐑} \braket{𝐫|ψ_{n𝐤}} = e^{i𝐤·𝐑} ψ_{n𝐤}(𝐫)
+= e^{i𝐤·𝐑} \braket{𝐫|ψ_{n𝐤}} = e^{i𝐤·𝐑} ψ_{n𝐤}(𝐫).
 ```
 
 The Bloch states transform as Bloch functions under translations in real space, as expected.
@@ -344,19 +326,19 @@ Secondly, let us analyze how they transform under reciprocal lattice translation
 𝐇_{𝐤+𝐆} 𝐰_{n,𝐤+𝐆} = E_{n,𝐤+𝐆} 𝐰_{n,𝐤+𝐆} \\
 ⇒ \sum_J h_{IJ,𝐤+𝐆} w_{Jn,𝐤+𝐆} = E_{n,𝐤} w_{In,𝐤+𝐆} \\
 ⇒ \sum_J e^{i𝐆·(𝐪_β-𝐪_α)} h_{IJ,𝐤} w_{Jn,𝐤+𝐆} = E_{n,𝐤} w_{In,𝐤+𝐆} \\
-⇒ \sum_J h_{IJ,𝐤} e^{i𝐆·𝐪_β} w_{Jn,𝐤+𝐆} = E_{n,𝐤} e^{i𝐆·𝐪_α} w_{In,𝐤+𝐆}
+⇒ \sum_J h_{IJ,𝐤} e^{i𝐆·𝐪_β} w_{Jn,𝐤+𝐆} = E_{n,𝐤} e^{i𝐆·𝐪_α} w_{In,𝐤+𝐆}.
 ```
 
 Then, this implies that the eigenvectors gain a phase factor when translated in reciprocal space such that:
 
 ```math
-w_{In,𝐤+𝐆} = e^{-i𝐆·𝐪_α} w_{In,𝐤}
+w_{In,𝐤+𝐆} = e^{-i𝐆·𝐪_α} w_{In,𝐤}.
 ```
 
 To make this easier, we can define a diagonal matrix such that $[Θ_𝐆]_{II} = e^{-i𝐆·𝐪_α}$; then the previous expression can be rewritten as:
 
 ```math
-𝐰_{n,𝐤+𝐆} = Θ_𝐆 𝐰_{n,𝐤}
+𝐰_{n,𝐤+𝐆} = Θ_𝐆 𝐰_{n,𝐤}.
 ```
 
 Notice that this transformation is not a simple phase factor — which is indeterminate for eigenvectors; rather, it acts differently on each entry of the eigenvector. This extra factor is crucial when analyzing the invariance of the Bloch states under reciprocal lattice translations, as we will see now.
@@ -366,7 +348,7 @@ Let us deduce how Bloch states will transform under reciprocal lattice translati
 ```math
 \ket{ψ_{n,𝐤+𝐆}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{In,𝐤+𝐆} e^{i(𝐤+𝐆)·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} \\
 = \frac{1}{\sqrt{N}} \sum_{I,𝐭} \cancel{e^{-i𝐆·𝐪_α}} w_{In,𝐤} \cancel{e^{i𝐆·𝐭}} \cancel{e^{i𝐆·𝐪_α}} e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} \\
-= \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{In,𝐤} e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} = \ket{ψ_{n𝐤}}
+= \frac{1}{\sqrt{N}} \sum_{I,𝐭} w_{In,𝐤} e^{i𝐤·(𝐭+𝐪_α)} \ket{ϕ_{I,𝐭}} = \ket{ψ_{n𝐤}}.
 ```
 
 The Bloch states remain invariant under reciprocal lattice translations, as they should. This is a crucial feature which must be upheld, regardless of the basis used for representing the Hamiltonian or the Fourier convention used. We prove that the property also holds for another Fourier convention in [Appendix A](#appendix-a).
@@ -378,7 +360,7 @@ Here we analyze how the Bloch states transform under more complex symmetry opera
 ```math
 ĝ \ket{ψ_{n𝐤}} = \sum_I w_{I,n𝐤} ĝ \ket{φ_{I,𝐤}} \\
 = \sum_{IJ} w_{I,n𝐤} [𝐃_𝐤(g)]_{JI} \ket{φ_{J,g𝐤}} \\
-= \sum_{IJ} [𝐃_𝐤(g)]_{JI} w_{I,n𝐤} \ket{φ_{J,g𝐤}}
+= \sum_{IJ} [𝐃_𝐤(g)]_{JI} w_{I,n𝐤} \ket{φ_{J,g𝐤}}.
 ```
 
 We are particularly interested in the transformation under operations $ĝ$ in the little group $G_𝐤$ of a particular 𝐤-point. These operations leave the particular 𝐤-point invariant up to a lattice translation, i.e., $g 𝐤 = 𝐤 + 𝐆$. How these functions transform under those operations at each high-symmetry point allows us to assign an irrep to each of the Bloch states at that 𝐤-point. Those should coincide with the ones obtained from the original system's band structure. The irrep can be assigned by computing the symmetry eigenvalues associated with each Bloch state. These are computed by:
@@ -389,7 +371,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [𝐃_𝐤(g)]_{J'J} \braket{φ_{I,𝐤}|φ_{J',𝐤+𝐆}} \\
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [𝐃_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} \braket{φ_{I,𝐤}|φ_{J',𝐤}} \\
 = \sum_{IJJ'} (w_{I,n𝐤})^* w_{J,n𝐤} [𝐃_𝐤(g)]_{J'J} e^{i𝐆·𝐪_{β'}} δ_{IJ'} \\
-= \sum_{IJ} (w_{I,n𝐤})^* e^{i𝐆·𝐪_α} [𝐃_𝐤(g)]_{IJ} w_{J,n𝐤}
+= \sum_{IJ} (w_{I,n𝐤})^* e^{i𝐆·𝐪_α} [𝐃_𝐤(g)]_{IJ} w_{J,n𝐤},
 ```
 
 where we have used how the Bloch functions transform under reciprocal lattice translations — a property inherited from the convention choice — and their orthogonality.
@@ -405,7 +387,7 @@ where we have used how the Bloch functions transform under reciprocal lattice tr
     ĝ ψ
     = ĝ \sum_i c_i 𝐯_i
     =  \sum_i c_i ĝ 𝐯_i 
-    =  \sum_{ij} c_i D_{ji} 𝐯_j
+    =  \sum_{ij} c_i D_{ji} 𝐯_j.
     ```
 
     The latter expression can be interpreted equivalently as either
@@ -493,7 +475,7 @@ If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we als
 Then, each term of the Hamiltonian matrix $𝐇^{αβ}_𝐤$ can be written as bilinear form in the following way:
 
 ```math
-[𝐇^{αβ}_𝐤]_{ij} = 𝐯_𝐤^T 𝐌^{αβ}_{ij} 𝐭
+[𝐇^{αβ}_𝐤]_{ij} = 𝐯_𝐤^T 𝐌^{αβ}_{ij} 𝐭,
 ```
 
 where $𝐌^{αβ}_{ij}$ is a numerical matrix that will relate a phase with a free-parameter present on the Hamiltonian matrix term.
@@ -516,27 +498,27 @@ where $𝐃_𝐤^α$ and $𝐃_𝐤^β$ are the representation matrices of the s
 Then,
 
 ```math
-𝘃_{g𝗸}^T 𝐌^{αβ}_{ij} 𝘁 = [𝐃_𝐤^α(g)]_{ir} 𝘃_𝗸^T 𝐌^{αβ}_{rs} 𝘁 [𝐃_𝐤^β(g)]_{sj}^†
+𝘃_{g𝗸}^T 𝐌^{αβ}_{ij} 𝘁 = [𝐃_𝐤^α(g)]_{ir} 𝘃_𝗸^T 𝐌^{αβ}_{rs} 𝘁 [𝐃_𝐤^β(g)]_{sj}^†.
 ```
 
 Since the representation matrices act on different indices than $𝘃$ and $𝘁$, we can permute them, obtaining:
 
 ```math
-𝘃^T_{g𝗸} 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁
+𝘃^T_{g𝗸} 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁.
 ```
 
 To compare both sides of the equation, we must analyze what $𝘃_{g𝗸}$ means. As can be seen above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As discussed above, we defined the action of $g$ on $𝗸$ by $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌^{αβ}_{ij}$ as follows:
 
 ```math
 (σ(g) 𝘃_𝗸)^T 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁 \\
-𝘃^T_𝗸 [σ(g)]^T 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁
+𝘃^T_𝗸 [σ(g)]^T 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁.
 ```
 
 Then, performing some algebra we obtain that:
 
 ```math
 𝘃^T_𝗸 \left( [σ(g)]^T 𝐌^{αβ}_{ij} - [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† \right) 𝘁 = 0 \\
-⇒ \boxed{\left( [σ(g)]^T 𝐌^{αβ}_{ij} - [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† \right) 𝘁 = 0}
+⇒ \boxed{\left( [σ(g)]^T 𝐌^{αβ}_{ij} - [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† \right) 𝘁 = 0.}
 ```
 
 This implies that if we compute the null space of the previous subtraction, we obtain a set of free-parameter vectors that fulfill the constraints imposed by unitary operations.
@@ -559,7 +541,7 @@ The benefit of this decomposition is that it greatly simplifies the taking of co
 We start again from the condition imposed on the Hamiltonian matrix:
 
 ```math
-𝐇^{αβ}_{-𝐤} = [𝐇^{αβ}_𝐤]^*
+𝐇^{αβ}_{-𝐤} = [𝐇^{αβ}_𝐤]^*.
 ```
 
 Representing each element on both sides using the numerical matrices:
@@ -582,13 +564,13 @@ The constraint then reduces to:
 ```math
 𝐯ᵀ_{-𝐤} \begin{bmatrix} 𝐌^{αβ}_{ij} & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝐭_\text{real} \\ i𝐭_\text{imag} \end{bmatrix} = 𝐯ᵀ_{-𝐤} \begin{bmatrix} 𝐌^{αβ}_{ij} & -𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} \\
 ⇒ 𝐯ᵀ_{-𝐤} \begin{bmatrix} 0 & 2𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} = 0 \\
-⇒ \boxed{\begin{bmatrix} 0 & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} = 0}
+⇒ \boxed{\begin{bmatrix} 0 & 𝐌^{αβ}_{ij} \end{bmatrix} \begin{bmatrix} 𝘁_\text{real} \\ i 𝘁_\text{imag} \end{bmatrix} = 0.}
 ```
 
 This implies that, in our implementation, time-reversal symmetry simply reduces to requiring that the free parameters are real.
 
-> [!NOTE]
-> The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_timereversal_related_orbits!`.
+!!! note
+    The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_timereversal_related_orbits!`.
 
 Finally, to obtain the full set of symmetry-allowed free parameters, we must intersect the null space from the spatial symmetry constraints (derived in the [previous section](#symmetry-constraints-in-the-numerical-matrix-mathbfm_ijalphabeta)) with the TRS constraint derived above. This intersection is computed using the [Zassenhaus algorithm](https://en.wikipedia.org/wiki/Zassenhaus_algorithm), implemented in `zassenhaus_intersection`.
 
@@ -596,8 +578,8 @@ Finally, to obtain the full set of symmetry-allowed free parameters, we must int
 
 In this appendix we present, develop, and compare two common conventions in the literature for Fourier transforms:
 
-1. **Convention 1:** $φ^{(1)}_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭)$
-2. **Convention 2:** $φ^{(2)}_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·𝐭} ϕ_I(𝐫-𝐭)$
+1. **Convention 1:** $φ^{(1)}_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·(𝐭+𝐪_α)} ϕ_I(𝐫-𝐭)$.
+2. **Convention 2:** $φ^{(2)}_{I,𝐤}(𝐫) ≡ \frac{1}{\sqrt{N}} \sum_𝐭 e^{i𝐤·𝐭} ϕ_I(𝐫-𝐭)$.
 
 where Convention 1 is the one we have been using in the theory notes and Convention 2 is another one commonly used in the literature and other packages such as [Bradlyn *et al.*](https://www.nature.com/articles/nature23268). This second convention does not include the position of the orbital $𝐪_α$ in the phase factor of the Fourier transform.
 
@@ -614,7 +596,7 @@ We first prove the previous statement: Convention 2 is periodic in reciprocal sp
 ```math
 φ^{(2)}_{I,𝐤+𝐆} = \sum_𝐭 e^{i(𝐤+𝐆)·𝐭} ϕ_I(𝐫-𝐭) \\
 = \sum_𝐭 \cancel{e^{i𝐆·𝐭}} e^{i𝐤·𝐭} ϕ_I(𝐫-𝐭) \\
-= φ^{(2)}_{I,𝐤}
+= φ^{(2)}_{I,𝐤}.
 ```
 
 This implies that the Bloch functions are periodic under reciprocal lattice translations within this convention. This has interesting implications in the computation of some parts of this package, such as, the representation of symmetry operations or symmetry eigenvalues. 
@@ -633,7 +615,7 @@ where we made the substitution $𝐭' = R𝐭 + 𝐭_{βα}$, and used the defin
 Similarly as before, we can define a representation matrix $𝐃^{(2)}_𝐤(g)$ whose entries are $[𝐃^{(2)}_𝐤(g)]_{IJ} = e^{-i(g𝐤)·𝐭_{βα}} [ρ(h)]_{IJ}$, where $I = (i,α)$ and $J = (j,β)$. Then, the previous expression reduces to:
 
 ```math
-g φ^{(2)}_{I,𝐤}(𝐫) = \sum_j [𝐃^{(2)}_𝐤(g)]_{JI} φ^{(2)}_{jβ,g𝐤}(𝐫)
+g φ^{(2)}_{I,𝐤}(𝐫) = \sum_j [𝐃^{(2)}_𝐤(g)]_{JI} φ^{(2)}_{jβ,g𝐤}(𝐫).
 ```
 
 Notice that the representation matrix for the space group operations differs between conventions, i.e., $𝐃^{(1)}_𝐤(g) ≠ 𝐃^{(2)}_𝐤(g)$. The representation under Convention 1 depends on the translational part $𝐯$, as shown before, whereas under Convention 2 it depends not on a global phase factor but on a local phase factor involving $𝐭_{βα}$.
@@ -645,7 +627,7 @@ The next step is to build a tight-binding model using this set of functions as a
 We want to use the previously introduced Bloch functions as a basis to construct a Bloch Hamiltonian in reciprocal space. Once again, we start from the most general tight-binding Hamiltonian, which, as we described, can be written as:
 
 ```math
-Ĥ = \sum_{IJ,𝐑𝐭} h_{IJ,𝐑} ĉ^†_{I,𝐭+𝐑} ĉ_{J,𝐭}
+Ĥ = \sum_{IJ,𝐑𝐭} h_{IJ,𝐑} ĉ^†_{I,𝐭+𝐑} ĉ_{J,𝐭}.
 ```
 
 Since we want to use the previous Bloch functions as a basis, we have to introduce a set of creation and annihilation operators that are consistent with the convention choice — Convention 2 in this case. This is satisfied by the following relation:
@@ -656,25 +638,25 @@ Since we want to use the previous Bloch functions as a basis, we have to introdu
 where we have used $\hat{b}$ as the notation for the operators under this new convention. It is interesting to notice that you can obtain one from the other by using the following relation:
 
 ```math
-\hat{b}_{I,𝐤}^† = e^{-i𝐤·𝐪_α} â_{I,𝐤}^†
+\hat{b}_{I,𝐤}^† = e^{-i𝐤·𝐪_α} â_{I,𝐤}^†.
 ```
 
 Introducing the previous transformation into the tight-binding Hamiltonian we obtain that:
 
 ```math
-Ĥ = \sum_{IJ,𝐑,𝐤} h_{IJ,𝐑} e^{i𝐤·𝐑} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤}
+Ĥ = \sum_{IJ,𝐑,𝐤} h_{IJ,𝐑} e^{i𝐤·𝐑} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤}.
 ```
 
 If we define $h^{(2)}_{IJ,𝐤} = \sum_𝐑 h_{IJ,𝐑} e^{i𝐤·𝐑}$, we obtain the usual expression for a tight-binding Hamiltonian in reciprocal space:
 
 ```math
-Ĥ = \sum_{IJ,𝐤} h^{(2)}_{IJ,𝐤} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤}
+Ĥ = \sum_{IJ,𝐤} h^{(2)}_{IJ,𝐤} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤}.
 ```
 
 From here, we can define the Bloch Hamiltonian which will be the diagonal part of the Hamiltonian in reciprocal space, i.e.:
 
 ```math
-Ĥ_𝐤 = \sum_{IJ} h^{(2)}_{IJ,𝐤} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤}
+Ĥ_𝐤 = \sum_{IJ} h^{(2)}_{IJ,𝐤} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤}.
 ```
 
 Since the Bloch functions are now periodic, the Bloch Hamiltonian is periodic as well. We verify this explicitly. First, the creation operator transforms under a reciprocal lattice translation as:
@@ -682,7 +664,7 @@ Since the Bloch functions are now periodic, the Bloch Hamiltonian is periodic as
 ```math
 \hat{b}_{I,𝐤+𝐆}^† = \frac{1}{\sqrt{N}} \sum_𝐭 e^{i(𝐤+𝐆)·𝐭} ĉ_{I,𝐭}^† \\
 = \frac{1}{\sqrt{N}} \sum_𝐭 \cancel{e^{i𝐆·𝐭}} e^{i𝐤·𝐭} ĉ_{I,𝐭}^† \\
-= \hat{b}_{I,𝐤}^†
+= \hat{b}_{I,𝐤}^†.
 ```
 
 Secondly, let us study how the coefficients transform under a reciprocal lattice translation:
@@ -690,14 +672,14 @@ Secondly, let us study how the coefficients transform under a reciprocal lattice
 ```math
 h^{(2)}_{IJ,𝐤+𝐆} = \sum_𝐑 h_{IJ,𝐑} e^{i(𝐤+𝐆)·𝐑} \\
 = \sum_𝐑 h_{IJ,𝐑} \cancel{e^{i𝐆·𝐑}} e^{i𝐤·𝐑} \\
-= h^{(2)}_{IJ,𝐤}
+= h^{(2)}_{IJ,𝐤}.
 ```
 
 As can be seen, all the components are periodic within this convention. This is the common reason why it is heavily used in the literature. Proving now the translational invariance of the Bloch Hamiltonian:
 
 ```math
 Ĥ_{𝐤+𝐆} = \sum_{IJ} h^{(2)}_{IJ,𝐤+𝐆} \hat{b}_{I,𝐤+𝐆}^† \hat{b}_{J,𝐤+𝐆} \\
-= \sum_{IJ} h^{(2)}_{IJ,𝐤} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤} = Ĥ_𝐤
+= \sum_{IJ} h^{(2)}_{IJ,𝐤} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤} = Ĥ_𝐤.
 ```
 
 This is an important property since the eigenvalues of this Bloch Hamiltonian, which correspond to the energies of the Bloch states of the system, must be periodic in reciprocal space, allowing us to restrict to the first Brillouin zone. Additionally, since the Hamiltonian matrix $𝐇^{(2)}_𝐤$ is now periodic by itself, the eigenvectors $𝐰^{(2)}_{n𝐤}$ will also be periodic. This has important implications, for example, when computing the symmetry eigenvalues.
@@ -709,7 +691,7 @@ Before studying the transformation properties of the Bloch states, we want to me
 Let us now jump into the transformation properties of the Bloch states. The Bloch states are represented using the basis obtained by Convention 2 as:
 
 ```math
-\ket{ψ_{n𝐤}} = \sum_I w^{(2)}_{I,n𝐤} \ket{φ^{(2)}_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·𝐭} \ket{ϕ_{I,𝐭}}
+\ket{ψ_{n𝐤}} = \sum_I w^{(2)}_{I,n𝐤} \ket{φ^{(2)}_{I,𝐤}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·𝐭} \ket{ϕ_{I,𝐭}}.
 ```
 
 Let us first study how the Bloch states transform under lattice translations in real and reciprocal space and, then, deduce how they transform under more complex symmetry operations.
@@ -723,7 +705,7 @@ First, consider lattice translations in real space:
 = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·𝐭} \braket{𝐫+𝐑|ϕ_{n,𝐭}} \\
 = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·𝐭} \braket{𝐫|ϕ_{n,𝐭-𝐑}} \\
 = e^{i𝐤·𝐑} \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{I,n𝐤} e^{i𝐤·(𝐭-𝐑)} \braket{𝐫|ϕ_{n,𝐭-𝐑}} \\
-= e^{i𝐤·𝐑} \braket{𝐫|ψ_{n𝐤}} = e^{i𝐤·𝐑} ψ_{n𝐤}(𝐫)
+= e^{i𝐤·𝐑} \braket{𝐫|ψ_{n𝐤}} = e^{i𝐤·𝐑} ψ_{n𝐤}(𝐫).
 ```
 
 The Bloch states transform as Bloch functions under translations in real space, as expected.
@@ -735,7 +717,7 @@ Let us deduce how Bloch states will transform under reciprocal lattice translati
 ```math
 \ket{ψ_{n,𝐤+𝐆}} = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{In,𝐤+𝐆} e^{i(𝐤+𝐆)·𝐭} \ket{ϕ_{I,𝐭}} \\
 = \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{In,𝐤} \cancel{e^{i𝐆·𝐭}} e^{i𝐤·𝐭} \ket{ϕ_{I,𝐭}} \\
-= \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{In,𝐤} e^{i𝐤·𝐭} \ket{ϕ_{I,𝐭}} = \ket{ψ_{n𝐤}}
+= \frac{1}{\sqrt{N}} \sum_{I,𝐭} w^{(2)}_{In,𝐤} e^{i𝐤·𝐭} \ket{ϕ_{I,𝐭}} = \ket{ψ_{n𝐤}}.
 ```
 
 The Bloch states will remain invariant under reciprocal lattice translations, as it should be.
@@ -747,7 +729,7 @@ Here we analyze how the Bloch states transform under more complex symmetry opera
 ```math
 ĝ \ket{ψ_{n𝐤}} = \sum_I w^{(2)}_{I,n𝐤} ĝ \ket{φ^{(2)}_{I,𝐤}} \\
 = \sum_{IJ} w^{(2)}_{I,n𝐤} [𝐃^{(2)}_𝐤(g)]_{JI} \ket{φ^{(2)}_{J,g𝐤}} \\
-= \sum_{IJ} [𝐃^{(2)}_𝐤(g)]_{JI} w^{(2)}_{I,n𝐤} \ket{φ^{(2)}_{J,g𝐤}}
+= \sum_{IJ} [𝐃^{(2)}_𝐤(g)]_{JI} w^{(2)}_{I,n𝐤} \ket{φ^{(2)}_{J,g𝐤}}.
 ```
 
 We are particularly interested in the transformation under operations $ĝ$ in the little-group $G_𝐤$ of a particular 𝐤-point. These operations leave the particular 𝐤-point invariant up to a lattice translation, i.e., $g 𝐤 = 𝐤 + 𝐆$. How functions transform under these operations at each high-symmetry point allows us to assign an irrep to each of the Bloch states at that 𝐤-point. Those should coincide with the ones obtained from the original system's band structure. The irrep can be assigned by computing the symmetry eigenvalues associated with each Bloch state. These are computed by:
@@ -758,7 +740,7 @@ We are particularly interested in the transformation under operations $ĝ$ in th
 = \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [𝐃^{(2)}_𝐤(g)]_{J'J} \braket{φ^{(2)}_{I,𝐤}|φ^{(2)}_{J',𝐤+𝐆}} \\
 = \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [𝐃^{(2)}_𝐤(g)]_{J'J} \braket{φ^{(2)}_{I,𝐤}|φ^{(2)}_{J',𝐤}} \\
 = \sum_{IJJ'} (w^{(2)}_{I,n𝐤})^* w^{(2)}_{J,n𝐤} [𝐃^{(2)}_𝐤(g)]_{J'J} δ_{IJ'} \\
-= \sum_{IJ} (w^{(2)}_{I,n𝐤})^* [𝐃^{(2)}_𝐤(g)]_{IJ} w^{(2)}_{J,n𝐤}
+= \sum_{IJ} (w^{(2)}_{I,n𝐤})^* [𝐃^{(2)}_𝐤(g)]_{IJ} w^{(2)}_{J,n𝐤}.
 ```
 
 Notice that this expression differs from the previous one due to a phase factor. This is the main reason why some authors decided to use Convention 2 instead Convention 1: it is not necessary to account for phase factors in the symmetry eigenvalues computations.
@@ -770,13 +752,13 @@ Nevertheless, it is interesting to be able to consider both conventions and that
 First, let us start with the conversion between the Bloch functions that the different Fourier transformations induce. Since there is just an additional phase factor, we can convert from one convention to the other by adding that extra factor as:
 
 ```math
-\ket{φ^{(2)}_{I,𝐤}} = e^{-i𝐤·𝐪_α} \ket{φ^{(1)}_{I,𝐤}}
+\ket{φ^{(2)}_{I,𝐤}} = e^{-i𝐤·𝐪_α} \ket{φ^{(1)}_{I,𝐤}}.
 ```
 
 Obviously, the creation and annihilation operators convert in a similar fashion; in particular, as stated previously:
 
 ```math
-\hat{b}_{I,𝐤}^† = e^{-i𝐤·𝐪_α} â_{I,𝐤}^†
+\hat{b}_{I,𝐤}^† = e^{-i𝐤·𝐪_α} â_{I,𝐤}^†.
 ```
 
 Second, the Hamiltonian must be invariant independently of the basis used to define it. Considering this, we can deduce how the matrix $𝐇_𝐤$, which is representation dependent, converts from one convention to the other. Let us start with the Bloch Hamiltonian:
@@ -784,7 +766,7 @@ Second, the Hamiltonian must be invariant independently of the basis used to def
 ```math
 Ĥ_𝐤 = \sum_{IJ} h^{(1)}_{IJ,𝐤} â_{I,𝐤}^† â_{J,𝐤} \\
 = \sum_{IJ} e^{i𝐤·𝐪_α} h^{(1)}_{IJ,𝐤} e^{-i𝐤·𝐪_β} \hat{b}_{I,𝐤}^† \hat{b}_{J,𝐤} \\
-⇒ h^{(2)}_{IJ,𝐤} = e^{i𝐤·𝐪_α} h^{(1)}_{IJ,𝐤} e^{-i𝐤·𝐪_β}
+⇒ h^{(2)}_{IJ,𝐤} = e^{i𝐤·𝐪_α} h^{(1)}_{IJ,𝐤} e^{-i𝐤·𝐪_β}.
 ```
 
 This allows us to convert from one representation matrix of the Hamiltonian to the other. It is convenient to rewrite the previous relation in matrix form, which is:
@@ -797,7 +779,7 @@ where $Θ_𝐤$ is a diagonal matrix containing the phase factor as defined prev
 Finally, we are interested in deducing the conversion properties of the eigenvectors obtained from diagonalizing the representation matrix $𝐇_𝐤$. Since $𝐇^{(1)}_𝐤$ and $𝐇^{(2)}_𝐤$ are related by a change of basis, the eigenvectors of both can be related to each other as:
 
 ```math
-𝐰^{(2)}_{n𝐤} = Θ^†_𝐤 𝐰^{(1)}_{n𝐤}
+𝐰^{(2)}_{n𝐤} = Θ^†_𝐤 𝐰^{(1)}_{n𝐤}.
 ```
 
 With these relations we are able to go back and forth from one convention to the other, making it possible to use both depending on which is most suitable for each case.
@@ -851,7 +833,7 @@ rank). Hence $W^* = V(Λ^{1/2})^*V^{\mathrm{T}} = VΛ^{-1/2}V^{\mathrm{T}} = W^{
 Now, let us rewrite $S ρ(h) S^{-1} = ρ^*(h)$ in terms of $W$:
 
 ```math
-WW ρ(h) W^{-1}W^{-1} = ρ(h)^* \\
+WW ρ(h) W^{-1}W^{-1} = ρ(h)^*.
 ```
 
 Multiply from the LHS by $W^*$ and from the RHS by $W$:
@@ -859,7 +841,7 @@ Multiply from the LHS by $W^*$ and from the RHS by $W$:
 ```math
 W^*WW ρ(h) W^{-1}W^{-1} W = W^*ρ(h)^* W \\
 \Leftrightarrow W ρ(h) W^{-1} = W^*ρ(h)^* W \\
-\Leftrightarrow W ρ(h) W^{-1} = W^* ρ(h)^* (W^{-1})^*
+\Leftrightarrow W ρ(h) W^{-1} = W^* ρ(h)^* (W^{-1})^*,
 ```
 where we have used properties of $W$ to reduce the expressions. 
 
