@@ -10,19 +10,22 @@ using Makie
 ## --------------------------------------------------------------------------------------- #
 
 const MaybeCoefficient = Union{Nothing, <:AbstractVector{<:Number}}
+const default_context_attributes = Attributes(;
+    include = true, color = :gray85, linecolor = :gray90, linewidth = 1.25, limits = nothing
+) # TODO: we define this so we can manually merge: remove this hack once Makie v0.25 is out
 
-@recipe(HoppingOrbitPlot, h, Rs, t, offdiag) do Scene
-    Attributes(;
-        origins = Attributes(; color = :firebrick2, label = "Origins (a)"),
-        destinations = Attributes(; color = :royalblue1, label = "Destinations (b+R)"),
-        markersize = 0.05,
-        bonds = Attributes(; color = :gray37, linewidth = 2.0, label = "Bonds"),
-        unitcell = Attributes(; color = :gray65, linewidth = 2.0, label = "Unit cell",
-                                patchcolor = :gray97),
-        context = Attributes(; include = true, color = :gray85, 
-                               linecolor = :gray90, linewidth= 1.25,
-                               limits = nothing),
-    )
+@recipe HoppingOrbitPlot (h, Rs, t, offdiag) begin
+    origins = Attributes(; color = :firebrick2, label = "Origins (a)")
+    destinations = Attributes(; color = :royalblue1, label = "Destinations (b+R)")
+    markersize = 0.05
+    bonds = Attributes(; color = :gray37, linewidth = 2.0, label = "Bonds")
+    unitcell = Attributes(; color = :gray65, linewidth = 2.0, label = "Unit cell",
+                            patchcolor = :gray97)
+    context = default_context_attributes
+    # TODO: Broken as-is: caller must give _full_ attributes for any field that is itself
+    #       an `Attributes(...)`: no automatic merging of default attributes with partial
+    #       caller attributes.
+    #       Will apparently be fixed in Makie v0.25+ (cf. ffreyer, Slack).
 end
 
 """
@@ -50,7 +53,9 @@ function Makie.plot!(
     h = p.h[]   # TODO: actually do the Observables updates; just so tedious...
     Rs = p.Rs[]
     t = p.t[]
-    offdiag = p.offdiag[] # implies that (anti-)hermicity requires adding reversed hoppings
+    offdiag = p.offdiag[] # implies that (anti-)hermiticity requires adding reversed hoppings
+    context = p.context[]
+    context = merge(context, default_context_attributes) # TODO: remove manual merging once Makie v0.25+ is out
 
     P, V = Point{D, Float32}, Vec{D, Float32}
     Rm = stack(Rs)
@@ -135,7 +140,7 @@ function Makie.plot!(
     )
 
     # set square axis limits, centered around unit cell center
-    bbox = if isnothing(p.context[].limits[])
+    bbox = if isnothing(context.limits[])
         bbox_coords = Makie.GeometryBasics.coordinates(data_limits(p))
         cntr = sum(Rs) ./ 2
         max_dist = maximum(abs,
@@ -145,11 +150,11 @@ function Makie.plot!(
         width = max_dist + pad*0.1
         Rect{D, Float32}(cntr-V(width), V(2*width))
     else
-        p.context[].limits[] :: Rect{D, Float32}
+        context.limits[] :: Rect{D, Float32}
     end
 
     # include symmetry-related sites, that we didn't hop to
-    if p.context[].include[]
+    if context.include[]
         i_lower = Rm \ (bbox.origin)
         i_lower = ntuple(d->floor(Int, i_lower[d])-1, Val(D))
         i_upper = Rm \ (bbox.origin .+ bbox.widths)
@@ -169,14 +174,14 @@ function Makie.plot!(
             D == 3 && continue # doesn't look nice for 3D
             unitcell′ = unitcell .+ Ref(R)
             any(in(bbox), unitcell′) || continue
-            lines!(unitcell′; color=p.context[].linecolor, linewidth=0.5, depth_shift=0)
+            lines!(unitcell′; color=context.linecolor, linewidth=0.5, depth_shift=0)
         end
         scatter!(
             p,
             rs,
             marker = :circle,
             markersize = 11,
-            color = p.context[].color,
+            color = context.color,
         )
     end
     limits!(bbox)
@@ -319,7 +324,10 @@ _orbit(h::HoppingOrbit) = h
 _coefficients(tbt::TightBindingTerm) = _coefficients(tbt.block)
 _coefficients(tbb::TightBindingBlock) = tbb.t
 _offdiag(tbt::TightBindingTerm) = _offdiag(tbt.block)
-_offdiag(tbb::TightBindingBlock) = !tbb.diagonal_block
+function _offdiag(tbb::TightBindingBlock{D, S}) where {D, S}
+    S === NONHERMITIAN && return false
+    return !tbb.diagonal_block
+end
 
 ## --------------------------------------------------------------------------------------- #
 # Plotting entire tight-binding models by tiling their hopping terms
@@ -345,8 +353,12 @@ function Makie.convert_arguments(
     for idx in LinearIndices(axs)
         if idx ≤ length(tbm)
             tbt = tbm[idx]
-            plots = [S.HoppingOrbitPlot(_orbit(tbt), Rs, _coefficients(tbt), _offdiag(tbt);
-                                        context = (; limits = bbox))]
+            plots = [
+                S.HoppingOrbitPlot(
+                    _orbit(tbt), Rs, _coefficients(tbt), _offdiag(tbt);
+                    context = (; limits = bbox)
+                )
+            ]
         else
             plots = PlotSpec[]
         end
@@ -415,7 +427,8 @@ function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) 
 
     # add points from unit cell
     rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
-    sites = P.(Ref(Rm) .* Makie.GeometryBasics.coordinates(rect))
+    rect_coords = D == 1 ? [P(0), P(1)] : Makie.GeometryBasics.coordinates(rect)
+    sites = P.(Ref(Rm) .* rect_coords)
     filter!(!isnan, sites)
     pts = @view sites[1:end] # for later referencing only the unit cell
 
@@ -435,13 +448,14 @@ function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) 
     lower_bound = ntuple(d -> minimum(v -> getindex(v, d), sites), Val(D))
     upper_bound = ntuple(d -> maximum(v -> getindex(v, d), sites), Val(D))
     data_bbox = Rect{D, Float32}(P(lower_bound), V(upper_bound .- lower_bound))
-    bbox_coords = Makie.GeometryBasics.coordinates(data_bbox)
+    bbox_coords = D == 1 ? [P(lower_bound), P(upper_bound)] : Makie.GeometryBasics.coordinates(data_bbox)
     cntr = sum(Rs) ./ 2
     max_dist = maximum(abs,
         ntuple(d->maximum(v->abs(cntr[d]-getindex(v, d)), bbox_coords), Val(D)))
     pad = maximum(abs, 
         ntuple(d -> splat(-)(extrema(v -> getindex(v, d), filter(!isnan, pts))), Val(D)))
     width = max_dist + pad*0.1
+    # TODO: the padding and added width should surely not be the same in all dimensions
     return Rect{D, Float32}(cntr-V(width), V(2*width))
 end
 function layout_limits(tbm::TightBindingModel{D}, Rs::DirectBasis{D}) where D

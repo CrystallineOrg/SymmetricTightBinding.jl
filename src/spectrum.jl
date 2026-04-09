@@ -39,13 +39,18 @@ julia> kpi = interpolate(irrfbz_path(17, directbasis(17, Val(2))), 100);
 julia> plot(kpi, spectrum(ptbm, kpi))
 ```
 """
-function spectrum(ptbm::ParameterizedTightBindingModel, ks; transform = nothing)
+function spectrum(
+    ptbm::ParameterizedTightBindingModel{D, S},
+    ks;
+    transform::F = nothing
+) where {D, S, F}
     if !(eltype(ks) <: AbstractVector{<:Real})
         error("the elements of `ks` must subtype `AbstractVector{<:Real}`")
     end
-    Es = Matrix{Float64}(undef, length(ks), ptbm.tbm.N)
+    ResultType = S === HERMITIAN ? Float64 : ComplexF64
+    Es = Matrix{ResultType}(undef, length(ks), ptbm.tbm.N)
     for (i, k) in enumerate(ks)
-        es = spectrum(ptbm, k; transform = transform)
+        es = spectrum(ptbm, k; transform)
         @inbounds Es[i, :] .= es
     end
     return Es
@@ -58,13 +63,14 @@ Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` at a si
 momentum `k`, across all the bands of `ptbm`.
 """
 function spectrum(
-    ptbm::ParameterizedTightBindingModel{D},
+    ptbm::ParameterizedTightBindingModel{D, S},
     k::AbstractVector{<:Real};
-    transform = nothing
-) where D
+    transform::F = nothing
+) where {D, S, F}
     length(k) == D ||
         error(lazy"dimension mismatch of momentum ($(length(k))) & model ($D)")
-    H = Hermitian(ptbm(k))
+    _H = ptbm(k)
+    H = S == HERMITIAN ? Hermitian(_H) : _H
     es = eigvals!(H)
     return _apply_transform(es, transform)
 end

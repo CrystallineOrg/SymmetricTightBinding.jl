@@ -23,6 +23,8 @@ const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 include("types.jl")
 export HoppingOrbit
 export TightBindingBlock
+export Hermiticity, HERMITIAN, ANTIHERMITIAN, NONHERMITIAN
+export hermiticity
 export TightBindingModel
 export ParameterizedTightBindingModel
 include("show.jl")

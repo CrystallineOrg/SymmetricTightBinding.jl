@@ -48,13 +48,19 @@ The gradient is returned as column vectors, one for each band, with each column 
 the gradient of the corresponding energy with respect to the hopping coefficients of `ptbm`.
 """
 function energy_gradient_wrt_hopping(
-    ptbm::ParameterizedTightBindingModel{D},
+    ptbm::ParameterizedTightBindingModel{D, S},
     k::ReciprocalPointLike{D},
     (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
     ;
     degen_rtol::Float64 = 1e-12,
     degen_atol::Float64 = 1e-12
-) where D
+) where {D, S}
+    if S === NONHERMITIAN
+        # TODO: requires left/right version of Feynman-Hellmann theorem + possibly handling
+        #       of defective case
+        error("energy gradient with respect to hopping is not currently implemented for \
+               NONHERMITIAN models")
+    end
     Nᶜ = length(ptbm.tbm) # number of hopping terms
     Nᵇ = ptbm.tbm.N       # number of bands
 
@@ -82,7 +88,8 @@ function energy_gradient_wrt_hopping(
     end
 
     # apply Feynman-Hellmann theorem, either in degenerate or non-degenerate variants
-    ∇ᶜEs = Matrix{Float64}(undef, Nᶜ, Nᵇ)
+    ResultType = S == HERMITIAN ? Float64 : ComplexF64
+    ∇ᶜEs = Matrix{ResultType}(undef, Nᶜ, Nᵇ)
     for i in 1:Nᶜ
         ∂ᵢH = tbmg(k, i)
         for ns in bands
@@ -90,11 +97,12 @@ function energy_gradient_wrt_hopping(
                 n = @inbounds ns[1]
                 uₙ = @view us[:, n]
                 ∂ᵢEₙ = dot(uₙ, ∂ᵢH, uₙ)
-                ∇ᶜEs[i, n] = real(∂ᵢEₙ)
+                ∇ᶜEs[i, n] = S == HERMITIAN ? real(∂ᵢEₙ) : ∂ᵢEₙ
             else               # degenerate bands
                 us′ = @view us[:, ns]
-                M = us′' * ∂ᵢH * us′ # Mₙₘ = ⟨uₙ|∂ᵢH|uₘ⟩ for n,m ∈ `ns`
-                ∂ᵢEs′ = eigvals!(Hermitian(M)) # ∂ᵢEₙ for n in `ns`
+                _M = us′' * ∂ᵢH * us′ # Mₙₘ = ⟨uₙ|∂ᵢH|uₘ⟩ for n,m ∈ `ns`
+                M = S == HERMITIAN ? Hermitian(_M) : _M
+                ∂ᵢEs′ = eigvals!(M) # ∂ᵢEₙ for n in `ns`
                 ∇ᶜEs[i, ns] = ∂ᵢEs′
             end
         end
@@ -215,12 +223,12 @@ The function is analogous to `evaluate_tight_binding_term!`, but computes moment
 gradient components rather than the Hamiltonian matrix itself.
 """
 function evaluate_tight_binding_momentum_gradient_term!(
-    tbt::TightBindingTerm{D},
+    tbt::TightBindingTerm{D, S},
     k::ReciprocalPointLike{D},
     components::NTuple{C, Int},
     c::Union{Nothing, <:Number} = nothing,
     ∇Hs::NTuple{C, Matrix{ComplexF64}} = ntuple(_ -> zeros(ComplexF64, size(tbt)), Val(C)),
-) where {D, C}
+) where {D, S, C}
     block = tbt.block
     block_i, block_j = tbt.block_ij
     is = tbt.axis[Block(block_i)] # global row indices
@@ -246,8 +254,9 @@ function evaluate_tight_binding_momentum_gradient_term!(
                 ∇Hᵢⱼ *= -2im * π # (-2πi) factor from ∂/∂kᵢ of e^{-2πik·δ}
                 isnothing(c) || (∇Hᵢⱼ *= c) # multiply by coefficient if provided
                 ∇H[i, j] += ∇Hᵢⱼ
-                i == j && continue # don't add diagonal elements twice
-                ∇H[j, i] += tbt.hermiticity == ANTIHERMITIAN ? -conj(∇Hᵢⱼ) : conj(∇Hᵢⱼ)
+                if S !== NONHERMITIAN && i ≠ j # off-diagonal contribution (& don't double-add diagonal)
+                    ∇H[j, i] += S == ANTIHERMITIAN ? -conj(∇Hᵢⱼ) : conj(∇Hᵢⱼ)
+                end
             end
         end
     end

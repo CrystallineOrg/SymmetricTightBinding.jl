@@ -50,13 +50,13 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
     @testset "TightBindingTerm" begin
         str = """
-        2×2 TightBindingTerm{2} over [(2b|A₁)]:
+        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
          1  0
          0  1"""
         test_tp_show(tbm[1], str)
 
         str = """
-        2×2 TightBindingTerm{2} over [(2b|A₁)]:
+        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
          0                     𝕖(-δ₄)+𝕖(-δ₅)+𝕖(-δ₆)
          𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃)  0                   
         δ₁=[-1/3,1/3], δ₂=[-1/3,-2/3], δ₃=[2/3,1/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃"""
@@ -65,7 +65,7 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
     @testset "TightBindingModel" begin
         str = """
-        2-term 2×2 TightBindingModel{2} over (2b|A₁):
+        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁):
         ┌─
         1. ⎡ 1  0 ⎤
         │  ⎣ 0  1 ⎦
@@ -79,7 +79,7 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
     @testset "ParameterizedTightBindingModel" begin
         str = """
-        2-term 2×2 ParameterizedTightBindingModel{2} over (2b|A₁) with amplitudes:
+        2-term 2×2 ParameterizedTightBindingModel{2} (hermitian) over (2b|A₁) with amplitudes:
          [0, 1.0]"""
         test_tp_show(ptbm, str)
     end
@@ -94,10 +94,10 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
     @testset "summary" begin
         test_show(sprint(summary, tbm),
-                  "2-term 2×2 TightBindingModel{2} over (2b|A₁)")
+                  "2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁)")
         test_show(sprint(summary, ptbm),
-                  "2-term 2×2 ParameterizedTightBindingModel{2} over (2b|A₁)")
+                  "2-term 2×2 ParameterizedTightBindingModel{2} (hermitian) over (2b|A₁)")
         test_show(sprint(summary, tbm[1]),
-                  "2×2 TightBindingTerm{2} over [(2b|A₁)]")
+                  "2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]")
     end
 end
