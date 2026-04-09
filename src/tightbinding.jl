@@ -11,7 +11,9 @@ WP of `brᵦ`, displaced by a set of primitive lattice-vector representatives `R
 
 ## Implementation
 1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. 
-    Compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`.
+    Compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`, giving the displacement
+    vector from `a` (created site) to `b + R` (annihilated site): i.e., `δ` points opposite
+    to the hopping direction.
 2. If `δ ∈ representatives`, add `δ => (a, b, R)` to the list of hoppings 
     for that representative and continue. Otherwise, search all representatives for one 
     whose list of hoppings contains `δ => (a, b, R)`. If none is found, add `δ` as a new 
@@ -218,14 +220,14 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
             deleteat!(h_orbits, n′)
             continue
         end
-    # we now know that at least some δ doesn't have a -δ counterpart; we assume that
-    # this implies that none of the δs have a -δ counterpart, so we need to add them all
+        # we now know that at least some δ doesn't have a -δ counterpart; we assume that
+        # this implies that none of the δs have a -δ counterpart, so we need to add them all
         @assert all(δ -> !isapproxin(-δ, δs, nothing, false; atol = VEC_CMP_ATOL), δs)
 
         # first append the new δs into the orbit
         append!(δs, -δs)
 
-    # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
+        # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
         # => -δ = a - (b + R) = a - b - R = b - 2b - R -a + 2a = b + (2a - 2b - R) - a = b + R' - a
         hoppings = h_orbit.hoppings
         hoppings′ = map(hoppings) do hops
@@ -238,35 +240,6 @@ function add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}
 end
 
 # ---------------------------------------------------------------------------- #
-# EBRs: (q|A), (w|B)
-# Wyckoff positions: q, w
-#   q: q1, ..., qN
-#   w: w1, ..., wM
-# Site symmetry irreps: A, B
-#   A: A1, ..., AJ
-#   B: B1, ..., BK
-# δs = [δ1, δ2, ..., δn]
-#   δ1: qi₁¹ -> wj₁¹, qi₁² -> wj₁², ...
-#   δ2: qi₂¹ -> wj₂¹, qi₂² -> wj₂², ...
-# v = [exp(-ik⋅δ1), exp(-ik⋅δ2), ..., exp(-ik⋅δn)]
-# t = [[t(δ1) ...], [t(δ2) ...], ..., [t(δn) ...]]
-#   t(δ1): [t(qi₁ᵅ -> wj₁ᵅ, A_f -> B_g) ...]
-
-# Current example: (1a|E), (2c|A)
-#   ___w2__
-#  |   x   |
-#  |q1 x   x w1
-#  |_______|
-#   δs = [1/2x, -1/2x, 1/2y, -1/2y]
-#      δ1: q1 -> w1 + G1
-#      δ2: q1 -> w1 + G2
-#      δ3: q1 -> w2 + G3
-#      δ4: q1 -> w2 + G4
-# t = [t(δ1)..., t(δ2)..., t(δ3)..., t(δ4)...]
-#   t(δ1): [t(q1 -> w1, G1, E1 -> A1), t(q1 -> w1, G1, E2 -> A1)]
-#   t(δ2): [t(q1 -> w1, G2, E1 -> A1), t(q1 -> w1, G2, E2 -> A1)]
-#   t(δ3): [t(q1 -> w2, G3, E1 -> A1), t(q1 -> w2, G3, E2 -> A1)]
-#   t(δ4): [t(q1 -> w2, G4, E1 -> A1), t(q1 -> w2, G4, E2 -> A1)]
 
 # NB: The ordering of `t` is a bit subtle: `t` is a kind of vector-flattened
 #        tensor `T`, with the following "indexing convention" for `T`:
@@ -419,8 +392,6 @@ function construct_M_matrix(
 
     return Mm
 end
-
-# H_{s,t} = v_i M_{i,j,s,t} t_j
 
 """
     representation_constraints_matrices(
@@ -749,7 +720,7 @@ Build the P matrix for a particular symmetry operation acting on k-space, which 
 rows of the M matrix.
 
 To obtain the P matrix, we exploit that the action is on exponentials of the type
-``exp(-2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
+``exp(2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
 we need to use the inverse of the rotation part of the symmetry operation.
 
 !!! details "Sketch of proof"

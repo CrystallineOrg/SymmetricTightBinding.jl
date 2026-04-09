@@ -120,10 +120,10 @@ end
             kc = cartesianize(k, dualbasis(directbasis(13, Val(2))))
 
             H = (
-                t₁ * (cos(dot(kc, a₁)) + cos(dot(kc, a₂)) + cos(dot(kc, a₃))) .* [0 1; 1 0] +
-                t₁ * (sin(dot(kc, a₁)) + sin(dot(kc, a₂)) + sin(dot(kc, a₃))) .* [0 -1im; 1im 0] +
-                2 * t₂* cos(ϕ) * (cos(dot(kc, b₁)) + cos(dot(kc, b₂)) + cos(dot(kc, b₃))) .* [1 0; 0 1] +
-                2 * t₂* sin(ϕ) * (sin(dot(kc, b₁)) + sin(dot(kc, b₂)) + sin(dot(kc, b₃))) .* [1 0; 0 -1] +
+                t₁ * (cos(kc ⋅ a₁) + cos(kc ⋅ a₂) + cos(kc ⋅ a₃)) .* [0 1; 1 0] +
+                t₁ * (sin(kc ⋅ a₁) + sin(kc ⋅ a₂) + sin(kc ⋅ a₃)) .* [0 -1im; 1im 0] +
+                2t₂ * cos(ϕ) * (cos(kc ⋅ b₁) + cos(kc ⋅ b₂) + cos(kc ⋅ b₃)) .* [1 0; 0 1] +
+                2t₂ * sin(ϕ) * (sin(kc ⋅ b₁) + sin(kc ⋅ b₂) + sin(kc ⋅ b₃)) .* [1 0; 0 -1] +
                 m .* [1 0; 0 -1]
             )
             return H
@@ -136,9 +136,7 @@ end
             H_ptbm = haldane_model(t₁, m, t₂, ϕ)(k)
             H_original = manual_haldane_model(k, t₁, m, t₂, ϕ)
 
-            # TODO: the hardcoded coefficients in `manual_haldane_model` use the old
-            #       Hamiltonian phase convention; update after correcting (cf. PR #89)
-            @test_broken isapprox(H_ptbm, H_original)
+            @test isapprox(H_ptbm, H_original)
         end
 
         # test that we also get the right Chern numbers

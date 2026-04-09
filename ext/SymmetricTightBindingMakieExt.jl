@@ -194,19 +194,21 @@ _cubic_basis(::Val{1}) = crystal(1)
 _cubic_basis(::Val{D}) where {D} = error("Unsupported dimension: $D")
 ## --------------------------------------------------------------------------------------- #
 
-# simple case: take no account of a coefficient vector, just plot all hoppings in `h`
+# Simple case: take no account of a coefficient vector, just plot all hoppings in `h`.
+# The hopping `δ` is such that `δ = b+R-a`, so the hopping direction is from `b+R`
+# (annihilated) to `a` (created).
 function _origins_and_destinations_from_hoppingorbit(
     h::HoppingOrbit{D},
     Rm::AbstractMatrix{<:Real}
 ) where D
     P = Point{D, Float32}
-    origins = mapreduce(vcat, h.hoppings) do hs
+    destinations = mapreduce(vcat, h.hoppings) do hs
         map(hs) do h
             a = Rm * constant(h[1])
             P(a)
         end
     end
-    destinations = mapreduce(vcat, h.hoppings) do hs
+    origins = mapreduce(vcat, h.hoppings) do hs
         map(hs) do h
             b_plus_R = Rm * (constant(h[2]) + constant(h[3]))
             P(b_plus_R)
@@ -244,8 +246,8 @@ function _origins_and_destinations_from_coefficients(
             has_hop || continue
             a = P(Rm * constant(h[1]))
             b_plus_R = P(Rm * (constant(h[2]) + constant(h[3])))
-            push!(origins, a)
-            push!(destinations, b_plus_R)
+            push!(destinations, a)
+            push!(origins, b_plus_R)
         end
     end
     return origins, destinations

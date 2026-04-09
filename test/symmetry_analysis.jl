@@ -41,16 +41,16 @@ end
 # topological EBRs): i.e., we don't know if the model is a single connected band or not,
 # only what the "sum" of symmetry vectors will be.
 
-function _test_symmetry_analysis(brs, i, αβγ; rng_seed=1234)
+function _test_symmetry_analysis(brs, i, αβγ; rng = seed!(copy(Random.default_rng()), 1234))
     coefs = zeros(length(brs))
     coefs[i] = 1
     cbr = CompositeBandRep(coefs, brs)
     iszero(free(position(brs[i]))) || pin_free!(brs, i => αβγ)
     tbm = tb_hamiltonian(cbr)
-    rng = seed!(copy(Random.default_rng()), rng_seed)
     ptbm = tbm(randn(rng, length(tbm)))
     ns = collect_compatible(ptbm)
-    return !isempty(ns) && sum(ns) == SymmetryVector(cbr)
+    @test !isempty(ns)
+    @test sum(ns) == SymmetryVector(cbr)
 end
 
 @testset "Symmetry analysis (full scan over EBRs)" begin
@@ -60,7 +60,7 @@ end
             @testset "Space group $sgnum in dimension $D" begin
                 brs = calc_bandreps(sgnum, Val(D))
                 for i in eachindex(brs)
-                    @test _test_symmetry_analysis(brs, i, αβγ)
+                    _test_symmetry_analysis(brs, i, αβγ)
                 end
             end
         end
