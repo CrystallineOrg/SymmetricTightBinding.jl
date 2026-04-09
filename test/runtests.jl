@@ -7,6 +7,7 @@ include("symmetry-breaking.jl")    # symmetry breaking
 include("berry.jl")                # berry curvature and chern numbers
 include("spectrum.jl")             # spectrum evaluation
 include("show.jl")                 # show/display methods
+include("nonhermitian.jl")         # NONHERMITIAN models
 include("gradients.jl")            # hopping and momentum gradients
 include("symmetry_analysis.jl")    # each tb model is symmetry compatible w/ its constituent EBRs
 include("symmetry_analysis_manual.jl") # paired-down, manual version of above, testing individual cases

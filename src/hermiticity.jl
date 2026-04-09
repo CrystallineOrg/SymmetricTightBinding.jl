@@ -4,10 +4,10 @@
         h_orbit::HoppingOrbit{D},
         brₐ::NewBandRep{D},
         brᵦ::NewBandRep{D},
+        antihermitian::Bool,
         orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-        Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ);
-        antihermitian::Bool = false,
+        Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
     ) where {D}
 
 Constructs a basis for the coefficient vectors `t⁽ⁿ⁾` that span the space of Hermitian (or
@@ -27,10 +27,10 @@ function obtain_basis_free_parameters_hermiticity(
     h_orbit::HoppingOrbit{D},
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
+    antihermitian::Bool,
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ);
-    antihermitian::Bool = false,
+    Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
 ) where {D}
     # Determine a basis for coefficient vectors t⁽ⁿ⁾ that span the space of Hermitian (or
     # `antihermitian` if `true`) TB Hamiltonians Hₛₜ(k) = vᵢ(k) Mᵢⱼₛₜ tⱼ = vᵀ(k) M⁽ˢᵗ⁾ t. 
@@ -65,8 +65,8 @@ function constraint_hermiticity(
 ) where {D}
     Q = Array{Int}(undef, size(Mm))
     opI = inversion(Val(D)) # inversion operation
-    Pᵀ =
-        transpose(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI))
+    P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI)
+    Pᵀ = transpose(P)
     for s in axes(Mm, 3)
         for t in axes(Mm, 4)
             Q[:, :, s, t] .= Pᵀ * Mm[:, :, t, s] # Pᵀ M⁽ᵗˢ⁾

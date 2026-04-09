@@ -28,6 +28,12 @@ end
 representative(s::HoppingOrbit) = s.representative
 Crystalline.orbit(s::HoppingOrbit) = s.orbit # extend to avoid clash w/ Crystalline's `orbit`
 
+function Base.:(==)(s1::HoppingOrbit{D}, s2::HoppingOrbit{D}) where {D}
+    return (representative(s1) == representative(s2) && orbit(s1) == orbit(s2) &&
+            s1.hoppings == s2.hoppings)
+end
+Base.:(==)(::HoppingOrbit, ::HoppingOrbit) = false # different dimensions (less specific)
+
 # ---------------------------------------------------------------------------------------- #
 # constructor defined in /src/tightbinding.jl
 
@@ -66,12 +72,13 @@ function Base.show(io::IO, tbe_str::TightBindingElementString)
 end
 
 """
-    TightBindingBlock{D}
+    TightBindingBlock{D, S}
 
-A structure for storing information about a matrix block of a tight-binding Hamiltonian.
+A structure for storing information about a matrix block of a tight-binding Hamiltonian of
+dimensionality `D` and [`Hermiticity`](@ref) `S`.
 
-A block will represent a hopping terms from band representation `br2` to `br1`. 
-For this hopping we store:
+A block represents a hopping term from band representation `br1` to `br2` (and possibly also
+from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 
 ## Fields
 - `br1 :: NewBandRep{D}`: first band representation
@@ -81,9 +88,11 @@ For this hopping we store:
 - `h_orbit :: Union{Nothing,HoppingOrbit{D}}`: hopping orbit associated to the block
 - `Mm :: Array{Int,4}`: matrix codifying Hamiltonian
 - `t :: Vector{Float64}}`: a basis vector, stored in re/im-doubled format
+- `MmtC :: Array{ComplexF64, 3}`: pre-contracted matrix `Mm` with "complexified" `t`.
+- `diagonal_block :: Bool`: whether this is a diagonal block in the overall Hamiltonian.
 """
 
-struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
+struct TightBindingBlock{D, S} <: AbstractMatrix{TightBindingElementString}
     br1::NewBandRep{D}
     br2::NewBandRep{D}
     ordering1::OrbitalOrdering{D}
@@ -98,23 +107,23 @@ struct TightBindingBlock{D} <: AbstractMatrix{TightBindingElementString}
     diagonal_block::Bool # whether this is a diagonal block in the overall Hamiltonian
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
-function TightBindingBlock{D}(
-    br1, 
-    br2, 
-    ordering1, 
-    ordering2, 
-    h_orbit, 
-    Mm, 
-    t, 
-    diagonal_block
-) where D
+function TightBindingBlock{D, S}(
+    br1::NewBandRep{D},
+    br2::NewBandRep{D},
+    ordering1::OrbitalOrdering{D},
+    ordering2::OrbitalOrdering{D},
+    h_orbit::HoppingOrbit{D},
+    Mm::AbstractArray{<:Integer, 4},
+    t::AbstractVector{<:Real},
+    diagonal_block::Bool
+) where {D, S}
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
     MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
     for i in axes(Mm, 3), j in axes(Mm, 4)
         MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
     end
-    tbb = TightBindingBlock{D}(
+    tbb = TightBindingBlock{D, S}(
         br1, 
         br2, 
         ordering1, 
@@ -128,18 +137,29 @@ function TightBindingBlock{D}(
     return tbb
 end
 
+"""
+    Hermiticity (enum)
+
+Enum-type (base type `UInt8`) describing the properties of a Hamiltonian under
+Hermitian conjugation. Values:
+- `HERMITIAN`: H† = H.
+- `ANTIHERMITIAN`: H† = -H.
+- `NONHERMITIAN`: H† unrelated to H.
+"""
 @enum Hermiticity::UInt8 begin
     HERMITIAN
     ANTIHERMITIAN
+    NONHERMITIAN
 end
 
-struct TightBindingTerm{D} <: AbstractBlockMatrix{TightBindingElementString}
+struct TightBindingTerm{D, S} <: AbstractBlockMatrix{TightBindingElementString}
     axis::BlockedOneTo{Int, Vector{Int}}
     block_ij::NTuple{2, Int}
-    block::TightBindingBlock{D}
-    hermiticity::Hermiticity
+    block::TightBindingBlock{D, S}
     brs::Vector{NewBandRep{D}}
 end
+
+hermiticity(::TightBindingTerm{D, S}) where {D, S} = S
 
 Base.axes(H::TightBindingTerm) = (H.axis, H.axis)
 function Base.axes(H::TightBindingTerm, d::Int)
@@ -148,7 +168,7 @@ function Base.axes(H::TightBindingTerm, d::Int)
 end
 Base.size(H::TightBindingTerm) = (N = last(H.axis); (N, N))
 
-function Base.getindex(H::TightBindingTerm, i::Int, j::Int)
+function Base.getindex(H::TightBindingTerm{D, S}, i::Int, j::Int) where {D, S}
     N = size(H, 1)
     @boundscheck 1 ≤ i ≤ N && 1 ≤ j ≤ N || error(BoundsError(H, (i, j)))
     tmp = BlockArrays.findblockindex(H.axis, i)
@@ -159,29 +179,22 @@ function Base.getindex(H::TightBindingTerm, i::Int, j::Int)
     local_j = only(tmp.α)
     if H.block_ij == (block_i, block_j)
         return _getindex(H.block, local_i, local_j)
-    elseif H.block_ij == (block_j, block_i) # hermiticity-related block
-        return _getindex(
-            H.block,
-            local_j,
-            local_i;
-            conjugate = true,
-            antihermitian = H.hermiticity == ANTIHERMITIAN,
-        )
+    elseif S !== NONHERMITIAN && H.block_ij == (block_j, block_i) # hermiticity-related block
+        return _getindex(H.block, local_j, local_i, #=conjugate=# true)
     else # not a stored block
         return TightBindingElementString("0", #=active=# false)
     end
 end
 
 function _getindex(
-    tbb::TightBindingBlock,
+    tbb::TightBindingBlock{D, S},
     i::Int,
-    j::Int;
-    conjugate::Bool = false,
-    antihermitian::Bool = false,
-)
-    if antihermitian && !conjugate
-        error("input has `antihermitian = true` but `conjugate = false`; not intended?")
-    end
+    j::Int,
+    conjugate::Bool = false
+) where {D, S}
+    # if we are actually getting from a block related to the stored one by antihermiticity
+    antihermitian_get = S === ANTIHERMITIAN && conjugate == true
+    
     @boundscheck 1 ≤ i ≤ size(tbb.Mm, 3) && 1 ≤ j ≤ size(tbb.Mm, 4) ||
                  error(BoundsError(tbb, (i, j)))
 
@@ -196,8 +209,13 @@ function _getindex(
         abs(v) < SPARSIFICATION_ATOL_DEFAULT && continue
         vᴿ, vᴵ = reim(v)
         if conjugate
-            vᴵ = -vᴵ # complex conjugate
-            antihermitian && (vᴿ = -vᴿ; vᴵ = -vᴵ) # additional sign-flip from anti-hermiticity
+            if S === ANTIHERMITIAN
+                # getting a block related to the stored one by antihermiticity; conjugate
+                # _and_ negate: vᴵ is invariant, but vᴿ swaps: cf. -(conj(v)) = -vᴿ+ivᴵ
+                vᴿ = -vᴿ
+            else # HERMITIAN or NONHERMITIAN
+                vᴵ = -vᴵ # just complex conjugate → vᴵ changes sign: conj(v) = vᴿ-ivᴵ
+            end
         end
 
         vᴿ′, vᴿ_str = _stringify_real(vᴿ)
@@ -235,7 +253,7 @@ function _getindex(
 end
 
 function Base.getindex(tbb::TightBindingBlock, i::Int, j::Int)
-    return _getindex(tbb, i, j; conjugate = false, antihermitian = false)
+    return _getindex(tbb, i, j, #=conjugate=# false)
 end
 
 Base.setindex!(::TightBindingBlock, v, ij...) = error("setindex! is not supported")
@@ -258,9 +276,9 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 """
-    TightBindingModel{D}
+    TightBindingModel{D, S}
 
-A structure storing a list of `TightBindingTerm{D}`s. Each term is assumed to associated
+A structure storing a list of `TightBindingTerm{D, S}`s. Each term is assumed to associated
 with an identical list of EBRs.
 
 To associate a set of coefficients to each term, see
@@ -268,16 +286,17 @@ To associate a set of coefficients to each term, see
 
 ## Fields
 
-- `terms :: Vector{TightBindingTerm{D}}`: a vector of `TightBindingTerm{D}`s, each of which
-  represents a block (or conjugated pairs of blocks) of the Hamiltonian matrix.
+- `terms :: Vector{TightBindingTerm{D, S}}`: a vector of `TightBindingTerm{D}`s, each of
+   which represents a block (or conjugated pairs of blocks) of the Hamiltonian matrix.
+   Associates to a `D`-dimensional lattice and with Hermitian-conjugation symmetry `S`.
 - `cbr :: CompositeBandRep{D}`: the composite band representation associated to the model.
 - `positions :: Vector{DirectPoint{D}}`: a vector of positions, specified in the lattice
   basis, associated to each orbital of the model.
 - `N :: Int`: the total number of orbitals in the model, i.e., the size of the Hamiltonian
   matrix associated to each element of `terms`.
 """
-struct TightBindingModel{D} <: AbstractVector{TightBindingTerm{D}}
-    terms::Vector{TightBindingTerm{D}}
+struct TightBindingModel{D, S} <: AbstractVector{TightBindingTerm{D, S}}
+    terms::Vector{TightBindingTerm{D, S}}
     cbr::CompositeBandRep{D} # band representation associated to the model
     positions::Vector{DirectPoint{D}} # positions associated to each orbital
     N::Int # total number of orbitals, i.e., matrix size
@@ -287,28 +306,39 @@ Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
 Base.setindex!(tbm::TightBindingModel, v, i::Int) = setindex!(tbm.terms, v, i)
 Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
 function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
-    tbm::TightBindingModel{D},
-    ::Type{TightBindingTerm{D}}, # element_type
+    tbm::TightBindingModel{D, S},
+    ::Type{TightBindingTerm{D, S}}, # element_type
     dims::Tuple{Int} = size(tbm),
-) where {D}
-    similar_terms = similar(tbm.terms, TightBindingTerm{D}, dims)
-    return TightBindingModel{D}(similar_terms, tbm.cbr, tbm.positions, tbm.N)
+) where {D, S}
+    similar_terms = similar(tbm.terms, TightBindingTerm{D, S}, dims)
+    return TightBindingModel{D, S}(similar_terms, tbm.cbr, tbm.positions, tbm.N)
 end
 
+"""
+    hermiticity(tbt::TightBindingTerm)                -> Hermiticity
+    hermiticity(tbm::TightBindingModel)               -> Hermiticity
+    hermiticity(ptbm::ParameterizedTightBindingModel) -> Hermiticity
+
+Return the [`Hermiticity`](@ref) of the input.
+
+If the input features multiple terms (i.e., is a sum of terms, as in a `TightBindingModel`),
+it is assumed that all terms have identical hermiticity.
+"""
+hermiticity(::TightBindingModel{D, S}) where {D, S} = S
 orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
 
 function TightBindingModel(
-    terms::Vector{TightBindingTerm{D}},
+    terms::Vector{TightBindingTerm{D, S}},
     cbr::CompositeBandRep{D},
-) where {D}
+) where {D, S}
     positions = orbital_positions(cbr)
-    length(terms) == 0 && return TightBindingModel{D}(terms, cbr, positions, 0)
+    length(terms) == 0 && return TightBindingModel{D, S}(terms, cbr, positions, 0)
     N = last(first(terms).axis)
-    return TightBindingModel{D}(terms, cbr, positions, N)
+    return TightBindingModel{D, S}(terms, cbr, positions, N)
 end
-function (tbm::TightBindingModel{D})(cs::AbstractVector{<:Real}) where {D}
-    return ParameterizedTightBindingModel{D}(tbm, cs)
+function (tbm::TightBindingModel{D, S})(cs::AbstractVector{<:Real}) where {D, S}
+    return ParameterizedTightBindingModel{D, S}(tbm, cs)
 end
 
 # ---------------------------------------------------------------------------------------- #
@@ -320,7 +350,7 @@ const ReciprocalPointLike{D} =
 # ---------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedTightBindingModel{D}
+    ParameterizedTightBindingModel{D, S}
 
 A coefficient-parameterized tight-binding model, that can be used as a functor for
 evaluation at input momenta `k`.
@@ -341,19 +371,19 @@ A `ParameterizedTightBindingModel` `ptbm` can be be evaluated at any ´D`-dimens
 momentum `k` by using `ptbm` as a functor. That is, `ptbm(k)` returns a numerical
 representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.`
 """
-struct ParameterizedTightBindingModel{D}
-    tbm::TightBindingModel{D}
+struct ParameterizedTightBindingModel{D, S}
+    tbm::TightBindingModel{D, S}
     cs::Vector{Float64} # coefficients of the tight-binding model
     scratch::Matrix{ComplexF64} # scratch space for evaluation
     # inner constructor w/ checks & conversion of input
-    function ParameterizedTightBindingModel{D}(
-        tbm::TightBindingModel{D},
+    function ParameterizedTightBindingModel{D, S}(
+        tbm::TightBindingModel{D, S},
         cs::AbstractVector{<:Real},
         scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N),
-    ) where {D}
+    ) where {D, S}
         length(tbm.terms) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm.terms, cs)
         size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
-        return new{D}(tbm, convert(Vector{Float64}, cs), scratch)
+        return new{D, S}(tbm, convert(Vector{Float64}, cs), scratch)
     end
 end
 @noinline function _throw_scratch_size_mismatch(scratch, N)
@@ -366,6 +396,7 @@ end
     error("number of coefficients ($Nc) does not match number of model terms ($Nt)")
 end
 
+hermiticity(::ParameterizedTightBindingModel{D, S}) where {D, S} = S
 orbital_positions(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.positions
 Crystalline.CompositeBandRep(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.cbr
 
@@ -404,11 +435,11 @@ The two-argument form of the function, i.e., returning the value of `tbt` at `k`
 more simply achieved via `tbt(k)`.
 """
 function evaluate_tight_binding_term!(
-    tbt::TightBindingTerm{D},
+    tbt::TightBindingTerm{D, S},
     k::ReciprocalPointLike{D},
     c::Union{Nothing, <:Number} = nothing,
     H::Matrix{ComplexF64} = zeros(ComplexF64, size(tbt)),
-) where {D}
+) where {D, S}
     block = tbt.block
     block_i, block_j = tbt.block_ij
     is = tbt.axis[Block(block_i)] # global row indices
@@ -429,8 +460,9 @@ function evaluate_tight_binding_term!(
             Hᵢⱼ = @inbounds dot(v_conj, @view MmtC[:, local_i, local_j])
             isnothing(c) || (Hᵢⱼ *= c) # multiply by coefficient if provided
             H[i, j] += Hᵢⱼ
-            i == j && continue # don't add diagonal elements twice
-            H[j, i] += tbt.hermiticity == ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
+            if S !== NONHERMITIAN && i ≠ j # add off-diagonal hermiticity-related block
+                H[j, i] += S === ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
+            end
         end
     end
 
@@ -445,16 +477,14 @@ function (tbt::TightBindingTerm{D})(k::ReciprocalPointLike{D}) where {D}
 end
 
 function solve(
-    ptbm::ParameterizedTightBindingModel{D},
+    ptbm::ParameterizedTightBindingModel{D, S},
     k::ReciprocalPointLike{D};
     bloch_phase::Union{Val{true}, Val{false}} = Val(false),
     eigen_kws...,
-) where D
+) where {D, S}
     length(k) == D || error("dimension mismatch")
-    if ptbm.tbm.terms[1].hermiticity == ANTIHERMITIAN
-        error("ANTIHERMITIAN model solve not implemented") # TODO: cf. `Hermitian` use below
-    end
-    H = Hermitian(ptbm(k))
+    _H = ptbm(k)
+    H = S == HERMITIAN ? Hermitian(_H) : _H
     es, vs = eigen!(H; eigen_kws...)
     if bloch_phase === Val(true)
         Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
@@ -474,3 +504,11 @@ function solve(ptbm::ParameterizedTightBindingModel{D}, k::KVec{D}; kws...) wher
     isspecial(k) || error("input k-point has free parameters, i.e., is not definite")
     solve(ptbm, constant(k); kws...)
 end
+
+# ---------------------------------------------------------------------------------------- #
+#=
+struct NonHermitianTightBindingModel{D}
+    tbm_h::TightBindingModel{D, HERMITIAN}
+    tbm_a::TightBindingModel{D, ANTIHERMITIAN}
+end
+=#
