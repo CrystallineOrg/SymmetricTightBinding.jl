@@ -1,3 +1,7 @@
+# Note [⚠️ phase]: `symmetry_eigenvalues` returns the complex conjugate of the Convention 1
+#   character to match Crystalline.jl's `calc_bandreps` convention.
+#   See `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
+
 """
     collect_compatible(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
 
@@ -39,8 +43,9 @@ function Crystalline.collect_compatible(
     isempty(tbm.terms) && error("`ptbm` is an empty tight-binding model")
     cbr = CompositeBandRep(tbm)
 
-    lgirsv = irreps(cbr) # get irreps associated to the EBRs
-    lgs = [primitivize(group(first(lgirs))) for lgirs in lgirsv]
+    clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting operations)
+    lgirsv = primitivize.(clgirsv) # must be `modw=false` (default for Collection dispatch)
+    lgs = group.(lgirsv)  # little groups associated to the EBRs (primitive setting)
     ops = unique(Iterators.flatten(lgs))
 
     # determine the induced space group rep associated with `cbr` across all `ops`
@@ -83,38 +88,54 @@ and are otherwise initialized by the function.
 
 The symmetry eigenvalues are returned as a matrix, with rows running over the elements of
 `ops` and columns running over the bands of `ptbm`.
+
+!!! note
+    The inputs `ops`, `k`, and `lg` must be provided in a primitive setting. See
+    Crystalline.jl's `primitivize`.
+
+!!! warning "⚠️ character phase convention"
+    The symmetry eigenvalues returned by this function are the complex conjugate of the
+    Convention 1 result (see `docs/src/devdocs/symmetry_eigenvalue_conventions.md`)
+    in order to match the convention used by Crystalline.jl's `calc_bandreps` and `lgirreps`
+    functions. See the above documentation for more details and 
+    https://github.com/thchr/Crystalline.jl/issues/12 for the relevant issue in
+    Crystalline.jl.
 """
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
     ops::AbstractVector{SymOperation{D}},
     k::ReciprocalPointLike{D},
-    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
-        Ref(ptbm.tbm.cbr),
-        ops,
-    ),
+    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = begin
+        sgrep_induced_by_siteir.(Ref(ptbm.tbm.cbr), ops)
+    end,
 ) where D
     length(k) == D || error("dimension mismatch")
     length(sgreps) == length(ops) || error("length of `sgreps` must match length of `ops`")
 
-    # NB: Currently, the site-symmetry induced reps assume the "Convention 1" Fourier
-    #     transform. This Fourier transform does depend on "in-unit-cell" coordinates;
-    #     so we must correct such phases here, as indicated in `/docs/usr/theory.md`.
+    # NB: `solve` with `bloch_phase=Val(false)` returns eigenvectors `vs` of H(k) in the
+    #     Convention 1 coefficient basis (without Bloch position phases). In Convention 1,
+    #     the symmetry eigenvalues are then `χ[n] = (Θ_G vs[n])† D_k vs[n]` where Θ_G & D_k
+    #     defined in `docs/src/theory.md` and `docs/src/devdocs/` (and methods below).
     #
-    # NOTE: since we picked "Convention 1" for the Fourier transform, we need to correct an
-    #       extra phase factor to correct the non-periodicity of the Bloch functions under
-    #       this convention.
+    # [⚠️ phase]: Crystalline.jl's `calc_bandreps` and `lgirreps` computes characters in a
+    #     convention that is the complex conjugate of the Convention 1 result (see
+    #     thchr/Crystalline.jl/#12).
+    #     To be able to interface with Crystalline.jl, and until thchr/Crystalline.jl/#12 is
+    #     resolved, we thus actually return `χ_Crystalline = conj(χ_Convention1)`.
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
+    v_kpG = similar(vs, size(vs, 1)) # preallocate for Θᴳ * v
     for (j, sgrep) in enumerate(sgreps)
         g = sgrep.op
         gk = compose(g, ReciprocalPoint{D}(k)) # NB: for k ∈ Gₖ, there exist G st g∘k = k+G
         G = gk - k # the possible reciprocal vector-difference G between k & g∘k; for Θᴳ
-        Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G) # TODO: preallocate & fill
-        ρ = sgrep(k)
+        Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G)
+        D_k = sgrep(k) # = D_k(g) = e^{-2πi(gk)·t} ρ(h) (Convention 1)
         for (n, v) in enumerate(eachcol(vs))
-            v_kpG = Θᴳ * v # correct the phase factor
-            symeigs[j, n] = dot(v_kpG, ρ, v)
-            # TODO: preallocate and `mul!` the `Θᴳ * v` term to avoid allocations
+            v_kpG = mul!(v_kpG, Θᴳ, v) # = Θᴳ * v (without re-allocating `v_kpG`)
+            χ = dot(v_kpG, D_k, v)  # Convention 1: (Θ_G w)† D_k w
+            χ_Crystalline = conj(χ) # [⚠️ phase]: convert to Crystalline.jl's convention
+            symeigs[j, n] = χ_Crystalline
         end
     end
     return symeigs
@@ -144,7 +165,8 @@ Useful for annotating irrep labels in band structure plots (via the Makie extens
 `plot(ks, energies; annotations=collect_irrep_annotations(ptbm))`)
 """
 function Crystalline.collect_irrep_annotations(ptbm::ParameterizedTightBindingModel; kws...)
-    lgirsv = irreps(ptbm.tbm.cbr) # get irreps associated to the EBRs
-    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, primitivize(group(lgirs)))) for lgirs in lgirsv]
+    clgirsv = irreps(ptbm.tbm.cbr) # irreps associated to the EBRs (conventional setting)
+    lgirsv = primitivize.(clgirsv) # convert associated groups & irreps to primitive setting
+    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, group(lgirs))) for lgirs in lgirsv]
     return collect_irrep_annotations(symeigsv, lgirsv; kws...)
 end

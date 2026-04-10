@@ -1,5 +1,7 @@
 using Test
+using Crystalline
 using SymmetricTightBinding
+using LinearAlgebra: dot
 
 @testset "Berry curvature" begin
     @testset "Berry phase of π around a perturbatively gapped Dirac point" begin
@@ -115,13 +117,13 @@ end
             b₁ = -[cos(ξ₁), sin(ξ₁)]; b₂ = -[cos(ξ₂), sin(ξ₂)]; b₃ = -[cos(ξ₃), sin(ξ₃)]
 
             # convert input k-point to cartesian coords
-            kc = cartesianize(k, reciprocalbasis(directbasis(13, Val(2))))
+            kc = cartesianize(k, dualbasis(directbasis(13, Val(2))))
 
             H = (
-                t₁ * (cos(dot(kc, a₁)) + cos(dot(kc, a₂)) + cos(dot(kc, a₃))) .* [0 1; 1 0] +
-                t₁ * (sin(dot(kc, a₁)) + sin(dot(kc, a₂)) + sin(dot(kc, a₃))) .* [0 -1im; 1im 0] +
-                2 * t₂* cos(ϕ) * (cos(dot(kc, b₁)) + cos(dot(kc, b₂)) + cos(dot(kc, b₃))) .* [1 0; 0 1] +
-                2 * t₂* sin(ϕ) * (sin(dot(kc, b₁)) + sin(dot(kc, b₂)) + sin(dot(kc, b₃))) .* [1 0; 0 -1] +
+                t₁ * (cos(kc ⋅ a₁) + cos(kc ⋅ a₂) + cos(kc ⋅ a₃)) .* [0 1; 1 0] +
+                t₁ * (sin(kc ⋅ a₁) + sin(kc ⋅ a₂) + sin(kc ⋅ a₃)) .* [0 -1im; 1im 0] +
+                2t₂ * cos(ϕ) * (cos(kc ⋅ b₁) + cos(kc ⋅ b₂) + cos(kc ⋅ b₃)) .* [1 0; 0 1] +
+                2t₂ * sin(ϕ) * (sin(kc ⋅ b₁) + sin(kc ⋅ b₂) + sin(kc ⋅ b₃)) .* [1 0; 0 -1] +
                 m .* [1 0; 0 -1]
             )
             return H

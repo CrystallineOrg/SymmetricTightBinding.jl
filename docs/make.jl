@@ -33,6 +33,7 @@ makedocs(;
             "devdocs/trs_notes.md",
             "devdocs/fourier.md",
             "devdocs/1d_example.md",
+            "devdocs/symmetry_eigenvalue_conventions.md",
         ],
     ],
     warnonly = Documenter.except(

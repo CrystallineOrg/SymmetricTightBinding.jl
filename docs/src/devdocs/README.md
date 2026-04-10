@@ -16,3 +16,8 @@ user-facing theory exposition, see [`theory.md`](../theory.md).
 - **[`1d_example.md`](1d_example.md)** — Worked example of a 1D bipartite lattice with
   inversion, illustrating the M-matrix approach by comparing a hand-derived Hamiltonian with
   the symmetry-constrained result.
+
+- **[`symmetry_eigenvalue_conventions.md`](symmetry_eigenvalue_conventions.md)** — Phase
+  convention mismatch between the physical derivation (`theory.md`) and Crystalline.jl's
+  `calc_bandreps`, how `symmetry_eigenvalues` corrects for it, the centered-lattice
+  primitivization fix, and options for future cleanup.

@@ -203,43 +203,42 @@ Keep refactoring PRs small and reviewable.
 
 ---
 
-## Phase 6: Symmetry analysis correctness (PR #89) `[ ]`
+## Phase 6: Symmetry analysis correctness (PR #89) `[x]`
 
-**Branch:** new branch (or continue from `symeigs-test`)
+**Branch:** `explore-fix-hamiltonian-phase-v2` (PR #104, targeting `tests/coverage-improvements`)
 
-The hardest problem. `symmetry_eigenvalues` returns incorrect irrep labels at many
-high-symmetry k-points, especially K/KA/H/HA (3-fold symmetry).
+### Root cause
 
-### Root cause hypothesis
+Two distinct error classes, all in `src/symmetry_analysis.jl`:
 
-The Theta_G phase factor `exp(-2*pi*i * G * q_i)` in `symmetry_eigenvalues` has a
-sign/convention mismatch. Conjugating the phase fixes K-point failures but introduces new
-ones elsewhere — so it's not a simple sign flip.
+1. **Convention mismatch (net effect: complex conjugation)**: `symmetry_eigenvalues`
+   computed the Convention 1 character `χ_C1 = (Θ_G w)† D_k w`, but Crystalline.jl's
+   `calc_bandreps` and `lgirreps` use a conjugated sign convention for both the `Θ_G`
+   factor and the global phase of `D_k` (cf. issue #12). These two conjugations together
+   give `χ_Crystalline = conj(χ_C1)`. Fix: compute `χ_C1` as before, then return
+   `conj(χ_C1)`. This resolved all 2D and 3D failures from the phase convention mismatch.
 
-### Approach
+2. **Translation reduction under primitivization**: `primitivize(::LittleGroup)` with default
+   `modw=true` discards lattice vectors from translations, corrupting phases at non-Γ
+   k-points in centered lattices. Fix: use `primitivize(::Collection{LGIrrep})` which passes
+   `modw=false`. Resolved all centered-lattice failures (SG 68, 88, 141, 142, 214, 220, 230).
 
-**Step 1 — Anchor on a minimal test case:**
-- Plane group 13, EBR `(1c|A)`, on-site only (zero hopping range)
-- All space group representations are the identity, so the only source of non-trivial
-  irreps is Theta_G
-- Hand-compute the expected symmetry eigenvalues and compare with `symmetry_eigenvalues`
+### Additional changes
 
-**Step 2 — Trace the phase pipeline:**
-- Convention 1 Bloch basis definition
-- `sgrep_induced_by_siteir` output
-- `symmetry_eigenvalues` Theta_G application
-- Crystalline.jl's `calc_bandreps` convention (and its issue #12)
+- New devdoc `docs/src/devdocs/symmetry_eigenvalue_conventions.md` explaining the mismatch
+  between Convention 1 and Crystalline.jl's convention, the implemented fix, and options
+  for future cleanup
+- `[⚠️ phase]` code annotations at convention-sensitive locations in `symmetry_analysis.jl`
+- Symmetry analysis tests rewritten with deterministic RNG and full 230-SG coverage
+- Stopgap `@test_broken` for p3/p6 flipped to `@test`
 
-**Step 3 — Classify failures:**
-- Which k-points are affected?
-- Is the pattern consistent (e.g., always complex-conjugated)?
-- Are there cases where the *structure* of the symmetry vector is wrong (not just permuted
-  labels)?
+### Note on Hamiltonian phase convention
 
-**Step 4 — Fix and validate:**
-- Propose a fix (may involve changes in both SymmetricTightBinding and Crystalline)
-- Run the full EBR scan to verify; convert `@test_broken` from Phase 4C to `@test`
+The symmetry eigenvalue correction is coupled to the Hamiltonian Fourier phase in
+`types.jl`. The correct Convention 1 phase is `cispi(-2k·δ)` (effective phase
+`e^{+ik·δ}`, with δ = b+R−a). The fix above was derived and tested with this convention.
+Changing the Hamiltonian phase sign would require re-deriving the correction in
+`symmetry_analysis.jl`.
 
 ### Relevant upstream issues
 - Crystalline.jl issue #12 (sign convention in `calc_bandreps`)
-- Possibly other Crystalline.jl issues identified during Step 2

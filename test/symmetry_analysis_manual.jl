@@ -101,24 +101,14 @@ end
 
     @testset "2D: SG 13 (p3)" begin
         brs = calc_bandreps(13, Val(2))
-        # EBRs 1-4 fail (1c and 1b sites — K-point phase issue)
-        for i in 1:4
-            @test_broken _test_symmetry_analysis(brs, i)
-        end
-        # EBRs 5-6 pass (1a site)
-        for i in 5:6
+        for i in eachindex(brs) # all 6 EBRs pass (K-point phase issue fixed)
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 14 (p3m1)" begin
         brs = calc_bandreps(14, Val(2))
-        # EBRs 1-6 fail (1c and 1b sites — K-point phase issue)
-        for i in 1:6
-            @test_broken _test_symmetry_analysis(brs, i)
-        end
-        # EBRs 7-9 pass (1a site)
-        for i in 7:9
+        for i in eachindex(brs) # all 9 EBRs pass (K-point phase issue fixed)
             @test _test_symmetry_analysis(brs, i)
         end
     end
