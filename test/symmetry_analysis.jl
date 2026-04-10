@@ -2,7 +2,6 @@ using Test
 using Random
 using SymmetricTightBinding
 using Crystalline
-using Crystalline: free
 
 # ---------------------------------------------------------------------------------------- #
 
@@ -48,7 +47,8 @@ function _test_symmetry_analysis(
     coefs = zeros(length(brs))
     coefs[i] = 1
     cbr = CompositeBandRep(coefs, brs)
-    iszero(free(position(brs[i]))) || pin_free!(brs, i => αβγ)
+    wp = position(brs[i])
+    isspecial(wp) || pin_free!(brs, i => αβγ)
     tbm = tb_hamiltonian(cbr)
     ptbm = tbm(randn(rng, length(tbm)))
     ns = collect_compatible(ptbm)
@@ -59,7 +59,7 @@ end
 @testset "Symmetry analysis (full scan over EBRs)" begin
     for D in 1:3
         αβγ = D == 1 ? [.1] : D == 2 ? [.1, .2] : [.1, .2, .3] # for `pin_free!`
-        for sgnum in MAX_SGNUM[D]
+        for sgnum in 1:MAX_SGNUM[D]
             @testset "Space group $sgnum in dimension $D" begin
                 brs = calc_bandreps(sgnum, Val(D))
                 for i in eachindex(brs)
