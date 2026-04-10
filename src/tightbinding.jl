@@ -510,7 +510,7 @@ function _obtain_basis_free_parameters(
     # build an aggregate constraint matrix, over all generators, acting on the hopping
     # coefficient vector tₐᵦ associated with h_orbit
     constraints = _aggregate_constraints(Qs, Zs)
-    tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
+    tₐᵦ_basis_matrix = _retrying_nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 
     # at this point, the coefficient-space spanning `tₐᵦ_basis` is implicitly complex; this
     # is conceptually not too nice for a Hamiltonian, and we'd like to work with strictly
@@ -598,6 +598,31 @@ function _obtain_basis_free_parameters(
     _prune_at_threshold!(tₐᵦ_basis_reim)
 
     return tₐᵦ_basis_reim
+end
+
+# Wrapper around `nullspace` that falls back to QR-iteration SVD if the default
+# divide-and-conquer SVD (`gesdd!`) fails with a `LAPACKException`. The fallback is slower
+# but unconditionally convergent, and is needed for large constraint matrices arising in
+# high-symmetry space groups (e.g., SG 230) on some platforms/LAPACK implementations.
+function _retrying_nullspace(
+    A;
+    atol::Real = 0.0,
+    rtol::Real = (min(size(A)...) * eps(real(float(oneunit(eltype(A)))))) * iszero(atol)
+)
+    try
+        return nullspace(A; atol, rtol)
+    catch e
+        e isa LinearAlgebra.LAPACKException || rethrow(e)
+        # the below simply copies the LinearAlgebra implementation of nullspace, with the
+        # only adjustment being to pass `alg = LinearAlgebra.QRIteration()` to `svd` to
+        # ensure convergence; 
+        # TODO: change to `nullspace(A; atol, rtol, alg = LinearAlgebra.QRIteration())`
+        #       if https://github.com/JuliaLang/LinearAlgebra.jl/issues/1571 is resolved
+        SVD = svd(A; full = true, alg = LinearAlgebra.QRIteration())
+        tol = max(atol, SVD.S[1]*rtol)
+        indstart = sum(s -> s .> tol, SVD.S) + 1
+        return copy((@view SVD.Vt[indstart:end,:])')
+    end
 end
 
 function _aggregate_constraints(
