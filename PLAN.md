@@ -209,38 +209,36 @@ Keep refactoring PRs small and reviewable.
 
 ### Root cause
 
-Three distinct error classes, all in `src/symmetry_analysis.jl`:
+Two distinct error classes, all in `src/symmetry_analysis.jl`:
 
-1. **Θ_G sign mismatch**: The physical formula uses `Θ_G†` but Crystalline.jl's
-   `calc_bandreps` (following its own conjugated convention, cf. issue #12) expects `Θ_G`.
-   Fix: use `-G` in `reciprocal_translation_phase`. Resolved all 2D failures.
+1. **Convention mismatch (net effect: complex conjugation)**: `symmetry_eigenvalues`
+   computed the Convention 1 character `χ_C1 = (Θ_G w)† D_k w`, but Crystalline.jl's
+   `calc_bandreps` and `lgirreps` use a conjugated sign convention for both the `Θ_G`
+   factor and the global phase of `D_k` (cf. issue #12). These two conjugations together
+   give `χ_Crystalline = conj(χ_C1)`. Fix: compute `χ_C1` as before, then return
+   `conj(χ_C1)`. This resolved all 2D and 3D failures from the phase convention mismatch.
 
-2. **Global phase mismatch**: The `SiteInducedSGRepElement` functor computes
-   `e^{-2πi(gk)·v}` (physical Convention 1) but `calc_bandreps` uses `e^{+2πi(gk)·v}`.
-   Fix: multiply by `cispi(4dot(gk, v))` in `symmetry_eigenvalues`. Resolved 3D failures
-   at k-points with screw/glide operations.
-
-3. **Translation reduction under primitivization**: `primitivize(::LittleGroup)` with default
+2. **Translation reduction under primitivization**: `primitivize(::LittleGroup)` with default
    `modw=true` discards lattice vectors from translations, corrupting phases at non-Γ
    k-points in centered lattices. Fix: use `primitivize(::Collection{LGIrrep})` which passes
    `modw=false`. Resolved all centered-lattice failures (SG 68, 88, 141, 142, 214, 220, 230).
 
 ### Additional changes
 
-- Corrected Hamiltonian Fourier phase sign to `e^{-ik·δ}` (Convention 1) in `types.jl` and
-  `gradients.jl`, with matching print code and comment updates
-- New devdoc `docs/src/devdocs/symmetry_eigenvalue_conventions.md` explaining the mismatch,
-  the fix, and options for future cleanup (recommended: change `SiteInducedSGRepElement`
-  convention to match Crystalline.jl directly)
-- `[⚠️ phase]` code annotations at all convention-sensitive locations in
-  `symmetry_analysis.jl`
+- New devdoc `docs/src/devdocs/symmetry_eigenvalue_conventions.md` explaining the mismatch
+  between Convention 1 and Crystalline.jl's convention, the implemented fix, and options
+  for future cleanup
+- `[⚠️ phase]` code annotations at convention-sensitive locations in `symmetry_analysis.jl`
 - Symmetry analysis tests rewritten with deterministic RNG and full 230-SG coverage
 - Stopgap `@test_broken` for p3/p6 flipped to `@test`
 
-### Outcome
+### Note on Hamiltonian phase convention
 
-All 1D, 2D, and 3D space groups pass symmetry analysis (all EBRs, all k-points). Berry
-curvature and Chern number tests unaffected.
+The symmetry eigenvalue correction is coupled to the Hamiltonian Fourier phase in
+`types.jl`. The correct Convention 1 phase is `cispi(-2k·δ)` (effective phase
+`e^{+ik·δ}`, with δ = b+R−a). The fix above was derived and tested with this convention.
+Changing the Hamiltonian phase sign would require re-deriving the correction in
+`symmetry_analysis.jl`.
 
 ### Relevant upstream issues
 - Crystalline.jl issue #12 (sign convention in `calc_bandreps`)

@@ -1,6 +1,6 @@
-# Note [⚠️ phase]: Several phase choices in this file intentionally deviate from the physical
-#   Convention 1 formulas derived in `docs/src/theory.md` to match Crystalline.jl's
-#   `calc_bandreps` convention. See `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
+# Note [⚠️ phase]: `symmetry_eigenvalues` returns the complex conjugate of the Convention 1
+#   character to match Crystalline.jl's `calc_bandreps` convention.
+#   See `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
 
 """
     collect_compatible(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
@@ -92,6 +92,14 @@ The symmetry eigenvalues are returned as a matrix, with rows running over the el
 !!! note
     The inputs `ops`, `k`, and `lg` must be provided in a primitive setting. See
     Crystalline.jl's `primitivize`.
+
+!!! warning "⚠️ character phase convention"
+    The symmetry eigenvalues returned by this function are the complex conjugate of the
+    Convention 1 result (see `docs/src/devdocs/symmetry_eigenvalue_conventions.md`)
+    in order to match the convention used by Crystalline.jl's `calc_bandreps` and `lgirreps`
+    functions. See the above documentation for more details and 
+    https://github.com/thchr/Crystalline.jl/issues/12 for the relevant issue in
+    Crystalline.jl.
 """
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
@@ -104,37 +112,30 @@ function symmetry_eigenvalues(
     length(k) == D || error("dimension mismatch")
     length(sgreps) == length(ops) || error("length of `sgreps` must match length of `ops`")
 
-    # NB: Currently, the site-symmetry induced reps assume the "Convention 1" Fourier
-    #     transform. This Fourier transform does depend on "in-unit-cell" coordinates;
-    #     so we must correct such phases here, as indicated in `/docs/usr/theory.md`.
+    # NB: `solve` with `bloch_phase=Val(false)` returns eigenvectors `vs` of H(k) in the
+    #     Convention 1 coefficient basis (without Bloch position phases). In Convention 1,
+    #     the symmetry eigenvalues are then `χ[n] = (Θ_G vs[n])† D_k vs[n]` where Θ_G & D_k
+    #     defined in `docs/src/theory.md` and `docs/src/devdocs/` (and methods below).
     #
-    # NOTE: since we picked "Convention 1" for the Fourier transform, we need to correct an
-    #       extra phase factor to correct the non-periodicity of the Bloch functions under
-    #       this convention.
+    # [⚠️ phase]: Crystalline.jl's `calc_bandreps` and `lgirreps` computes characters in a
+    #     convention that is the complex conjugate of the Convention 1 result (see
+    #     thchr/Crystalline.jl/#12).
+    #     To be able to interface with Crystalline.jl, and until thchr/Crystalline.jl/#12 is
+    #     resolved, we thus actually return `χ_Crystalline = conj(χ_Convention1)`.
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
+    v_kpG = similar(vs, size(vs, 1)) # preallocate for Θᴳ * v
     for (j, sgrep) in enumerate(sgreps)
         g = sgrep.op
         gk = compose(g, ReciprocalPoint{D}(k)) # NB: for k ∈ Gₖ, there exist G st g∘k = k+G
         G = gk - k # the possible reciprocal vector-difference G between k & g∘k; for Θᴳ
-        # [⚠️ phase]: we use -G (i.e., `conj(Θᴳ)`) rather than G because the symmetry
-        #     eigenvalue formula `⟨ψ|ĝ|ψ⟩ = w† Θ_G† D_k w` uses the physical Conv 1 result
-        #     with Θ_G†; but `calc_bandreps` in Crystalline.jl (following Cano et al.) computes
-        #     characters as `Tr(Θ_G D_k)` (not Θ_G†). To match, we compute `w† Θ_G D_k w`,
-        #     achieved by placing `conj(Θ_G)` in the conjugated slot of the dot product.
-        Θᴳ_conj = reciprocal_translation_phase(orbital_positions(ptbm), -G) # = conj(Θᴳ)
-        # [⚠️ phase]: the `sgrep` functor computes `D_k(g) = e^{-2πi(gk)·t} ρ(h)` (physical
-        #     Conv 1), but `calc_bandreps` in Crystalline.jl uses the conjugated global phase
-        #     `e^{+2πi(gk)·t}` (cf. Crystalline.jl issue #12). To match, we conjugate the
-        #     global phase by multiplying by `e^{+4πi(gk)·t}` (flipping the sign of the
-        #     exponent).
-        t = translation(g)
-        phase_correction = cispi(4dot(gk, t))
-        ρ = phase_correction * sgrep(k)
+        Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G)
+        D_k = sgrep(k) # = D_k(g) = e^{-2πi(gk)·t} ρ(h) (Convention 1)
         for (n, v) in enumerate(eachcol(vs))
-            v_kpG = Θᴳ_conj * v
-            symeigs[j, n] = dot(v_kpG, ρ, v) # = v† Θᴳ (D_k w/ phase_correction) v
-            # TODO: preallocate and `mul!` the `Θᴳ_conj * v` term to avoid allocations
+            v_kpG = mul!(v_kpG, Θᴳ, v) # = Θᴳ * v (without re-allocating `v_kpG`)
+            χ = dot(v_kpG, D_k, v)  # Convention 1: (Θ_G w)† D_k w
+            χ_Crystalline = conj(χ) # [⚠️ phase]: convert to Crystalline.jl's convention
+            symeigs[j, n] = χ_Crystalline
         end
     end
     return symeigs

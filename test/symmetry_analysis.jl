@@ -26,8 +26,8 @@ using Crystalline: free
 
     ptbm′′ = tbm′([2.5, 0, 0.2, 0, -1, .5]) # turn on hybridization and split bands
     ns′′ = collect_compatible(ptbm′′)
-    @test length(ns′′) == 2 # bands are overlapping and not separable
-    @test ns′′[1] ∉ brs[[3, 5]]
+    @test length(ns′′) == 2 # bands do not overlap fully but separate into two multiplets
+    @test ns′′[1] ∉ brs[[3, 5]] # each multiplet differs from both parent EBRs
     @test ns′′[2] ∉ brs[[3, 5]]
     @test sum(ns′′) == SymmetryVector(cbr′)
 end
@@ -41,7 +41,10 @@ end
 # topological EBRs): i.e., we don't know if the model is a single connected band or not,
 # only what the "sum" of symmetry vectors will be.
 
-function _test_symmetry_analysis(brs, i, αβγ; rng = seed!(copy(Random.default_rng()), 1234))
+function _test_symmetry_analysis(
+    brs, i, αβγ;
+    rng = Random.seed!(copy(Random.default_rng()), 1234)
+)
     coefs = zeros(length(brs))
     coefs[i] = 1
     cbr = CompositeBandRep(coefs, brs)

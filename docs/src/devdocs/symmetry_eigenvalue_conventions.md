@@ -1,36 +1,28 @@
 # Phase conventions in `symmetry_eigenvalues`: reconciling with Crystalline.jl
 
-This document explains the phase convention mismatch between the physical derivation in
-[`theory.md`](../theory.md) and Crystalline.jl's `calc_bandreps`, and how
-`symmetry_eigenvalues` in SymmetricTightBinding.jl corrects for it.
+This document explains the phase convention mismatch between the Convention 1 derivation in
+[`theory.md`](../theory.md) and Crystalline.jl's `calc_bandreps` and `lgirreps` and how
+`symmetry_eigenvalues` in SymmetricTightBinding.jl corrects for it, to align with Crystalline.jl's convention.
 
 ## Background: what `theory.md` derives
 
 The derivation in `theory.md` (§ "Transformation properties under symmetry operations")
-gives the **physical** symmetry eigenvalue for band $n$ at $\mathbf{k}$ under a little-group
+gives the Convention 1 symmetry eigenvalue for band $n$ at $\mathbf{k}$ under a little-group
 operation $g = \{R|\mathbf{v}\}$:
 
 ```math
-\langle\psi_{n\mathbf{k}}|\hat{g}|\psi_{n\mathbf{k}}\rangle
-= \sum_{IJ} (w_{I,n\mathbf{k}})^* \, e^{+i\mathbf{G}\cdot\mathbf{q}_\alpha} \, [\mathbf{D}_\mathbf{k}(g)]_{IJ} \, w_{J,n\mathbf{k}}
+\chi_{n\mathbf{k}}(g)
+= (\Theta_\mathbf{G} \, \mathbf{w}_{n\mathbf{k}})^\dagger \, \mathbf{D}_\mathbf{k}(g) \, \mathbf{w}_{n\mathbf{k}}
 ```
 
 where:
 
-- $\mathbf{w}_{n\mathbf{k}}$ is the eigenvector of $H(\mathbf{k})$
+- $\mathbf{w}_{n\mathbf{k}}$ is the eigenvector of $H(\mathbf{k})$ in the Convention 1 coefficient basis
 - $\mathbf{G} = g\mathbf{k} - \mathbf{k}$ is a reciprocal lattice vector (since $g$ is in the little group $G_\mathbf{k}$)
-- The factor $e^{+i\mathbf{G}\cdot\mathbf{q}_\alpha}$ arises from the conjugation of $\Theta_\mathbf{G}$, defined as $[\Theta_\mathbf{G}]_{II} = e^{-i\mathbf{G}\cdot\mathbf{q}_\alpha}$
-- $\mathbf{D}_\mathbf{k}(g) = e^{-i(g\mathbf{k})\cdot\mathbf{v}} \, \rho(h)$ is the site-induced space group representation, with $\rho(h)$ the momentum-independent matrix part
+- $[\Theta_\mathbf{G}]_{II} = e^{-i\mathbf{G}\cdot\mathbf{q}_I}$ (so $\Theta_\mathbf{G}^\dagger = \Theta_{-\mathbf{G}}$ contributes $e^{+i\mathbf{G}\cdot\mathbf{q}_I}$ upon conjugation)
+- $\mathbf{D}_\mathbf{k}(g) = e^{-i(g\mathbf{k})\cdot\mathbf{v}} \, \rho(h)$ is the site-induced space group representation (Convention 1)
 
-In vectorized form (the boxed formula in `theory.md`):
-
-```math
-\langle\psi_{n\mathbf{k}}|\hat{g}|\psi_{n\mathbf{k}}\rangle
-= (\Theta_\mathbf{G} \, \mathbf{w}_{n\mathbf{k}})^\dagger \, (\mathbf{D}_\mathbf{k}(g) \, \mathbf{w}_{n\mathbf{k}})
-```
-
-All signs follow consistently from the Convention 1 Fourier transform used throughout the
-package. The `SiteInducedSGRepElement` functor in `site_representations.jl` faithfully
+The `SiteInducedSGRepElement` functor in `site_representations.jl` faithfully
 implements $\mathbf{D}_\mathbf{k}(g)$:
 
 ```julia
@@ -55,147 +47,90 @@ A comment in the source (lines 180–185) explicitly acknowledges this:
 [^1]: B. Bradlyn et al., "Topological quantum chemistry," Nature **547**, 298 (2017);
 L. Elcoro et al., "Double crystallographic groups [...]," J. Appl. Cryst. **50**, 1457 (2017).
 
-This means the band representation characters computed by `calc_bandreps` are **complex
-conjugated** in their global phases relative to the physical convention. However,
-Crystalline.jl is **internally consistent**: its `LGIrrep` matrices also use this conjugated
-convention, so subduction (decomposing characters into irreps) works correctly — the
-conjugation cancels when matching characters against irreps, because both sides are
+This means the band representation characters computed by `calc_bandreps` use conjugated
+phase signs for both the $\Theta_\mathbf{G}$ factor and the $\mathbf{D}_\mathbf{k}$ global phase,
+relative to the Convention 1 derivation. Crystalline.jl is **internally consistent**: its
+`LGIrrep` matrices also use these conjugated signs, so subduction (decomposing characters
+into irreps) works correctly within Crystalline — the conjugations cancel when matching
+characters against irreps, because both sides are conjugated identically.
+
+## The net effect: complex conjugation
+
+The two sign flips (one in $\Theta_\mathbf{G}$, one in $\mathbf{D}_\mathbf{k}$) both
+individually conjugate phases in the character formula, and together they give:
+
+```math
+\chi_\text{Crystalline}(g) = \overline{\chi_\text{Convention 1}(g)}
+```
+
+That is, the Crystalline.jl convention returns characters that are the **complex conjugate**
+of the Convention 1 result.
+
+To see this concretely: the Convention 1 character is
+$\chi_\text{Convention 1} = (\Theta_\mathbf{G} \mathbf{w})^\dagger \mathbf{D}_\mathbf{k} \mathbf{w}$.
+Under the Crystalline sign convention, $\Theta_\mathbf{G} \to \Theta_{-\mathbf{G}}$ and
+$e^{-i(g\mathbf{k})\cdot\mathbf{v}} \to e^{+i(g\mathbf{k})\cdot\mathbf{v}}$, which
+individually conjugates both scalar factors in the formula, so the overall character is
 conjugated.
 
 ## Where the mismatch occurs
 
 The mismatch arises at the **interface** between the two packages:
 
-1. **SymmetricTightBinding.jl** computes symmetry eigenvalues from actual Hamiltonian
-   eigenvectors using the **physical** convention (matching `theory.md`)
-2. **Crystalline.jl** expects characters in its **conjugated** convention (matching its
+1. **SymmetricTightBinding.jl** computes symmetry eigenvalues from Hamiltonian
+   eigenvectors in Convention 1
+2. **Crystalline.jl** expects characters in its conjugated convention (to match its
    `LGIrrep`s)
 
 When `collect_compatible` calls `symmetry_eigenvalues` and passes the result to Crystalline's
-`collect_compatible(symeigsv, cbr.brs)`, the conventions disagree. This produced incorrect
-irrep labels at many high-symmetry $\mathbf{k}$-points (the bug tracked in PR #89).
-
-## The two components of the mismatch
-
-The conjugation affects two independent phase factors in the symmetry eigenvalue formula:
-
-### Component 1: the $\Theta_\mathbf{G}$ factor
-
-| | Physical (`theory.md`) | Crystalline convention |
-|---|---|---|
-| Phase on position $\mathbf{q}$ | $e^{+i\mathbf{G}\cdot\mathbf{q}}$ (from $\Theta_\mathbf{G}^\dagger$) | $e^{-i\mathbf{G}\cdot\mathbf{q}}$ (i.e., $\Theta_\mathbf{G}$ unconjugated) |
-
-For operations where $\mathbf{G} = 0$ (when $g\mathbf{k} = \mathbf{k}$ exactly), this
-component is trivially 1 and doesn't matter. It matters at $\mathbf{k}$-points like K in p3,
-where 3-fold rotations give $g\mathbf{k} = \mathbf{k} + \mathbf{G}$ with nonzero
-$\mathbf{G}$.
-
-### Component 2: the global phase from the translation part of $g$
-
-| | Physical (`theory.md`) | Crystalline convention |
-|---|---|---|
-| Phase on translation $\mathbf{v}$ | $e^{-i(g\mathbf{k})\cdot\mathbf{v}}$ | $e^{+i(g\mathbf{k})\cdot\mathbf{v}}$ |
-
-For operations with $\mathbf{v} = 0$ (pure rotations), this is trivially 1. It matters for
-screw axes and glide planes (e.g., the $4_1$ screw in SG 93, 141, etc.).
-
-### Failure pattern explained
-
-This two-component structure explains the pattern of test failures across space groups:
-
-- **Original code (both components wrong):** All 2D p3/p6 failures at the K-point
-  (Component 1), plus all 3D screw/glide failures (Component 2)
-- **$\Theta_\mathbf{G}$ fix only (Component 1 fixed):** 2D fixed, but 3D screw/glide
-  operations still fail
-- **Both components fixed:** Everything passes except pre-existing centered-lattice bugs
-  (a separate issue, likely in Crystalline.jl)
+`collect_compatible(symeigsv, cbr.brs)`, the conventions must agree. This mismatch was the
+root cause of the incorrect irrep labels reported in PR #89.
 
 ## The fix
 
-With both corrections, `symmetry_eigenvalues` computes:
-
-```math
-\mathbf{w}_{n\mathbf{k}}^\dagger \,
-\Theta_\mathbf{G} \,
-\tilde{\mathbf{D}}_\mathbf{k}(g) \,
-\mathbf{w}_{n\mathbf{k}}
-```
-
-where $\tilde{\mathbf{D}}_\mathbf{k}(g) = e^{+2\pi i(g\mathbf{k})\cdot\mathbf{v}} \, \rho(h)$ uses the conjugated global phase but the same (unconjugated) matrix part $\rho$.
-
-Note that only the scalar phases are conjugated, **not** the representation matrix $\rho$.
-This matches what `calc_bandreps` does: it conjugates the exponential phase factor (line 179
-uses `cis(+2π...)`) but does not conjugate the site-irrep character $\chi_s$.
-
-In the code, this is implemented as:
+Since $\chi_\text{Crystalline} = \overline{\chi_\text{Convention 1}}$, the correction is simply to
+take the complex conjugate of the Convention 1 formula. In `symmetry_eigenvalues`:
 
 ```julia
-# Component 1: use conj(Θ_G) = Θ_{-G} instead of Θ_G
-Θᴳ_conj = reciprocal_translation_phase(orbital_positions(ptbm), -G)
-
-# Component 2: flip the sign of the global phase e^{-2πi(gk)·v} → e^{+2πi(gk)·v}
-v_g = translation(g)
-phase_correction = cispi(4dot(gk, v_g))
-ρ = phase_correction * sgrep(k)
-
-# Compute w† Θ_G D̃_k w (matching Crystalline.jl's convention)
+Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G)   # = Θ_G (positive G)
+ρ = sgrep(k)   # = D_k(g) = e^{-2πi(gk)·v} ρ(h) (Convention 1)
 for (n, v) in enumerate(eachcol(vs))
-    v_kpG = Θᴳ_conj * v
-    symeigs[j, n] = dot(v_kpG, ρ, v)
+    v_kpG = Θᴳ * v
+    χ = dot(v_kpG, ρ, v)          # Convention 1: (Θ_G w)† D_k w
+    χ_Crystalline = conj(χ)       # [⚠️ phase]: convert to Crystalline.jl's convention
+    symeigs[j, n] = χ_Crystalline
 end
 ```
+
+Note: the eigenvectors `vs` are from `solve(ptbm, k; bloch_phase=Val(false))`, i.e.,
+they are eigenvectors of $H(\mathbf{k})$ in the Convention 1 coefficient basis. The
+Hamiltonian phase convention affects the eigenvectors (particularly at non-TRIM
+$\mathbf{k}$-points where $\mathbf{k} \neq -\mathbf{k}$), so the symmetry eigenvalue
+result is coupled to the Hamiltonian phase convention. The code uses the Convention 1
+Hamiltonian phase ($e^{+i\mathbf{k}\cdot\boldsymbol{\delta}}$, i.e., `cispi(-2k·δ)` in
+`types.jl`); changing this sign would require re-deriving the correction here.
 
 ## Should this be fixed in Crystalline.jl instead?
 
 There are three options, each with different trade-offs:
 
-### Option A: Monkey-patch in `symmetry_eigenvalues` (current approach)
+### Option A: Complex-conjugate in `symmetry_eigenvalues` (current approach)
 
-The `theory.md` convention is "correct physics" and the code corrects at the interface with
-Crystalline.jl.
+`symmetry_eigenvalues` computes the Convention 1 character and conjugates it before
+returning.
 
-- **Pro:** Minimal blast radius; no Crystalline.jl changes
-- **Con:** The code's comments reference the `theory.md` formula but compute something
-  different; the correction factor (`cispi(4dot(gk, v_g))`) is a wart that's easy to get
-  confused about
+- **Pro:** Minimal blast radius; no Crystalline.jl changes needed; the correction
+  ($\overline{\chi_\text{Convention 1}} = \chi_\text{Crystalline}$) is concise and easy to
+  understand
+- **Con:** The returned characters differ by a global complex conjugation from what
+  `theory.md` derives; downstream callers must be aware of this convention
 
 ### Option B: Fix the root cause in Crystalline.jl (best, but harder)
 
-Change to use active-convention irreps with minus sign in exponential factors. Flip all associated phase factor signs in Crystalline. Basically, fix https://github.com/thchr/Crystalline.jl/issues/12 and then see if the issues here can be dropped.
+Change Crystalline.jl to use the conventional minus sign in its exponential phase factors
+(fixing https://github.com/thchr/Crystalline.jl/issues/12), then remove the conjugation
+correction here entirely.
 
-- **Pro:** Everything matches the physics and the literature
-- **Con:** It is not clear to me what fixing #12 means for the labels of irreps.
-
-### Option C: Change the `SiteInducedSGRepElement` convention
-
-The key observation is that **the functor's global phase is only used in
-`symmetry_analysis.jl`** — the constraint-building code in `tightbinding.jl` uses
-`sgrep_induced_by_siteir_excl_phase`, which returns just $\rho$ without any global phase.
-
-So changing the functor's phase convention from $e^{-i(g\mathbf{k})\cdot\mathbf{v}}$ to
-$e^{+i(g\mathbf{k})\cdot\mathbf{v}}$ would:
-
-- Remove Component 2 of the monkey-patch from `symmetry_eigenvalues`
-- Not affect Hamiltonian construction at all
-- Make the `SiteInducedSGRepElement` explicitly match Crystalline.jl's convention
-
-You'd still need the Component 1 fix (the $\Theta_\mathbf{G}$ sign), but that becomes a more
-natural choice: implement $\mathbf{w}^\dagger \Theta_\mathbf{G} \tilde{\mathbf{D}}_\mathbf{k} \mathbf{w}$
-instead of $(\Theta_\mathbf{G} \mathbf{w})^\dagger \mathbf{D}_\mathbf{k} \mathbf{w}$, documented clearly
-as "we use $\Theta_\mathbf{G}$ (not $\Theta_\mathbf{G}^\dagger$) to match Crystalline.jl's
-character convention."
-
-In this option, `theory.md` should also gain a note (or a new devdoc section) explaining:
-"The physical formula uses $e^{-i(g\mathbf{k})\cdot\mathbf{v}}$, but Crystalline.jl's
-`calc_bandreps` and `LGIrrep`s use the conjugated phase $e^{+i(g\mathbf{k})\cdot\mathbf{v}}$.
-Since `symmetry_eigenvalues` must match Crystalline.jl's irreps for subduction to work, we
-adopt the conjugated convention for $\mathbf{D}_\mathbf{k}$."
-
-## Note: the Hamiltonian Fourier phase is independent
-
-The Hamiltonian evaluation phase ($e^{-2\pi i \mathbf{k}\cdot\boldsymbol{\delta}}$ in
-`evaluate_tight_binding_term!`) does **not** affect symmetry analysis results. This was
-verified during the investigation: the phase sign only transposes $H(\mathbf{k}) \to H(-\mathbf{k})$,
-and eigenvectors at the high-symmetry $\mathbf{k}$-points used by `symmetry_eigenvalues` are
-obtained from `solve(ptbm, k)` which always uses the actual $\mathbf{k}$. Changing the
-Hamiltonian phase sign is therefore not a route to fixing symmetry analysis.
+- **Pro:** Both packages use Convention 1 throughout; the code matches the literature
+- **Con:** It is not clear what fixing issue #12 means for irrep label assignments across
+  Crystalline.jl.
