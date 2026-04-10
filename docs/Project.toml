@@ -5,6 +5,8 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 SymmetricTightBinding = "793e0360-0e47-4c52-9513-43d75d53c7d0"
+SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
 [sources]
 SymmetricTightBinding = {path = ".."}
+SymmetryBases = {url = "https://github.com/thchr/SymmetryBases.jl.git"}
