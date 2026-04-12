@@ -55,7 +55,7 @@ function Makie.plot!(
     t = p.t[]
     offdiag = p.offdiag[] # implies that (anti-)hermiticity requires adding reversed hoppings
     context = p.context[]
-    context = merge(context, default_context_attributes) # TODO: remove manual merging once Makie v0.25+ is out
+    context = merge(default_context_attributes, context) # TODO: remove manual merging once Makie v0.25+ is out
 
     P, V = Point{D, Float32}, Vec{D, Float32}
     Rm = stack(Rs)

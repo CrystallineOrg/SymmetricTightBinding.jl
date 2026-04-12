@@ -29,7 +29,7 @@ function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D};
-    diagonal_block::Bool = true, # whether to manually add "reversed" hoppings (if false),
+    diagonal_block::Bool = true, # whether to manually add "reversed" hoppings (if true),
     reverse_hop::Bool = false, # if hopping actually goes from a+R→b rather than a→b+R
                                # (used in NONHERMITIAN case, for lower-triangular blocks)
                                # practically just corresponds to flipping signs of `Rs`
@@ -75,7 +75,7 @@ function obtain_symmetry_related_hoppings(
     # hermiticity/anti-hermiticity could link orbits that spatial symmetries might not have
     # already linked: in particular, if we are in a "diagonal block" of the Hamiltonian,
     # then, for every hopping vector `δ`, we must have a "reversed" counterpart `-δ` in the
-    # presence of hermiticity r anti-hermiticity (always the case in our implementation);
+    # presence of hermiticity or anti-hermiticity (always the case in our implementation);
     # but those two vectors might have fallen in distinct orbits up this point - if so, we
     # now merge them
     if diagonal_block
@@ -849,16 +849,18 @@ end
     tb_hamiltonian(
         cbr::CompositeBandRep{D},
         Rs::AbstractVector{Vector{Int}}
-        [Sᵛ::Val{S} = Val(Hermitian)]
+        [Sᵛ::Val{S} = Val(HERMITIAN)]
     ) -> TightBindingModel{D, S}
 
 Construct the tight-binding Hamiltonian from a given composite band representation `cbr` and
 a set of global translation-representatives `Rs`.
 
-Whether the returned Hamiltonian is Hermitian or anti-Hermitian can be controlled by passing
-the optional argument `Sᵛ` as `Val(HERMITIAN)` (default) or `Val(ANTIHERMITIAN)`.
-This can also be passed as a plain `HERMITIAN` or `ANTIHERMITIAN` (but is then not type
-stable).
+Whether the returned Hamiltonian is Hermitian, anti-Hermitian, or non-Hermitian can be
+controlled by passing the optional argument `Sᵛ :: Val{S}` where `S` is an value of the enum
+type [`Hermiticity`](@ref), i.e., `HERMITIAN`, `ANTIHERMITIAN`, or `NONHERMITIAN` (default,
+`HERMITIAN`).
+This choice can also be passed a plain `S` (without a `Val` wrapper) but the call is then
+not type-stable.
 
 The returned [`TightBindingModel`](@ref) will generally feature several terms (iterating to
 [`TightBindingTerm`](@ref)s), each representing a tight-binding term that is closed under
@@ -903,7 +905,7 @@ function tb_hamiltonian(
     # upper block-diagonals: we do this to get a more natural sorting of the terms in the
     # model, with self-hoppings first, etc. For Hermitian/anti-Hermitian models, we only
     # go over the upper triangular part, with the latter following directly; for
-    # non-Hermitian, we just go over all blocks, going along diagonls 0,1,-1,…,B-1,-(B-1)
+    # non-Hermitian, we just go over all blocks, going along diagonals 0,1,-1,…,B-1,-(B-1)
     for d in _diagonal_indices(B, Sᵛ) # offset from main diagonal (at 0)
         for block_i in _row_indices(B, d, Sᵛ)
             block_j = block_i + d

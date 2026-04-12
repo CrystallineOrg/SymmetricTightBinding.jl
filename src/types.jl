@@ -85,9 +85,9 @@ from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 - `br2 :: NewBandRep{D}`: second band representation
 - `ordering1 :: OrbitalOrdering{D}`: ordering of the orbitals in `br1`
 - `ordering2 :: OrbitalOrdering{D}`: ordering of the orbitals in `br2`
-- `h_orbit :: Union{Nothing,HoppingOrbit{D}}`: hopping orbit associated to the block
+- `h_orbit :: HoppingOrbit{D}`: hopping orbit associated to the block
 - `Mm :: Array{Int,4}`: matrix codifying Hamiltonian
-- `t :: Vector{Float64}}`: a basis vector, stored in re/im-doubled format
+- `t :: Vector{Float64}`: a basis vector, stored in re/im-doubled format
 - `MmtC :: Array{ComplexF64, 3}`: pre-contracted matrix `Mm` with "complexified" `t`.
 - `diagonal_block :: Bool`: whether this is a diagonal block in the overall Hamiltonian.
 """
@@ -152,6 +152,26 @@ Hermitian conjugation. Values:
     NONHERMITIAN
 end
 
+
+"""
+    TightBindingTerm{D, S}
+
+A single term a tight-binding Hamiltonian, representing a single block or a
+hermiticity-related pair of blocks of the Hamiltonian matrix.
+
+## Fields
+- `axis :: BlockedOneTo{Int, Vector{Int}}`: the blocked axis of the term, encoding the
+  global row/column indices all blocks in the full Hamiltonian matrix.
+- `block_ij :: NTuple{2, Int}`: the indices of considered term in the blocked axes; i.e.,
+  `axis[block_ij...]` gives the global row/column indices of the "key" block represented by
+  the term. If `S` is `NONHERMITIAN` or the term is diagonal, the key block is the only
+  block represented by the term; otherwise, the term also represents the hermiticity-related
+  block, whose global coordinates are `axis[reverse(block_ij)...]`.
+- `block :: TightBindingBlock{D, S}`: the `TightBindingBlock` associated to the key block.
+- `brs :: Vector{NewBandRep{D}}`: the set of band representations involved in the
+  Hamiltonian; each element corresponds to a block-index in `axis`, such that `axis[i, j]`
+  gives the (block of) hopping amplitudes from `brs[j]` to `brs[i]`.
+"""
 struct TightBindingTerm{D, S} <: AbstractBlockMatrix{TightBindingElementString}
     axis::BlockedOneTo{Int, Vector{Int}}
     block_ij::NTuple{2, Int}
@@ -191,10 +211,7 @@ function _getindex(
     i::Int,
     j::Int,
     conjugate::Bool = false
-) where {D, S}
-    # if we are actually getting from a block related to the stored one by antihermiticity
-    antihermitian_get = S === ANTIHERMITIAN && conjugate == true
-    
+) where {D, S}  
     @boundscheck 1 ≤ i ≤ size(tbb.Mm, 3) && 1 ≤ j ≤ size(tbb.Mm, 4) ||
                  error(BoundsError(tbb, (i, j)))
 
