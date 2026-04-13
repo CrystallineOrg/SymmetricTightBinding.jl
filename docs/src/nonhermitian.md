@@ -8,6 +8,7 @@ The archetypical non-Hermitian model is the 1D Hatano--Nelson model, consisting 
 It is simple to build this model with SymmetricTightBinding.jl:
 
 ```@example hatano-nelson
+using Crystalline, SymmetricTightBinding
 brs = calc_bandreps(1, 1)  # EBRs in plane group 1, with time-reversal symmetry
 pin_free!(brs, [1=>[0]]) # the 1a Wyckoff position in plane group 1 has a free parameter: set to 0 for definiteness
 cbr = @composite brs[1]    # single-site model
@@ -24,7 +25,7 @@ The non-Hermitian model reduces to the Hermitian model when the left- and right-
 ```@example hatano-nelson
 ptbm = tbm([0.9, 1.1]) # a model with 0.9 hopping amplitude to right, 1.1 to the left
 
-using Brillouin, GLMakie
+using Brillouin
 kp = irrfbz_path(1, directbasis(1, 1)) # a k-path in plane group 1
 kpi = interpolate(kp, 500) # interpolated over 500 points
 Es = spectrum(ptbm, kpi)
@@ -46,6 +47,7 @@ tbm_notr = tb_hamiltonian((@composite brs_notr[1]), [[0], [1]], NONHERMITIAN) # 
 
 We can also construct more complicated examples where symmetry plays a role. Consider for example the following simple extension of the Hatano-Nelson model to a 2D lattice with p4 symmetry:
 ```@example hatano-nelson-p4
+using Crystalline, SymmetricTightBinding, GLMakie # hide
 brs = calc_bandreps(10, Val(2))
 cbr = @composite brs[1]
 tbm_H  = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(HERMITIAN))
