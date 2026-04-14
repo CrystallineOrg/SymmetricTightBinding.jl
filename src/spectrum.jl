@@ -87,8 +87,7 @@ function spectrum_single_k(
 ) where {D, S, F}
     length(k) == D ||
         error(lazy"dimension mismatch of momentum ($(length(k))) & model ($D)")
-    _H = ptbm(k)
-    H = S == HERMITIAN ? Hermitian(_H) : _H
+    H = ptbm(k)
     es = eigvals!(H)
     return _apply_transform(es, transform)
 end

@@ -18,7 +18,8 @@ using LinearAlgebra
         @test issorted(es)     # eigenvalues sorted
 
         # compare against direct eigvals
-        H = Hermitian(ptbm(k))
+        H = ptbm(k)
+        @test H isa Hermitian
         @test es ≈ eigvals(H)
     end
 

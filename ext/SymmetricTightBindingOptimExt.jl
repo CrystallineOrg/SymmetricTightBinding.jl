@@ -20,7 +20,7 @@ function fg!(
     end
 
     for (Es_r, k) in zip(eachrow(Em_r), ks)
-        H = Hermitian(ptbm(k))
+        H = ptbm(k)
         Es, us = eigen!(H) # no Bloch phases, deliberately
 
         # MSE loss (possibly with lasso penalty)

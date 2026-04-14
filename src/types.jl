@@ -417,24 +417,24 @@ hermiticity(::ParameterizedTightBindingModel{D, S}) where {D, S} = S
 orbital_positions(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.positions
 Crystalline.CompositeBandRep(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.cbr
 
-function (ptbm::ParameterizedTightBindingModel{D})(
+function (ptbm::ParameterizedTightBindingModel{D, S})(
     k::ReciprocalPointLike{D},
     scratch::Matrix{ComplexF64} = ptbm.scratch,
-) where {D}
+) where {D, S}
     if length(k) ≠ D
         error("momentum `k` must be a $D-dimensional vector to match the model dimension")
     end
     tbm = ptbm.tbm
     size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
 
-    H = scratch # grab & reset scratch space for evaluating Hamiltonian matrix
-    fill!(H, 0.0)
+    _H = scratch # grab & reset scratch space for evaluating Hamiltonian matrix
+    fill!(_H, 0.0)
 
     # evaluate each block of the Hamiltonian terms, multiply by coefficients, & store in `H`
     for (tbt, c) in zip(tbm.terms, ptbm.cs)
-        evaluate_tight_binding_term!(tbt, k, c, H) # modifies `H` in-place
+        evaluate_tight_binding_term!(tbt, k, c, _H) # modifies `H` in-place
     end
-
+    H = S == HERMITIAN ? Hermitian(_H) : _H # return Hermitian wrapper if S == HERMITIAN
     return H
 end
 
@@ -500,8 +500,7 @@ function solve(
     eigen_kws...,
 ) where {D, S}
     length(k) == D || error("dimension mismatch")
-    _H = ptbm(k)
-    H = S == HERMITIAN ? Hermitian(_H) : _H
+    H = ptbm(k)
     es, vs = eigen!(H; eigen_kws...)
     if bloch_phase === Val(true)
         Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
