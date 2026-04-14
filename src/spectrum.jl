@@ -1,11 +1,18 @@
 """
-    spectrum(ptbm::ParameterizedTightBindingModel, ks; transform = identity)
+    spectrum(ptbm::ParameterizedTightBindingModel{D, S}, ks; transform = identity)
 
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` over an iterable
 of input momenta `ks`. 
 
 Energies are returned as a matrix, with rows running over momenta and columns over distinct
-bands.
+bands. If `S == HERMITIAN`, the element types (energies) are `Float64`, and otherwise
+`ComplexF64`.
+
+## Arguments
+- `ptbm`: a [`ParameterizedTightBindingModel`](@ref) to evaluate the spectrum of.
+- `ks`: An iterable of momenta. Each such momentum `ks[i]` must evaluate to a real
+  `D`-dimensional abstract vector. If `D = 1` (1D models), `ks` can also be any abstract
+  vector of real numbers.
 
 ## Keyword arguments
 
@@ -50,19 +57,30 @@ function spectrum(
     ResultType = S === HERMITIAN ? Float64 : ComplexF64
     Es = Matrix{ResultType}(undef, length(ks), ptbm.tbm.N)
     for (i, k) in enumerate(ks)
-        es = spectrum(ptbm, k; transform)
+        es = spectrum_single_k(ptbm, k; transform)
         @inbounds Es[i, :] .= es
     end
     return Es
 end
 
+# if the model is 1D (D==1), we also provide a convenience method that allows passing a
+# any abstract vector of real numbers, each an interpreted as independent momentum point
+function spectrum(
+    ptbm::ParameterizedTightBindingModel{1, S},
+    ks::AbstractVector{<:Real},
+    transform::F = nothing
+) where {S, F}
+    ks = [[k] for k in ks]
+    return spectrum(ptbm, ks; transform)
+end
+
 """
-    spectrum(ptbm::ParameterizedTightBindingModel, k::AbstractVector{<:Real})
+    spectrum_single_k(ptbm::ParameterizedTightBindingModel, k::AbstractVector{<:Real})
 
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` at a single
 momentum `k`, across all the bands of `ptbm`.
 """
-function spectrum(
+function spectrum_single_k(
     ptbm::ParameterizedTightBindingModel{D, S},
     k::AbstractVector{<:Real};
     transform::F = nothing

@@ -41,7 +41,7 @@ export pin_free!
 include("symmetry_analysis.jl")
 export symmetry_eigenvalues
 include("spectrum.jl")
-export spectrum
+export spectrum, spectrum_single_k
 include("gradients.jl")
 export gradient_wrt_hopping
 export TightBindingModelHoppingGradient

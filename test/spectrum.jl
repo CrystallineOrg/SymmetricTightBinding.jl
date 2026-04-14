@@ -13,7 +13,7 @@ using LinearAlgebra
 
     @testset "Single k-point" begin
         k = [0.2, -0.1]
-        es = spectrum(ptbm, k)
+        es = spectrum_single_k(ptbm, k)
         @test length(es) == 2  # 2 bands
         @test issorted(es)     # eigenvalues sorted
 
@@ -30,14 +30,14 @@ using LinearAlgebra
 
         # verify consistency with single-k method
         for (i, k) in enumerate(ks)
-            @test Es[i, :] ≈ spectrum(ptbm, k)
+            @test Es[i, :] ≈ spectrum_single_k(ptbm, k)
         end
     end
 
     @testset "Transform keyword" begin
         k = [0.0, 0.0]
-        es = spectrum(ptbm, k)
-        es_sq = spectrum(ptbm, k; transform=x->x^2)
+        es = spectrum_single_k(ptbm, k)
+        es_sq = spectrum_single_k(ptbm, k; transform=x->x^2)
         @test es_sq ≈ es.^2
 
         ks = [[0.0, 0.0], [0.5, 0.0]]
@@ -47,11 +47,30 @@ using LinearAlgebra
 
     @testset "Graphene Dirac point" begin
         # at K = (1/3, 1/3), graphene should have a degeneracy
-        es_K = spectrum(ptbm, [1/3, 1/3])
+        es_K = spectrum_single_k(ptbm, [1/3, 1/3])
         @test es_K[1] ≈ es_K[2] atol=1e-10
 
         # at Gamma, bands should be split
-        es_Γ = spectrum(ptbm, [0.0, 0.0])
+        es_Γ = spectrum_single_k(ptbm, [0.0, 0.0])
         @test abs(es_Γ[2] - es_Γ[1]) > 1e-1
+    end
+
+    @testset "D = 1 convenience method" begin
+        brs_1D = calc_bandreps(2, Val(1))
+        cbr_1D = @composite brs_1D[1]+brs_1D[3] # 2 bands
+        tbm_1D = tb_hamiltonian(cbr_1D, [[0], [1]])
+        ptbm_1D = tbm_1D([0.1, 0.2, -0.3, 0.4, -0.5])
+        # for 1D models, we allow passing a vector of real numbers, each interpreted as
+        # independent momentum points
+        ks_numbers = [0.0, 0.25, 0.5, 0.75]     # ::Vector 
+        ks_points  = [[k] for k in ks_numbers]
+        @test spectrum(ptbm_1D, ks_numbers) ≈ spectrum(ptbm_1D, ks_points)
+
+        ks_numbers_range = range(0, 1/2, 10)    # ::StepRange (an `AbstractVector`)
+        ks_points_range  = [[k] for k in ks_numbers_range]
+        @test spectrum(ptbm_1D, ks_numbers_range) ≈ spectrum(ptbm_1D, ks_points_range)
+
+        # we should still throw an informative error if we try to do this with a D≠1 model
+        @test_throws ErrorException spectrum(ptbm, ks_numbers)
     end
 end
