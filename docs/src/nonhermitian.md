@@ -15,7 +15,13 @@ cbr = @composite brs[1]   # single-site model
 tbm = tb_hamiltonian(cbr, [[1]], NONHERMITIAN) # nearest neighbor hoppings
 ```
 
-The model is very simple: two different hopping terms, corresponding to right- and left-directed hops. 
+The model is very simple: two different hopping terms, corresponding to left- and right-directed hops. The spatial interpretation can be checked by explicitly visualizing the tight-binding terms:
+
+```@example hatano-nelson
+using GLMakie
+plot(tbm)
+```
+
 It is the absence of hermiticity that allows the hopping amplitudes to differ in the two directions, in clear contrast to the Hermitian case:
 
 ```@example hatano-nelson
@@ -27,14 +33,13 @@ However, when the two amplitudes are unequal, the Hatano--Nelson model features 
 We can see this by visualizing the complex energy as we vary $k$ from -1/2 to 1/2:
 
 ```@example hatano-nelson
-ptbm = tbm([0.8, 1.2]) # a model with 0.8 hopping amplitude to right, 1.2 to the left
+ptbm = tbm([0.8, 1.2])     # left & right hopping amplitudes of 0.8 and 1.2, respectively
 
-using GLMakie
+ks = range(-1/2, 1/2, 500) # 500 sampling points in k
+Es = spectrum(ptbm, ks)    # 500×1 matrix
+Es = vec(Es)               # convert to vector
+
 update_theme!(linewidth = 4)
-
-ks = range(-1/2, 1/2, 500) # 500 sampling points
-Es = spectrum(ptbm, ks) # 500×1 matrix
-Es = vec(Es)            # convert to vector
 lines(real(Es), imag(Es); axis = (; autolimitaspect = 1))
 ```
 
@@ -204,10 +209,39 @@ using Crystalline, SymmetricTightBinding # hide
 brs = calc_bandreps(2, Val(1))
 cbr = @composite brs[1] + brs[3]
 tbm = tb_hamiltonian(cbr, [[0], [2]], Val(NONHERMITIAN))
+tbm = tbm[5:8] # retain only inter-orbital (offdiagonal) terms for simplicity
+```
 
-# retain only inter-orbital (offdiagonal) terms for simplicity
-tbm = tbm[5:8]
-ptbm = tbm([.5, 1, 1, .5]) # antisymmetric hopping pattern
+We can visualize the associated terms via Makie:
+
+```@example nonhermitian-ssh
+using GLMakie # hide
+update_theme!(linewidth = 4) # hide
+plot(tbm)
+```
+
+!!! note "Comparison of non-Hermitian and Hermitian SSH model terms"
+    It is instructive to compare the hopping terms in our non-Hermitian SSH model with its Hermitian counterpart:
+
+    ```@example nonhermitian-ssh
+    tbm_H = tb_hamiltonian(cbr, [[0], [2]], Val(HERMITIAN))
+    tbm_H = tbm_H[5:6] # retain only inter-orbital (offdiagonal) terms
+    ```
+
+    ```@example nonhermitian-ssh
+    plot(tbm_H)
+    ```
+
+    From which we see that the breaking of Hermiticity splits `tbm_H[1]` across `tbm[1]` and `tbm[3]`, while `tbm_H[2]` is split across `tbm[2]` and `tbm[4]`. In other words, Hermiticity is restored in `tbm` for models `tbm([t1, t2, t1, t2])`.
+
+We might e.g., explore the band structure (and associated exceptional points) for a non-Hermitian configuration, where the nearest- and next-nearest neighbor have equal-amplitude Hermitian hoppings, but oppositely signed non-Hermitian hoppings:
+
+```@example nonhermitian-ssh
+Δ₁ = -0.3 # nearest-neighbor non-Hermitian asymmetry 
+Δ₂ = 0.3  # next-nearest-neighbor ━━━━━━━ ┃┃ ━━━━━━━  
+t₁ = 1    # nearest-neighbor Hermitian amplitude
+t₂ = 1    # next-nearest neighbor ━━━━━ ┃┃ ━━━━━  
+ptbm = tbm([t₁+Δ₁, t₂+Δ₂, t₁-Δ₁, t₂-Δ₂]) # asymmetric hopping pattern
 
 # calculate spectrum
 ks = range(-1/2, 1/2, 500)
@@ -218,8 +252,6 @@ Es_re = sort(Es_re; dims=2) # necessary to explicitly sort for visualization, du
 Es_im = sort(Es_im; dims=2) # difficult of sorting floating-point rounded complex numbers
 
 # plot spectrum
-using GLMakie # hide
-update_theme!(linewidth = 4) # hide
 f = Figure()
 ax = Axis(f[1,1])
 lines!(ks, Es_re[:,1]; color=:royalblue,  label="Re " * rich("E", font=:italic) * subscript("−"))
