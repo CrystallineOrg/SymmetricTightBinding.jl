@@ -69,8 +69,8 @@ using LinearAlgebra
         # C₄ symmetry: H(k₁,k₂) and H(k₂,-k₁) should have same spectrum
         k = [0.1, 0.3]
         k_rot = [0.3, -0.1] # C₄ rotation in reciprocal space
-        es = spectrum(ptbm, k)
-        es_rot = spectrum(ptbm, k_rot)
+        es = spectrum_single_k(ptbm, k)
+        es_rot = spectrum_single_k(ptbm, k_rot)
         @test es ≈ es_rot  atol=1e-10
     end
 

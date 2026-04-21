@@ -74,12 +74,12 @@ using LinearAlgebra
 
         # verify via finite differences: ∂Eₙ/∂cᵢ ≈ [Eₙ(c+εeᵢ) - Eₙ(c-εeᵢ)] / 2ε
         ε = 1e-8
-        Es_ref = spectrum(ptbm, k)
+        Es_ref = spectrum_single_k(ptbm, k)
         for i in 1:length(cs)
             cs₊ = copy(cs); cs₊[i] += ε
             cs₋ = copy(cs); cs₋[i] -= ε
-            Es₊ = spectrum(tbm(cs₊), k)
-            Es₋ = spectrum(tbm(cs₋), k)
+            Es₊ = spectrum_single_k(tbm(cs₊), k)
+            Es₋ = spectrum_single_k(tbm(cs₋), k)
             dEs_fd = (Es₊ .- Es₋) ./ (2ε)
             dEs_analytic = [∇Es[n][i] for n in 1:tbm.N]
             @test dEs_analytic ≈ dEs_fd  atol=1e-5

@@ -9,20 +9,34 @@ using Makie
 
 ## --------------------------------------------------------------------------------------- #
 
-const MaybeCoefficient = Union{Nothing, <:AbstractVector{<:Number}}
+# This method is missing in GeometryBasics (see GeometryBasics.jl PR#277); pirate-patch
+# TODO: remove eventually, if above-noted PR is merged and released
+function Makie.GeometryBasics.coordinates(rect::Rect{1, T}) where T
+    w = rect.widths
+    o = rect.origin
+    return [Point{1,T}(o[1]), Point{1,T}(o[1]+w[1])]
+end
 
-@recipe(HoppingOrbitPlot, h, Rs, t, offdiag) do Scene
-    Attributes(;
-        origins = Attributes(; color = :firebrick2, label = "Origins (a)"),
-        destinations = Attributes(; color = :royalblue1, label = "Destinations (b+R)"),
-        markersize = 0.05,
-        bonds = Attributes(; color = :gray37, linewidth = 2.0, label = "Bonds"),
-        unitcell = Attributes(; color = :gray65, linewidth = 2.0, label = "Unit cell",
-                                patchcolor = :gray97),
-        context = Attributes(; include = true, color = :gray85, 
-                               linecolor = :gray90, linewidth= 1.25,
-                               limits = nothing),
-    )
+## --------------------------------------------------------------------------------------- #
+
+const MaybeCoefficient = Union{Nothing, <:AbstractVector{<:Number}}
+const default_context_attributes = Attributes(;
+    include = true, color = :gray75, linecolor = :gray80, linewidth = 1.25, limits = nothing
+) # TODO: we define this so we can manually merge: remove this hack once Makie v0.25 is out
+
+@recipe HoppingOrbitPlot (h, Rs, t, offdiag) begin
+    origins = Attributes(; color = :firebrick2, label = "Annihilation site (b+R)")
+    destinations = Attributes(; color = :royalblue1, label = "Creation sites (a)")
+    markersize = 0.05
+    bonds = Attributes(; color = :gray37, linewidth = 2.0, label = "Bonds")
+    unitcell = Attributes(; color = :gray55, linewidth = 2.0, label = "Unit cell",
+                            patchcolor = :gray94)
+    context = default_context_attributes
+    # TODO: All `Attributes` kwargs are broken (except `context`, which we handle specially)
+    #       due to bug in Makie 0.24: currently, caller must give _full_ attributes for any
+    #       field that is itself an `Attributes(...)` since no automatic merging of default
+    #       attributes with partial caller attributes takes place.
+    #       Will apparently be fixed in Makie v0.25+ (cf. ffreyer, Slack).
 end
 
 """
@@ -50,10 +64,32 @@ function Makie.plot!(
     h = p.h[]   # TODO: actually do the Observables updates; just so tedious...
     Rs = p.Rs[]
     t = p.t[]
-    offdiag = p.offdiag[] # implies that (anti-)hermicity requires adding reversed hoppings
+    offdiag = p.offdiag[] # implies that (anti-)hermiticity requires adding reversed hoppings
+    
+    # TODO: remove manual merging once Makie v0.25 is out (then just `p.context[]` directly)
+    context = p.context[]
+    if pkgversion(Makie) < v"0.25"
+        # Beware that Makie v0.24 merges in the wrong order (i.e., in Makie's `merge(a, b)`,
+        # `a` takes precedence over `b`, unlike the usual Julia convention for `merge`)`
+        context = merge(context, default_context_attributes)
+    end
 
     P, V = Point{D, Float32}, Vec{D, Float32}
     Rm = stack(Rs)
+
+    # compute creation (`destination`) and annihilation (`origin`) sites for each hopping,
+    # accounting for `t` if given
+    origins, destinations = if isnothing(t)
+        _origins_and_destinations_from_hoppingorbit(h, Rm)
+    else
+        _origins_and_destinations_from_coefficients(h, t, Rm)
+    end
+
+    # For D = 1: lift to 2D for Makie calls; keep D-dimensional originals for context loop
+    # Thus, `plot_origins` is either 2D or 3D, while `origins` is D-dimensional; similar for
+    # `plot_destinations` and `destinations`.
+    plot_origins = D == 1 ? lift_coordinates_to_2D(origins) : origins
+    plot_destinations = D == 1 ? lift_coordinates_to_2D(destinations) : destinations
 
     # plot parallepiped unit cell (with lower left corner at origin)
     rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
@@ -62,13 +98,28 @@ function Makie.plot!(
         push!(pts, P(NaN))
         unitcell = pts[[1, 3, 4, 2, 1, 5, 6, 2, 9, 6, 8, 7, 5, 9, 8, 4, 9, 7, 3]]
     elseif D == 2
-        unitcell = pts[[1,2,3,4,1]]#push!(pts, pts[1])
+        unitcell = pts[[1, 2, 3, 4, 1]]
     elseif D == 1
-        error("unsupported dimension $D")
+        # Makie cannot do 1D plotting, so we manually convert the 1D unit cell to a thin
+        # 2D unit cell; similarly so, all other coordinates in 1D case are given a y-coord.
+        # equal to zero (via `lift_coordinates_to_2D`)
+        x_width_1d = if !isnothing(context.limits[])
+            (context.limits[] :: Rect{1, Float32}).widths[1]
+        else
+            max_x = max(maximum(first, origins), maximum(first, destinations), maximum(first, pts))
+            min_x = min(minimum(first, origins), minimum(first, destinations), minimum(first, pts))
+            max_x - min_x
+        end
+        y_height = x_width_1d * 0.2f0 # y-height = 20% of x-width
+        unitcell = lift_1D_unit_cell_to_2D(pts, y_height) # only vertical lines; NaN-breaks to avoid horizontal lines
+        pts = unitcell[[1, 2, 4, 5]] # skip the NaN break so we can draw with `poly!`
     else
         error("unsupported dimension $D")
     end
-    D == 2 && poly!(pts; color=p.unitcell[].patchcolor)
+
+    if D == 1 || D == 2
+        poly!(pts; color=p.unitcell[].patchcolor)
+    end
     lines!(
         p,
         unitcell;
@@ -77,15 +128,8 @@ function Makie.plot!(
         label = p.unitcell[].label,
     )
 
-    origins, destinations = if isnothing(t)
-        _origins_and_destinations_from_hoppingorbit(h, Rm)
-    else
-        _origins_and_destinations_from_coefficients(h, t, Rm)
-    end
-
-
     # plot bonds
-    if destinations ≠ origins # skip self-energies
+    if plot_destinations ≠ plot_origins # skip self-energies
         arrows2d_kws = (;
             argmode = :endpoint, # interpret inputs as start/end points, not start/direction
             color = p.bonds[].color, # grayish
@@ -94,21 +138,22 @@ function Makie.plot!(
             tiplength = 10,
             label = p.bonds[].label
         )
-        arrows_dir = V.(destinations .- origins)
+        plot_V = D == 1 ? Vec{2, Float32} : V
+        arrows_dir = plot_V.(plot_destinations .- plot_origins)
         arrows2d!(
             p,
-            origins .+ arrows_dir * .11,
-            destinations .- arrows_dir * .09;
+            plot_origins .+ arrows_dir * .11,
+            plot_destinations .- arrows_dir * .09;
             arrows2d_kws...
         )
-        
+
         # if we're looking at an off-diagonal "block" term, we must also add "reversed"
         # hoppings explicitly, corresponding to the transposed block
         if offdiag
             arrows2d!(
                 p,
-                destinations .- arrows_dir * 0.11,
-                origins .+ arrows_dir .* 0.09;
+                plot_destinations .- arrows_dir * 0.11,
+                plot_origins .+ arrows_dir .* 0.09;
                 arrows2d_kws...
             )
         end
@@ -117,7 +162,7 @@ function Makie.plot!(
     # plot atoms
     scatter!(
         p,
-        unique(destinations);
+        unique(plot_destinations);
         marker = :circle,
         markersize = 14,
         color = p.destinations[].color,
@@ -126,7 +171,7 @@ function Makie.plot!(
     )
     scatter!(
         p,
-        unique(origins);
+        unique(plot_origins);
         marker = :circle,
         markersize = 14,
         color = p.origins[].color,
@@ -135,7 +180,7 @@ function Makie.plot!(
     )
 
     # set square axis limits, centered around unit cell center
-    bbox = if isnothing(p.context[].limits[])
+    bbox = if isnothing(context.limits[])
         bbox_coords = Makie.GeometryBasics.coordinates(data_limits(p))
         cntr = sum(Rs) ./ 2
         max_dist = maximum(abs,
@@ -145,11 +190,11 @@ function Makie.plot!(
         width = max_dist + pad*0.1
         Rect{D, Float32}(cntr-V(width), V(2*width))
     else
-        p.context[].limits[] :: Rect{D, Float32}
+        context.limits[] :: Rect{D, Float32}
     end
 
     # include symmetry-related sites, that we didn't hop to
-    if p.context[].include[]
+    if context.include[]
         i_lower = Rm \ (bbox.origin)
         i_lower = ntuple(d->floor(Int, i_lower[d])-1, Val(D))
         i_upper = Rm \ (bbox.origin .+ bbox.widths)
@@ -165,21 +210,38 @@ function Makie.plot!(
                 isapproxin(r′, rs; atol=1e-5) && continue      # skip if previously included
                 push!(rs, r′)
             end
+
             # include adjacent unit cell boundaries
-            D == 3 && continue # doesn't look nice for 3D
-            unitcell′ = unitcell .+ Ref(R)
-            any(in(bbox), unitcell′) || continue
-            lines!(unitcell′; color=p.context[].linecolor, linewidth=0.5, depth_shift=0)
+            D ∈ (1, 2) || continue # doesn't look nice for 3D
+            _bbox = if D == 1
+                # need a 2D bbox to check containment of the 2D-lifted unit cell polygon;
+                # full y_height = 2 * half-height, where half-height = abs(unitcell[1][2])
+                lift_1D_bbox_to_2D(bbox, 2*abs(unitcell[1][2]))
+            else # 2D
+                bbox
+            end :: Rect{2, Float32}
+            _R = D == 2 ? R : Point{2, eltype(R)}(R[1], zero(eltype(R))) # lift to 2D for use in `unitcell′`
+            unitcell′ = unitcell .+ Ref(_R)
+            any(in(_bbox), unitcell′) || continue # skip if no part is inside bounding box
+            lines!(
+                p, unitcell′; 
+                color=context.linecolor, linewidth=context.linewidth, depth_shift=0
+            )
         end
+        D == 1 && (rs = lift_coordinates_to_2D(rs))
         scatter!(
             p,
             rs,
             marker = :circle,
             markersize = 11,
-            color = p.context[].color,
+            color = context.color,
         )
     end
-    limits!(bbox)
+    if D == 1
+        limits!(lift_1D_bbox_to_2D(bbox, 2*abs(unitcell[1][2])))
+    else
+        limits!(bbox)
+    end
 
     return p
 end
@@ -192,6 +254,29 @@ _cubic_basis(::Val{3}) = crystal(1, 1, 1, π / 2, π / 2, π / 2)
 _cubic_basis(::Val{2}) = crystal(1, 1, π / 2)
 _cubic_basis(::Val{1}) = crystal(1)
 _cubic_basis(::Val{D}) where {D} = error("Unsupported dimension: $D")
+
+## --------------------------------------------------------------------------------------- #
+# 1D to 2D conversion helpers
+
+function lift_1D_unit_cell_to_2D(pts::Vector{Point{1, Float32}}, y_height::Float32)
+    x0, x1 = pts[1][1], pts[2][1]
+    h = y_height / 2
+    # only vertical walls; NaN break avoids drawing horizontal top/bottom lines
+    return Point{2, Float32}[
+        Point2f(x0, h),  Point2f(x0, -h),
+        Point2f(NaN32, NaN32),
+        Point2f(x1, -h), Point2f(x1, h),
+    ]
+end
+
+function lift_1D_bbox_to_2D(bbox::Rect{1, T}, y_height::T) where T
+    return Rect{2, T}(bbox.origin[1], -y_height/2, bbox.widths[1], y_height)
+end
+
+function lift_coordinates_to_2D(pts::Vector{Point{1, T}}) where T
+    return [Point{2, T}(pt[1], zero(T)) for pt in pts]
+end
+
 ## --------------------------------------------------------------------------------------- #
 
 # Simple case: take no account of a coefficient vector, just plot all hoppings in `h`.
@@ -321,7 +406,10 @@ _orbit(h::HoppingOrbit) = h
 _coefficients(tbt::TightBindingTerm) = _coefficients(tbt.block)
 _coefficients(tbb::TightBindingBlock) = tbb.t
 _offdiag(tbt::TightBindingTerm) = _offdiag(tbt.block)
-_offdiag(tbb::TightBindingBlock) = !tbb.diagonal_block
+function _offdiag(tbb::TightBindingBlock{D, S}) where {D, S}
+    S === NONHERMITIAN && return false
+    return !tbb.diagonal_block
+end
 
 ## --------------------------------------------------------------------------------------- #
 # Plotting entire tight-binding models by tiling their hopping terms
@@ -347,15 +435,22 @@ function Makie.convert_arguments(
     for idx in LinearIndices(axs)
         if idx ≤ length(tbm)
             tbt = tbm[idx]
-            plots = [S.HoppingOrbitPlot(_orbit(tbt), Rs, _coefficients(tbt), _offdiag(tbt);
-                                        context = (; limits = bbox))]
+            plots = [
+                S.HoppingOrbitPlot(
+                    _orbit(tbt), Rs, _coefficients(tbt), _offdiag(tbt);
+                    context = Attributes(; limits = bbox),
+                    markersize = 0.1,
+                )
+            ]
         else
             plots = PlotSpec[]
         end
         ax = if D == 3
             AT(; plots, aspect = :data, viewmode = :fit)
-        else # D == 2
+        elseif D == 2 || D == 1
             AT(; plots, aspect = DataAspect())
+        else
+            error("unsupported dimension D")
         end
 
         # hiding spines & decorations, in declarative style
@@ -366,14 +461,15 @@ function Makie.convert_arguments(
             ax.xspinesvisible = ax.yspinesvisible = ax.zspinesvisible = false
             ax.zgridvisible = ax.zticksvisible = ax.zticklabelsvisible = false
             ax.xlabelvisible = ax.ylabelvisible = ax.zlabelvisible = false
-        else # D == 2
+        else # D == 1 or 2
             ax.topspinevisible = ax.bottomspinevisible = false
             ax.leftspinevisible = ax.rightspinevisible = false
             # # disable interactions (don't play nice with x/axislinks)
             # ax.xzoomlock = ax.yzoomlock = ax.xpanlock = ax.ypanlock = true
             # ax.xrectzoom = ax.yrectzoom = false
         end
-        ax.limits = bbox_to_limits(bbox)
+        ax_bbox = D == 1 ? lift_1D_bbox_to_2D(bbox, bbox.widths[1] * 0.2f0) : bbox
+        ax.limits = bbox_to_limits(ax_bbox) # TODO: seems to do nothing?
         idx ≤ length(tbm) && (ax.title = "Term $idx"; ax.titlefont = :regular; ax.titlegap = 2)
         axs[idx] = ax
     end
@@ -417,7 +513,8 @@ function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) 
 
     # add points from unit cell
     rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
-    sites = P.(Ref(Rm) .* Makie.GeometryBasics.coordinates(rect))
+    rect_coords = Makie.GeometryBasics.coordinates(rect)
+    sites = P.(Ref(Rm) .* rect_coords)
     filter!(!isnan, sites)
     pts = @view sites[1:end] # for later referencing only the unit cell
 
@@ -444,6 +541,7 @@ function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) 
     pad = maximum(abs, 
         ntuple(d -> splat(-)(extrema(v -> getindex(v, d), filter(!isnan, pts))), Val(D)))
     width = max_dist + pad*0.1
+    # TODO: the padding and added width should surely not be the same in all dimensions
     return Rect{D, Float32}(cntr-V(width), V(2*width))
 end
 function layout_limits(tbm::TightBindingModel{D}, Rs::DirectBasis{D}) where D

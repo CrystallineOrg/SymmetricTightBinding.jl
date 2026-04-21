@@ -47,7 +47,7 @@ This allows three additional terms. Conversely, we could have also tried to brea
 Δtbm_tr = subduced_complement(tbm, 11; timereversal = false) # break TR
 ```
 
-[^1]: For mirror symmetry-breaking, the absence of new terms is a result of looking only at a limited set of hopping orbits (in the original model `tb_hamiltonian(cbr, [[0,0], [1,0]])`): by including longer-range hopping orbits, we would eventually find new mirror-symmetry-broken terms. This is not so for time-reversal breaking, however: in *p*4mm, mirror symmetry and hermicity jointly impose an effective time-reversal symmetry.
+[^1]: For mirror symmetry-breaking, the absence of new terms is a result of looking only at a limited set of hopping orbits (in the original model `tb_hamiltonian(cbr, [[0,0], [1,0]])`): by including longer-range hopping orbits, we would eventually find new mirror-symmetry-broken terms. This is not so for time-reversal breaking, however: in *p*4mm, mirror symmetry and hermiticity jointly impose an effective time-reversal symmetry.
 
 However, by breaking both mirror and time-reversal symmetry simultaneously, additional terms do appear:
 

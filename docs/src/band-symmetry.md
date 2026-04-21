@@ -11,7 +11,7 @@ To explore these tools, we first re-build the graphene model previously explored
     sgnum = 17                         # plane group p6mm
     brs = calc_bandreps(sgnum, Val(2)) # band representations
     cbr = @composite brs[5]            # (2b|A₁) EBR
-    tbm = tb_hamiltonian(cbr)          # tight-binding model (nearest neigbors)
+    tbm = tb_hamiltonian(cbr)          # tight-binding model (nearest neighbors)
     ptbm = tbm([0, 1])                 # zero self-energy, nonzero nearest-neighbor hopping
     Rs = directbasis(sgnum, Val(2))    # (conventional) direct lattice basis
     kp = irrfbz_path(sgnum, Rs)        # high-symmetry k-path

@@ -25,6 +25,7 @@ makedocs(;
         "Band symmetry" => "band-symmetry.md",
         "Berry curvature & Chern numbers" => "berry.md",
         "Symmetry breaking" => "symmetry-breaking.md",
+        "Non-Hermitian models" => "nonhermitian.md",
         "API" => "api.md",
         "Internal API" => "internal-api.md",
         "Theory" => "theory.md",

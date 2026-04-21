@@ -10,16 +10,17 @@ import SymmetricTightBinding: fit
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 function fg!(
-    F, G, cs, tbm::TightBindingModel, Em_r, ks;
+    F, G, cs, tbm::TightBindingModel{D, S}, Em_r, ks;
     lasso::Union{Nothing,Real} = nothing
-)
+) where {D, S}
+    S ≠ HERMITIAN && error("loss function can currently only handle HERMITIAN models")
     ptbm = tbm(cs)
     if !isnothing(G)
         fill!(G, zero(eltype(G)))
     end
 
     for (Es_r, k) in zip(eachrow(Em_r), ks)
-        H = Hermitian(ptbm(k))
+        H = ptbm(k)
         Es, us = eigen!(H) # no Bloch phases, deliberately
 
         # MSE loss (possibly with lasso penalty)

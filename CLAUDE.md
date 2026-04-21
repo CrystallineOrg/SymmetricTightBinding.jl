@@ -22,7 +22,7 @@ hopping ranges, the package:
 ## Key types and API
 
 ### Core pipeline
-- `tb_hamiltonian(cbr, Rs; antihermitian)` — top-level entry point; returns `TightBindingModel`
+- `tb_hamiltonian(cbr, Rs, ::Val{<:Hermiticity})` — top-level entry point; returns `TightBindingModel`
 - `obtain_symmetry_related_hoppings(Rs, br_a, br_b)` — enumerates hopping orbits
 - `sgrep_induced_by_siteir(br, op)` — site-symmetry induced space group representation
 

@@ -29,7 +29,10 @@ function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D};
-    diagonal_block::Bool = true, # whether to manually add "reversed" hoppings (if false)
+    diagonal_block::Bool = true, # whether to manually add "reversed" hoppings (if true),
+    reverse_hop::Bool = false, # if hopping actually goes from a+R→b rather than a→b+R
+                               # (used in NONHERMITIAN case, for lower-triangular blocks)
+                               # practically just corresponds to flipping signs of `Rs`
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
     num(brᵦ) == sgnum ||
@@ -59,6 +62,7 @@ function obtain_symmetry_related_hoppings(
 
     h_orbits = HoppingOrbit{D}[]
     for R in Rs
+        reverse_hop && (R = -R) # treat as hopping from a+R→b (equivalently, from a→b-R)
         R = RVec{D}(R) # change the type of R for type consistency
         for (qₐ, qᵦ) in Iterators.product(wpsₐ, wpsᵦ)
             qₐ = parent(qₐ) # work with RVec directly rather than Wyckoff Position
@@ -68,12 +72,12 @@ function obtain_symmetry_related_hoppings(
         end
     end
 
-    # hermiticity/anti-hermicity could link orbits that spatial symmetries might not have
+    # hermiticity/anti-hermiticity could link orbits that spatial symmetries might not have
     # already linked: in particular, if we are in a "diagonal block" of the Hamiltonian,
     # then, for every hopping vector `δ`, we must have a "reversed" counterpart `-δ` in the
-    # presence of hermicity r anti-hermiticity (always the case in our implementation); but
-    # those two vectors might have fallen in distinct orbits up this point - if so, we now
-    # merge them
+    # presence of hermiticity or anti-hermiticity (always the case in our implementation);
+    # but those two vectors might have fallen in distinct orbits up this point - if so, we
+    # now merge them
     if diagonal_block
         add_reversed_orbits!(h_orbits)
     end
@@ -127,8 +131,8 @@ function _maybe_add_hoppings!(
     for g in ops
         _qₐ′ = g * qₐ
         _qᵦ′ = g * (qᵦ + R)
-    # _qₐ′ and _qᵦ′ can include a translation part that is a multiple of the lattice
-    # translation, so we reduce it to a unit range and keep that translation part separate
+        # _qₐ′ and _qᵦ′ can include a translation part that is a multiple of the lattice
+        # translation, so we reduce it to a unit range & keep the translation part separate
         qₐ′ = RVec(reduce_translation_to_unitrange(constant(_qₐ′)), free(_qₐ′))
         qᵦ′ = RVec(reduce_translation_to_unitrange(constant(_qᵦ′)), free(_qᵦ′))
         dₐ = _qₐ′ - qₐ′ # possible lattice translation part of _qₐ′
@@ -158,16 +162,12 @@ function _maybe_add_hoppings!(
             push!(orbit(δ_orbit), δ′)
             push!(δ_orbit.hoppings, [(qₐ′, qᵦ′, R′)])
         else
-            # δ′ already in `orbit(δ_orbit)` but hopping term might not be:
-            # evaluate `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/
-            # approximate equality comparison
-            bool =
-                !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
-                    (
-                        isapprox(qₐ′, qₐ′′, nothing, false; atol = VEC_CMP_ATOL) &&
-                        isapprox(qᵦ′, qᵦ′′, nothing, false; atol = VEC_CMP_ATOL) &&
-                        isapprox(R′, R′′, nothing, false; atol = VEC_CMP_ATOL)
-                    )
+            # δ′ already in `orbit(δ_orbit)` but hopping term might not be: evaluate
+            # `(qₐ′, qᵦ′, R′) ∉ δ_orbit.hoppings[idx_in_orbit]`, w/ approx. comparison
+            bool = !any(δ_orbit.hoppings[idx_in_orbit]) do (qₐ′′, qᵦ′′, R′′)
+                    isapprox(qₐ′, qₐ′′, nothing, false; atol = VEC_CMP_ATOL) &&
+                    isapprox(qᵦ′, qᵦ′′, nothing, false; atol = VEC_CMP_ATOL) &&
+                    isapprox(R′, R′′, nothing, false; atol = VEC_CMP_ATOL)
                 end
             if bool
                 push!(δ_orbit.hoppings[idx_in_orbit], (qₐ′, qᵦ′, R′))
@@ -277,7 +277,7 @@ end
 #     have a hopping from w to q.
 
 #     The only terms where we need to consider reversed hoppings are the cases of blocks where
-#     hermicity or anti-hermicity relates the block to itself: i.e., diagonal blocks. There,
+#     hermiticity or anti-hermiticity relates the block to itself: i.e., diagonal blocks. There,
 #     if we have a hopping from q to w, we must also have a hopping from w to q, but they both
 #     correspond to the same Wyckoff position and site-symmetry irrep, so the former discussion
 #     holds.
@@ -438,7 +438,10 @@ end
         h_orbit::HoppingOrbit{D},
         brₐ::NewBandRep{D}, 
         brᵦ::NewBandRep{D}, 
-        [orderingₐ = OrbitalOrdering(brₐ), orderingᵦ = OrbitalOrdering(brᵦ)]
+       [orderingₐ = OrbitalOrdering(brₐ), 
+        orderingᵦ = OrbitalOrdering(brᵦ),
+        diagonal_block::Bool = true,
+        hermiticity::Hermiticity = HERMITIAN]
         )                            --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
@@ -453,9 +456,9 @@ function obtain_basis_free_parameters(
     brₐ::NewBandRep{D},
     brᵦ::NewBandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
-    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ);
+    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
     diagonal_block::Bool = true,
-    antihermitian::Bool = true,
+    hermiticity::Hermiticity = HERMITIAN,
 ) where {D}
     # obtain the needed representations over the generators of each bandrep
     gensₐ = generators(num(brₐ), SpaceGroup{D})
@@ -483,7 +486,7 @@ function obtain_basis_free_parameters(
         gens,
         timereversal,
         diagonal_block,
-        antihermitian,
+        hermiticity,
     )
 
     return Mm, tₐᵦ_basis_reim
@@ -499,7 +502,7 @@ function _obtain_basis_free_parameters(
     gens::AbstractVector{SymOperation{D}},
     timereversal::Bool,
     diagonal_block::Bool,
-    antihermitian::Bool,
+    hermiticity::Hermiticity,
 ) where {D}
     # encode representation constraints on Hₐᵦ
     Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens)
@@ -555,8 +558,8 @@ function _obtain_basis_free_parameters(
 
     ## ----------------------------------------------------------------------------------- #
     if timereversal # "add" and "intersect" the associated TRS constraints
-        # now we want to construct the TRS constraints, and then intersect the allowable basis
-        # terms on that constraint with those corresponding to the previously computed basis
+        # now we construct the TRS constraints, and then intersect the allowable basis terms
+        # of these constraints with those corresponding to the previously computed basis
         tₐᵦ_basis_tr_reim_matrix =
             obtain_basis_free_parameters_TRS(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
         tₐᵦ_basis_reim =
@@ -568,19 +571,20 @@ function _obtain_basis_free_parameters(
 
     # ------------------------------------------------------------------------------------ #
     # "add" and "intersect" the associated hermiticity constraints if this is a diagonal block
-    if diagonal_block
+    if diagonal_block && hermiticity ≠ NONHERMITIAN
+        antihermitian = hermiticity === ANTIHERMITIAN
         tₐᵦ_basis_herm_reim_matrix = obtain_basis_free_parameters_hermiticity(
             h_orbit,
             brₐ,
             brᵦ,
+            antihermitian,
             orderingₐ,
             orderingᵦ,
-            Mm;
-            antihermitian,
+            Mm,
         )
 
-        tₐᵦ_basis_reim =
-            zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix)
+        tₐᵦ_basis_reim = zassenhaus_intersection(
+            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix)
         tₐᵦ_basis_reim_matrix =
             reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
     end
@@ -842,25 +846,38 @@ end
 # ---------------------------------------------------------------------------- #
 
 """
-    tb_hamiltonian(cbr::CompositeBandRep{D}, Rs::AbstractVector{Vector{Int}}) 
-        --> Vector{TightBindingTerm{D}}
+    tb_hamiltonian(
+        cbr::CompositeBandRep{D},
+        Rs::AbstractVector{Vector{Int}}
+        [Sᵛ::Val{S} = Val(HERMITIAN)]
+    ) -> TightBindingModel{D, S}
 
-Construct the TB Hamiltonian matrix from a given composite band representation `cbr` and a
-set of global translation-representatives `Rs`.
-The Hamiltonian is constructed block by block according to the symmetry-related hoppings
-between the band representations in `cbr`.
-Several models returned, each representing a term that is closed under the symmetry operations of 
-the underlying space group.
+Construct the tight-binding Hamiltonian from a given composite band representation `cbr` and
+a set of global translation-representatives `Rs`.
+
+Whether the returned Hamiltonian is Hermitian, anti-Hermitian, or non-Hermitian can be
+controlled by passing the optional argument `Sᵛ :: Val{S}` where `S` is an value of the enum
+type [`Hermiticity`](@ref), i.e., `HERMITIAN`, `ANTIHERMITIAN`, or `NONHERMITIAN` (default,
+`HERMITIAN`).
+This choice can also be passed a plain `S` (without a `Val` wrapper) but the call is then
+not type-stable.
+
+The returned [`TightBindingModel`](@ref) will generally feature several terms (iterating to
+[`TightBindingTerm`](@ref)s), each representing a tight-binding term that is closed under
+the symmetry operations of the underlying space group.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D},
-    Rs::AbstractVector{Vector{Int}} = [zeros(Int, D)]; # "global" hopping translation-representatives
-    antihermitian::Bool = false,
-) where {D}
+    Rs::AbstractVector{<:AbstractVector{Int}} = [zeros(Int, D)], # "global" hopping translation-representatives
+    Sᵛ::Val{S} = Val(HERMITIAN),
+) where {D, S}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("the input composite band representation does not have a symmetric \
                tight-binding model: its expansion in EBRs contain negative or \
                fractional coefficients")
+    end
+    if !(S isa Hermiticity)
+        error(lazy"hermiticity type `S` must be a value of the `Hermiticity` enum: was $S")
     end
     coefs = round.(Int, cbr.coefs)
 
@@ -881,35 +898,38 @@ function tb_hamiltonian(
 
     # find all families of hoppings between involved band representations: the TB model will
     # be divided into each of these representatives since they will be symmetry independent
-    hermiticity = antihermitian ? ANTIHERMITIAN : HERMITIAN
     B = length(brs)
     axis = BlockArrays.BlockedOneTo((cumsum(occupation(br) for br in brs)))
-    tbs = Vector{TightBindingTerm{D}}()
-    for d in 0:B-1 # offset from main diagonal (at 0)
-        for block_i in 1:B-d
-            # we iterate here across diagonal blocks, going from the main diagonal and up
-            # toward the upper block-diagonals: we do this to get a more natural sorting of
-            # the terms in the model, with self-hoppings first
-            # we only go over the upper triangular part cf. hermiticity/anti-hermiticity
+    tbs = Vector{TightBindingTerm{D, S}}()
+    # We iterate across diagonal blocks, going from the main diagonal and up toward the
+    # upper block-diagonals: we do this to get a more natural sorting of the terms in the
+    # model, with self-hoppings first, etc. For Hermitian/anti-Hermitian models, we only
+    # go over the upper triangular part, with the latter following directly; for
+    # non-Hermitian, we just go over all blocks, going along diagonals 0,1,-1,…,B-1,-(B-1)
+    for d in _diagonal_indices(B, Sᵛ) # offset from main diagonal (at 0)
+        for block_i in _row_indices(B, d, Sᵛ)
             block_j = block_i + d
             br1 = brs[block_i]
             br2 = brs[block_j]
             ordering1 = OrbitalOrdering(br1)
             ordering2 = OrbitalOrdering(br2)
             diagonal_block = d == 0
-            h_orbits = obtain_symmetry_related_hoppings(Rs, br1, br2; diagonal_block)
+            reverse_hop = S === NONHERMITIAN ? d<0 : false
+            h_orbits = obtain_symmetry_related_hoppings(
+                Rs, br1, br2; diagonal_block, reverse_hop
+            )
             for h_orbit in h_orbits
                 Mm, t_αβ_basis = obtain_basis_free_parameters(
                     h_orbit,
                     br1,
                     br2,
                     ordering1,
-                    ordering2;
+                    ordering2,
                     diagonal_block,
-                    antihermitian,
+                    S,               #=hermiticity=#
                 )
                 for t in t_αβ_basis
-                    block = TightBindingBlock{D}(
+                    block = TightBindingBlock{D, S}(
                         br1,
                         br2,
                         ordering1,
@@ -919,11 +939,10 @@ function tb_hamiltonian(
                         t,
                         diagonal_block
                     )
-                    h = TightBindingTerm{D}(
+                    h = TightBindingTerm{D, S}(
                         axis,
                         (block_i, block_j),
                         block,
-                        hermiticity,
                         brs,
                     )
                     push!(tbs, h)
@@ -935,6 +954,20 @@ function tb_hamiltonian(
     return TightBindingModel(tbs, cbr)
 end
 
+# For HERMITIAN/ANTIHERMITIAN: iterate over only non-negative diagonals (negative diagonals
+# follow from hermiticity/anti-hermiticity)
+_diagonal_indices(B::Int, ::Val{S}) where {S} = 0:B-1
+_row_indices(B::Int, d::Int, ::Val{S}) where {S} = 1:B-d
+# For NONHERMITIAN: iterate over all diagonal, including positive and negative ones, and do
+# it in the order 0, 1, -1, 2, -2, …, B-1, -(B-1)
+_diagonal_indices(B::Int, ::Val{NONHERMITIAN}) = (iseven(i) ? -(i÷2) : (i+1)÷2 for i in 0:2(B-1))
+_row_indices(B::Int, d::Int, ::Val{NONHERMITIAN}) = d ≥ 0 ? (1:B-d) : (-d+1:B)
+
+function tb_hamiltonian(
+    cbr::CompositeBandRep, Rs::AbstractVector{<:AbstractVector{Int}}, S::Hermiticity
+) 
+    return tb_hamiltonian(cbr, Rs, Val(S))
+end
 #=
 """
     occupation(br::NewBandRep{D}) --> Int
