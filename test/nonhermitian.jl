@@ -16,7 +16,7 @@ using LinearAlgebra: ishermitian, eigvals
         @test hermiticity(tbm_H)  == HERMITIAN
 
         # NONHERMITIAN: upper & lower off-diagonal blocks are independent → 6 terms
-        # HERMITIAN:    lower off-diagonal block follows from upper by conjugation  → 5 terms
+        # HERMITIAN:    lower off-diagonal block follows from upper by conjugation → 5 terms
         # (all 4 diagonal self-terms are shared; only off-diagonal count differs: 2 vs 1)
         @test length(tbm_NH) == 6
         @test length(tbm_H)  == 5

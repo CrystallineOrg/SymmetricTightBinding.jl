@@ -9,18 +9,30 @@ using Crystalline
         cbr = @composite brs[1] # (2c|A₁)
         tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])
         
-        Δtbm_m   = subduced_complement(tbm, 10);                      # break mirror
+        Δtbm_m   = subduced_complement(tbm, 10)                       # break mirror
         Δtbm_tr  = subduced_complement(tbm, 11; timereversal = false) # break TR
         Δtbm_mtr = subduced_complement(tbm, 10; timereversal = false) # break both
-        @test length(Δtbm_m) == 0
-        @test length(Δtbm_tr) == 0
-        @test length(Δtbm_mtr) == 1
+        @test length(Δtbm_m) == 1
+        @test length(Δtbm_tr) == 1
+        @test length(Δtbm_mtr) == 4
+        
+        # restrict to simpler terms (tbm[5] = complicated diagonally-directed hopping term)
+        tbm′ = tbm[1:4] 
+        Δtbm′_m   = subduced_complement(tbm′, 10)                       # break mirror
+        Δtbm′_tr  = subduced_complement(tbm′, 11; timereversal = false) # break TR
+        Δtbm′_mtr = subduced_complement(tbm′, 10; timereversal = false) # break both
+        @test length(Δtbm′_m) == 0
+        @test length(Δtbm′_tr) == 0
+        @test length(Δtbm′_mtr) == 1
 
-        Δtbm_C4  = subduced_complement(tbm, 6)                        # break C₄
-        @test length(Δtbm_C4) == 3
-
-        # when we add more orbits, we can find a mirror-breaking term, but not a TR-breaking
-        tbm_big = tb_hamiltonian(cbr, [[0,0], [1,0], [1,1]])
+        Δtbm′_C4 = subduced_complement(tbm′, 6)               # break C₄
+        @test length(Δtbm′_C4) == 3
+        Δtbm_diagonal_term = subduced_complement(tbm[5:5], 6) # break C₄ (diagonal term only)
+        @test length(Δtbm_diagonal_term) == 1
+        
+        # adding more orbits, we find a simple mirror-breaking term, but not a TR-breaking
+        tbm_big_full = tb_hamiltonian(cbr, [[0,0], [1,0], [1,1]])
+        tbm_big = tbm_big_full[[1:4...,6]] # drop complicated diagonally-directed term again
         Δtbm_big_m   = subduced_complement(tbm_big, 10)                       # break mirror
         Δtbm_big_tr  = subduced_complement(tbm_big, 11; timereversal = false) # break TR
         Δtbm_big_mtr = subduced_complement(tbm_big, 10; timereversal = false) # break both
@@ -30,13 +42,18 @@ using Crystalline
         @test issubset(Δtbm_big_m, Δtbm_big_mtr) # must subset eachother
 
         # breaking mirror and TR symmetry together should give the same basis as starting
-        # directly to plane group p4 (#10) and breaking TR from the get-go
+        # directly with plane group p4 (#10) and breaking TR from the get-go
         brs10 = calc_bandreps(10, Val(D); timereversal=false)
         cbr10 = @composite brs10[1] # (2c|A) (unlike #11: two distinct M irreps, M₃ & M₄)
-        tbm10 = tb_hamiltonian(cbr10, [[0,0], [1,0]])
+
+        tbm10 = tb_hamiltonian(cbr10, [[0,0], [1,0], [0,1]]) # (⋆)
         @test length(tbm10) == length(tbm) + length(Δtbm_mtr)
+        # (⋆): must add [0,1] also, cf. diagonally-directed hopping term involving both 
+        # [1,0] and [0,1] in C₄ setting
+
         tbm10_big = tb_hamiltonian(cbr10, [[0,0], [1,0], [1,1]])
-        @test length(tbm10_big) == length(tbm_big) + length(Δtbm_big_mtr)
+        Δtbm_big_full_mtr = subduced_complement(tbm_big_full, 10; timereversal = false)
+        @test length(tbm10_big) == length(tbm_big_full) + length(Δtbm_big_full_mtr)
     end
 
     @testset "3D example" begin

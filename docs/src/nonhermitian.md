@@ -290,7 +290,7 @@ plot(tbm_H)
 plot(tbm_NH)
 ```
 
-The second and third terms of the non-Hermitian model clearly break Hermiticity (unless of equal amplitude).
+The non-Hermitian model's terms `tbm_NH[2:3]` (and `tbm[6:7]`) evidently break Hermiticity and correspond to the non-Hermitian splitting of `tbm_H[2]` (and `tbm_H[5]`).
 We can verify that the model hosts exceptional lines in this case:
 
 ```@example nonhermitian-p4

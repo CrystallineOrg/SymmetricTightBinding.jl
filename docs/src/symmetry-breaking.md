@@ -10,7 +10,7 @@ We start by constructing our symmetry-unbroken model, picking the (2c|A₁) band
 using Crystalline, SymmetricTightBinding
 brs = calc_bandreps(11, Val(2))
 cbr = @composite brs[1]
-tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])
+tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])[1:4] # restrict to 4 simplest terms
 ptbm = tbm([0, 1, -1, 1])
 ```
 
