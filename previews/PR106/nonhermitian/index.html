@@ -42,7 +42,7 @@ tbm_notr = tb_hamiltonian((@composite brs_notr[1]), [[0], [1]], NONHERMITIAN) # 
 <span class="sgr1">6. </span> <span class="sgr34">i𝕖(δ₂)</span>
 <span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span><span class="sgr90"> self-term:  δ₁=[1], δ₂=-δ₁</span></code></pre><h2 id="Two-band-Hatano–Nelson-like-model-with-exceptional-points"><a class="docs-heading-anchor" href="#Two-band-Hatano–Nelson-like-model-with-exceptional-points">Two-band Hatano–Nelson-like model with exceptional points</a><a id="Two-band-Hatano–Nelson-like-model-with-exceptional-points-1"></a><a class="docs-heading-anchor-permalink" href="#Two-band-Hatano–Nelson-like-model-with-exceptional-points" title="Permalink"></a></h2><p>We can generalize the single-band Hatano–Nelson model from above simply by constructing a two-band model, with two orbitals placed at the unit cell center. To do so, we simply include two copies of the same EBR in the composite band representation provided to <code>tb_hamiltonian</code>: each copy is treated as a separate physical orbital.</p><pre><code class="language-julia hljs">cbr = @composite 2brs[1]
 tbm = tb_hamiltonian(cbr, [[0], [1]], Val(NONHERMITIAN))
-summary(tbm)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;10-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A)&quot;</code></pre><p>The resulting model has 10 free terms: the first 6 are self-couplings (self-energies and intercell hoppings between the same physical orbital); the last 4 are hoppings between the two distinct orbitals. We restrict the model to this subset in the interest of simplicity:</p><pre><code class="language-julia hljs">tbm = tbm[7:10]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A):
+summary(tbm)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;12-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A)&quot;</code></pre><p>The resulting model has 10 free terms: the first 6 are self-couplings (self-energies and intercell hoppings between the same physical orbital); the last 4 are hoppings between the two distinct orbitals. We restrict the model to this subset in the interest of simplicity:</p><pre><code class="language-julia hljs">tbm = tbm[7:10]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A):
 <span class="sgr90">┌─</span>
 <span class="sgr1">1. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr34">1</span> ⎤
 <span class="sgr90">│  </span>⎢ ───┼─── ⎥
@@ -54,15 +54,15 @@ summary(tbm)</code></pre><pre class="documenter-example-output"><code class="noh
 <span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>     ⎦
 <span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span><span class="sgr90">:  δ₁=[1]</span>
 <span class="sgr90">┌─</span>
-<span class="sgr1">3. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span> ⎤
+<span class="sgr1">3. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr34">𝕖(δ₁)</span> ⎤
+<span class="sgr90">│  </span>⎢ ───┼─────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>     ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span><span class="sgr90">:  δ₁=[-1]</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">4. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span> ⎤
 <span class="sgr90">│  </span>⎢ ───┼─── ⎥
 <span class="sgr90">│  </span>⎣ <span class="sgr34">1</span>  │  <span class="sgr90">0</span> ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span>
-<span class="sgr90">┌─</span>
-<span class="sgr1">4. </span>⎡ <span class="sgr90">0</span>      │  <span class="sgr90">0</span> ⎤
-<span class="sgr90">│  </span>⎢ ───────┼─── ⎥
-<span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(δ₁)</span>  │  <span class="sgr90">0</span> ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span><span class="sgr90">:  δ₁=[-1]</span></code></pre><p>The four terms span a model of the kind:</p><p class="math-container">\[\mathbf{H}(k) = 
+<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span></code></pre><p>The four terms span a model of the kind:</p><p class="math-container">\[\mathbf{H}(k) = 
 \begin{bmatrix}
     0 &amp; t_1 + t_2 \mathrm{e}^{2\pi\mathrm{i}k} \\
     t_1&#39; + t_2&#39; \mathrm{e}^{-2\pi\mathrm{i}k} &amp; 0
@@ -70,8 +70,8 @@ summary(tbm)</code></pre><pre class="documenter-example-output"><code class="noh
 t₁, t₂, t₁′, t₂′ = 1, 1, t, 0
 ptbm = tbm([t₁, t₂, t₁′, t₂′])
 ptbm([1/2]) # evaluate the Bloch Hamiltonian at k = 1/2</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2×2 Matrix{ComplexF64}:
- 0.0+0.0im  0.0+0.0im
- 0.5+0.0im  0.0+0.0im</code></pre><p>We can visualize the resulting spectrum of the model over the Brillouin zone to learn more:</p><pre><code class="language-julia hljs">ks = range(-1/2, 1/2, 500)
+ 0.0+0.0im  -0.5+0.0im
+ 0.0+0.0im   0.0+0.0im</code></pre><p>We can visualize the resulting spectrum of the model over the Brillouin zone to learn more:</p><pre><code class="language-julia hljs">ks = range(-1/2, 1/2, 500)
 Es = spectrum(ptbm, ks)
 Es_re = real(Es) # real parts
 Es_im = imag(Es) # imaginary parts
@@ -83,11 +83,11 @@ lines!(ks, Es_im[:,2]; color=:firebrick2, label = &quot;Im &quot; * rich(&quot;E
 faxp.axis.xlabel = &quot;Momentum &quot; * rich(&quot;k&quot;, font=:italic)
 faxp.axis.ylabel = &quot;Energy &quot; * rich(&quot;E&quot;, font=:italic)
 axislegend(faxp.axis; framevisible=false)
-xlims!(-1/2, 1/2)</code></pre><img src="8fc2c6d4.png" alt="Example block output"/><p>The spectrum is degenerate at <span>$k = \pm 1/2$</span> as expected, generally complex, and exhibiting both time-reversal symmetry <span>$E_1(k) = E_2(-k)^*$</span> and ``accidental&#39;&#39; particle-hole symmetry <span>$E_1(k) = -E_1(k)$</span> (resulting from our restriction to a small set of hopping hoppings terms).</p><h3 id="Exceptional-points-with-PT-symmetry"><a class="docs-heading-anchor" href="#Exceptional-points-with-PT-symmetry">Exceptional points with PT symmetry</a><a id="Exceptional-points-with-PT-symmetry-1"></a><a class="docs-heading-anchor-permalink" href="#Exceptional-points-with-PT-symmetry" title="Permalink"></a></h3><p>Exceptional points are especially interesting in contexts where the Hamiltonian is not only non-Hermitian but also PT-symmetric (inversion and time). The previous Hatano–Nelson-like model, however, is T-symmetric (by default, <code>calc_bandreps</code> assumes time-reversal symmetry, and this assumption is propagated via <code>brs</code> and <code>cbr</code> to <code>tb_hamiltonian</code>) but inversion-broken, and so lacks PT-symmetry.</p><p>We can build a variant, however, that breaks both P and T but retains PT symmetry. To do so, first construct the terms of a time-reversal model, starting now with a set of time-reversal broken EBRs:</p><pre><code class="language-julia hljs">brs = calc_bandreps(1, 1; timereversal=false) # a single EBR, as before, but now without assumption of time-reversal
+xlims!(-1/2, 1/2)</code></pre><img src="21ebf9c3.png" alt="Example block output"/><p>The spectrum is degenerate at <span>$k = \pm 1/2$</span> as expected, generally complex, and exhibiting both time-reversal symmetry <span>$E_1(k) = E_2(-k)^*$</span> and ``accidental&#39;&#39; particle-hole symmetry <span>$E_1(k) = -E_1(k)$</span> (resulting from our restriction to a small set of hopping hoppings terms).</p><h3 id="Exceptional-points-with-PT-symmetry"><a class="docs-heading-anchor" href="#Exceptional-points-with-PT-symmetry">Exceptional points with PT symmetry</a><a id="Exceptional-points-with-PT-symmetry-1"></a><a class="docs-heading-anchor-permalink" href="#Exceptional-points-with-PT-symmetry" title="Permalink"></a></h3><p>Exceptional points are especially interesting in contexts where the Hamiltonian is not only non-Hermitian but also PT-symmetric (inversion and time). The previous Hatano–Nelson-like model, however, is T-symmetric (by default, <code>calc_bandreps</code> assumes time-reversal symmetry, and this assumption is propagated via <code>brs</code> and <code>cbr</code> to <code>tb_hamiltonian</code>) but inversion-broken, and so lacks PT-symmetry.</p><p>We can build a variant, however, that breaks both P and T but retains PT symmetry. To do so, first construct the terms of a time-reversal model, starting now with a set of time-reversal broken EBRs:</p><pre><code class="language-julia hljs">brs = calc_bandreps(1, 1; timereversal=false) # a single EBR, as before, but now without assumption of time-reversal
 pin_free!(brs, [1=&gt;[0]]) # as before, pin free parameters of the EBR&#39;s Wyckoff position
 cbr = @composite 2brs[1]
 tbm = tb_hamiltonian(cbr, [[0], [1]], Val(NONHERMITIAN))
-summary(tbm)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;20-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A)&quot;</code></pre><p>The resulting model has no less than 20 possible terms: simply due to being a fully unconstrained problem – lack both hermitian, spatial, and time-reversal symmetry. We pick a small subset of these terms, with the aim of building a simple model. In particular, we retain imaginary onsite terms and the terms in our previous reduced model:</p><pre><code class="language-julia hljs">onsite_terms  = [2, 8]
+summary(tbm)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;24-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A)&quot;</code></pre><p>The resulting model has no less than 20 possible terms: simply due to being a fully unconstrained problem – lack both hermitian, spatial, and time-reversal symmetry. We pick a small subset of these terms, with the aim of building a simple model. In particular, we retain imaginary onsite terms and the terms in our previous reduced model:</p><pre><code class="language-julia hljs">onsite_terms  = [2, 8]
 hopping_terms = [13, 15, 17, 19]
 tbm = tbm[vcat(onsite_terms, hopping_terms)]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-term 2×2 TightBindingModel{1} (nonhermitian) over (1a|A)⊕(1a|A):
 <span class="sgr90">┌─</span>
@@ -111,15 +111,15 @@ tbm = tbm[vcat(onsite_terms, hopping_terms)]</code></pre><pre class="documenter-
 <span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>     ⎦
 <span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span><span class="sgr90">:  δ₁=[1]</span>
 <span class="sgr90">┌─</span>
-<span class="sgr1">5. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span> ⎤
+<span class="sgr1">5. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr34">𝕖(δ₁)</span> ⎤
+<span class="sgr90">│  </span>⎢ ───┼─────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>     ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span><span class="sgr90">:  δ₁=[-1]</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">6. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr90">0</span> ⎤
 <span class="sgr90">│  </span>⎢ ───┼─── ⎥
 <span class="sgr90">│  </span>⎣ <span class="sgr34">1</span>  │  <span class="sgr90">0</span> ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span>
-<span class="sgr90">┌─</span>
-<span class="sgr1">6. </span>⎡ <span class="sgr90">0</span>      │  <span class="sgr90">0</span> ⎤
-<span class="sgr90">│  </span>⎢ ───────┼─── ⎥
-<span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(δ₁)</span>  │  <span class="sgr90">0</span> ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span><span class="sgr90">:  δ₁=[-1]</span></code></pre><p>The span of these terms result in a Bloch Hamiltonian:</p><p class="math-container">\[\mathbf{H}(k) = 
+<span class="sgr90">└─ </span><span class="sgr34">(1a|A)</span>↔<span class="sgr34">(1a|A)</span></code></pre><p>The span of these terms result in a Bloch Hamiltonian:</p><p class="math-container">\[\mathbf{H}(k) = 
 \begin{bmatrix}
     \mathrm{i}\gamma_1 &amp; t_1 + t_2 \mathrm{e}^{2\pi\mathrm{i}k} \\
     t_1&#39; + t_2&#39; \mathrm{e}^{-2\pi\mathrm{i}k} &amp; \mathrm{i}\gamma_2
@@ -148,7 +148,7 @@ lines!(ks, Es_im[:,2]; color=:firebrick2, label=&quot;Im &quot; * rich(&quot;E&q
 ax.xlabel = &quot;Momentum &quot; * rich(&quot;k&quot;, font=:italic)
 ax.ylabel = &quot;Energy &quot; * rich(&quot;E&quot;, font=:italic)
 axislegend(ax; framevisible=false)
-xlims!(-1/2, 1/2)</code></pre><img src="a8424936.png" alt="Example block output"/><h2 id="Non-Hermitian-SSH-model"><a class="docs-heading-anchor" href="#Non-Hermitian-SSH-model">Non-Hermitian SSH model</a><a id="Non-Hermitian-SSH-model-1"></a><a class="docs-heading-anchor-permalink" href="#Non-Hermitian-SSH-model" title="Permalink"></a></h2><p>***WIP***</p><pre><code class="language-julia hljs"># (1b|A′) ⊕ (1a|A′) in 1D SG 2 (inversion symmetry); with intra-cell hoppings &amp; onsite terms
+xlims!(-1/2, 1/2)</code></pre><img src="bd83e653.png" alt="Example block output"/><h2 id="Non-Hermitian-SSH-model"><a class="docs-heading-anchor" href="#Non-Hermitian-SSH-model">Non-Hermitian SSH model</a><a id="Non-Hermitian-SSH-model-1"></a><a class="docs-heading-anchor-permalink" href="#Non-Hermitian-SSH-model" title="Permalink"></a></h2><p>***WIP***</p><pre><code class="language-julia hljs"># (1b|A′) ⊕ (1a|A′) in 1D SG 2 (inversion symmetry); with intra-cell hoppings &amp; onsite terms
 brs = calc_bandreps(2, Val(1))
 cbr = @composite brs[1] + brs[3]
 tbm = tb_hamiltonian(cbr, [[0], [2]], Val(NONHERMITIAN))
@@ -164,15 +164,15 @@ tbm = tbm[5:8] # retain only inter-orbital (offdiagonal) terms for simplicity</c
 <span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>           ⎦
 <span class="sgr90">└─ </span><span class="sgr34">(1b|A′)</span>↔<span class="sgr34">(1a|A′)</span><span class="sgr90">:  δ₁=[3/2], δ₂=-δ₁</span>
 <span class="sgr90">┌─</span>
-<span class="sgr1">3. </span>⎡ <span class="sgr90">0</span>            │  <span class="sgr90">0</span> ⎤
-<span class="sgr90">│  </span>⎢ ─────────────┼─── ⎥
-<span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)</span>  │  <span class="sgr90">0</span> ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(1a|A′)</span>↔<span class="sgr34">(1b|A′)</span><span class="sgr90">:  δ₁=[1/2], δ₂=-δ₁</span>
+<span class="sgr1">3. </span>⎡ <span class="sgr90">0</span>  │  <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)</span> ⎤
+<span class="sgr90">│  </span>⎢ ───┼───────────── ⎥
+<span class="sgr90">│  </span>⎣ <span class="sgr90">0</span>  │  <span class="sgr90">0</span>           ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(1b|A′)</span>↔<span class="sgr34">(1a|A′)</span><span class="sgr90">:  δ₁=[-5/2], δ₂=-δ₁</span>
 <span class="sgr90">┌─</span>
 <span class="sgr1">4. </span>⎡ <span class="sgr90">0</span>            │  <span class="sgr90">0</span> ⎤
 <span class="sgr90">│  </span>⎢ ─────────────┼─── ⎥
 <span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)</span>  │  <span class="sgr90">0</span> ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(1a|A′)</span>↔<span class="sgr34">(1b|A′)</span><span class="sgr90">:  δ₁=[-3/2], δ₂=-δ₁</span></code></pre><p>We can visualize the associated terms via Makie:</p><pre><code class="language-julia hljs">plot(tbm)</code></pre><img src="ef4c11f6.png" alt="Example block output"/><div class="admonition is-info" id="Comparison-of-non-Hermitian-and-Hermitian-SSH-model-terms-2ad50ca63a01ef58"><header class="admonition-header">Comparison of non-Hermitian and Hermitian SSH model terms<a class="admonition-anchor" href="#Comparison-of-non-Hermitian-and-Hermitian-SSH-model-terms-2ad50ca63a01ef58" title="Permalink"></a></header><div class="admonition-body"><p>It is instructive to compare the hopping terms in our non-Hermitian SSH model with its Hermitian counterpart:</p><pre><code class="language-julia hljs">tbm_H = tb_hamiltonian(cbr, [[0], [2]], Val(HERMITIAN))
+<span class="sgr90">└─ </span><span class="sgr34">(1a|A′)</span>↔<span class="sgr34">(1b|A′)</span><span class="sgr90">:  δ₁=[1/2], δ₂=-δ₁</span></code></pre><p>We can visualize the associated terms via Makie:</p><pre><code class="language-julia hljs">plot(tbm)</code></pre><img src="ac5b9200.png" alt="Example block output"/><div class="admonition is-info" id="Comparison-of-non-Hermitian-and-Hermitian-SSH-model-terms-2ad50ca63a01ef58"><header class="admonition-header">Comparison of non-Hermitian and Hermitian SSH model terms<a class="admonition-anchor" href="#Comparison-of-non-Hermitian-and-Hermitian-SSH-model-terms-2ad50ca63a01ef58" title="Permalink"></a></header><div class="admonition-body"><p>It is instructive to compare the hopping terms in our non-Hermitian SSH model with its Hermitian counterpart:</p><pre><code class="language-julia hljs">tbm_H = tb_hamiltonian(cbr, [[0], [2]], Val(HERMITIAN))
 tbm_H = tbm_H[5:6] # retain only inter-orbital (offdiagonal) terms</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-term 2×2 TightBindingModel{1} (hermitian) over (1b|A′)⊕(1a|A′):
 <span class="sgr90">┌─</span>
 <span class="sgr1">1. </span>⎡ <span class="sgr90">0</span>              │  <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)</span> ⎤
@@ -207,10 +207,10 @@ lines!(ks, Es_im[:,2]; color=:firebrick2, label=&quot;Im &quot; * rich(&quot;E&q
 ax.xlabel = &quot;Momentum &quot; * rich(&quot;k&quot;, font=:italic)
 ax.ylabel = &quot;Energy &quot; * rich(&quot;E&quot;, font=:italic)
 axislegend(ax; framevisible=false)
-xlims!(-1/2, 1/2)</code></pre><img src="6ec8587f.png" alt="Example block output"/><h2 id="A-more-complicated-example:-exceptional-lines-in-p4"><a class="docs-heading-anchor" href="#A-more-complicated-example:-exceptional-lines-in-p4">A more complicated example: exceptional lines in p4</a><a id="A-more-complicated-example:-exceptional-lines-in-p4-1"></a><a class="docs-heading-anchor-permalink" href="#A-more-complicated-example:-exceptional-lines-in-p4" title="Permalink"></a></h2><p>We can also construct more complicated examples where symmetry plays a role. Consider for example a non-Hermitian model on a 2D lattice with p4 symmetry, obtained by placing <em>s</em>-like orbitals at the two symmetry-related edges of the unit cell (i.e., a (2c|A) orbital):</p><pre><code class="language-julia hljs">brs = calc_bandreps(10, Val(2))
+xlims!(-1/2, 1/2)</code></pre><img src="c9e3f8ff.png" alt="Example block output"/><h2 id="A-more-complicated-example:-exceptional-lines-in-p4"><a class="docs-heading-anchor" href="#A-more-complicated-example:-exceptional-lines-in-p4">A more complicated example: exceptional lines in p4</a><a id="A-more-complicated-example:-exceptional-lines-in-p4-1"></a><a class="docs-heading-anchor-permalink" href="#A-more-complicated-example:-exceptional-lines-in-p4" title="Permalink"></a></h2><p>We can also construct more complicated examples where symmetry plays a role. Consider for example a non-Hermitian model on a 2D lattice with p4 symmetry, obtained by placing <em>s</em>-like orbitals at the two symmetry-related edges of the unit cell (i.e., a (2c|A) orbital):</p><pre><code class="language-julia hljs">brs = calc_bandreps(10, Val(2))
 cbr = @composite brs[1] # pick the (2c|A) EBR
 tbm_H  = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(HERMITIAN))
-tbm_NH = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(NONHERMITIAN))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-term 2×2 TightBindingModel{2} (nonhermitian) over (2c|A):
+tbm_NH = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(NONHERMITIAN))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">7-term 2×2 TightBindingModel{2} (nonhermitian) over (2c|A):
 <span class="sgr90">┌─</span>
 <span class="sgr1">1. </span>⎡ <span class="sgr34">1</span>  0 ⎤
 <span class="sgr90">│  </span>⎣ 0  <span class="sgr34">1</span> ⎦
@@ -234,7 +234,11 @@ tbm_NH = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(NONHERMITIAN))</code></pre><pre
 <span class="sgr90">┌─</span>
 <span class="sgr1">6. </span>⎡ 0            <span class="sgr34">𝕖(δ₃)+𝕖(δ₄)</span> ⎤
 <span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)</span>  0           ⎦
-<span class="sgr90">└─ </span><span class="sgr34">(2c|A)</span><span class="sgr90"> self-term:  δ₁=[3/2,-1/2], δ₂=-δ₁, δ₃=[1/2,3/2], δ₄=-δ₃</span></code></pre><p>It is instructive to visualize both the Hermitian and non-Hermitian models and compare the involved hopping terms:</p><pre><code class="language-julia hljs">plot(tbm_H)</code></pre><img src="045aa3e4.png" alt="Example block output"/><pre><code class="language-julia hljs">plot(tbm_NH)</code></pre><img src="ce8a6868.png" alt="Example block output"/><p>The second and third terms of the non-Hermitian model clearly break Hermiticity (unless of equal amplitude). We can verify that the model hosts exceptional lines in this case:</p><pre><code class="language-julia hljs">tbm = tbm_NH[2:3] # retain only terms 2 and 3
+<span class="sgr90">└─ </span><span class="sgr34">(2c|A)</span><span class="sgr90"> self-term:  δ₁=[3/2,-1/2], δ₂=-δ₁, δ₃=[1/2,3/2], δ₄=-δ₃</span>
+<span class="sgr90">┌─</span>
+<span class="sgr1">7. </span>⎡ 0            <span class="sgr34">𝕖(δ₁)+𝕖(δ₂)</span> ⎤
+<span class="sgr90">│  </span>⎣ <span class="sgr34">𝕖(δ₃)+𝕖(δ₄)</span>  0           ⎦
+<span class="sgr90">└─ </span><span class="sgr34">(2c|A)</span><span class="sgr90"> self-term:  δ₁=[3/2,-1/2], δ₂=-δ₁, δ₃=[1/2,3/2], δ₄=-δ₃</span></code></pre><p>It is instructive to visualize both the Hermitian and non-Hermitian models and compare the involved hopping terms:</p><pre><code class="language-julia hljs">plot(tbm_H)</code></pre><img src="045aa3e4.png" alt="Example block output"/><pre><code class="language-julia hljs">plot(tbm_NH)</code></pre><img src="6a2f9cb1.png" alt="Example block output"/><p>The second and third terms of the non-Hermitian model clearly break Hermiticity (unless of equal amplitude). We can verify that the model hosts exceptional lines in this case:</p><pre><code class="language-julia hljs">tbm = tbm_NH[2:3] # retain only terms 2 and 3
 ptbm_NH = tbm([1.2, 0.8]) # 1.2 vs. 0.8 hopping asymmetry
 ks = range(-1/2, 1/2, 201)
 Em = [spectrum_single_k(ptbm_NH, [k1, k2]) for k1 in ks, k2 in ks]
@@ -277,4 +281,4 @@ ax2 = Axis3(f[2,2]; zlabel=&quot;Im &quot;*E_label, axis_args...)
 p2 = surface!(ks, ks, Es_im_1; colormap=:RdBu_8, colorrange=lims_im, shininess)
 surface!(     ks, ks, Es_im_2; colormap=:RdBu_8, colorrange=lims_im, shininess)
 zlims!(ax2, lims_re)
-Colorbar(f[1,2], p2; ticks=([.9999*lims_im[1], 0, .9999*lims_im[2]], [&quot;min&quot;, &quot;0&quot;, &quot;max&quot;]), colorbar_args...)</code></pre><img src="76eb0c62.png" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../symmetry-breaking/">« Symmetry breaking</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 21 April 2026 15:00">Tuesday 21 April 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Colorbar(f[1,2], p2; ticks=([.9999*lims_im[1], 0, .9999*lims_im[2]], [&quot;min&quot;, &quot;0&quot;, &quot;max&quot;]), colorbar_args...)</code></pre><img src="76eb0c62.png" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../symmetry-breaking/">« Symmetry breaking</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 19 May 2026 21:20">Tuesday 19 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
