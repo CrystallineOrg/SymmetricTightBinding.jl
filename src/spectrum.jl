@@ -67,7 +67,7 @@ end
 # any abstract vector of real numbers, each an interpreted as independent momentum point
 function spectrum(
     ptbm::ParameterizedTightBindingModel{1, S},
-    ks::AbstractVector{<:Real},
+    ks::AbstractVector{<:Real};
     transform::F = nothing
 ) where {S, F}
     ks = [[k] for k in ks]
