@@ -1,3 +1,8 @@
+const HERMITIAN_COLOR = :green
+const ANTIHERMITIAN_COLOR = :red
+
+# ---------------------------------------------------------------------------------------- #
+
 function Base.show(io::IO, ::MIME"text/plain", ho::HoppingOrbit)
     # before getting started, determine maximum length of δᵢ entries, to align:
     aligns = map(enumerate(ho.orbit)) do (i, δᵢ)
@@ -94,45 +99,99 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
-function _summary_like(io::IO, tbm::TightBindingModel{D, S}, spoofname::String) where {D, S}
+function _summary_like(io::IO, tbm::TightBindingModel{D, S}, typename::String) where {D, S}
     N = tbm.N
-    print(io, length(tbm), "-term ", N, "×", N, " ", spoofname, "{", D, "}")
+    print(io, length(tbm), "-term ", N, "×", N, " ", typename, "{", D, "}")
     print(io, " (", lowercase(string(S)), ")")
-    N == 0 && return
-    length(tbm) == 0 && return
+    (N == 0 || length(tbm) == 0) && return
     brs = first(tbm).brs
     print(io, " over ")
     join(io, brs, "⊕")
+    return
 end
-Base.summary(io::IO, tbm::TightBindingModel) = _summary_like(io, tbm, "TightBindingModel")
+function _summary_like(io::IO, ctbm::CompositeTightBindingModel{D}, typename::String) where D
+    tbm_h = ctbm.tbm_h
+    tbm_a = ctbm.tbm_a
+    N = tbm_h.N
+    print(io, "(")
+    printstyled(io, length(tbm_h); color=HERMITIAN_COLOR)
+    print(io, "+")
+    printstyled(io, length(tbm_a); color=ANTIHERMITIAN_COLOR)
+    print(io, ")-term ", N, "×", N, " ", typename, "{", D, "}")
+    (N == 0 || (length(tbm_h) == 0 && length(tbm_a) == 0)) && return
+    brs = first(tbm_h).brs
+    print(io, " over ")
+    join(io, brs, "⊕")
+    return    
+end
+function Base.summary(io::IO, atbm::AbstractTightBindingModel)
+    _summary_like(io, atbm, String(nameof(typeof(atbm))))
+end
 
-function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where {D}
-    summary(io, tbm)
-    length(tbm) == 0 && return
-    print(io, ":")
+# This method is factored out of `show(…, ::TightBindingModel)` to allow use also for
+# `show(…, ::CompositeTightBindingModel)` without code duplication
+function _show_textplain(
+    io::IO,
+    tbm::TightBindingModel{D};
+    add_to_term_counter::Int=0,
+    header::Union{Nothing, String}=nothing,
+    header_kws=(;),
+    trim_line_color=:light_black
+) where D
+    # NB: Be aware that the first write to `io` in this function is _always_ a newline
     N = tbm.N
     ioc = IOContext(io, :displaysize => displaysize(io) .- (0, 5))
     for (i, tbt) in enumerate(tbm)
-        printstyled(io, "\n┌─\n"; color = :light_black)
-        printstyled(io, i, ". "; bold = true)
+        printstyled(io, "\n┌─"; color=trim_line_color)
+        if !isnothing(header) && i == 1
+            printstyled(io, " ", something(header); header_kws...)
+        end
+        println(io)
+        printstyled(io, i+add_to_term_counter, ". "; bold = true)
         indent = " "^(ndigits(i) + 1)
 
         s = sprint((io′, x) -> Base.print_array(io′, x), tbt; context = ioc)
         Nˢ = count('\n', s) + 1
         io′ = IOBuffer(s)
         for (i, l) in enumerate(eachline(io′))
-            i ≠ 1 && printstyled(io, "│", indent; color = :light_black)
+            i ≠ 1 && printstyled(io, "│", indent; color=trim_line_color)
             N > 1 && print(io, i == 1 ? '⎡' : i == Nˢ ? '⎣' : '⎢')
             print(io, l)
             N > 1 && print(io, ' ', i == 1 ? '⎤' : i == Nˢ ? '⎦' : '⎥')
             print(io, '\n')
         end
-        printstyled(io, "└─ "; color = :light_black)
+        printstyled(io, "└─ "; color=trim_line_color)
         _print_tightbindingterm_block_summary(io, tbt)
         _print_orbit_elements(io, tbt; color = :light_black, pretext = ":  ")
     end
 end
-function _print_tightbindingterm_block_summary(io::IO, tbt::TightBindingTerm{D}) where {D}
+function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where {D}
+    summary(io, tbm)
+    length(tbm) == 0 && return
+    print(io, ":")
+    return _show_textplain(io, tbm)
+end
+function Base.show(io::IO, ::MIME"text/plain", ctbm::CompositeTightBindingModel{D}) where {D}
+    summary(io, ctbm)
+    length(ctbm) == 0 && return
+    tbm_h = ctbm.tbm_h
+    tbm_a = ctbm.tbm_a
+    print(io, ":")
+    _show_textplain(
+        io, tbm_h;
+        header = "Hermitian",
+        header_kws = (; color=HERMITIAN_COLOR, italic=true),
+        trim_line_color = HERMITIAN_COLOR
+    )
+    return _show_textplain(
+        io, tbm_a;
+        header = "Anti-Hermitian",
+        header_kws = (; color=ANTIHERMITIAN_COLOR, italic=true),
+        trim_line_color = ANTIHERMITIAN_COLOR,
+        add_to_term_counter = length(tbm_h),
+    )
+end
+function _print_tightbindingterm_block_summary(io::IO, tbt::TightBindingTerm)
     i, j = tbt.block_ij
     printstyled(io, tbt.brs[i]; color = :blue)
     if i == j
@@ -145,30 +204,29 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
-function Base.summary(io::IO, ptbm::ParameterizedTightBindingModel)
-    _summary_like(io, ptbm.tbm, "ParameterizedTightBindingModel")
+function Base.summary(io::IO, aptbm::AbstractParameterizedTightBindingModel)
+    _summary_like(io, aptbm.tbm, String(nameof(typeof(aptbm))))
 end
 
-function Base.show(
-    io::IO, 
-    ::MIME"text/plain", 
-    ptbm::ParameterizedTightBindingModel{D}
-) where {D}
-    summary(io, ptbm)
-    length(ptbm.tbm) == 0 && (print(io, " with no amplitudes"); return)
+function Base.show(io::IO, ::MIME"text/plain", aptbm::AbstractParameterizedTightBindingModel)
+    summary(io, aptbm)
+    length(aptbm.tbm) == 0 && (print(io, " with no amplitudes"); return)
     println(io, " with amplitudes:")
     print(io, " [")
-    for (i, c) in enumerate(ptbm.cs)
+    for (i, c) in enumerate(aptbm.cs)
         if iszero(c)
             printstyled(io, "0"; color = :light_black)
         else
-            print(io, round(c, sigdigits=5))
+            printstyled(io, round(c, sigdigits=5); color=_coefficient_color(aptbm, i))
         end
-        i ≠ length(ptbm.cs) && print(io, ", ")
+        i ≠ length(aptbm.cs) && print(io, ", ")
     end
     print(io, "]")
 end
-
+_coefficient_color(::ParameterizedTightBindingModel, _) = :normal
+function _coefficient_color(pctbm::ParameterizedCompositeTightBindingModel, i)
+    return i ≤ length(pctbm.tbm.tbm_h) ? HERMITIAN_COLOR : ANTIHERMITIAN_COLOR
+end
 
 # ---------------------------------------------------------------------------------------- #
 
