@@ -1,6 +1,6 @@
 # [Non-Hermitian tight-binding models](@id nonhermitian)
 
-By default, the models returned by `tb_hamiltonian` are Hermitian. In addition to Hermitian models, however, it is also possible to return anti-Hermitian or generically non-Hermitian (neither Hermitian or anti-Hermitian) models. Here, we showcase the latter.
+By default, the models returned by `tb_hamiltonian` are Hermitian. In addition to Hermitian models, however, it is also possible to return anti-Hermitian or generically non-Hermitian (neither Hermitian nor anti-Hermitian) models. Here, we showcase the latter.
 
 ## Hatano--Nelson model
 
@@ -9,8 +9,8 @@ It is simple to build this model with SymmetricTightBinding.jl:
 
 ```@example hatano-nelson
 using Crystalline, SymmetricTightBinding
-brs = calc_bandreps(1, 1) # EBRs in plane group 1, with time-reversal symmetry
-pin_free!(brs, [1=>[0]])  # the 1a Wyckoff position in plane group 1 has a free parameter: set to 0 for definiteness
+brs = calc_bandreps(1, 1) # EBRs in line group 1, with time-reversal symmetry
+pin_free!(brs, [1=>[0]])  # the 1a Wyckoff position in line group 1 has a free parameter: set to 0 for definiteness
 cbr = @composite brs[1]   # single-site model
 tbm = tb_hamiltonian(cbr, [[1]], NONHERMITIAN) # nearest neighbor hoppings
 ```
@@ -51,7 +51,7 @@ The loop is associated with a quantized spectral winding $\nu = (2\pi \mathrm{i}
 We can also create models that do not assume time-reversal symmetry. In our context, this allows additional hopping terms, differing only from the time-reversal symmetric Hatano--Nelson terms by having overall imaginary prefactor:
 
 ```@example hatano-nelson
-brs_notr = calc_bandreps(1, 1; timereversal=false)  # EBRs in plane group 1, without time-reversal symmetry
+brs_notr = calc_bandreps(1, 1; timereversal=false)  # EBRs in line group 1, without time-reversal symmetry
 pin_free!(brs_notr, [1=>[0]])
 tbm_notr = tb_hamiltonian((@composite brs_notr[1]), [[0], [1]], NONHERMITIAN) # on-site terms _and_ nearest-neighbor hoppings
 ```
@@ -87,8 +87,8 @@ The four terms span a model of the kind:
 with intercell hoppings $t_2^{(\prime)}$ and intracell hoppings $t_1^{(\prime)}$.
 A specific instance of this model can be created from `tbm` via `tbm([t₁, t₂, t₁′, t₂′])`.
 
-An simple special case -- but interesting, as we will see -- is equal inter- and intracell hoppings from orbital 2 to orbital 1 ($2\rightarrow 1$ hopping), i.e., $t_1 = t_2 = 1$, fully suppressed intercell $1 \rightarrow 2$ hopping, i.e., $t_2' = 0$ and free intracell $1 \rightarrow 2$ hopping, i.e., $t_1' = t$.
-With this restriction, the model features an exceptional point (band degeneracy without a complete associated eigenfunction basis), occuring when $t_1 + t_2 \mathrm{e}^{2\pi\mathrm{i}k} = 1 + \mathrm{e}^{2\pi\mathrm{i}k} = 0$, i.e., when $\mathrm{e}^{2\pi\mathrm{i}k} = -1 \Leftrightarrow k = \pm 1/2$ (the BZ edge).
+A simple special case -- but interesting, as we will see -- is equal inter- and intracell hoppings from orbital 2 to orbital 1 ($2\rightarrow 1$ hopping), i.e., $t_1 = t_2 = 1$, fully suppressed intercell $1 \rightarrow 2$ hopping, i.e., $t_2' = 0$ and free intracell $1 \rightarrow 2$ hopping, i.e., $t_1' = t$.
+With this restriction, the model features an exceptional point (band degeneracy without a complete associated eigenfunction basis), occurring when $t_1 + t_2 \mathrm{e}^{2\pi\mathrm{i}k} = 1 + \mathrm{e}^{2\pi\mathrm{i}k} = 0$, i.e., when $\mathrm{e}^{2\pi\mathrm{i}k} = -1 \Leftrightarrow k = \pm 1/2$ (the BZ edge).
 At the exceptional point, the Bloch Hamiltonian is defective in the sense that it is similar to a Jordan block $\big[\begin{smallmatrix} 0 & 1 \\ 0 & 0\end{smallmatrix}\big]$:
 
 ```@example hatano-nelson
@@ -117,7 +117,7 @@ xlims!(-1/2, 1/2)
 faxp # hide
 ```
 
-The spectrum is degenerate at $k = \pm 1/2$ as expected, generally complex, and exhibiting both time-reversal symmetry $E_1(k) = E_2(-k)^*$ and ``accidental'' particle-hole symmetry $E_1(k) = -E_1(k)$ (resulting from our restriction to a small set of hopping hoppings terms).
+The spectrum is degenerate at $k = \pm 1/2$ as expected, generally complex, and exhibiting both time-reversal symmetry $E_1(k) = E_2(-k)^*$ and ``accidental'' particle-hole symmetry $E_1(k) = -E_2(k)$ (resulting from our restriction to a small set of hopping hoppings terms).
 
 
 ### Exceptional points with PT symmetry
@@ -137,7 +137,7 @@ tbm = tb_hamiltonian(cbr, [[0], [1]], Val(NONHERMITIAN))
 summary(tbm)
 ```
 
-The resulting model has no less than 20 possible terms: simply due to being a fully unconstrained problem -- lack both hermitian, spatial, and time-reversal symmetry.
+The resulting model has no less than 20 possible terms: simply due to being a fully unconstrained problem -- lacking both Hermitian, spatial, and time-reversal symmetry.
 We pick a small subset of these terms, with the aim of building a simple model. In particular, we retain imaginary onsite terms and the terms in our previous reduced model:
 
 ```@example PT-symmetry
@@ -182,7 +182,7 @@ Es = spectrum(ptbm, ks)
 Es_re = real(Es) # real parts
 Es_im = imag(Es) # imaginary parts
 Es_re = sort(Es_re; dims=2) # necessary to explicitly sort for visualization, due to intrinsic
-Es_im = sort(Es_im; dims=2) # difficult of sorting floating-point rounded complex numbers
+Es_im = sort(Es_im; dims=2) # difficulty of sorting floating-point rounded complex numbers
 
 # plot spectrum
 using GLMakie # hide
@@ -201,16 +201,34 @@ f # hide
 ```
 
 ## Non-Hermitian SSH model
-***WIP***
+
+The non-Hermitian SSH (Su-Schrieffer-Heeger) model generalizes the standard Hermitian SSH model by allowing left- and right-directed inter-sublattice hoppings to take independent values.
+We construct it in line group 2, which has inversion symmetry and two inequivalent Wyckoff positions per unit cell, 1a and 1b.
+By placing an $s$-like orbital at each position, we obtain the usual sublattice construction of the SSH model:
 
 ```@example nonhermitian-ssh
 using Crystalline, SymmetricTightBinding # hide
-# (1b|A′) ⊕ (1a|A′) in 1D SG 2 (inversion symmetry); with intra-cell hoppings & onsite terms
-brs = calc_bandreps(2, Val(1))
+# (1b|A′) ⊕ (1a|A′) in 1D line group 2 (inversion symmetry); with intra-cell hoppings & onsite terms
+brs = calc_bandreps(2, 1)
 cbr = @composite brs[1] + brs[3]
 tbm = tb_hamiltonian(cbr, [[0], [2]], Val(NONHERMITIAN))
 tbm = tbm[5:8] # retain only inter-orbital (offdiagonal) terms for simplicity
 ```
+
+Terms 1–4 are intra-orbital (on-site terms and same-orbital next-nearest-neighbor inter-cell hoppings).
+We retain only the inter-orbital terms (terms 5–8; nearest- and next-nearest-neighbor terms).
+The Bloch Hamiltonian of `tbm([t₁, t₂, t₁′, t₂′])` is:
+
+```math
+\mathbf{H}(k) = 
+2\begin{bmatrix}
+    0 & t_1\cos(\tfrac{1}{2}\pi k) + t_2 \cos(\tfrac{3}{2}\pi k) \\
+    t_1'\cos(\tfrac{1}{2}\pi k) + t_2' \cos(\tfrac{3}{2}\pi k) & 0
+\end{bmatrix},
+```
+
+with $(t_1, t_2)$ and $(t_1', t_2')$ the two independent pairs of inter-sublattice hoppings (in the two directions) and $k$ specified in Cartesian coordaintes.
+Hermiticity is recovered when $t_{1,2} = t_{1,2}'$, reducing to the standard SSH model with nearest-neighbor intracell hopping $t_1$ and next-nearest neighbor intracell hopping $t_2$.
 
 We can visualize the associated terms via Makie:
 
@@ -232,9 +250,10 @@ plot(tbm)
     plot(tbm_H)
     ```
 
-    From which we see that the breaking of Hermiticity splits `tbm_H[1]` across `tbm[1]` and `tbm[3]`, while `tbm_H[2]` is split across `tbm[2]` and `tbm[4]`. In other words, Hermiticity is restored in `tbm` for models `tbm([t1, t2, t1, t2])`.
+    From which we see that the breaking of Hermiticity splits `tbm_H[1]` across `tbm[1]` and `tbm[3]`, while `tbm_H[2]` is split across `tbm[2]` and `tbm[4]`.
+    In other words, Hermiticity is restored in `tbm` for models `tbm([t₁, t₂, t₁, t₂])`.
 
-We might e.g., explore the band structure (and associated exceptional points) for a non-Hermitian configuration, where the nearest- and next-nearest neighbor have equal-amplitude Hermitian hoppings, but oppositely signed non-Hermitian hoppings:
+We might e.g., explore the band structure (and associated exceptional points) for a non-Hermitian configuration, wherein a Hermitian nearest- and next-nearest neighbor hopping configuration (of equal amplitudes), is perturbed by a finite non-Hermitian asymmetry (of opposite sign in the nearest- and next-nearest terms):
 
 ```@example nonhermitian-ssh
 Δ₁ = -0.3 # nearest-neighbor non-Hermitian asymmetry 
@@ -249,7 +268,7 @@ Es = spectrum(ptbm, ks)
 Es_re = real(Es) # real parts
 Es_im = imag(Es) # imaginary parts
 Es_re = sort(Es_re; dims=2) # necessary to explicitly sort for visualization, due to intrinsic
-Es_im = sort(Es_im; dims=2) # difficult of sorting floating-point rounded complex numbers
+Es_im = sort(Es_im; dims=2) # difficulty of sorting floating-point rounded complex numbers
 
 # plot spectrum
 f = Figure()
@@ -265,20 +284,20 @@ xlims!(-1/2, 1/2)
 f # hide
 ```
 
-## A more complicated example: exceptional lines in p4
+## 2D model: exceptional lines in *p*4
 
 We can also construct more complicated examples where symmetry plays a role.
-Consider for example a non-Hermitian model on a 2D lattice with p4 symmetry, obtained by placing *s*-like orbitals at the two symmetry-related edges of the unit cell (i.e., a (2c|A) orbital):
+Consider for example a non-Hermitian model on a 2D lattice with *p*4 symmetry, obtained by placing *s*-like orbitals at the two symmetry-related edges of the unit cell (i.e., a (2c|A) orbital):
 
 ```@example nonhermitian-p4
 using Crystalline, SymmetricTightBinding # hide
-brs = calc_bandreps(10, Val(2))
+brs = calc_bandreps(10, 2)
 cbr = @composite brs[1] # pick the (2c|A) EBR
 tbm_H  = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(HERMITIAN))
 tbm_NH = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(NONHERMITIAN))
 ```
 
-It is instructive to visualize both the Hermitian and non-Hermitian models and compare the involved hopping terms:
+It is instructive to compare the Hermitian and non-Hermitian models to discern which terms are genuinely nonhermitian:
 
 ```@example nonhermitian-p4
 using GLMakie # hide

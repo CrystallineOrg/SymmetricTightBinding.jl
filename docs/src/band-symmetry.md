@@ -78,6 +78,8 @@ calc_topology.(ns, Ref(brs))
 
 I.e., in this example, both band representations are either a trivial or a fragile phase. To resolve this distinction, we can use [SymmetryBases.jl](https://github.com/thchr/SymmetryBases.jl)'s `calc_detailed_topology`:
 ```@repl band-symmetry
+redirect_stdout(devnull) do # hide
 using SymmetryBases
+end # hide
 calc_detailed_topology.(ns, Ref(brs))
 ```
