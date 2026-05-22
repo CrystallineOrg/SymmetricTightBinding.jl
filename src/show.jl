@@ -105,6 +105,8 @@ function _summary_like(io::IO, tbm::TightBindingModel{D, S}, spoofname::String) 
     join(io, brs, "⊕")
 end
 Base.summary(io::IO, tbm::TightBindingModel) = _summary_like(io, tbm, "TightBindingModel")
+# TODO: implementation for Base._summary_like(::IO, ::CompositeTightBindingModel) and change
+#       above to Base.summary(io::IO, tbm::AbstractTightBindingModel)
 
 function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where {D}
     summary(io, tbm)
@@ -132,7 +134,8 @@ function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where 
         _print_orbit_elements(io, tbt; color = :light_black, pretext = ":  ")
     end
 end
-function _print_tightbindingterm_block_summary(io::IO, tbt::TightBindingTerm{D}) where {D}
+# TODO: implementation for Base.show(::IO, …, ::CompositeTightBindingModel)
+function _print_tightbindingterm_block_summary(io::IO, tbt::TightBindingTerm)
     i, j = tbt.block_ij
     printstyled(io, tbt.brs[i]; color = :blue)
     if i == j
@@ -148,12 +151,9 @@ end
 function Base.summary(io::IO, ptbm::ParameterizedTightBindingModel)
     _summary_like(io, ptbm.tbm, "ParameterizedTightBindingModel")
 end
+# TODO: implementation for Base.summary(::IO, ::ParameterizedCompositeTightBindingModel)
 
-function Base.show(
-    io::IO, 
-    ::MIME"text/plain", 
-    ptbm::ParameterizedTightBindingModel{D}
-) where {D}
+function Base.show(io::IO, ::MIME"text/plain", ptbm::AbstractParameterizedTightBindingModel)
     summary(io, ptbm)
     length(ptbm.tbm) == 0 && (print(io, " with no amplitudes"); return)
     println(io, " with amplitudes:")
