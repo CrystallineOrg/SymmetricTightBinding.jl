@@ -42,9 +42,10 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
-function Base.summary(io::IO, tbt::TightBindingTerm{D}) where {D}
+function Base.summary(io::IO, tbt::TightBindingTerm{D, S}) where {D, S}
     N = last(tbt.axis)
     print(io, N, "×", N, " TightBindingTerm{", D, "}")
+    print(io, " (", lowercase(string(S)), ")")
     N == 0 && return
     _print_tightbindingterm_bandreps(io, tbt)
 end
@@ -93,9 +94,10 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
-function _summary_like(io::IO, tbm::TightBindingModel{D}, spoofname::String) where {D}
+function _summary_like(io::IO, tbm::TightBindingModel{D, S}, spoofname::String) where {D, S}
     N = tbm.N
     print(io, length(tbm), "-term ", N, "×", N, " ", spoofname, "{", D, "}")
+    print(io, " (", lowercase(string(S)), ")")
     N == 0 && return
     length(tbm) == 0 && return
     brs = first(tbm).brs

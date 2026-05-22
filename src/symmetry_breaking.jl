@@ -105,10 +105,10 @@ function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) w
 end
 
 function subduced_complement(
-    tbm::TightBindingModel{D},
+    tbm::TightBindingModel{D, S},
     gensᴴ::AbstractVector{SymOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal
-) where D
+) where {D, S}
     timereversalᴳ = first(tbm.cbr.brs).timereversal
     if timereversalᴳ == false && timereversal == true
         error(
@@ -136,7 +136,7 @@ function subduced_complement(
 
     # now we can compute a new coefficient basis in H and compare with our original basis,
     # progressing "group by group"
-    complement_tbs = TightBindingTerm{D}[]
+    complement_tbs = TightBindingTerm{D, S}[]
     for idxs in grouped_orbits_idxs
         tbt = tbm.terms[first(idxs)]
         tbb = tbt.block
@@ -151,7 +151,7 @@ function subduced_complement(
             gensᴴ,
             timereversal,
             tbt.block_ij[1] == tbt.block_ij[2], #= .diagonal_block =#
-            tbt.hermiticity == ANTIHERMITIAN,   #= .antihermitian =#
+            S,                                  #= hermiticity =#
         )
         # check output dimensions
         if length(tₐᵦ_basis_reimᴴ_vs) < length(idxs)
@@ -213,7 +213,7 @@ function subduced_complement(
 
         # now we have the new terms - store them as `TightBindingTerm`s
         for tᴴᵪᴳ in eachcol(tₐᵦ_basis_reim_ᴴᵪᴳ′_sparsified)
-            tbbᴴᵪᴳ = TightBindingBlock{D}(
+            tbbᴴᵪᴳ = TightBindingBlock{D, S}(
                 tbb.br1,
                 tbb.br2,
                 tbb.ordering1,
@@ -223,15 +223,14 @@ function subduced_complement(
                 tᴴᵪᴳ,
                 tbb.diagonal_block
             )
-            h = TightBindingTerm{D}(
+            h = TightBindingTerm{D, S}(
                 tbt.axis,
                 tbt.block_ij,
                 tbbᴴᵪᴳ, #= .block =#
-                tbt.hermiticity,
                 tbt.brs,
             )
             push!(complement_tbs, h)
         end
     end
-    return TightBindingModel{D}(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
+    return TightBindingModel{D, S}(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
 end

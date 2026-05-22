@@ -23,6 +23,8 @@ const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 include("types.jl")
 export HoppingOrbit
 export TightBindingBlock
+export Hermiticity, HERMITIAN, ANTIHERMITIAN, NONHERMITIAN
+export hermiticity
 export TightBindingModel
 export ParameterizedTightBindingModel
 include("show.jl")
@@ -39,7 +41,7 @@ export pin_free!
 include("symmetry_analysis.jl")
 export symmetry_eigenvalues
 include("spectrum.jl")
-export spectrum
+export spectrum, spectrum_single_k
 include("gradients.jl")
 export gradient_wrt_hopping
 export TightBindingModelHoppingGradient
