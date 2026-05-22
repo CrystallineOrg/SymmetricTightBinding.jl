@@ -5,6 +5,7 @@ module SymmetricTightBindingMakieExt
 using SymmetricTightBinding
 using SymmetricTightBinding: TightBindingTerm, PRUNE_ATOL_DEFAULT
 using Crystalline: DirectBasis, crystal, constant, isapproxin
+using LinearAlgebra: normalize, norm
 using Makie
 
 ## --------------------------------------------------------------------------------------- #
@@ -138,12 +139,15 @@ function Makie.plot!(
             tiplength = 10,
             label = p.bonds[].label
         )
-        plot_V = D == 1 ? Vec{2, Float32} : V
-        arrows_dir = plot_V.(plot_destinations .- plot_origins)
+        arrows_offset_start, arrows_offset_end = _arrows_offsets(
+            plot_origins, plot_destinations, Rm, Val(D)
+        )
+
+        # draw arrows from origins to destinations
         arrows2d!(
             p,
-            plot_origins .+ arrows_dir * .11,
-            plot_destinations .- arrows_dir * .09;
+            plot_origins .+ arrows_offset_start,
+            plot_destinations .- arrows_offset_end;
             arrows2d_kws...
         )
 
@@ -152,8 +156,8 @@ function Makie.plot!(
         if offdiag
             arrows2d!(
                 p,
-                plot_destinations .- arrows_dir * 0.11,
-                plot_origins .+ arrows_dir .* 0.09;
+                plot_destinations .- arrows_offset_start,
+                plot_origins .+ arrows_offset_end;
                 arrows2d_kws...
             )
         end
@@ -254,6 +258,44 @@ _cubic_basis(::Val{3}) = crystal(1, 1, 1, π / 2, π / 2, π / 2)
 _cubic_basis(::Val{2}) = crystal(1, 1, π / 2)
 _cubic_basis(::Val{1}) = crystal(1)
 _cubic_basis(::Val{D}) where {D} = error("Unsupported dimension: $D")
+
+# ---------------------------------------------------------------------------------------- #
+
+# determine a suitable "effective scale" for each arrow with which to shorten the arrow at
+# its start and end, so it doesn't overlap the sites too much; we project the arrow onto the
+# basis vectors (if the arrow is aligned with Rs[i], we get ‖Rs[i]‖ back; otherwise, a 
+# weighted average) and also clamp the scale to avoid removing too much for short hoppings
+function _arrows_offsets(
+    plot_origins, plot_destinations, Rm #= stack(Rs) =#, ::Val{D};
+    shift_factor_start = 0.11, shift_factor_end = 0.1
+) where D
+    plot_V = D == 1 ? Vec{2, Float32} : Vec{D, Float32}
+
+    # initially, get a normalized direction vectors from A to B
+    arrows_offset_abs = plot_V.(plot_destinations .- plot_origins) # vector from A to B
+    arrows_norm = norm.(arrows_offset_abs)
+    arrows_offset_abs ./= arrows_norm # normalize to unit-length: direction from A to B
+    
+    # project arrows onto lattice basis vectors to get an effective scale
+    arrows_eff_scale_unclamped = if D == 1
+        norm(only(Rm)) # no need to project; only one vector
+    else
+        norm.(Ref(Rm') .* arrows_offset_abs)
+    end
+    
+    # clamp the effective scale to avoid shortening arrows beyond their actual length
+    consume_max = 0.5 # at most reduce arrow length by 50%
+    arrows_eff_scale = min.(
+        arrows_eff_scale_unclamped,
+        arrows_norm .* (consume_max / (shift_factor_start + shift_factor_end))
+    )
+
+    arrows_offset_abs .*= arrows_eff_scale # normalize to effective scale
+    arrows_offset_start = arrows_offset_abs .* shift_factor_start
+    arrows_offset_end   = arrows_offset_abs .* shift_factor_end
+
+    return arrows_offset_start, arrows_offset_end
+end
 
 ## --------------------------------------------------------------------------------------- #
 # 1D to 2D conversion helpers
