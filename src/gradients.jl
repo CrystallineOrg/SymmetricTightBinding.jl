@@ -1,5 +1,5 @@
-struct TightBindingModelHoppingGradient{D}
-   tbm :: TightBindingModel{D}
+struct TightBindingModelHoppingGradient{D, S}
+   tbm :: TightBindingModel{D, S}
 end
 
 """
@@ -129,8 +129,8 @@ function energy_gradient_wrt_hopping(
 end
 
 # ---------------------------------------------------------------------------------------- #
-struct TightBindingModelMomentumGradient{D}
-   ptbm :: ParameterizedTightBindingModel{D}
+struct TightBindingModelMomentumGradient{D, S}
+   ptbm :: ParameterizedTightBindingModel{D, S}
 end
 
 """
@@ -145,8 +145,8 @@ functor at `k`. I.e., `gradient_wrt_momentum(ptbm)(k)[i]` returns the `i`th comp
 momentum derivative of `ptbm` with respect to the momentum at `k`. The return value is a
 `D`-dimensional tuple of matrices (see also [`TightBindingModelMomentumGradient`](@ref)).
 """
-function gradient_wrt_momentum(ptbm::ParameterizedTightBindingModel{D}) where {D}
-    return TightBindingModelMomentumGradient{D}(ptbm)
+function gradient_wrt_momentum(ptbm::ParameterizedTightBindingModel)
+    return TightBindingModelMomentumGradient(ptbm)
 end
 
 """
