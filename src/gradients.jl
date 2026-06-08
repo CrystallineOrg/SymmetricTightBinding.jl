@@ -1,5 +1,5 @@
-struct TightBindingModelHoppingGradient{D}
-   tbm :: TightBindingModel{D}
+struct TightBindingModelHoppingGradient{D, S}
+   tbm :: TightBindingModel{D, S}
 end
 
 """
@@ -27,6 +27,57 @@ function (tbmg::TightBindingModelHoppingGradient{D})(
     i::Int
 ) where D
     tbmg.tbm[i](k)
+end
+
+# Group band indices into ranges of (near-)degenerate bands, using a degeneracy tolerance
+# `max(degen_rtol·bandwidth, degen_atol)` on the (unperturbed) energies `Es`. Shared by the
+# Feynman–Hellmann energy gradients (`energy_gradient_wrt_hopping`/`_wrt_momentum`).
+# `Es` is assumed sorted (ascending), as returned by `solve`; a degenerate group is extended
+# greedily while subsequent bands stay within `degen_tol` of the group's first band, so
+# degeneracies of any multiplicity (3-fold and higher, not just pairs) are grouped together.
+function _degenerate_band_groups(Es::AbstractVector, degen_rtol::Real, degen_atol::Real)
+    degen_tol = max(degen_rtol * (maximum(Es) - minimum(Es)), degen_atol)
+    Nᵇ = length(Es)
+    bands = Vector{UnitRange{Int}}(); sizehint!(bands, Nᵇ)
+    n = 1
+    while n <= Nᵇ
+        Eₙ = Es[n]
+        n′ = n
+        while n′ < Nᵇ && abs(Es[n′+1] - Eₙ) < degen_tol # extend the degenerate group
+            n′ += 1
+        end
+        push!(bands, n:n′)
+        n = n′ + 1
+    end
+    return bands
+end
+
+# Feynman–Hellmann band derivatives along a single direction: given the perturbation matrix
+# `∂H = ∂H/∂xᵢ` (for one parameter `xᵢ`) and the unperturbed eigenstates `us`, write `∂Eₙ/∂xᵢ`
+# into `∂Es[n]` for every band `n`. Band groups flagged as (near-)degenerate by `bands` are
+# treated with degenerate perturbation theory, i.e. by diagonalizing `∂H` within each
+# degenerate subspace (`S` is the model's `Hermiticity`, threaded as `Val(S)`).
+function _feynman_hellmann_derivatives!(
+    ∂Es::AbstractVector, ∂H::AbstractMatrix, us::AbstractMatrix,
+    bands::AbstractVector{UnitRange{Int}}, ::Val{S},
+) where {S}
+    if S === HERMITIAN
+        ∂H = Hermitian(∂H)
+    end
+    for ns in bands
+        if length(ns) == 1 # non-degenerate band
+            n = @inbounds ns[1]
+            uₙ = @view us[:, n]
+            ∂Eₙ = dot(uₙ, ∂H, uₙ)
+            @inbounds ∂Es[n] = S === HERMITIAN ? real(∂Eₙ) : ∂Eₙ
+        else               # degenerate bands
+            us′ = @view us[:, ns]
+            _M = us′' * ∂H * us′ # Mₙₘ = ⟨uₙ|∂H|uₘ⟩ for n,m ∈ `ns`
+            M = S === HERMITIAN ? Hermitian(_M) : _M
+            @inbounds ∂Es[ns] = eigvals!(M)
+        end
+    end
+    return ∂Es
 end
 
 """
@@ -65,55 +116,21 @@ function energy_gradient_wrt_hopping(
     Nᵇ = ptbm.tbm.N       # number of bands
 
     tbmg = gradient_wrt_hopping(ptbm) # ∇ᶜH
-    
-    # figure out if any bands are degenerate; if so, we need to treat them using degenerate
-    # perturbation theory
-    degen_tol = max(degen_rtol * (maximum(Es) - minimum(Es)), degen_atol)
-    bands = Vector{UnitRange{Int}}(); sizehint!(bands, Nᵇ) # indices into degenerate bands
-    n = 1
-    while n <= Nᵇ
-        if n == Nᵇ # last band
-            push!(bands, n:n)
-            break
-        end
-        Eₙ = Es[n]
-        n′ = findnext(E->abs(E-Eₙ) < degen_tol, Es, n+1)
-        if isnothing(n′) # non-degenerate band
-            push!(bands, n:n)
-            n += 1
-        else             # degenerate bands
-            push!(bands, n:n′)
-            n = n′ + 1
-        end
-    end
+    bands = _degenerate_band_groups(Es, degen_rtol, degen_atol)
 
-    # apply Feynman-Hellmann theorem, either in degenerate or non-degenerate variants
-    ResultType = S == HERMITIAN ? Float64 : ComplexF64
+    # apply the Feynman–Hellmann theorem along each hopping coefficient `i`
+    ResultType = S === HERMITIAN ? Float64 : ComplexF64
     ∇ᶜEs = Matrix{ResultType}(undef, Nᶜ, Nᵇ)
     for i in 1:Nᶜ
-        ∂ᵢH = tbmg(k, i)
-        for ns in bands
-            if length(ns) == 1 # non-degenerate band
-                n = @inbounds ns[1]
-                uₙ = @view us[:, n]
-                ∂ᵢEₙ = dot(uₙ, ∂ᵢH, uₙ)
-                ∇ᶜEs[i, n] = S == HERMITIAN ? real(∂ᵢEₙ) : ∂ᵢEₙ
-            else               # degenerate bands
-                us′ = @view us[:, ns]
-                _M = us′' * ∂ᵢH * us′ # Mₙₘ = ⟨uₙ|∂ᵢH|uₘ⟩ for n,m ∈ `ns`
-                M = S == HERMITIAN ? Hermitian(_M) : _M
-                ∂ᵢEs′ = eigvals!(M) # ∂ᵢEₙ for n in `ns`
-                ∇ᶜEs[i, ns] = ∂ᵢEs′
-            end
-        end
+        _feynman_hellmann_derivatives!((@view ∇ᶜEs[i, :]), tbmg(k, i), us, bands, Val(S))
     end
 
     return eachcol(∇ᶜEs)
 end
 
 # ---------------------------------------------------------------------------------------- #
-struct TightBindingModelMomentumGradient{D}
-   ptbm :: ParameterizedTightBindingModel{D}
+struct TightBindingModelMomentumGradient{D, S}
+   ptbm :: ParameterizedTightBindingModel{D, S}
 end
 
 """
@@ -128,8 +145,8 @@ functor at `k`. I.e., `gradient_wrt_momentum(ptbm)(k)[i]` returns the `i`th comp
 momentum derivative of `ptbm` with respect to the momentum at `k`. The return value is a
 `D`-dimensional tuple of matrices (see also [`TightBindingModelMomentumGradient`](@ref)).
 """
-function gradient_wrt_momentum(ptbm::ParameterizedTightBindingModel{D}) where {D}
-    return TightBindingModelMomentumGradient{D}(ptbm)
+function gradient_wrt_momentum(ptbm::ParameterizedTightBindingModel)
+    return TightBindingModelMomentumGradient(ptbm)
 end
 
 """
@@ -262,4 +279,63 @@ function evaluate_tight_binding_momentum_gradient_term!(
     end
 
     return ∇Hs
+end
+
+# ---------------------------------------------------------------------------------------- #
+
+"""
+    energy_gradient_wrt_momentum(
+        ptbm::ParameterizedTightBindingModel{D},
+        k::ReciprocalPointLike{D},
+        (Es, us) = solve(ptbm, k; bloch_phase=Val(false));
+        degen_rtol::Float64 = 1e-12,
+        degen_atol::Float64 = 1e-12,
+        ∇Hs = <scratch>,
+    ) where D
+
+Return the group velocity ``\\mathbf{v}_n = \\nabla_{\\mathbf{k}} E_n(\\mathbf{k})`` of each
+band of `ptbm` at momentum `k`, computed using the Feynman–Hellmann theorem.
+
+For degenerate bands (assessed energetically using relative and absolute tolerances
+`degen_rtol` and `degen_atol`), a degenerate variant is used, equivalent to degenerate
+perturbation theory.
+
+The gradient is returned as a vector of `SVector{D}`, one for each band, with the `i`th
+component giving the derivative with respect to `kᵢ` in the basis of the primitive reciprocal
+lattice vectors (see [`gradient_wrt_momentum`](@ref) for this convention and how to convert
+to a Cartesian or unit-normalized basis).
+
+The scratch argument `∇Hs` may be supplied to avoid reallocation when evaluating the velocity
+over many momenta (e.g. across a mesh).
+"""
+function energy_gradient_wrt_momentum(
+    ptbm::ParameterizedTightBindingModel{D, S},
+    k::ReciprocalPointLike{D},
+    (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
+    ;
+    degen_rtol::Float64 = 1e-12,
+    degen_atol::Float64 = 1e-12,
+    ∇Hs::NTuple{D, Matrix{ComplexF64}} = begin
+        ntuple(_ -> Matrix{ComplexF64}(undef, ptbm.tbm.N, ptbm.tbm.N), Val(D))
+    end,
+) where {D, S}
+    if S === NONHERMITIAN
+        error("energy gradient with respect to momentum is not currently implemented for \
+               NONHERMITIAN models")
+    end
+    Nᵇ = ptbm.tbm.N
+    components = ntuple(identity, Val(D)) # (1, …, D)
+    # fill `∇Hs[i]` with ∂H/∂kᵢ at `k` (the momentum-gradient wrapper is a free no-op)
+    ∇Hs = gradient_wrt_momentum(ptbm)(k, components, ∇Hs)
+
+    bands = _degenerate_band_groups(Es, degen_rtol, degen_atol)
+
+    # apply the Feynman–Hellmann theorem along each momentum component `i`
+    ResultType = S === HERMITIAN ? Float64 : ComplexF64
+    ∇ᵏEs = Matrix{ResultType}(undef, D, Nᵇ)
+    for i in 1:D
+        _feynman_hellmann_derivatives!((@view ∇ᵏEs[i, :]), ∇Hs[i], us, bands, Val(S))
+    end
+
+    return [SVector{D, ResultType}(@view ∇ᵏEs[:, n]) for n in 1:Nᵇ]
 end

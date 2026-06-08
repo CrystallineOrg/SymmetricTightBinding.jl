@@ -48,10 +48,13 @@ export TightBindingModelHoppingGradient
 export energy_gradient_wrt_hopping
 export gradient_wrt_momentum
 export TightBindingModelMomentumGradient
+export energy_gradient_wrt_momentum
 include("berry.jl")
 export berrycurvature
 export chern
 export chern_fukui
+include("dos.jl")
+export densityofstates
 include("symmetry_breaking.jl")
 export subduced_complement
 
