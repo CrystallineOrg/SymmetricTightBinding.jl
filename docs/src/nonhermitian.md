@@ -39,7 +39,7 @@ ks = range(-1/2, 1/2, 500) # 500 sampling points in k
 Es = spectrum(ptbm, ks)    # 500×1 matrix
 Es = vec(Es)               # convert to vector
 
-update_theme!(linewidth = 4)
+update_theme!(linewidth = 4) # hide
 lines(real(Es), imag(Es); axis = (; autolimitaspect = 1))
 ```
 

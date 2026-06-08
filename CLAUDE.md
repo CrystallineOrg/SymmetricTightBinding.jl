@@ -38,7 +38,10 @@ hopping ranges, the package:
 - `symmetry_eigenvalues(ptbm, ops, k, sgreps)` — irrep content at high-symmetry k (`src/symmetry_analysis.jl`)
 - `collect_compatible(ptbm)` / `collect_irrep_annotations(ptbm)` — band symmetry labels
 - `berrycurvature(ptbm, k, n)` / `chern(ptbm, n, Nk)` / `chern_fukui(ptbm, n, Nk)` (`src/berry.jl`)
-- `gradient_wrt_hopping` / `gradient_wrt_momentum` (`src/gradients.jl`)
+- `densityofstates(ptbm, frequencies; Nk, offset, transform)` — DOS via generalized
+  Gilat–Raubenheimer (`src/dos.jl`); per-unit-cell normalized (∫g dE = #bands); `D ∈ {1,2,3}`
+- `gradient_wrt_hopping` / `gradient_wrt_momentum` / `energy_gradient_wrt_hopping` /
+  `energy_gradient_wrt_momentum` (group velocity ∇ₖEₙ via Feynman–Hellmann, degenerate-aware) (`src/gradients.jl`)
 - `subduced_complement(tbm, sgnum_H)` — new terms from symmetry breaking (`src/symmetry_breaking.jl`)
 
 ### Utilities
@@ -69,6 +72,7 @@ src/
   symmetry_analysis.jl      # irrep content at high-symmetry k-points
   spectrum.jl               # band eigenvalue computation
   berry.jl                  # Berry curvature, Chern numbers (Kubo + Fukui)
+  dos.jl                    # density of states (generalized Gilat–Raubenheimer)
   gradients.jl              # dH/dc_i and dH/dk_i
   hermiticity.jl            # hermiticity/anti-hermiticity constraint intersection
   timereversal.jl           # TRS constraint: H(k) = H*(-k)
@@ -88,6 +92,7 @@ test/
   symmetry_analysis.jl      # comprehensive symmetry tests (commented out; see PR #89)
   symmetry_analysis_stopgap.jl # interim symmetry vector tests (see PR #89)
   berry.jl                  # Berry curvature + Chern number tests
+  dos.jl                    # density of states (per-cell formula + sum-rule tests)
   spectrum.jl               # band eigenvalue tests
   show.jl                   # regression tests for show/summary methods
   gradients.jl              # hopping/momentum gradient tests

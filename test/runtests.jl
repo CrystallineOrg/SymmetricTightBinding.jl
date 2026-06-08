@@ -5,6 +5,7 @@ include("sg_tb_hamiltonian.jl")    # space groups
 include("site_representations.jl") # site representations
 include("symmetry-breaking.jl")    # symmetry breaking
 include("berry.jl")                # berry curvature and chern numbers
+include("dos.jl")                  # density of states (Gilat–Raubenheimer)
 include("spectrum.jl")             # spectrum evaluation
 include("show.jl")                 # show/display methods
 include("nonhermitian.jl")         # NONHERMITIAN models
