@@ -47,22 +47,22 @@ the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) whil
 time-reversal symmetry.
 ```julia-repl
 julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
-2-term 2×2 TightBindingModel{2} over (2b|A₁):
+2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁):
 ┌─
 1. ⎡ i𝕖(δ₁)+i𝕖(δ₂)+i𝕖(δ₃)-i𝕖(δ₄)-i𝕖(δ₅)-i𝕖(δ₆)  0                                          ⎤
 │  ⎣ 0                                          -i𝕖(δ₁)-i𝕖(δ₂)-i𝕖(δ₃)+i𝕖(δ₄)+i𝕖(δ₅)+i𝕖(δ₆) ⎦
-└─ (2b|A₁) self-term:  δ₁=[1,0], δ₂=[0,1], δ₃=[-1,-1], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃
+└─ (2b|A₁) self-term:  δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃
 ┌─
 2. ⎡ 0                                       𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)-𝕖(δ₇)-𝕖(δ₈)-𝕖(δ₉) ⎤
 │  ⎣ 𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆)-𝕖(δ₁₀)-𝕖(δ₁₁)-𝕖(δ₁₂)  0                                   ⎦
-└─ (2b|A₁) self-term:  δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[-5/3,-4/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃, δ₇=[1/3,-4/3], δ₈=[-5/3,-1/3], δ₉=[4/3,5/3], δ₁₀=-δ₇, δ₁₁=-δ₈, δ₁₂=-δ₉
+└─ (2b|A₁) self-term:  δ₁=[-4/3,1/3], δ₂=[-1/3,-5/3], δ₃=[5/3,4/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃, δ₇=[-1/3,4/3], δ₈=[5/3,1/3], δ₉=[-4/3,-5/3], δ₁₀=-δ₇, δ₁₁=-δ₈, δ₁₂=-δ₉
 ```
 The first of the of these terms is not diagonal at K and so opens a gap at the Dirac point:
 ```julia-repl
 julia> Δtbm[1](ReciprocalPoint(1/3, 1/3))
 2×2 Matrix{ComplexF64}:
- 5.19615+1.73195e-14im       0.0+0.0im
-     0.0+0.0im          -5.19615+1.43774e-14im
+ -5.19615+1.73195e-14im      0.0+0.0im
+      0.0+0.0im          5.19615+1.43774e-14im
 ```
 
 ### Adding symmetry-breaking terms to the original model

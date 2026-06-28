@@ -322,7 +322,7 @@ end
 ## --------------------------------------------------------------------------------------- #
 
 # Simple case: take no account of a coefficient vector, just plot all hoppings in `h`.
-# The hopping `δ` is such that `δ = b+R-a`, so the hopping direction is from `b+R`
+# The hopping `δ` is such that `δ = a-b-R`, so the hopping direction is from `b+R`
 # (annihilated) to `a` (created).
 function _origins_and_destinations_from_hoppingorbit(
     h::HoppingOrbit{D},
