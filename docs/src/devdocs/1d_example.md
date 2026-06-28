@@ -35,11 +35,12 @@ then the Hamiltonian in $k$-space will look like:
 
 ## Derivation from our method
 
-First, consider the translation $t=0$. Then, remember that $\Delta_{\alpha\to\beta+R} =
-\mathbf{q}_\beta + \mathbf{R} - \mathbf{q}_\alpha$.
+First, consider the translation $t=0$. Then, remember that the hopping vector points from the
+annihilated site $\beta + R$ to the created site $\alpha$, $\Delta_{\alpha\to\beta+R} =
+\mathbf{q}_\alpha - \mathbf{q}_\beta - \mathbf{R}$.
 
 - Possible $\Delta$'s: $\Delta_{a\to a} = \Delta_{b\to b} = 0; \quad \Delta_{a\to b} =
-    -\Delta_{b\to a} = -1/2$.
+    -\Delta_{b\to a} = 1/2$.
 - Orbits of $\Delta$'s: $\{\Delta_{a\to a}\} = \{\Delta_{b\to b}\} = \{0\}; \quad
     \{\Delta_{a\to b}\} = \{\Delta_{b\to a}\} = \{1/2,-1/2\}$.
 
