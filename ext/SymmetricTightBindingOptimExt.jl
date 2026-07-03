@@ -2,7 +2,7 @@ module SymmetricTightBindingOptimExt
 
 using SymmetricTightBinding
 using SymmetricTightBinding: solve
-using LinearAlgebra: eigen!, Hermitian, dot, norm, tr
+using LinearAlgebra: eigen!, eigvals!, Hermitian, dot, norm, tr
 using Optim
 import SymmetricTightBinding: fit
 
@@ -20,7 +20,13 @@ function fgh!(
 
     for (Es_r, k) in zip(eachrow(Em_r), ks)
         Hₖ = ptbm(k)
-        Es, us = eigen!(Hₖ) # no Bloch phases, deliberately
+        if isnothing(G) && isnothing(H)
+            # fast-path, avoiding eigenvector eval. if this is a residuals-only calculation
+            Es = eigvals!(Hₖ)
+            us = nothing
+        else
+            Es, us = eigen!(Hₖ) # no Bloch phases, deliberately
+        end
 
         # MSE loss
         if !isnothing(F)
@@ -39,6 +45,8 @@ function fgh!(
 
     # lasso penalty term & gradient
     if !isnothing(lasso)
+        lasso *= length(ks) # rescaling `lasso` weight to ensure relative contributions of
+                            # LSE vs LASSO are invariant to number of k-points
         !isnothing(F) && (F += lasso * sum(abs, cs))
         !isnothing(G) && (G .+= lasso .* sign.(cs))
     end
@@ -201,7 +209,7 @@ function fit(
         if verbose
             mse_loss = o.minimum
             if !isnothing(lasso)
-                mse_loss -= lasso * sum(abs, o.minimizer)
+                mse_loss -= lasso * length(ks) * sum(abs, o.minimizer)
             end
             mean_err = round(mse_loss / (tbm.N * length(ks)); sigdigits = 3)
             printstyled(" (mean err ", mean_err, ")"; color = :light_black)
