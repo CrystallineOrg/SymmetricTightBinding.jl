@@ -9,30 +9,30 @@ import SymmetricTightBinding: fit
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
-function fg!(
-    F, G, cs, tbm::TightBindingModel{D, S}, Em_r, ks;
+function fgh!(
+    F, G, H, cs, tbm::TightBindingModel{D, S}, Em_r, ks;
     lasso::Union{Nothing,Real} = nothing
 ) where {D, S}
     S ≠ HERMITIAN && error("loss function can currently only handle HERMITIAN models")
     ptbm = tbm(cs)
-    if !isnothing(G)
-        fill!(G, zero(eltype(G)))
-    end
+    isnothing(G) || fill!(G, zero(eltype(G)))
+    isnothing(H) || fill!(H, zero(eltype(H)))
 
     for (Es_r, k) in zip(eachrow(Em_r), ks)
-        H = ptbm(k)
-        Es, us = eigen!(H) # no Bloch phases, deliberately
+        Hₖ = ptbm(k)
+        Es, us = eigen!(Hₖ) # no Bloch phases, deliberately
 
         # MSE loss
         if !isnothing(F)
             F += sum(abs2∘splat(-), zip(Es_r, Es))
         end
 
-        # gradient of loss
-        if !isnothing(G)
+        # loss gradient & Gauss–Newton approx. of Hessian (⋆)
+        if !isnothing(G) || !isnothing(H)
             ∇Es = energy_gradient_wrt_hopping(ptbm, k, (Es, us))
             for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
-                G .+= (-2 * (E_r - E)) .* ∇E
+                isnothing(G) || (G .+= (-2 * (E_r - E)) .* ∇E)
+                isnothing(H) || (H .+= 2 .* ∇E .* ∇E')
             end
         end
     end
@@ -45,6 +45,18 @@ function fg!(
 
     return F
 end
+
+# (⋆): The Gauss–Newton approximation of the Hessian `H` of a least-squares error (LSE) is 
+# `∇²F ≈ 2 ∑ₖ ∑ₙ ∇Eₙ∇Eₙᵀ` (F denoting LSE loss value), which corresponds to dropping the
+# residual-curvature term `2∑ₖ∑ₙ (Eₙ-Eₙʳ)∇²Eₙ`. If we use this approximation with Optim's
+# second-order optimizers (`Newton`, `NewtonTrustRegion`), we effectively end up with
+# Gauss–Newton (line-search) or Levenberg–Marquardt-like (trust-region) least-squares
+# solvers. 
+# There is a detail around the LASSO penalty though: in principle, this is not an LSE-like
+# term, but it also doesn't contribute any curvature (|·| has zero second derivative), so 
+# `H` only carries the Gauss–Newton term.
+# The mapping from Newton method to Gauss-Newton is e.g. described e.g., at
+# https://en.wikipedia.org/wiki/Gauss–Newton_algorithm#Derivation_from_Newton%27s_method
 
 """
     fit(tbm::TightBindingModel{D},
@@ -66,8 +78,12 @@ The function is defined as an Optim.jl extension to SymmetricTightBinding.jl: i.
 must be explicitly loaded to use this function.
 
 ## Keyword arguments
-- `optimizer` (default, `Optim.LBFGS()`): a local optimizer from Optim.jl, capable of
-  exploiting gradient information.
+- `optimizer` (default, `Optim.NewtonTrustRegion()`): a local optimizer from Optim.jl.
+  First-order optimizers exploit the analytic (Feynman–Hellmann) gradient of the loss;
+  second-order optimizers (e.g., `Newton()`, `NewtonTrustRegion()`) additionally exploit a
+  Gauss–Newton approximation of its Hessian, `∇²F ≈ 2∑ₖ∑ₙ ∇Eₙ∇Eₙᵀ`, and thereby act as
+  Gauss–Newton (line-search) or Levenberg–Marquardt-like (trust-region) least-squares
+  solvers.
 - `max_multistarts` (default, `100`): maximum number of multi-start iterations.
 - `atol` (default, `1e-3`): threshold for early return, specifying the minimum required mean
   energetic error (averaged over bands and **k**-points).
@@ -115,7 +131,7 @@ function fit(
     tbm::TightBindingModel{D},
     Em_r::AbstractMatrix{<:Real},
     ks::AbstractVector{<:SymmetricTightBinding.ReciprocalPointLike{D}};
-    optimizer::Optim.FirstOrderOptimizer = LBFGS(),
+    optimizer::Optim.AbstractOptimizer = NewtonTrustRegion(),
     max_multistarts::Integer = 100,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
     verbose::Bool = false,
@@ -127,9 +143,15 @@ function fit(
     lasso::Union{Nothing,Real} = nothing,
 ) where D
 
-    # let-block-capture-trick to make absolutely sure we have no closure boxing issues
-    _fg! = let Em_r = Em_r, ks = ks, tbm = tbm, lasso = lasso
-        (F, G, cs) -> fg!(F, G, cs, tbm, Em_r, ks; lasso)
+    # let-block-capture-trick to make absolutely sure we have no closure boxing issues;
+    # second-order optimizers additionally get a Gauss–Newton Hessian (cf. `fgh!`), making
+    # e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt
+    obj = let Em_r = Em_r, ks = ks, tbm = tbm, lasso = lasso
+        if optimizer isa Optim.SecondOrderOptimizer
+            Optim.only_fgh!((F, G, H, cs) -> fgh!(F, G, H, cs, tbm, Em_r, ks; lasso))
+        else
+            Optim.only_fg!((F, G, cs) -> fgh!(F, G, nothing, cs, tbm, Em_r, ks; lasso))
+        end
     end
 
     # multi-start optimization
@@ -142,9 +164,9 @@ function fit(
         verbose && print("   trial #$t")
         init_cs = randn(length(tbm))
         init_cs .*= init_hopping_scale # TODO: Improve guess; could likely do much better
-        o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
+        o = optimize(obj, init_cs, optimizer, options)
         accept = o.minimum < best_loss
-
+        
         if verbose
             mse_loss = o.minimum
             if !isnothing(lasso)
@@ -178,7 +200,7 @@ function fit(
     # polish off the best result
     if polish
         verbose && print("Polishing off ")
-        o = optimize(Optim.only_fg!(_fg!), best_cs, optimizer)
+        o = optimize(obj, best_cs, optimizer)
         o.minimum < best_loss && (best_loss = o.minimum; best_cs = o.minimizer)
         if verbose
             printstyled(
