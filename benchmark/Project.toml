@@ -1,0 +1,11 @@
+[deps]
+Chairmarks = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+SymmetricTightBinding = "793e0360-0e47-4c52-9513-43d75d53c7d0"
+
+[sources]
+SymmetricTightBinding = {path = ".."}
