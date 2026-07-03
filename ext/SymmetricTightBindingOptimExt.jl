@@ -6,6 +6,22 @@ using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, norm, tr
 using Optim
 import SymmetricTightBinding: fit
 
+# Basin-hopping exploration constants (cf. the multi-start loop in `fit` & `hop_start`).
+# A "hop" perturbs the incumbent best by `step .* randn .* (abs.(best_cs) .+ FLOOR*ρ)`,
+# with `step = BASE*(1+n)^(1/4)` after `n` stagnated trials and ρ the moment-derived
+# coefficient scale (cf. `SpectralMoments`). The two hop constants play different,
+# dimensionally distinct roles:
+# - `BASIN_HOP_BASE` is a multiplicative gain: hop sizes relative to each coefficient's own
+#   magnitude (the initial hop perturbs each coefficient by ~30% of itself), growing slowly
+#   under stagnation and reset upon meaningful improvement;
+# - `BASIN_HOP_FLOOR` is an additive offset (in units of ρ) inside the per-coefficient
+#   amplitude: it keeps coefficients with `|csᵢ| ≈ 0` explorable — a purely relative
+#   perturbation could never move an exactly-zero coefficient.
+const BASIN_RESTART_EVERY = 4     # default of `fit`'s `restart_every` keyword argument
+const BASIN_HOP_BASE      = 0.3   # relative hop amplitude (multiplicative gain)
+const BASIN_HOP_FLOOR     = 0.25  # hop-amplitude floor, in units of the moment scale ρ
+const BASIN_IMPROVE_RTOL  = 0.005 # relative improvement resetting the stagnation counter
+
 # ---------------------------------------------------------------------------------------- #
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
@@ -142,6 +158,13 @@ function moment_start(m::SpectralMoments)
     return m.c₀ .+ α .* v
 end
 
+# basin hop: perturb the incumbent best with relative amplitudes, floored by the moment
+# scale ρ (so vanishing coefficients still get explored) & growing under stagnation
+function hop_start(m::SpectralMoments, best_cs::AbstractVector, since_improve::Integer)
+    step = BASIN_HOP_BASE * (1 + since_improve)^(1/4)
+    return best_cs .+ step .* randn(length(best_cs)) .* (abs.(best_cs) .+ BASIN_HOP_FLOOR * m.ρ)
+end
+
 """
     fit(tbm::TightBindingModel{D},
         Em_r::AbstractMatrix{<:Real},
@@ -154,10 +177,11 @@ band `n` (and bands are assumed energetically sorted).
 
 Fitting is performed using a local optimizer (configurable via `optimizer` from Optim.jl)
 with mean-squared error loss. The local optimizer is used as a basis for a "multi-start"
-global optimization, seeded by spectral-moment matching: the first start is the
-least-squares solution of the (linear) first-moment (trace) equations; subsequent random
-starts are displaced from it with magnitudes chosen to reproduce the reference spectrum's
-second moment.
+global optimization, combining moment-seeded starts with basin-hopping exploration: the
+first trial starts from the least-squares solution of the (linear) first-moment (trace)
+equations; most subsequent trials perturb the incumbent best fit ("hops"), with amplitudes
+that grow under stagnation, interspersed with fresh random restarts whose magnitudes are
+chosen to reproduce the reference spectrum's second moment.
 The global search returns early if the mean fit error, per band and per energy, is less than
 `atol`.
 
@@ -171,7 +195,13 @@ must be explicitly loaded to use this function.
   Gauss–Newton approximation of its Hessian, `∇²F ≈ 2∑ₖ∑ₙ ∇Eₙ∇Eₙᵀ`, and thereby act as
   Gauss–Newton (line-search) or Levenberg–Marquardt-like (trust-region) least-squares
   solvers.
-- `max_multistarts` (default, `100`): maximum number of multi-start iterations.
+- `max_multistarts` (default, `max(100, 25length(tbm))`): maximum number of multi-start
+  trials; scales with the number of hopping terms, since higher-dimensional models require
+  more exploration.
+- `restart_every` (default, `4`): every `restart_every`th multi-start trial is a fresh
+  moment-scaled restart rather than a basin-hopping perturbation of the incumbent best
+  (see above). Set to e.g. `typemax(Int)` to disable fresh restarts entirely (pure basin
+  hopping).
 - `atol` (default, `1e-3`): threshold for early return, specifying the minimum required mean
   energetic error (averaged over bands and **k**-points).
 - `verbose` (default, `false`): whether to print information on optimization progress.
@@ -219,7 +249,8 @@ function fit(
     Em_r::AbstractMatrix{<:Real},
     ks::AbstractVector{<:SymmetricTightBinding.ReciprocalPointLike{D}};
     optimizer::Optim.AbstractOptimizer = NewtonTrustRegion(),
-    max_multistarts::Integer = 100,
+    max_multistarts::Integer = max(100, 25length(tbm)),
+    restart_every::Integer = BASIN_RESTART_EVERY,
     atol::Real = 1e-3, # minimum threshold error, per k-point & per band, averaged over both
     verbose::Bool = false,
     options::Optim.Options = Optim.Options(;
@@ -233,17 +264,35 @@ function fit(
     obj = make_objective(tbm, Em_r, ks, optimizer; lasso)
     moments = SpectralMoments(tbm, Em_r, ks)
 
-    # multi-start optimization: the first trial starts from the deterministic first-moment
-    # (trace) fit `c₀`; subsequent trials are fresh moment-scaled random starts
+    # multi-start optimization with basin-hopping exploration: the first trial starts from
+    # the deterministic first-moment fit `c₀`; most subsequent trials perturb the incumbent
+    # best fit ("hops") — the loss landscape is funnel-like, with hierarchies of
+    # progressively better band-assignment minima, so local exploration around the
+    # incumbent is far more effective than independent restarts — with hop amplitudes that
+    # grow slowly under stagnation and reset upon meaningful improvement. Every
+    # `BASIN_RESTART_EVERY`th trial is instead a fresh moment-scaled restart, hedging
+    # against over-commitment to a single funnel
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
+    since_improve = 0 # trials since the last meaningful improvement (sets hop amplitude)
     verbose && println("Starting multi-start optimization with $max_multistarts trials:")
     for t in 1:max_multistarts
-        verbose && print("   trial #$t")
-        init_cs = t == 1 ? copy(moments.c₀) : moment_start(moments)
+        kind = t == 1 ? :moment : (t % restart_every == 0 ? :restart : :hop)
+        verbose && print("   trial #$t [$kind]")
+        init_cs = if kind === :moment
+            copy(moments.c₀) # deterministic first start: exact first-moment (trace) fit
+        elseif kind === :hop
+            hop_start(moments, best_cs, since_improve)
+        else # kind === :restart
+            moment_start(moments)
+        end
         o = optimize(obj, init_cs, optimizer, options)
         accept = o.minimum < best_loss
+        # only meaningful (> BASIN_IMPROVE_RTOL, relatively) improvements reset the hop
+        # amplitude; marginal ones are still kept as the incumbent best below
+        meaningful = o.minimum * (1 + BASIN_IMPROVE_RTOL) < best_loss
+        since_improve = meaningful ? 0 : since_improve + 1
 
         if verbose
             mse_loss = o.minimum
