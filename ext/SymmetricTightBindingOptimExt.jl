@@ -2,7 +2,7 @@ module SymmetricTightBindingOptimExt
 
 using SymmetricTightBinding
 using SymmetricTightBinding: solve
-using LinearAlgebra: eigen!, eigvals!, Hermitian, dot, norm, tr
+using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, norm, tr
 using Optim
 import SymmetricTightBinding: fit
 
@@ -54,6 +54,24 @@ function fgh!(
     return F
 end
 
+# value-only loss evaluation (hits `fgh!`'s eigenvalue-only fast-path); used by
+# global-search stages that only need to rank candidate coefficient vectors
+function f(cs, tbm::TightBindingModel, Em_r, ks; lasso::Union{Nothing,Real} = nothing)
+    return fgh!(0.0, nothing, nothing, cs, tbm, Em_r, ks; lasso)
+end
+
+# objective wrapper for Optim.jl: second-order optimizers additionally get the Gauss–Newton
+# Hessian (cf. `fgh!`), making e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()`
+# as Levenberg–Marquardt
+function make_objective(tbm::TightBindingModel, Em_r, ks, optimizer;
+                        lasso::Union{Nothing,Real} = nothing)
+    return if optimizer isa Optim.SecondOrderOptimizer
+        Optim.only_fgh!((F, G, H, cs) -> fgh!(F, G, H, cs, tbm, Em_r, ks; lasso))
+    else
+        Optim.only_fg!((F, G, cs) -> fgh!(F, G, nothing, cs, tbm, Em_r, ks; lasso))
+    end
+end
+
 # (⋆): The Gauss–Newton approximation of the Hessian `H` of a least-squares error (LSE) is 
 # `∇²F ≈ 2 ∑ₖ ∑ₙ ∇Eₙ∇Eₙᵀ` (F denoting LSE loss value), which corresponds to dropping the
 # residual-curvature term `2∑ₖ∑ₙ (Eₙ-Eₙʳ)∇²Eₙ`. If we use this approximation with Optim's
@@ -65,6 +83,64 @@ end
 # `H` only carries the Gauss–Newton term.
 # The mapping from Newton method to Gauss-Newton is e.g. described e.g., at
 # https://en.wikipedia.org/wiki/Gauss–Newton_algorithm#Derivation_from_Newton%27s_method
+
+# ---------------------------------------------------------------------------------------- #
+# Spectral-moment machinery, shared by `fit`'s initialization & exploration draws (and by
+# the global-search experiments in benchmark/, via `Base.get_extension`)
+
+"""
+    SpectralMoments(tbm::TightBindingModel, Em_r, ks)
+
+Moment-derived quantities of a band-fitting problem, exploiting linearity of
+H(k) = ∑ᵢ cᵢhᵢ(k): the first moment ∑ₙ Eₙ(k) = tr H(k) = ∑ᵢ cᵢ tr hᵢ(k) is *linear* in the
+coefficients `cs`, and the aggregate second moment ∑ₖₙ Eₙ²(k) = ∑ₖ tr H²(k) = cᵀQ̄c is
+quadratic, with Gram matrix Q̄ᵢⱼ = ∑ₖ tr[hᵢ(k)hⱼ(k)]. Both moments are sorting-free (basis-
+independent) functions of the coefficients, and hence cheap, exact handles on the fitting
+problem's geometry.
+
+## Fields
+- `c₀`: least-squares solution of the (linear) first-moment (trace) equations
+- `Q̄`: the Gram matrix above
+- `M₂`: the reference spectrum's aggregate second moment ∑ₖₙ [Eₙʳ(k)]²
+- `ρ`: scalar coefficient scale √(M₂/tr Q̄)
+- `ρs`: per-term coefficient scales √(M₂/(Nᶜ·Q̄ᵢᵢ)), i.e., the size of `csᵢ` if term `i`
+  were to carry an equal (1/Nᶜ) share of `M₂`; useful as per-term bounds for bounded
+  global-search methods
+"""
+struct SpectralMoments
+    c₀ :: Vector{Float64}
+    Q̄  :: Matrix{Float64}
+    M₂ :: Float64
+    ρ  :: Float64
+    ρs :: Vector{Float64}
+end
+
+function SpectralMoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, ks)
+    Nᶜ = length(tbm)
+    hs = [tbm[i](k) for i in 1:Nᶜ, k in ks] # hᵢ(k); Hermitian & coefficient-independent
+    A  = transpose([real(tr(h)) for h in hs]) # Nᵏ×Nᶜ: A[κ,i] = tr hᵢ(kᴋ); lazy transpose
+    Q̄  = [sum(κ -> real(dot(hs[i, κ], hs[j, κ])), eachindex(ks)) for i in 1:Nᶜ, j in 1:Nᶜ]
+    m₁ = vec(sum(Em_r; dims = 2))  # ∑ₙ Eₙʳ(k), for each k
+    M₂ = sum(abs2, Em_r)           # ∑ₖₙ [Eₙʳ(k)]²
+    c₀ = norm(A) > 0 ? A \ m₁ : zeros(Nᶜ)
+    ρ  = sqrt(M₂ / max(tr(Q̄), eps()))
+    ρs = sqrt.(M₂ ./ (Nᶜ .* max.(diag(Q̄), eps())))
+    return SpectralMoments(c₀, Q̄, M₂, ρ, ρs)
+end
+
+# fresh moment-scaled start: displace `c₀` along a random direction `v` with magnitude `α`
+# solved from (c₀+αv)ᵀQ̄(c₀+αv) = M₂, i.e., every start reproduces the reference's second
+# moment and thereby has the right overall spectral scale. If no real root exists (the
+# trace fit alone overshoots M₂), the displacement is scaled to M₂ instead.
+# NB: a negative root is fine; it merely flips the (sign-symmetric) direction `v`
+function moment_start(m::SpectralMoments)
+    v = randn(length(m.c₀))
+    q₂ = max(dot(v, m.Q̄, v), eps())
+    q₁ = 2 * dot(m.c₀, m.Q̄, v)
+    disc = q₁^2 - 4 * q₂ * (dot(m.c₀, m.Q̄, m.c₀) - m.M₂)
+    α = disc ≥ 0 ? (-q₁ + sqrt(disc)) / (2q₂) : sqrt(m.M₂ / q₂)
+    return m.c₀ .+ α .* v
+end
 
 """
     fit(tbm::TightBindingModel{D},
@@ -154,58 +230,21 @@ function fit(
     lasso::Union{Nothing,Real} = nothing,
 ) where D
 
-    # let-block-capture-trick to make absolutely sure we have no closure boxing issues;
-    # second-order optimizers additionally get a Gauss–Newton Hessian (cf. `fgh!`), making
-    # e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt
-    obj = let Em_r = Em_r, ks = ks, tbm = tbm, lasso = lasso
-        if optimizer isa Optim.SecondOrderOptimizer
-            Optim.only_fgh!((F, G, H, cs) -> fgh!(F, G, H, cs, tbm, Em_r, ks; lasso))
-        else
-            Optim.only_fg!((F, G, cs) -> fgh!(F, G, nothing, cs, tbm, Em_r, ks; lasso))
-        end
-    end
+    obj = make_objective(tbm, Em_r, ks, optimizer; lasso)
+    moments = SpectralMoments(tbm, Em_r, ks)
 
-    # --- multi-start initialization from spectral moments ---
-    # the reference spectrum's moments are simple, sorting-free functions of `cs`, by
-    # linearity of H(k) = ∑ᵢ cᵢhᵢ(k): the first moment ∑ₙ Eₙ(k) = tr H(k) = ∑ᵢ cᵢ tr hᵢ(k)
-    # is *linear* in `cs`, and the aggregate second moment ∑ₖₙ Eₙ²(k) = ∑ₖ tr H²(k) = cᵀQ̄c
-    # is quadratic, with Gram matrix Q̄ᵢⱼ = ∑ₖ tr[hᵢ(k)hⱼ(k)]. We exploit this to seed the
-    # multi-start search: the deterministic first start `c₀` is the least-squares solution
-    # of the (linear) first-moment equations; subsequent random starts displace `c₀` along
-    # random directions `v`, with the displacement magnitude `α` solved (quadratically)
-    # such that every start reproduces the reference's second moment, i.e., has the right
-    # overall spectral scale
-    Nᶜ = length(tbm)
-    hs = [tbm[i](k) for i in 1:Nᶜ, k in ks] # hᵢ(k); Hermitian & coefficient-independent
-    A  = [real(tr(hs[i, κ])) for κ in eachindex(ks), i in 1:Nᶜ]
-    Q̄  = [sum(κ -> real(dot(hs[i, κ], hs[j, κ])), eachindex(ks)) for i in 1:Nᶜ, j in 1:Nᶜ]
-    m₁ = vec(sum(Em_r; dims = 2))  # ∑ₙ Eₙʳ(k), for each k
-    M₂ = sum(abs2, Em_r)           # ∑ₖₙ [Eₙʳ(k)]²
-    c₀ = norm(A) > 0 ? A \ m₁ : zeros(Nᶜ)
-
-    # multi-start optimization
+    # multi-start optimization: the first trial starts from the deterministic first-moment
+    # (trace) fit `c₀`; subsequent trials are fresh moment-scaled random starts
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs = Vector{Float64}(undef, length(tbm))
     best_loss = Inf
     verbose && println("Starting multi-start optimization with $max_multistarts trials:")
     for t in 1:max_multistarts
         verbose && print("   trial #$t")
-        init_cs = if t == 1
-            copy(c₀) # deterministic first start: exact first-moment (trace) fit
-        else
-            v = randn(Nᶜ)
-            # solve (c₀+αv)ᵀQ̄(c₀+αv) = M₂ for α; if no real root exists (trace fit alone
-            # already overshoots the second moment), scale the displacement to M₂ instead.
-            # NB: a negative root is fine; it merely flips the (sign-symmetric) direction v
-            q₂ = max(dot(v, Q̄, v), eps())
-            q₁ = 2 * dot(c₀, Q̄, v)
-            disc = q₁^2 - 4 * q₂ * (dot(c₀, Q̄, c₀) - M₂)
-            α = disc ≥ 0 ? (-q₁ + sqrt(disc)) / (2q₂) : sqrt(M₂ / q₂)
-            c₀ .+ α .* v
-        end
+        init_cs = t == 1 ? copy(moments.c₀) : moment_start(moments)
         o = optimize(obj, init_cs, optimizer, options)
         accept = o.minimum < best_loss
-        
+
         if verbose
             mse_loss = o.minimum
             if !isnothing(lasso)
