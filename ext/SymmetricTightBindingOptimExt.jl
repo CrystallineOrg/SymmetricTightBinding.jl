@@ -23,12 +23,9 @@ function fg!(
         H = ptbm(k)
         Es, us = eigen!(H) # no Bloch phases, deliberately
 
-        # MSE loss (possibly with lasso penalty)
+        # MSE loss
         if !isnothing(F)
             F += sum(abs2∘splat(-), zip(Es_r, Es))
-            if !isnothing(lasso)
-                F += lasso * sum(abs, cs)
-            end
         end
 
         # gradient of loss
@@ -36,12 +33,16 @@ function fg!(
             ∇Es = energy_gradient_wrt_hopping(ptbm, k, (Es, us))
             for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
                 G .+= (-2 * (E_r - E)) .* ∇E
-                if !isnothing(lasso)
-                    G .+= lasso .* sign.(cs) # lasso penalty gradient
-                end
             end
         end
     end
+
+    # lasso penalty term & gradient
+    if !isnothing(lasso)
+        !isnothing(F) && (F += lasso * sum(abs, cs))
+        !isnothing(G) && (G .+= lasso .* sign.(cs))
+    end
+
     return F
 end
 
@@ -143,7 +144,7 @@ function fit(
         init_cs .*= init_hopping_scale # TODO: Improve guess; could likely do much better
         o = optimize(Optim.only_fg!(_fg!), init_cs, optimizer, options)
         accept = o.minimum < best_loss
-        
+
         if verbose
             mse_loss = o.minimum
             if !isnothing(lasso)
@@ -178,7 +179,7 @@ function fit(
     if polish
         verbose && print("Polishing off ")
         o = optimize(Optim.only_fg!(_fg!), best_cs, optimizer)
-        o.minimum > best_loss && (best_loss = o.minimum; best_cs = o.minimizer)
+        o.minimum < best_loss && (best_loss = o.minimum; best_cs = o.minimizer)
         if verbose
             printstyled(
                 "(mean error ",
