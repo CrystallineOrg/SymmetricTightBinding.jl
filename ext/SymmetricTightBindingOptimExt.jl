@@ -4,7 +4,7 @@ using SymmetricTightBinding
 using SymmetricTightBinding: solve
 using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, norm, tr
 using Optim
-import SymmetricTightBinding: fit
+import SymmetricTightBinding: fit, multistart_fit, make_objective, spectralmoments
 
 # Basin-hopping exploration constants (cf. `multistart_fit` & `hop_start`).
 # A "hop" perturbs the incumbent best by `step .* randn .* (abs.(best_cs) .+ FLOOR*ρ)`,
@@ -143,6 +143,13 @@ function SpectralMoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, k
     ρ  = sqrt(M₂ / max(tr(Q̄), eps()))
     ρs = sqrt.(M₂ ./ (Nᶜ .* max.(diag(Q̄), eps())))
     return SpectralMoments(c₀, Q̄, M₂, ρ, ρs)
+end
+
+# implementation of the `SymmetricTightBinding.spectralmoments` stub: the struct itself is
+# deliberately extension-local (small inter-package interface); the stub lets dependent
+# packages (e.g., PhotonicTightBinding.jl) construct it for use with `multistart_fit`
+function spectralmoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, ks)
+    return SpectralMoments(tbm, Em_r, ks)
 end
 
 # fresh moment-scaled start: displace `c₀` along a random direction `v` with magnitude `α`
