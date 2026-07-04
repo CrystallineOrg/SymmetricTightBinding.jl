@@ -6,7 +6,7 @@ using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, norm, tr
 using Optim
 import SymmetricTightBinding: fit
 
-# Basin-hopping exploration constants (cf. the multi-start loop in `fit` & `hop_start`).
+# Basin-hopping exploration constants (cf. `multistart_fit` & `hop_start`).
 # A "hop" perturbs the incumbent best by `step .* randn .* (abs.(best_cs) .+ FLOOR*ρ)`,
 # with `step = BASE*(1+n)^(1/4)` after `n` stagnated trials and ρ the moment-derived
 # coefficient scale (cf. `SpectralMoments`). The two hop constants play different,
@@ -17,7 +17,7 @@ import SymmetricTightBinding: fit
 # - `BASIN_HOP_FLOOR` is an additive offset (in units of ρ) inside the per-coefficient
 #   amplitude: it keeps coefficients with `|csᵢ| ≈ 0` explorable — a purely relative
 #   perturbation could never move an exactly-zero coefficient.
-const BASIN_RESTART_EVERY = 4     # default of `fit`'s `restart_every` keyword argument
+const BASIN_RESTART_EVERY = 4     # default of the `restart_every` keyword argument
 const BASIN_HOP_BASE      = 0.3   # relative hop amplitude (multiplicative gain)
 const BASIN_HOP_FLOOR     = 0.25  # hop-amplitude floor, in units of the moment scale ρ
 const BASIN_IMPROVE_RTOL  = 0.005 # relative improvement resetting the stagnation counter
@@ -76,16 +76,18 @@ function f(cs, tbm::TightBindingModel, Em_r, ks; lasso::Union{Nothing,Real} = no
     return fgh!(0.0, nothing, nothing, cs, tbm, Em_r, ks; lasso)
 end
 
-# objective wrapper for Optim.jl: second-order optimizers additionally get the Gauss–Newton
-# Hessian (cf. `fgh!`), making e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()`
-# as Levenberg–Marquardt
-function make_objective(tbm::TightBindingModel, Em_r, ks, optimizer;
+# objective wrappers for Optim.jl. The generic form bundles any loss with the `fgh!`
+# calling convention `_fgh!(F, G, H, cs)` — `G`/`H` are filled in-place when non-`nothing`
+# (`_fgh!` can, and for performance usually should, be an in-place mutating function) and
+# the loss value is returned when `F` is non-`nothing` — into a single Optim objective.
+# Optim extracts whichever value/gradient/Hessian combination each optimizer actually
+# needs, passing `nothing` for the rest, so the same objective serves zeroth-, first-, and
+# second-order optimizers alike; for the latter, a Gauss–Newton `H` makes e.g. `Newton()`
+# act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt (cf. ⋆)
+make_objective(_fgh!) = Optim.only_fgh!(_fgh!)
+function make_objective(tbm::TightBindingModel, Em_r, ks;
                         lasso::Union{Nothing,Real} = nothing)
-    return if optimizer isa Optim.SecondOrderOptimizer
-        Optim.only_fgh!((F, G, H, cs) -> fgh!(F, G, H, cs, tbm, Em_r, ks; lasso))
-    else
-        Optim.only_fg!((F, G, cs) -> fgh!(F, G, nothing, cs, tbm, Em_r, ks; lasso))
-    end
+    return make_objective((F, G, H, cs) -> fgh!(F, G, H, cs, tbm, Em_r, ks; lasso))
 end
 
 # (⋆): The Gauss–Newton approximation of the Hessian `H` of a least-squares error (LSE) is 
@@ -101,8 +103,7 @@ end
 # https://en.wikipedia.org/wiki/Gauss–Newton_algorithm#Derivation_from_Newton%27s_method
 
 # ---------------------------------------------------------------------------------------- #
-# Spectral-moment machinery, shared by `fit`'s initialization & exploration draws (and by
-# the global-search experiments in benchmark/, via `Base.get_extension`)
+# Spectral-moment machinery, shared by `fit`'s initialization & exploration draws
 
 """
     SpectralMoments(tbm::TightBindingModel, Em_r, ks)
@@ -215,6 +216,8 @@ must be explicitly loaded to use this function.
 - `lasso` (defalt, `nothing`): if set to a positive number, applies a LASSO penalty to the
   hopping amplitudes, encouraging model sparsity (i.e., small hopping amplitudes to
   vanish). Setting to `nothing` disables the LASSO penalty.
+- `init` (default, `nothing`): if provided, a vector of hopping amplitudes used as the
+  deterministic first multi-start trial, replacing the first-moment (trace) fit.
 
 ## Example
 
@@ -259,29 +262,75 @@ function fit(
     ),
     polish::Bool = true,
     lasso::Union{Nothing,Real} = nothing,
+    init::Union{Nothing, AbstractVector{<:Real}} = nothing,
 ) where D
 
-    obj = make_objective(tbm, Em_r, ks, optimizer; lasso)
+    obj = make_objective(tbm, Em_r, ks; lasso)
     moments = SpectralMoments(tbm, Em_r, ks)
-
-    # multi-start optimization with basin-hopping exploration: the first trial starts from
-    # the deterministic first-moment fit `c₀`; most subsequent trials perturb the incumbent
-    # best fit ("hops") — the loss landscape is funnel-like, with hierarchies of
-    # progressively better band-assignment minima, so local exploration around the
-    # incumbent is far more effective than independent restarts — with hop amplitudes that
-    # grow slowly under stagnation and reset upon meaningful improvement. Every
-    # `BASIN_RESTART_EVERY`th trial is instead a fresh moment-scaled restart, hedging
-    # against over-commitment to a single funnel
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
-    best_cs = Vector{Float64}(undef, length(tbm))
+    best_cs, _ = multistart_fit(obj, moments;
+                                optimizer, max_multistarts, restart_every, tol, options,
+                                polish, verbose, init)
+    return tbm(best_cs)
+end
+
+
+# ---------------------------------------------------------------------------------------- #
+# multi-start driver
+
+"""
+    multistart_fit(obj, moments::SpectralMoments; kws...)  -->  (best_cs, best_loss)
+
+Moment-seeded, basin-hopping multi-start minimization of an Optim.jl objective `obj` (e.g.,
+constructed via [`make_objective`](@ref)), with exploration draws derived from `moments`
+(cf. [`SpectralMoments`](@ref)). This is the search engine underlying `fit`, factored out
+so that related fitting problems with custom losses (e.g., PhotonicTightBinding.jl) can
+reuse it.
+
+The search strategy is informed by the loss-landscape geometry typical of (sorted-
+eigenvalue, least-squares) band-fitting problems: the landscape is funnel-like, with
+hierarchies of progressively better band-assignment local minima, so that local exploration
+around the incumbent best is far more effective than independent restarts. Concretely:
+- the first trial starts from the deterministic first-moment (trace) fit `moments.c₀` (or
+  from `init`, if provided);
+- most subsequent trials are "hops": perturbations of the incumbent best fit, with
+  amplitudes that grow slowly under stagnation and reset upon meaningful improvement (cf.
+  `hop_start`);
+- every `restart_every`th trial is instead a fresh moment-scaled random restart (cf.
+  `moment_start`), hedging against over-commitment to a single funnel.
+
+Returns `(best_cs, best_loss)`, returning early if the loss drops to (or below) `tol`.
+
+## Keyword arguments
+- `optimizer`, `max_multistarts`, `restart_every`, `options`, `polish`, `verbose`: as in
+  `fit`.
+- `tol` (default, `0.0`): early-return threshold on the *loss value* (for `fit`'s
+  mean-error-per-band-and-k-point semantics, pass `length(ks) * N * atol^2`).
+- `init` (default, `nothing`): if provided, replaces `moments.c₀` as the deterministic
+  first start.
+"""
+function multistart_fit(
+    obj,
+    moments::SpectralMoments;
+    optimizer::Optim.AbstractOptimizer = NewtonTrustRegion(),
+    max_multistarts::Integer = max(100, 25length(moments.c₀)),
+    restart_every::Integer = BASIN_RESTART_EVERY,
+    tol::Real = 0.0,
+    options::Optim.Options = Optim.Options(; g_abstol = 1e-2, f_reltol = 1e-5),
+    polish::Bool = true,
+    verbose::Bool = false,
+    init::Union{Nothing, AbstractVector{<:Real}} = nothing,
+)
+    best_cs = Vector{Float64}(undef, length(moments.c₀))
     best_loss = Inf
     since_improve = 0 # trials since the last meaningful improvement (sets hop amplitude)
     verbose && println("Starting multi-start optimization with $max_multistarts trials:")
     for t in 1:max_multistarts
-        kind = t == 1 ? :moment : (t % restart_every == 0 ? :restart : :hop)
-        verbose && print("   trial #$t [$kind]")
-        init_cs = if kind === :moment
-            copy(moments.c₀) # deterministic first start: exact first-moment (trace) fit
+        kind = t == 1 ? :start : (t % restart_every == 0 ? :restart : :hop)
+        verbose && (print("   trial #$t "); printstyled("[", kind, "]"; color=:light_blue))
+        init_cs = if kind === :start
+            # deterministic first start: user-provided `init` or first-moment (trace) fit
+            isnothing(init) ? copy(moments.c₀) : convert(Vector{Float64}, init)
         elseif kind === :hop
             hop_start(moments, best_cs, since_improve)
         else # kind === :restart
@@ -295,12 +344,8 @@ function fit(
         since_improve = meaningful ? 0 : since_improve + 1
 
         if verbose
-            mse_loss = o.minimum
-            if !isnothing(lasso)
-                mse_loss -= lasso * length(ks) * sum(abs, o.minimizer)
-            end
-            mean_err = round(mse_loss / (tbm.N * length(ks)); sigdigits = 3)
-            printstyled(" (mean err ", mean_err, ")"; color = :light_black)
+            printstyled(" (loss ", round(o.minimum; sigdigits = 3), ")";
+                        color = :light_black)
             accept && printstyled(" → new best"; color = :green)
             println()
         end
@@ -328,17 +373,21 @@ function fit(
     if polish
         verbose && print("Polishing off ")
         o = optimize(obj, best_cs, optimizer)
-        o.minimum < best_loss && (best_loss = o.minimum; best_cs = o.minimizer)
-        if verbose
-            printstyled(
-                "(mean error ",
-                round(o.minimum / (tbm.N * length(ks)); sigdigits = 3), ")\n";
-                color = :green
-            )
+        if o.minimum < best_loss
+            best_loss = o.minimum
+            best_cs = o.minimizer
+            if verbose
+                printstyled(
+                    "(loss reduced to ", round(best_loss; sigdigits = 3), ")\n";
+                    color = :green,
+                )
+            end
+        elseif verbose
+            printstyled("(no improvement)\n"; color = :yellow)
         end
     end
 
-    return tbm(best_cs)
+    return best_cs, best_loss
 end
 
 end # module SymmetricTightBindingOptimExt
