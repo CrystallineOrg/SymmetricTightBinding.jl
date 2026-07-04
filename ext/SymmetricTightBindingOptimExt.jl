@@ -26,16 +26,15 @@ const BASIN_IMPROVE_RTOL  = 0.005 # relative improvement resetting the stagnatio
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 function fgh!(
-    F, G, H, cs, tbm::TightBindingModel{D, S}, Em_r, ks;
+    F, G, H, cs, cache::TightBindingCache{D, S}, Em_r;
     lasso::Union{Nothing,Real} = nothing
 ) where {D, S}
     S ≠ HERMITIAN && error("loss function can currently only handle HERMITIAN models")
-    ptbm = tbm(cs)
     isnothing(G) || fill!(G, zero(eltype(G)))
     isnothing(H) || fill!(H, zero(eltype(H)))
 
-    for (Es_r, k) in zip(eachrow(Em_r), ks)
-        Hₖ = ptbm(k)
+    for (κ, Es_r) in enumerate(eachrow(Em_r))
+        Hₖ = cache(cs, κ) # assembled into `cache`'s work array (mutated by eigen below)
         if isnothing(G) && isnothing(H)
             # fast-path, avoiding eigenvector eval. if this is a residuals-only calculation
             Es = eigvals!(Hₖ)
@@ -51,7 +50,7 @@ function fgh!(
 
         # loss gradient & Gauss–Newton approx. of Hessian (⋆)
         if !isnothing(G) || !isnothing(H)
-            ∇Es = energy_gradient_wrt_hopping(ptbm, k, (Es, us))
+            ∇Es = energy_gradient_wrt_hopping(cache, κ, (Es, us))
             for (E_r, E, ∇E) in zip(Es_r, Es, ∇Es)
                 isnothing(G) || (G .+= (-2 * (E_r - E)) .* ∇E)
                 isnothing(H) || (H .+= 2 .* ∇E .* ∇E')
@@ -61,8 +60,8 @@ function fgh!(
 
     # lasso penalty term & gradient
     if !isnothing(lasso)
-        lasso *= length(ks) # rescaling `lasso` weight to ensure relative contributions of
-                            # LSE vs LASSO are invariant to number of k-points
+        lasso *= size(Em_r, 1) # rescaling `lasso` weight to ensure relative contributions
+                               # of LSE vs LASSO are invariant to number of k-points
         !isnothing(F) && (F += lasso * sum(abs, cs))
         !isnothing(G) && (G .+= lasso .* sign.(cs))
     end
@@ -72,8 +71,8 @@ end
 
 # value-only loss evaluation (hits `fgh!`'s eigenvalue-only fast-path); used by
 # global-search stages that only need to rank candidate coefficient vectors
-function f(cs, tbm::TightBindingModel, Em_r, ks; lasso::Union{Nothing,Real} = nothing)
-    return fgh!(0.0, nothing, nothing, cs, tbm, Em_r, ks; lasso)
+function f(cs, cache::TightBindingCache, Em_r; lasso::Union{Nothing,Real} = nothing)
+    return fgh!(0.0, nothing, nothing, cs, cache, Em_r; lasso)
 end
 
 # objective wrappers for Optim.jl. The generic form bundles any loss with the `fgh!`
@@ -85,9 +84,13 @@ end
 # second-order optimizers alike; for the latter, a Gauss–Newton `H` makes e.g. `Newton()`
 # act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt (cf. ⋆)
 make_objective(_fgh!) = Optim.only_fgh!(_fgh!)
+function make_objective(cache::TightBindingCache, Em_r;
+                        lasso::Union{Nothing,Real} = nothing)
+    return make_objective((F, G, H, cs) -> fgh!(F, G, H, cs, cache, Em_r; lasso))
+end
 function make_objective(tbm::TightBindingModel, Em_r, ks;
                         lasso::Union{Nothing,Real} = nothing)
-    return make_objective((F, G, H, cs) -> fgh!(F, G, H, cs, tbm, Em_r, ks; lasso))
+    return make_objective(TightBindingCache(tbm, ks), Em_r; lasso)
 end
 
 # (⋆): The Gauss–Newton approximation of the Hessian `H` of a least-squares error (LSE) is 
@@ -132,11 +135,11 @@ struct SpectralMoments
     ρs :: Vector{Float64}
 end
 
-function SpectralMoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, ks)
-    Nᶜ = length(tbm)
-    hs = [tbm[i](k) for i in 1:Nᶜ, k in ks] # hᵢ(k); Hermitian & coefficient-independent
-    A  = transpose([real(tr(h)) for h in hs]) # Nᵏ×Nᶜ: A[κ,i] = tr hᵢ(kᴋ); lazy transpose
-    Q̄  = [sum(κ -> real(dot(hs[i, κ], hs[j, κ])), eachindex(ks)) for i in 1:Nᶜ, j in 1:Nᶜ]
+function SpectralMoments(cache::TightBindingCache, Em_r::AbstractMatrix{<:Real})
+    hs = cache.hs # hᵢ(k), as hs[κ][i]; Hermitian & coefficient-independent (cached)
+    Nᶜ = length(cache.tbm)
+    A  = [real(tr(hs[κ][i])) for κ in eachindex(hs), i in 1:Nᶜ] # Nᵏ×Nᶜ: A[κ,i] = tr hᵢ(kᴋ)
+    Q̄  = [sum(hsₖ -> real(dot(hsₖ[i], hsₖ[j])), hs) for i in 1:Nᶜ, j in 1:Nᶜ]
     m₁ = vec(sum(Em_r; dims = 2))  # ∑ₙ Eₙʳ(k), for each k
     M₂ = sum(abs2, Em_r)           # ∑ₖₙ [Eₙʳ(k)]²
     c₀ = norm(A) > 0 ? A \ m₁ : zeros(Nᶜ)
@@ -144,10 +147,16 @@ function SpectralMoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, k
     ρs = sqrt.(M₂ ./ (Nᶜ .* max.(diag(Q̄), eps())))
     return SpectralMoments(c₀, Q̄, M₂, ρ, ρs)
 end
+function SpectralMoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, ks)
+    return SpectralMoments(TightBindingCache(tbm, ks), Em_r)
+end
 
 # implementation of the `SymmetricTightBinding.spectralmoments` stub: the struct itself is
 # deliberately extension-local (small inter-package interface); the stub lets dependent
 # packages (e.g., PhotonicTightBinding.jl) construct it for use with `multistart_fit`
+function spectralmoments(cache::TightBindingCache, Em_r::AbstractMatrix{<:Real})
+    return SpectralMoments(cache, Em_r)
+end
 function spectralmoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, ks)
     return SpectralMoments(tbm, Em_r, ks)
 end
@@ -272,8 +281,9 @@ function fit(
     init::Union{Nothing, AbstractVector{<:Real}} = nothing,
 ) where D
 
-    obj = make_objective(tbm, Em_r, ks; lasso)
-    moments = SpectralMoments(tbm, Em_r, ks)
+    cache = TightBindingCache(tbm, ks) # hᵢ(k) tabulated once, shared by objective & moments
+    obj = make_objective(cache, Em_r; lasso)
+    moments = spectralmoments(cache, Em_r)
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs, _ = multistart_fit(obj, moments;
                                 optimizer, max_multistarts, restart_every, tol, options,

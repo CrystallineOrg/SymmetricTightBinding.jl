@@ -49,6 +49,8 @@ export energy_gradient_wrt_hopping
 export gradient_wrt_momentum
 export TightBindingModelMomentumGradient
 export energy_gradient_wrt_momentum
+include("caching.jl")
+export TightBindingCache
 include("berry.jl")
 export berrycurvature
 export chern
