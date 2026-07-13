@@ -107,9 +107,8 @@ they are eigenvectors of $H(\mathbf{k})$ in the Convention 1 coefficient basis. 
 Hamiltonian phase convention affects the eigenvectors (particularly at non-TRIM
 $\mathbf{k}$-points where $\mathbf{k} \neq -\mathbf{k}$), so the symmetry eigenvalue
 result is coupled to the Hamiltonian phase convention. The code uses the Convention 1
-Hamiltonian phase ($e^{-i\mathbf{k}\cdot\boldsymbol{\delta}}$, i.e., `cispi(2k·δ)` in
-`types.jl`, with $\boldsymbol{\delta}$ pointing from the annihilated to the created site);
-changing this sign would require re-deriving the correction here.
+Hamiltonian phase ($e^{-i\mathbf{k}\cdot\boldsymbol{\delta}}$, i.e., `cispi(-2k·δ)` in
+`types.jl`, with $\boldsymbol{\delta}$ pointing from the annihilated to the created site).
 
 ## Should this be fixed in Crystalline.jl instead?
 
