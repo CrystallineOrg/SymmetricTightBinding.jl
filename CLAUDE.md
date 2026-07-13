@@ -139,33 +139,6 @@ Tests take ~2 minutes.
    `[⚠️ phase]`. See `docs/src/devdocs/symmetry_eigenvalue_conventions.md` for details and
    recommended future cleanup (Option C: change `SiteInducedSGRepElement` convention).
 
-5. **Hopping-vector convention (resolved 2026-06-28):**
-   The stored hopping vector points from the annihilated site to the created site:
-   `δ = q_α − q_β − R` (`tightbinding.jl:93`) with phase `e^{−i k·δ}` (`types.jl:467`,
-   `gradients.jl:260`), so `[H(k)]_{IJ} = Σ_R h_{IJ,R} e^{−i k·(q_α − q_β − R)}`. This is the
-   same Bloch Hamiltonian and the same δ vectors as the companion paper's
-   `Σ_R h_{IJ,R} e^{−i k·(R + q_α − q_β)}` — the two differ only by the dummy relabel `R → −R`
-   in the lattice sum (the code hangs `R` on the annihilated site `q_β + R`; the paper hangs it
-   on the created site `q_α + R`). The change from the previous `δ = q_β + R − q_α` / `e^{+i k·δ}`
-   convention is a pure negation of the stored `δ` and so leaves `H(k)` bit-for-bit unchanged
-   (only displayed orbits / element strings flip sign). The paper text will be flipped to match
-   the code (see `../paper/CLAUDE.md`).
-
-6. **`SymmetricTightBindingMakieExt` type piracy — breaks precompilation only with
-   GeometryBasics ≥ 0.5.11:** the extension defines `Makie.GeometryBasics.coordinates(::Rect{1,T})`
-   at `ext/SymmetricTightBindingMakieExt.jl:15` as a pirate-patch for a method that used to be
-   missing in `GeometryBasics`. The effect is version-dependent:
-   - **GeometryBasics ≤ 0.5.10** (method absent): line 15 is a clean *addition*, the extension
-     loads normally, and hopping-orbit plots (`plot(tbm, Rs)`) work.
-   - **GeometryBasics ≥ 0.5.11** (method now provided upstream at `primitives/rectangles.jl`,
-     via GeometryBasics PR#277): line 15 *overwrites* it, which is a hard precompile error on
-     Julia 1.12 ("Method overwriting is not permitted during Module precompilation"), so the
-     extension fails to load.
-
-   Band-structure plotting via Brillouin.jl's Makie extension is unaffected either way.
-   **TODO:** now that the method exists upstream, remove the pirate-patch (lines 13–19) and add a
-   `GeometryBasics ≥ 0.5.11` lower bound (e.g. via a Makie compat bump).
-
 ## Improvement plan
 
 See `PLAN.md` for the phased work plan. Completed: Phase 1 (CLAUDE.md), Phase 2 (TODO
