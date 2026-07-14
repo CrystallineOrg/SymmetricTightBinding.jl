@@ -439,11 +439,12 @@ The first step we need to do is to list all the possible hopping distances that 
 Within each representative we find different hopping distances $δs = [δ_1, δ_2, …, δ_n]$, which will be associated with different hopping terms:
 
 ```math
-δ_1: q_i → w_j + G_k, q_l → w_l + G_n, … \\
-δ_2: q_o → w_p + G_r, q_s → w_t + G_z, … \\
+δ_1: w_j + G_k → q_i, w_l + G_n → q_l, … \\
+δ_2: w_p + G_r → q_o, w_t + G_z → q_s, … \\
 \vdots
 ```
-where $G_k$ are some particular lattice translations.
+where $G_k$ are some particular lattice translations, and each hopping vector points from the
+annihilated site to the created site, $δ = q_α - q_β - 𝐆$ (i.e., from $w_p + 𝐆$ to $q_r$).
 
 With this information we are able to numerically codify the Hamiltonian matrix by terms, as we will show in the following.
 
@@ -451,7 +452,7 @@ As we showed above, the phases in the Bloch Hamiltonian can be computed from the
 First, we use them to create an abstract vector $𝐯$ which will store the phases that will appear in the Hamiltonian's term in reciprocal space. Being specific, this vector would look like:
 
 ```math
-𝐯^T = [e^{i𝐤·δ_1}, e^{i𝐤·δ_2}, …, e^{i𝐤·δ_n}]
+𝐯^T = [e^{-i𝐤·δ_1}, e^{-i𝐤·δ_2}, …, e^{-i𝐤·δ_n}]
 ```
 
 Note that the order used here matches that provided by the function `obtain_symmetry_related_hoppings`.
@@ -467,10 +468,10 @@ where each $𝐭(δ_i)$ represent a collection of free parameters, one per hoppi
 Notice that, the ordering of $𝐭$ is a bit subtle: $𝐭$ should be interpreted as a kind of vector-flattened tensor $𝐓$, with the following "indexing convention" for $𝐓$:
 
 1. The elements $𝐓[i]$ give a vector of hoppings corresponding to the $i$-th orbit $δ_i$; denoted $𝐭(δ_i)$ above). 
-2. The elements $T[i][j]$ give a vector of hoppings corresponding to the $j$-th possible spatial hopping with displacement $δᵢ$. This describes hoppings from an "origin" site $q_r$ to a "destination" site $w_p + 𝐆$ (where $G$ is a lattice translation).
-3. Finally, $𝐓[i][j][k][m]$ is a _single_ hopping term from the $k$-th partner function of $q_r$ site to the $m$-th partner function of $w_p$ site.
+2. The elements $T[i][j]$ give a vector of hoppings corresponding to the $j$-th possible spatial hopping with displacement $δᵢ$. This describes hoppings from an "origin" (annihilated) site $w_p + 𝐆$ to a "destination" (created) site $q_r$ (where $G$ is a lattice translation), with $δᵢ = q_r - (w_p + 𝐆)$.
+3. Finally, $𝐓[i][j][k][m]$ is a _single_ hopping term from the $k$-th partner function of $w_p$ site to the $m$-th partner function of $q_r$ site.
 
-If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we also have to include the hermitian or anti-hermitian counterparts of each hopping term, i.e., for each hopping term from $q_r$ to $w_p + 𝐆$, we also have to include the "reversed" hopping term from $w_p$ to $q_r - 𝐆$.
+If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we also have to include the hermitian or anti-hermitian counterparts of each hopping term, i.e., for each hopping term from $w_p + 𝐆$ to $q_r$, we also have to include the "reversed" hopping term from $q_r - 𝐆$ to $w_p$.
 
 Then, each term of the Hamiltonian matrix $𝐇^{αβ}_𝐤$ can be written as bilinear form in the following way:
 
@@ -507,7 +508,7 @@ Since the representation matrices act on different indices than $𝘃$ and $𝘁
 𝘃^T_{g𝗸} 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁.
 ```
 
-To compare both sides of the equation, we must analyze what $𝘃_{g𝗸}$ means. As can be seen above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{i𝗸·δ₁}, e^{i𝗸·δ₂}, …, e^{i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{i(g𝗸)·δ₁}, e^{i(g𝗸)·δ₂}, …, e^{i(g𝗸)·δ_n}]$. As discussed above, we defined the action of $g$ on $𝗸$ by $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{i𝗸·(R⁻¹δ₁)}, e^{i𝗸·(R⁻¹δ₂)}, …, e^{i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌^{αβ}_{ij}$ as follows:
+To compare both sides of the equation, we must analyze what $𝘃_{g𝗸}$ means. As can be seen above, the $𝘃_𝐤$ vector is constructed as: $𝘃^T_𝗸 = [e^{-i𝗸·δ₁}, e^{-i𝗸·δ₂}, …, e^{-i𝗸·δ_n}]$, where $\{ δ_i \}$ is a closed orbit. Then, $𝘃^T_{g𝗸} = [e^{-i(g𝗸)·δ₁}, e^{-i(g𝗸)·δ₂}, …, e^{-i(g𝗸)·δ_n}]$. As discussed above, we defined the action of $g$ on $𝗸$ by $(g𝗸)·𝗿 ≡ ([R^{-1}]^T 𝗸)·𝗿 = 𝐤 · (R^{-1} 𝐫)$, where $g = \{ R|τ \}$, then: $𝘃^T_{g𝗸} = [e^{-i𝗸·(R⁻¹δ₁)}, e^{-i𝗸·(R⁻¹δ₂)}, …, e^{-i𝗸·(R⁻¹δ_n)}]$. Additionally, since $\{ δ_i \}$ is a closed orbit, $𝘃_{g𝗸}$ will be just a permutation of $𝘃_𝗸$, in other words, $𝘃_{g𝗸} = σ(g) 𝘃_𝗸$, with $σ(g)$ a particular permutation. This permutation is obtained in `_permute_symmetry_related_hoppings_under_symmetry_operation`, allowing us to operate on the numerical tensor $𝐌^{αβ}_{ij}$ as follows:
 
 ```math
 (σ(g) 𝘃_𝗸)^T 𝐌^{αβ}_{ij} 𝘁 = 𝘃^T_𝗸 [𝐃_𝐤^α(g)]_{ir} 𝐌^{αβ}_{rs} [𝐃_𝐤^β(g)]_{sj}^† 𝘁 \\
@@ -570,7 +571,7 @@ The constraint then reduces to:
 This implies that, in our implementation, time-reversal symmetry simply reduces to requiring that the free parameters are real.
 
 !!! note
-    The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_timereversal_related_orbits!`.
+    The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_reversed_orbits!`.
 
 Finally, to obtain the full set of symmetry-allowed free parameters, we must intersect the null space from the spatial symmetry constraints (derived in the [previous section](#symmetry-constraints-in-the-numerical-matrix-mathbfm_ijalphabeta)) with the TRS constraint derived above. This intersection is computed using the [Zassenhaus algorithm](https://en.wikipedia.org/wiki/Zassenhaus_algorithm), implemented in `zassenhaus_intersection`.
 

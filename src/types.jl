@@ -18,7 +18,7 @@ For each element of the orbit δᵢ there may be multiple hopping terms, from si
 - `hoppings :: Vector{Vector{NTuple{3,RVec{D}}}}`: the `i`th element gives the possible
   physical hopping terms `(a,b,R)` associated to `orbit[i]`. Multiple physical hopping terms
   may correspond to each element of the orbit. 
-  For `(a, b, R) = hoppings[i][j]`, we have `orbit[i] = δᵢ = b + R - a`
+  For `(a, b, R) = hoppings[i][j]`, we have `orbit[i] = δᵢ = a - b - R`
 """
 struct HoppingOrbit{D}
     representative::RVec{D} # representative hopping vector δ
@@ -253,7 +253,7 @@ function _getindex(
         print(io, v_str)
 
         δ = tbb.h_orbit.orbit[n]
-        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(2πi𝐤⋅δ)
+        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(-2πi𝐤⋅δ)
             print(io, "𝕖(")
             # TODO: could do a little better here, since we know that `-δ` is in the orbit?
             conjugate && print(io, "-")
@@ -464,14 +464,15 @@ function evaluate_tight_binding_term!(
     MmtC = block.MmtC # contracted product of `Mm` and (complexified) `t`
 
     # NB: ↓ one more case of assuming no free parameters in `δ`
-    v_conj = cispi.(dot.(Ref(-2 .* k), constant.(orbit(block.h_orbit))))
+    v_conj = cispi.(dot.(Ref(2 .* k), constant.(orbit(block.h_orbit))))
     # NB: ↑ this is `v` conjugated: we do this because the `dot`-product below conjugates
     #     its first argument; so by conjugating twice we get the unconjugated result.
     # NB: ↑ each term in the Hamiltonian is associated to an annihilation+creation operator
     #     pair `aᵢ† aⱼ`. Since we use Convention 1 for the Fourier transform, we have
     #     aᵢ† = √N⁻¹ ∑ₖ e^{-ik·(tᵢ + rᵢ)} aₖ†, such that each term will be multiplied by a
-    #     phase e^{ik·δᵢⱼ} with δᵢⱼ ≡ Rᵢⱼ + rᵢ - rⱼ, i.e., the hopping vector in the orbit;
-    #     this is what `orbit(block.h_orbit)` gives us above
+    #     phase e^{-ik·δᵢⱼ} with δᵢⱼ ≡ rᵢ - rⱼ - Rᵢⱼ, i.e., the hopping vector in the orbit
+    #     (pointing from the annihilated site `j` at `rⱼ + Rᵢⱼ` to the created site `i` at
+    #     `rᵢ`); this is what `orbit(block.h_orbit)` gives us above
     for (local_i, i) in enumerate(is)
         for (local_j, j) in enumerate(js)
             Hᵢⱼ = @inbounds dot(v_conj, @view MmtC[:, local_i, local_j])

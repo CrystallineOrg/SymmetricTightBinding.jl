@@ -13,9 +13,9 @@ WP of `brᵦ`, displaced by a set of primitive lattice-vector representatives `R
 
 ## Implementation
 1. Take a point `a` in the WP of `brₐ` and a point `b` in the WP of `brᵦ`. 
-    Compute the displacement vector `δ = b + R - a`, where `R ∈ Rs`, giving the displacement
-    vector from `a` (created site) to `b + R` (annihilated site): i.e., `δ` points opposite
-    to the hopping direction.
+    Compute the displacement vector `δ = a - b - R`, where `R ∈ Rs`, giving the displacement
+    vector from `b + R` (annihilated site) to `a` (created site): i.e., `δ` points along
+    the hopping direction (from annihilated to created site).
 2. If `δ ∈ representatives`, add `δ => (a, b, R)` to the list of hoppings 
     for that representative and continue. Otherwise, search all representatives for one 
     whose list of hoppings contains `δ => (a, b, R)`. If none is found, add `δ` as a new 
@@ -90,7 +90,7 @@ function obtain_symmetry_related_hoppings(
         for (qₐ, qᵦ) in Iterators.product(wpsₐ, wpsᵦ)
             qₐ = parent(qₐ) # work with RVec directly rather than Wyckoff Position
             qᵦ = parent(qᵦ)
-            δ = qᵦ + R - qₐ # potential representative in next element of `h_orbits`
+            δ = qₐ - qᵦ - R # potential representative in next element of `h_orbits`
             maybe_add_hoppings!(h_orbits, δ, qₐ, qᵦ, R, ops)
         end
     end
@@ -167,14 +167,14 @@ function _maybe_add_hoppings!(
         # several sanity checks:
         #   1. R´ is a lattice translation, i.e., it is integer
         #   2. R´ doesn't have any free parameters
-        #   3. δ′ = qᵦ′ + R′ - qₐ′
+        #   3. δ′ = qₐ′ - qᵦ′ - R′
         all(Rᵢ′ -> abs(Rᵢ′ - round(Rᵢ′)) < VEC_CMP_ATOL, constant(R′)) ||
             error("arrived at non-integer lattice translation R′: should be impossible")
         isspecial(R′) || error(
             "arrived at non-special (nonzero free parameters) lattice translation R′: should be impossible",
         )
-        isapprox(δ′, qᵦ′ + R′ - qₐ′, nothing, false; atol = VEC_CMP_ATOL) ||
-            error("δ′ ≠ qᵦ′ + R′ - qₐ′")
+        isapprox(δ′, qₐ′ - qᵦ′ - R′, nothing, false; atol = VEC_CMP_ATOL) ||
+            error("δ′ ≠ qₐ′ - qᵦ′ - R′")
 
         idx_in_orbit = findfirst(orbit(δ_orbit)) do δ′′
             isapprox(δ′, δ′′, nothing, false; atol = VEC_CMP_ATOL)
@@ -278,8 +278,9 @@ function add_reversed_orbits!(
         # first append the new δs into the orbit
         append!(δs, -δs)
 
-        # add the "reversed" hopping terms: i.e., for every a → b + R, add b + R → a 
-        # => -δ = a - (b + R) = a - b - R = b - 2b - R -a + 2a = b + (2a - 2b - R) - a = b + R' - a
+        # add the "reversed" hopping terms: i.e., for every hop with tuple (a, b, R) we add
+        # the reversed tuple (b, a, -R); with δ = a - b - R, the reversed tuple has
+        # displacement b - a - (-R) = -(a - b - R) = -δ, which is why we appended -δs above
         hoppings = h_orbit.hoppings
         hoppings′ = map(hoppings) do hops
             map(hops) do (qₐ, qᵦ, R)
@@ -817,7 +818,7 @@ Build the P matrix for a particular symmetry operation acting on k-space, which 
 rows of the M matrix.
 
 To obtain the P matrix, we exploit that the action is on exponentials of the type
-``exp(2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
+``exp(-2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
 we need to use the inverse of the rotation part of the symmetry operation.
 
 !!! details "Sketch of proof"
