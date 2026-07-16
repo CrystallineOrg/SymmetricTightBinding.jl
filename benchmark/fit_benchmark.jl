@@ -18,6 +18,12 @@ Pkg.activate(@__DIR__; io = devnull)
 using Crystalline, SymmetricTightBinding, Optim, Chairmarks
 using Random, Statistics, Printf, LinearAlgebra
 
+# temporary Optim.jl workaround (near-singular-Hessian NaN in `solve_tr_subproblem!`, hit by
+# the SG 221 scenario); self-disables once a fixed Optim is installed. Remove after upstream
+# release (PR at https://github.com/JuliaNLSolvers/Optim.jl/pull/1266). Must run before any 
+# `fit` call.
+include(joinpath(@__DIR__, "optim_trsubproblem_patch.jl"))
+
 # include(joinpath(@__DIR__, "fit_mmd.jl")) # annealed-MMD prototype: superseded by
 #                                           # basin-hopping `fit` (kept for reference)
 
@@ -80,13 +86,17 @@ setup_t = @elapsed begin
 end
 @printf("   done (%.1f s)\n\n", setup_t)
 
-# per-term coefficient scales for the 3-range graphene model: leading (on-site + shorter-
-# range) terms O(1), third-range terms small. NB: assumes `tb_hamiltonian` orders terms by
-# hopping range, i.e., that the first `length(tbm_nnn)` terms of `tbm_3rd` are those shared
-# with `tbm_nnn`
-N_extra = length(tbm_3rd) - length(tbm_nnn)
+# per-term coefficient scales for the longer-range graphene models: leading (on-site +
+# shorter-range) terms O(1), longer-range terms small. NB: `tb_hamiltonian` does NOT order
+# terms globally by hopping range (it is block-major, and only loosely range-sorted within a
+# block); this trailing-terms-are-weak construction relies only on the weaker (verified)
+# property that, for these single-EBR graphene models, `tbm_nnn`'s terms are a prefix of
+# `tbm_3rd`'s and `tbm_4th`'s — so the trailing extra terms are the added longer-range ones
+N_extra  = length(tbm_3rd) - length(tbm_nnn)
+N_extra4 = length(tbm_4th) - length(tbm_nnn)
 scales_hier  = vcat(ones(length(tbm_nnn)), fill(0.2, N_extra)) # realistic hopping decay
 scales_trunc = vcat(ones(length(tbm_nnn)), fill(0.1, N_extra)) # small omitted terms
+scales_trunc4 = vcat(ones(length(tbm_nnn)), [0.2^r for r in 1:N_extra4]) # strongly decaying tail
 
 scenarios = [
     Scenario("graphene NN",            tbm_nn,  hs17,  0.0),
@@ -98,6 +108,10 @@ scenarios = [
     # misspecified fit: reference has N terms, fit model only M < N (omitted terms small);
     # no exact solution exists — success means beating the naive-truncation error Δ
     Scenario("graphene truncated (M<N)", tbm_nnn, tbm_3rd, scales_trunc, hs17, 0.0),
+    # larger misspecified fit with a strongly range-decaying reference (4 hopping ranges, fit
+    # keeps only the 4 short-range terms): the frustrated, hierarchical regime that hopping-
+    # range continuation targets — cf. `fit_continuation`
+    Scenario("graphene truncated 4-range (M<N)", tbm_nnn, tbm_4th, scales_trunc4, hs17, 0.0),
     # two EBRs: more bands, more terms, more crossings — stresses the multi-start search
     Scenario("pg 17, two EBRs",        tbm17b,  hs17,  0.0),
 ]
@@ -180,7 +194,7 @@ end
 
 print("warming up (compilation)… ")
 warmup_t = @elapsed for (tbm, D) in ((tbm_nn, 2), (tbm221, 3))
-    Random.seed!(0)
+    Random.seed!(1)
     ks = [rand(D) for _ in 1:3]
     Em = spectrum(tbm(randn(length(tbm))), ks)
     for (_, fitter) in FITTERS
