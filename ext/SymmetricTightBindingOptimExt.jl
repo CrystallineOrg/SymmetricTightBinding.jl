@@ -2,8 +2,9 @@ module SymmetricTightBindingOptimExt
 
 using SymmetricTightBinding
 using SymmetricTightBinding: solve
-using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, norm, tr
+using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, pinv, tr
 using Optim
+using Optim: NLSolversBase
 import SymmetricTightBinding: fit, multistart_fit, make_objective, spectralmoments
 
 # Basin-hopping exploration constants (cf. `multistart_fit` & `hop_start`).
@@ -83,7 +84,7 @@ end
 # needs, passing `nothing` for the rest, so the same objective serves zeroth-, first-, and
 # second-order optimizers alike; for the latter, a Gauss–Newton `H` makes e.g. `Newton()`
 # act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt (cf. ⋆)
-make_objective(_fgh!) = Optim.only_fgh!(_fgh!)
+make_objective(_fgh!) = NLSolversBase.only_fgh!(_fgh!)
 function make_objective(cache::TightBindingCache, Em_r;
                         lasso::Union{Nothing,Real} = nothing)
     return make_objective((F, G, H, cs) -> fgh!(F, G, H, cs, cache, Em_r; lasso))
@@ -142,7 +143,13 @@ function SpectralMoments(cache::TightBindingCache, Em_r::AbstractMatrix{<:Real})
     Q̄  = [sum(hsₖ -> real(dot(hsₖ[i], hsₖ[j])), hs) for i in 1:Nᶜ, j in 1:Nᶜ]
     m₁ = vec(sum(Em_r; dims = 2))  # ∑ₙ Eₙʳ(k), for each k
     M₂ = sum(abs2, Em_r)           # ∑ₖₙ [Eₙʳ(k)]²
-    c₀ = norm(A) > 0 ? A \ m₁ : zeros(Nᶜ)
+    # min-norm least-squares seed via `pinv` (SVD): robust to rank-deficient `A`. A purely
+    # off-diagonal term has tr hᵢ(k) ≡ 0 → a zero column in `A`; the first moment carries no
+    # information about it, so `pinv` correctly seeds its coefficient at 0 (its exploration
+    # scale still comes from `ρs`). Unlike `A \ m₁`, this never throws on a zero/collinear
+    # column, whatever the shape of `A` (a plain solve throws `SingularException` once `A`
+    # is square, i.e. once #k-points ≤ #terms).
+    c₀ = pinv(A) * m₁
     ρ  = sqrt(M₂ / max(tr(Q̄), eps()))
     ρs = sqrt.(M₂ ./ (Nᶜ .* max.(diag(Q̄), eps())))
     return SpectralMoments(c₀, Q̄, M₂, ρ, ρs)
