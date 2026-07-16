@@ -11,6 +11,7 @@ RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
@@ -21,6 +22,7 @@ SymmetricTightBindingOptimExt = "Optim"
 [compat]
 BlockArrays = "1.6.3"
 Crystalline = "0.6.24"
+GeometryBasics = "0.5.11"
 LinearAlgebra = "1.11.0"
 Makie = "0.24.2"
 Optim = "1"
@@ -29,5 +31,6 @@ StaticArrays = "1.9.15"
 julia = "1.12"
 
 [extras]
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"

@@ -10,16 +10,6 @@ using Makie
 
 ## --------------------------------------------------------------------------------------- #
 
-# This method is missing in GeometryBasics (see GeometryBasics.jl PR#277); pirate-patch
-# TODO: remove eventually, if above-noted PR is merged and released
-function Makie.GeometryBasics.coordinates(rect::Rect{1, T}) where T
-    w = rect.widths
-    o = rect.origin
-    return [Point{1,T}(o[1]), Point{1,T}(o[1]+w[1])]
-end
-
-## --------------------------------------------------------------------------------------- #
-
 const MaybeCoefficient = Union{Nothing, <:AbstractVector{<:Number}}
 const default_context_attributes = Attributes(;
     include = true, color = :gray75, linecolor = :gray80, linewidth = 1.25, limits = nothing
