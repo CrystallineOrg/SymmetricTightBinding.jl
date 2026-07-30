@@ -66,13 +66,28 @@ using Crystalline
         @test length(subduced_complement(tbm, 3)) == 1
     end
 
-    @testset "broken 3D example" begin
+    @testset "3D example, body-centered (I) lattice" begin
         brs = calc_bandreps(121, Val(3); timereversal = true)
         cbr = @composite brs[1] + brs[end-1] # (4d|A) + (2a|A₂) (3 bands)
         tbm = tb_hamiltonian(cbr, [[0,0,0],])
 
-        @test_broken subduced_complement(tbm, 82)
-        # ERROR: failed to find any nonzero block (br=(4d|A), siteg=[1, {2₁₁₀|1,0,1},
-        #        {-4₁₁₀⁺|1,0,0}, {-4₁₁₀⁻|1,1,1}] (4d: [3/4, 1/4, 1/2]), op=2₀₀₁)
+        @test length(subduced_complement(tbm, 82)) == 2
+    end
+
+    @testset "centered lattices" begin
+        # the subgroup generators must be converted to the primitive setting before the
+        # constraints are imposed; if not, centered lattices error out in
+        # `sgrep_induced_by_siteir` (which compares against primitivized site groups)
+        brs = calc_bandreps(12, Val(3); timereversal = true) # C2/m (C-centered)
+        cbr = @composite brs[1] # (4f|Ag)
+        tbm = tb_hamiltonian(cbr, [[0,0,0], [1,0,0]])
+        @test length(tbm) == 6
+
+        # subducing to G itself, with unchanged time-reversal, must give nothing new
+        @test length(subduced_complement(tbm, 12)) == 0
+
+        @test length(subduced_complement(tbm, 12; timereversal = false)) == 1 # break TR
+        @test length(subduced_complement(tbm, 5)) == 2                       # break mirror
+        @test length(subduced_complement(tbm, 8)) == 2                       # break C₂ & -1
     end
 end

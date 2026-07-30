@@ -104,6 +104,16 @@ function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) w
     return subduced_complement(tbm, gensᴴ; kws...)
 end
 
+"""
+    subduced_complement(tbm::TightBindingModel{D}, gensᴴ::AbstractVector{SymOperation{D}};
+                        timereversal)                       --> TightBindingModel{D}
+
+Variant of [`subduced_complement`](@ref) taking the generators `gensᴴ` of the subgroup ``H``
+directly, rather than its space group number.
+
+The generators must be given in the *conventional* setting of the original group ``G``
+(i.e., in the setting of `tbm`); they are converted internally to the primitive setting.
+"""
 function subduced_complement(
     tbm::TightBindingModel{D, S},
     gensᴴ::AbstractVector{SymOperation{D}};
@@ -115,6 +125,14 @@ function subduced_complement(
             "requested subgroup `timereversal = true`, but original model was built without time-reversal present; input for H must maintain or reduce symmetry",
         )
     end
+
+    # the constraint machinery in `_obtain_basis_free_parameters` works in the primitive
+    # setting (cf. `obtain_basis_free_parameters`), but `gensᴴ` is given in the conventional
+    # setting of G: convert, lest we compare conventional-setting operations against the
+    # primitivized site symmetry groups of `sgrep_induced_by_siteir` (which finds no
+    # matching coset and errors out)
+    cntr = centering(num(tbm.cbr), D)
+    gensᴴ′ = cntr ∈ ('P', 'p') ? gensᴴ : primitivize.(gensᴴ, cntr)
 
     # we need to go through the terms of `tbm` in "groups of the same orbit" - each orbit
     # will have some coefficient basis, and it is this basis we need to compare. So first,
@@ -148,7 +166,7 @@ function subduced_complement(
             tbb.ordering1,
             tbb.ordering2,
             tbb.Mm,
-            gensᴴ,
+            gensᴴ′,
             timereversal,
             tbt.block_ij[1] == tbt.block_ij[2], #= .diagonal_block =#
             S,                                  #= hermiticity =#
