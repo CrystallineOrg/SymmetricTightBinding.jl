@@ -7,6 +7,8 @@ using Optim
 using Optim: NLSolversBase
 import SymmetricTightBinding: fit, multistart_fit, make_objective, spectralmoments
 
+include(joinpath(@__DIR__, "optim_trsubproblem_patch.jl"))
+
 # Basin-hopping exploration constants (cf. `multistart_fit` & `hop_start`).
 # A "hop" perturbs the incumbent best by `step .* randn .* (abs.(best_cs) .+ FLOOR*ρ)`,
 # with `step = BASE*(1+n)^(1/4)` after `n` stagnated trials and ρ the moment-derived
@@ -412,6 +414,12 @@ function multistart_fit(
     end
 
     return best_cs, best_loss
+end
+
+# run at load time (not precompile time, cf. `optim_trsubproblem_patch.jl`), every time this
+# extension is loaded
+function __init__()
+    __patch_optim_tr_subproblem!()
 end
 
 end # module SymmetricTightBindingOptimExt

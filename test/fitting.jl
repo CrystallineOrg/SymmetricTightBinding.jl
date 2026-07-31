@@ -155,21 +155,20 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
         @test ptbm_lbfgs isa ParameterizedTightBindingModel
     end
 
-    @testset "Broken example due to near-singular Hessian" begin
-        # The following example errors due to an Optim.jl bug. I proposed a PR to fix the
-        # bug at https://github.com/JuliaNLSolvers/Optim.jl/pull/1266, but in the meantime,
-        # we just log it as a broken test
+    @testset "Formerly-broken example due to near-singular Hessian" begin
+        # The following example used to error due to an Optim.jl bug (proposed fix at
+        # https://github.com/JuliaNLSolvers/Optim.jl/pull/1266). It's now covered by the
+        # local `ext/optim_trsubproblem_patch.jl` workaround, applied automatically whenever
+        # the Optim extension loads.
 
         # SG 221: (3d|A₁g) ⊕ (3d|B₂g); 6 bands, 3D (the `fit` docstring example)
         brs = calc_bandreps(221, Val(3))
         tbm = tb_hamiltonian(@composite brs[1] + brs[7])
 
-        Random.seed!(0) # this value happens to trigger the bug; seed 1 does not e.g.
+        Random.seed!(0) # this value used to trigger the bug; seed 1 did not e.g.
         ks = [rand(dim(brs)) for _ in 1:3]
         Em_ref = spectrum(tbm(randn(length(tbm))), ks)
-        @test_broken fit(tbm, Em_ref, ks) isa ParameterizedTightBindingModel{3}
-        # ↑ remove `@test_broken` once the Optim.jl#1266 PR is merged and released (& we 
-        #   increase our compat)
+        @test fit(tbm, Em_ref, ks) isa ParameterizedTightBindingModel{3}
 
         Random.seed!(1) # works on seed 1
         ks = [rand(dim(brs)) for _ in 1:3]

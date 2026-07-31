@@ -1,12 +1,12 @@
-# benchmark/optim_trsubproblem_patch.jl
+# ext/optim_trsubproblem_patch.jl
 #
 # TEMPORARY workaround for an Optim.jl bug in `solve_tr_subproblem!` (the trust-region
 # subproblem solver used by `NewtonTrustRegion`, our default `fit` optimizer). For a
 # (near-)singular Hessian, `lambda_lb = nextfloat(-min_H_ev)` is a negligible ridge, so the
 # Cholesky root-finding loop never factorizes within `max_iters` and leaves the step `s`
 # unwritten (NaN) — which then crashes the next `eigen!` in `fgh!`. Our moment seed for
-# multi-EBR models (e.g. SG 221) lands exactly on such a singular-Hessian point, so the SG
-# 221 benchmark scenario fails reliably on some BLAS/LAPACK builds.
+# multi-EBR models (e.g. SG 221) can land exactly on such a singular-Hessian point, so `fit`
+# fails reliably on some BLAS/LAPACK builds (observed on CI, Julia 1.12, ubuntu-latest).
 #
 # Fix (submitted upstream): leave `lambda_lb` untouched and, only when Cholesky fails, boost
 # λ to the spectral scale of H so the next factorization succeeds (`max(2λ, √eps·‖H‖)`); the
@@ -19,8 +19,15 @@
 #
 # Fix for Optim.jl in PR #1266 (https://github.com/JuliaNLSolvers/Optim.jl/pull/1266):
 # delete this once that is merged + released + compat-updated here.
-
-let
+#
+# Included from `SymmetricTightBindingOptimExt.jl` (so every `fit`/`multistart_fit` call is
+# protected, not just the benchmark harness); `benchmark/fit_benchmark.jl` relies on the same
+# copy via that extension load, rather than including this file itself.
+#
+# Wrapped in a function called from the extension's `__init__` rather than run as top-level
+# module code: `@eval`-ing into another (closed) module is disallowed during precompilation,
+# and extensions — unlike plain scripts — are precompiled.
+function __patch_optim_tr_subproblem!()
     _has_bug = if !isdefined(Optim, :solve_tr_subproblem!)
         false
     else
@@ -36,8 +43,9 @@ let
     end
 
     if _has_bug
-        @info "fit_benchmark: applying temporary Optim `solve_tr_subproblem!` patch \
-               (near-singular-Hessian NaN bug); remove once a fixed Optim.jl is released"
+        @info "SymmetricTightBinding: applying temporary Optim `solve_tr_subproblem!` \
+               patch (near-singular-Hessian NaN bug); remove once a fixed Optim.jl is \
+               released (cf. JuliaNLSolvers/Optim.jl#1266)"
         @eval Optim begin
             function solve_tr_subproblem!(gr, H, delta, s; tolerance = 1e-10, max_iters = 5)
                 T = eltype(gr)
