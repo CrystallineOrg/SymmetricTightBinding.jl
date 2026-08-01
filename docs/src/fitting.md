@@ -128,7 +128,7 @@ The search engine is exposed separately as [`multistart_fit`](@ref), which minim
 
 For workloads that evaluate the same model over the same **k**-points many times with varying amplitudes (fitting, above all), the coefficient-independent term matrices ``h_i(\mathbf{k})`` are tabulated once up front in a [`TightBindingCache`](@ref); `fit` builds and shares one internally.
 
-## API
+## Fitting API
 
 ```@docs
 fit

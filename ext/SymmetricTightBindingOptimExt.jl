@@ -78,14 +78,26 @@ function f(cs, cache::TightBindingCache, Em_r; lasso::Union{Nothing,Real} = noth
     return fgh!(0.0, nothing, nothing, cs, cache, Em_r; lasso)
 end
 
-# objective wrappers for Optim.jl. The generic form bundles any loss with the `fgh!`
-# calling convention `_fgh!(F, G, H, cs)` — `G`/`H` are filled in-place when non-`nothing`
-# (`_fgh!` can, and for performance usually should, be an in-place mutating function) and
-# the loss value is returned when `F` is non-`nothing` — into a single Optim objective.
-# Optim extracts whichever value/gradient/Hessian combination each optimizer actually
-# needs, passing `nothing` for the rest, so the same objective serves zeroth-, first-, and
-# second-order optimizers alike; for the latter, a Gauss–Newton `H` makes e.g. `Newton()`
-# act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt (cf. ⋆)
+"""
+    make_objective(_fgh!)
+    make_objective(cache::TightBindingCache, Em_r; lasso=nothing)
+    make_objective(tbm::TightBindingModel, Em_r, ks; lasso=nothing)
+
+Bundle a loss into a single Optim.jl objective, suitable for [`multistart_fit`](@ref).
+
+The generic form takes any loss following the `fgh!` calling convention
+`_fgh!(F, G, H, cs)`: `G`/`H` are filled in-place when non-`nothing` (`_fgh!` can, and for
+performance usually should, be an in-place mutating function) and the loss value is returned
+when `F` is non-`nothing`. Optim extracts whichever value/gradient/Hessian combination each
+optimizer actually needs, passing `nothing` for the rest, so the same objective serves
+zeroth-, first-, and second-order optimizers alike; for the latter, a Gauss–Newton `H` makes
+e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt (cf. ⋆).
+
+The two remaining forms build the sorted-eigenvalue least-squares loss that `fit` itself
+uses, comparing against the reference spectrum `Em_r` over the k-points of `cache` (or over
+`ks`, tabulating a [`TightBindingCache`](@ref) internally). The `lasso` keyword adds an
+``\\ell_1`` penalty on the hopping amplitudes, as in `fit`.
+"""
 make_objective(_fgh!) = NLSolversBase.only_fgh!(_fgh!)
 function make_objective(cache::TightBindingCache, Em_r;
                         lasso::Union{Nothing,Real} = nothing)
