@@ -43,9 +43,9 @@ function __patch_optim_tr_subproblem!()
     end
 
     if _has_bug
-        @info "SymmetricTightBinding: applying temporary Optim `solve_tr_subproblem!` \
-               patch (near-singular-Hessian NaN bug); remove once a fixed Optim.jl is \
-               released (cf. JuliaNLSolvers/Optim.jl#1266)"
+        @debug "SymmetricTightBinding: applying temporary Optim `solve_tr_subproblem!` \
+                patch (near-singular-Hessian NaN bug); remove once a fixed Optim.jl is \
+                released (cf. JuliaNLSolvers/Optim.jl#1266)"
         @eval Optim begin
             function solve_tr_subproblem!(gr, H, delta, s; tolerance = 1e-10, max_iters = 5)
                 T = eltype(gr)
