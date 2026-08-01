@@ -91,7 +91,7 @@ performance usually should, be an in-place mutating function) and the loss value
 when `F` is non-`nothing`. Optim extracts whichever value/gradient/Hessian combination each
 optimizer actually needs, passing `nothing` for the rest, so the same objective serves
 zeroth-, first-, and second-order optimizers alike; for the latter, a Gauss–Newton `H` makes
-e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt (cf. ⋆).
+e.g. `Newton()` act as Gauss–Newton & `NewtonTrustRegion()` as Levenberg–Marquardt.
 
 The two remaining forms build the sorted-eigenvalue least-squares loss that `fit` itself
 uses, comparing against the reference spectrum `Em_r` over the k-points of `cache` (or over
@@ -262,22 +262,30 @@ As a synthetic example, we might use `fit` to recover the coefficients of a rand
 parameterized tight-binding model, using its spectrum sampled over 10 **k**-points:
 
 ```jldoctest
-julia> using Crystalline, SymmetricTightBinding, Brillouin, Optim
+julia> using Crystalline, SymmetricTightBinding, Brillouin, Optim, Random
+
 julia> sgnum = 221;
+
 julia> brs = calc_bandreps(sgnum);
+
 julia> cbr = @composite brs[1] + brs[7];
+
 julia> tbm = tb_hamiltonian(cbr);
 
-julia> using Random; Random.seed!(123);
+julia> Random.seed!(123);
+
 julia> ptbm_r = tbm(randn(length(tbm)))
-4-term 6×6 ParameterizedTightBindingModel{3} over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
+4-term 6×6 ParameterizedTightBindingModel{3} (hermitian) over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
  [-0.64573, -1.4633, -1.6236, -0.21767]
 
 julia> kp = irrfbz_path(sgnum, directbasis(sgnum, Val(3)));
+
 julia> ks = interpolate(kp, 10);
+
 julia> Em_r = spectrum(ptbm_r, ks);
+
 julia> ptbm_fit = fit(tbm, Em_r, ks)
-4-term 6×6 ParameterizedTightBindingModel{3} over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
+4-term 6×6 ParameterizedTightBindingModel{3} (hermitian) over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
  [-0.64573, -1.4633, -1.6236, -0.21767]
 
 julia> ptbm_fit.cs ≈ ptbm_r.cs
@@ -321,7 +329,7 @@ end
 
 Moment-seeded, basin-hopping multi-start minimization of an Optim.jl objective `obj` (e.g.,
 constructed via [`make_objective`](@ref)), with exploration draws derived from `moments`
-(cf. [`SpectralMoments`](@ref)). This is the search engine underlying `fit`, factored out
+(cf. `SpectralMoments`). This is the search engine underlying `fit`, factored out
 so that related fitting problems with custom losses (e.g., PhotonicTightBinding.jl) can
 reuse it.
 
