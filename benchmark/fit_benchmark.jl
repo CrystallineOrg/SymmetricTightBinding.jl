@@ -70,6 +70,7 @@ setup_t = @elapsed begin
     tbm_nn  = tb_hamiltonian(cbr17, [[0, 0]])         # on-site + nearest neighbor
     tbm_nnn = tb_hamiltonian(cbr17, [[0, 0], [1, 0]]) # + next-nearest neighbor
     tbm_3rd = tb_hamiltonian(cbr17, [[0, 0], [1, 0], [1, 1]]) # + third-range hoppings
+    tbm_4th = tb_hamiltonian(cbr17, [[0, 0], [1, 0], [1, 1], [2, 0]]) # + fourth-range hoppings
     hs17    = [[0.0, 0.0], [1/3, 1/3], [1/2, 0.0]]    # Γ, K (Dirac point), M
 
     # two-EBR graphene-lattice model: more bands, more terms, more crossings
@@ -107,8 +108,8 @@ scenarios = [
     # no exact solution exists — success means beating the naive-truncation error Δ
     Scenario("graphene truncated (M<N)", tbm_nnn, tbm_3rd, scales_trunc, hs17, 0.0),
     # larger misspecified fit with a strongly range-decaying reference (4 hopping ranges, fit
-    # keeps only the 4 short-range terms): the frustrated, hierarchical regime that hopping-
-    # range continuation targets — cf. `fit_continuation`
+    # keeps only the 4 short-range terms): the frustrated, hierarchical regime, in which the
+    # omitted terms are individually small but jointly non-negligible
     Scenario("graphene truncated 4-range (M<N)", tbm_nnn, tbm_4th, scales_trunc4, hs17, 0.0),
     # two EBRs: more bands, more terms, more crossings — stresses the multi-start search
     Scenario("pg 17, two EBRs",        tbm17b,  hs17,  0.0),
