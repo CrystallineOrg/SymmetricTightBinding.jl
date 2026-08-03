@@ -8,6 +8,9 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SymmetricTightBinding = "793e0360-0e47-4c52-9513-43d75d53c7d0"
 SymmetryBases = "cb68ded9-7e8c-45d3-bc66-19b5867c0467"
 
+[compat]
+Brillouin = "0.5.32"
+
 [sources]
 SymmetricTightBinding = {path = ".."}
 SymmetryBases = {url = "https://github.com/thchr/SymmetryBases.jl.git"}
