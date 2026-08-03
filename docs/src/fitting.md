@@ -91,6 +91,45 @@ hopping_scale = sum(abs, ptbm_long_ref.cs[1:5]) / 5
 (ptbm_short_fit.cs - ptbm_long_ref.cs[1:5]) ./ hopping_scale * 100 # relative deviation (%)
 ```
 
+### An infinite-range reference
+
+The example above is still representable in principle — the reference merely has more terms than the fitting model. A sharper test is a reference that *no* finite-range model can represent. Consider a 1D chain with two orbitals per site, coupled across every distance with an exponentially decaying amplitude ``t_n = t_0 e^{-\gamma n}``. Summing the geometric series gives a closed-form Bloch Hamiltonian, ``H(k) = f(k)\sigma_x``, and hence exact bands ``\pm f(k)``:
+
+```@example fitting
+brs_1d = calc_bandreps(2, Val(1)) # 1D space group 2
+cbr_1d = @composite brs_1d[1] + brs_1d[1] # two orbitals per site
+
+γ, t₀ = 0.5, 1.0
+tₙ(n) = t₀ * exp(-γ * n) # hopping amplitude across n cells
+f(k) = t₀ * (1 - exp(-2γ)) / (1 - 2exp(-γ) * cospi(2k) + exp(-2γ)) # = ∑ₙ t₀exp(-γ|n|)exp(i2πnk)
+
+kpi_1d = interpolate(irrfbz_path(2, directbasis(2, Val(1))), 100)
+Em_1d = (v = [f(only(k)) for k in kpi_1d]; [-v v])
+nothing # hide
+```
+
+We now fit truncations of this chain, keeping hoppings only out to `nmax` cells. `tb_hamiltonian` orders its terms block-major, so the two intra-orbital blocks come first and the inter-orbital couplings last; slicing off the former leaves exactly the terms of the model above:
+
+```@example fitting
+function truncated_chain(nmax)
+    tbm_1d = tb_hamiltonian(cbr_1d, [[n] for n in 0:nmax])
+    return tbm_1d[2(nmax + 1) + 1 : end] # keep only the inter-orbital couplings
+end
+
+ptbm_2 = fit(truncated_chain(2), Em_1d, kpi_1d)
+ptbm_6 = fit(truncated_chain(6), Em_1d, kpi_1d)
+
+plot(kpi_1d, Em_1d, spectrum(ptbm_2, kpi_1d), spectrum(ptbm_6, kpi_1d);
+     color = [:gray, :cornflowerblue, :crimson],
+     linestyle = [nothing, :dash, :dash], linewidth = [5, 2, 2])
+```
+
+Two cells (blue) are too short-ranged to resolve the sharp peak of ``f`` at Γ, and the bands acquire spurious oscillations — and even a spurious touching — across the rest of the zone. Six cells (crimson) already track the exact bands closely. Notably, the fit is never told that the amplitudes decay exponentially, yet recovers ``t_n = t_0e^{-\gamma n}`` to three digits:
+
+```@example fitting
+round.([ptbm_6.cs tₙ.(0:6)]; sigdigits = 3) # fitted amplitudes vs. exact tₙ
+```
+
 
 ## Choosing the number of terms
 
