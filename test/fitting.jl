@@ -6,7 +6,7 @@ using Optim
 using Random
 using LinearAlgebra: Hermitian, eigen, tr
 
-# Tests for the Optim.jl fitting extension (`fit`, `multistart_fit`, `make_objective`,
+# Tests for the Optim.jl fitting extension (`fit`, `multistart_fit`, `make_fit_objective`,
 # `spectralmoments`) and the `TightBindingCache` it is built on. Kept deliberately fast:
 # small 2D graphene models plus one small 3D model, few k-points, and exactly-representable
 # reference spectra (so the multi-start search early-returns quickly).
@@ -61,7 +61,7 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
     end
 
     # -------------------------------------------------------------------------------------
-    @testset "make_objective / spectralmoments routes agree" begin
+    @testset "make_fit_objective / spectralmoments routes agree" begin
         Random.seed!(2)
         cs_r = randn(length(tbm_nn))
         Em_r = spectrum(tbm_nn(cs_r), ks)
@@ -74,8 +74,8 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
         @test m_cache.ρ ≈ m_tbm.ρ
         @test m_cache.ρ > 0 && all(>(0), m_cache.ρs)
 
-        # both `make_objective` routes are usable and produce a fit of the same quality
-        for obj in (make_objective(cache, Em_r), make_objective(tbm_nn, Em_r, ks))
+        # both `make_fit_objective` routes are usable and produce a fit of the same quality
+        for obj in (make_fit_objective(cache, Em_r), make_fit_objective(tbm_nn, Em_r, ks))
             best_cs, best_loss = multistart_fit(obj, m_cache; max_multistarts = 40)
             @test best_loss < 1e-8
             @test rms(spectrum(tbm_nn(best_cs), ks) - Em_r) < 1e-5

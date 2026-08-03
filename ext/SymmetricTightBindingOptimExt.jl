@@ -5,7 +5,7 @@ using SymmetricTightBinding: solve
 using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, pinv, tr
 using Optim
 using Optim: NLSolversBase
-import SymmetricTightBinding: fit, multistart_fit, make_objective, spectralmoments
+import SymmetricTightBinding: fit, multistart_fit, make_fit_objective, spectralmoments
 
 include(joinpath(@__DIR__, "optim_trsubproblem_patch.jl"))
 
@@ -79,9 +79,9 @@ function f(cs, cache::TightBindingCache, Em_r; lasso::Union{Nothing,Real} = noth
 end
 
 """
-    make_objective(_fgh!)
-    make_objective(cache::TightBindingCache, Em_r; lasso=nothing)
-    make_objective(tbm::TightBindingModel, Em_r, ks; lasso=nothing)
+    make_fit_objective(_fgh!)
+    make_fit_objective(cache::TightBindingCache, Em_r; lasso=nothing)
+    make_fit_objective(tbm::TightBindingModel, Em_r, ks; lasso=nothing)
 
 Bundle a loss into a single Optim.jl objective, suitable for [`multistart_fit`](@ref).
 
@@ -98,14 +98,14 @@ uses, comparing against the reference spectrum `Em_r` over the k-points of `cach
 `ks`, tabulating a [`TightBindingCache`](@ref) internally). The `lasso` keyword adds an
 ``\\ell_1`` penalty on the hopping amplitudes, as in `fit`.
 """
-make_objective(_fgh!) = NLSolversBase.only_fgh!(_fgh!)
-function make_objective(cache::TightBindingCache, Em_r;
-                        lasso::Union{Nothing,Real} = nothing)
-    return make_objective((F, G, H, cs) -> fgh!(F, G, H, cs, cache, Em_r; lasso))
+make_fit_objective(_fgh!) = NLSolversBase.only_fgh!(_fgh!)
+function make_fit_objective(cache::TightBindingCache, Em_r;
+                            lasso::Union{Nothing,Real} = nothing)
+    return make_fit_objective((F, G, H, cs) -> fgh!(F, G, H, cs, cache, Em_r; lasso))
 end
-function make_objective(tbm::TightBindingModel, Em_r, ks;
-                        lasso::Union{Nothing,Real} = nothing)
-    return make_objective(TightBindingCache(tbm, ks), Em_r; lasso)
+function make_fit_objective(tbm::TightBindingModel, Em_r, ks;
+                            lasso::Union{Nothing,Real} = nothing)
+    return make_fit_objective(TightBindingCache(tbm, ks), Em_r; lasso)
 end
 
 # (⋆): The Gauss–Newton approximation of the Hessian `H` of a least-squares error (LSE) is 
@@ -311,7 +311,7 @@ function fit(
 ) where D
 
     cache = TightBindingCache(tbm, ks) # hᵢ(k) tabulated once, shared by objective & moments
-    obj = make_objective(cache, Em_r; lasso)
+    obj = make_fit_objective(cache, Em_r; lasso)
     moments = spectralmoments(cache, Em_r)
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs, _ = multistart_fit(obj, moments;
@@ -328,7 +328,7 @@ end
     multistart_fit(obj, moments::SpectralMoments; kws...)  -->  (best_cs, best_loss)
 
 Moment-seeded, basin-hopping multi-start minimization of an Optim.jl objective `obj` (e.g.,
-constructed via [`make_objective`](@ref)), with exploration draws derived from `moments`
+constructed via [`make_fit_objective`](@ref)), with exploration draws derived from `moments`
 (cf. `SpectralMoments`). This is the search engine underlying `fit`, factored out
 so that related fitting problems with custom losses (e.g., PhotonicTightBinding.jl) can
 reuse it.

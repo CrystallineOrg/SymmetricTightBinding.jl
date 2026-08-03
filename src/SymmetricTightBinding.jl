@@ -68,10 +68,10 @@ export collect_compatible, collect_irrep_annotations # extended functions from C
 
 # fitting functionality; all implemented in the Optim.jl extension
 function fit end
-function multistart_fit end   # ┐ stubs, overloaded in the extension, so that the fitting
-function make_objective end   # │ machinery can be reused from dependent packages (e.g.,
-function spectralmoments end  # ┘ PhotonicTightBinding.jl) without `Base.get_extension`
-export fit, multistart_fit, make_objective
+function multistart_fit end     # ┐ stubs, overloaded in the extension, so that the fitting
+function make_fit_objective end # │ machinery can be reused from dependent packages (e.g.,
+function spectralmoments end    # ┘ PhotonicTightBinding.jl) without `Base.get_extension`
+export fit, multistart_fit, make_fit_objective
 
 # ---------------------------------------------------------------------------------------- #
 end # module

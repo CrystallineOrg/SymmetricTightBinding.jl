@@ -124,7 +124,7 @@ round.(ptbm_sparse.cs; sigdigits = 3)
 - the deterministic first trial, and the occasional fresh restarts, are seeded using the reference spectrum's first two moments (exploiting the linearity ``H(\mathbf{k}) = \sum_i c_i h_i(\mathbf{k})`` for cheap, sorting-free handles on the coefficient scale);
 - second-order optimizers use a Gauss–Newton approximation of the Hessian, ``\nabla^2 F \approx 2\sum_{\mathbf{k}, n} \nabla E_n \nabla E_n^\top``, so the default `NewtonTrustRegion()` acts as a Levenberg–Marquardt least-squares solver.
 
-The search engine is exposed separately as [`multistart_fit`](@ref), which minimizes any Optim.jl objective (built with [`make_objective`](@ref)) against a moment structure. This lets related fitting problems with custom losses — for example photonic band-fitting, which penalizes longitudinal modes differently — reuse the same machinery.
+The search engine is exposed separately as [`multistart_fit`](@ref), which minimizes any Optim.jl objective (built with [`make_fit_objective`](@ref)) against a moment structure. This lets related fitting problems with custom losses — for example photonic band-fitting, which penalizes longitudinal modes differently — reuse the same machinery.
 
 For workloads that evaluate the same model over the same **k**-points many times with varying amplitudes (fitting, above all), the coefficient-independent term matrices ``h_i(\mathbf{k})`` are tabulated once up front in a [`TightBindingCache`](@ref); `fit` builds and shares one internally.
 
@@ -133,7 +133,7 @@ For workloads that evaluate the same model over the same **k**-points many times
 ```@docs
 fit
 multistart_fit
-make_objective
+make_fit_objective
 ```
 
 ([`TightBindingCache`](@ref) is documented in the [API](@ref) reference.)
