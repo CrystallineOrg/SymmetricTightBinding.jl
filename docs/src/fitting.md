@@ -158,14 +158,56 @@ Here the reference was generated with next-nearest-neighbor hopping, so the erro
 
 ### Sparsity-encouraged fitting
 
-If we want to *encourage sparsity* -- letting the fit decide which longer-range terms are actually (or merely primarily) needed -- we can set the `lasso` keyword to a finite value. This adds an ``\ell_1`` penalty on the amplitudes, tending to drive weakly-supported terms toward zero:
+If we want to *encourage sparsity* -- letting the fit decide which longer-range terms are actually (or merely primarily) needed -- we can set the `lasso` keyword to a positive value ``\lambda``. This adds an ``\ell_1`` penalty ``\lambda\sum_i|c_i|`` to the loss, which shrinks weakly-supported amplitudes and, when successful, drives them to zero outright.
 
-```@example fitting
-ptbm_sparse = fit(tbm, Em_ref, kpi; lasso = 1e-1)
-round.(ptbm_sparse.cs; sigdigits = 3)
-```
+The setting this targets is the one described above: data produced by something other than a tight-binding model -- a DFT or other wave-equation calculation -- for which no finite-range parameterization is exact. There are then no "true" amplitudes to recover, and the goal shifts to finding the *simplest* model that still tracks the data closely. Since we cannot know in advance how many hopping ranges the data will support, the practical approach is to include generously many and let the penalty prune those that do not earn their place.
 
-(In this example every term genuinely contributes to the reference, so none is driven all the way to zero -- the penalty merely biases the amplitudes slightly. The effect is most useful when the model includes ranges that the data does not actually require.)
+!!! details "Example: pruning an over-specified model"
+    As a synthetic stand-in for such data, we generate a reference from a 20-term model whose five leading amplitudes are ``\mathcal{O}(1)`` and whose remaining fifteen form a small, long-ranged tail. We then fit it with a 15-term model: fewer terms than the reference, but still far more than we would like to end up with.
+
+    ```@example fitting
+    ranges_20 = [[0,0], [1,0], [1,1], [1,2], [2,2], [0,3], [1,3], [2,3], [3,3], [1,4], [2,4]]
+    tbm_20 = tb_hamiltonian(cbr, ranges_20)      # reference model
+    tbm_15 = tb_hamiltonian(cbr, ranges_20[1:8]) # fitting model
+    (length(tbm_20), length(tbm_15))
+    ```
+
+    ```@example fitting
+    Random.seed!(2)
+    cs_20 = vcat(randn(5), 0.08 .* randn(length(tbm_20)-5) .* [0.9^i for i in 1:length(tbm_20)-5])
+    Em_20 = spectrum(tbm_20(cs_20), kpi)
+    nothing # hide
+    ```
+
+    Fitting the 15-term model twice, with and without the penalty:
+
+    ```@example fitting
+    Random.seed!(3)
+    ptbm_dense  = fit(tbm_15, Em_20, kpi)              # unpenalized
+    ptbm_sparse = fit(tbm_15, Em_20, kpi; lasso = 1.0) # ℓ₁-penalized
+    round.([ptbm_dense.cs ptbm_sparse.cs]; digits = 3) # amplitudes, side by side
+    ```
+
+    The unpenalized fit puts amplitude on every term available to it, while the penalized fit switches a third of them off entirely:
+
+    ```@example fitting
+    (dense  = count(>(1e-2), abs.(ptbm_dense.cs)),
+     sparse = count(>(1e-2), abs.(ptbm_sparse.cs)))
+    ```
+
+    The spectral price for this is modest -- measured as an RMS energy error relative to the bandwidth of the reference bands:
+
+    ```@example fitting
+    bandwidth = maximum(Em_20) - minimum(Em_20)
+    rel_rms(ptbm) = 100norm(spectrum(ptbm, kpi) - Em_20) / sqrt(length(Em_20)) / bandwidth
+    (dense  = round(rel_rms(ptbm_dense);  sigdigits = 2), # RMS error, % of bandwidth
+     sparse = round(rel_rms(ptbm_sparse); sigdigits = 2))
+    ```
+
+    Both models track the reference to well under 1% of its bandwidth, so the sparser one is arguably the better answer: it is very nearly as faithful, with a third fewer amplitudes to interpret.
+
+!!! warning "`lasso` is a blunt instrument"
+    The penalty's sparsifying tendency is not systematic. Whether a given term is driven to zero depends on ``\lambda``, on the model, and on which local minimum the search happens to settle in -- and the number of surviving terms need not even decrease monotonically with ``\lambda``. Treat `lasso` as a knob worth exploring rather than a dependable model-selection procedure, and always inspect the resulting spectrum and amplitudes.
 
 ## Under the hood
 
