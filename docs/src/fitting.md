@@ -9,7 +9,7 @@ Because [`tb_hamiltonian`](@ref) already fixes the *form* of every allowed Hamil
 
 ## A synthetic reference
 
-To demonstrate the workflow, we generate a synthetic "reference" band structure from a known set of amplitudes and then try to recover it — pretending, for the moment, that we only have the band energies. (In a real application, the reference energies might instead come from DFT, experiment, or other wave-equation calculation.)
+To demonstrate the workflow, we generate a synthetic "reference" band structure from a known set of amplitudes and then try to recover it — pretending, for the moment, that we only have the band energies. (In a real application, the reference energies might instead come from DFT, experiment, or another wave-equation calculation.)
 
 We use graphene: the (2b|A₁) elementary band representation of plane group 17 (*p*6*mm*), with nearest- and next-nearest-neighbor hopping:
 
@@ -67,9 +67,9 @@ plot(kpi, Em_ref, Em_fit;
      color = [:gray, :crimson], linestyle = [nothing, :dash], linewidth = [5, 2])
 ```
 
-## Fitting to non-exactly representatable data
+## Fitting to non-exactly representable data
 
-Real data is usually never exactly mappable to a finite-range tight-binding model. To emulate this, we can create a model with a few small long-range hopping terms and then attempt to fit its spectrum to a shorter-range model. Because the model form is symmetry-constrained, the fit remains rather good and simply returns the a spectrally close symmetry-consistent model (in a least-squares sense).
+Real data is usually never exactly mappable to a finite-range tight-binding model. To emulate this, we can create a model with a few small long-range hopping terms and then attempt to fit its spectrum to a shorter-range model. Because the model form is symmetry-constrained, the fit remains rather good and simply returns a spectrally close symmetry-consistent model (in a least-squares sense).
 
 ```@example fitting
 tbm_long = tb_hamiltonian(cbr, [[0, 0], [1, 0], [1, 1], [1,2], [2,2]]) # terms 6-8 are additional to onsite+NN+NNN
@@ -149,7 +149,6 @@ Here the reference was generated with next-nearest-neighbor hopping, so the erro
 If instead you want to *encourage sparsity* — letting the fit decide which longer-range terms are actually needed — set the `lasso` keyword to a finite value. This adds an ``\ell_1`` penalty on the amplitudes, shrinking them and driving weakly-supported terms toward zero:
 
 ```@example fitting
-tbm
 ptbm_sparse = fit(tbm, Em_ref, kpi; lasso = 1e-1)
 round.(ptbm_sparse.cs; sigdigits = 3)
 ```

@@ -220,8 +220,8 @@ first trial starts from the least-squares solution of the (linear) first-moment 
 equations; most subsequent trials perturb the incumbent best fit ("hops"), with amplitudes
 that grow under stagnation, interspersed with fresh random restarts whose magnitudes are
 chosen to reproduce the reference spectrum's second moment.
-The global search returns early if the mean fit error, per band and per energy, is less than
-`atol`.
+The global search returns early if the mean fit error, per band and per **k**-point, is less
+than `atol`.
 
 The function is defined as an Optim.jl extension to SymmetricTightBinding.jl: i.e., Optim.jl
 must be explicitly loaded to use this function.
@@ -240,19 +240,19 @@ must be explicitly loaded to use this function.
   moment-scaled restart rather than a basin-hopping perturbation of the incumbent best
   (see above). Set to e.g. `typemax(Int)` to disable fresh restarts entirely (pure basin
   hopping).
-- `atol` (default, `1e-3`): threshold for early return, specifying the minimum required mean
-  energetic error (averaged over bands and **k**-points).
+- `atol` (default, `1e-3`): threshold for early return, specifying the mean energetic error
+  (averaged over bands and **k**-points) below which the search stops.
 - `verbose` (default, `false`): whether to print information on optimization progress.
-- `options` (default, empty): a `Optim.Options(…)` structure of optimization options, used
-  during the local optimization of the multi-start search. Defaults to
-  `Optim.Options(g_abstol=1e-2, f_reltol=1e-5)` (i.e., low tolerances, suitable for the
-  low precision demands of the multi-start search).
+- `options` (default, `Optim.Options(g_abstol=1e-2, f_reltol=1e-5)`): an `Optim.Options(…)`
+  structure of optimization options, used during the local optimization of the multi-start
+  search. The default is deliberately loose, suiting the low-precision demands of the
+  multi-start search.
 - `polish` (default, `true`): whether to polish off the multi-start optimization with a
   final local optimization step using default Optim.jl options. This is useful to ensure
   that the best candidate from the multi-start search is fully converged.
-- `lasso` (defalt, `nothing`): if set to a positive number, applies a LASSO penalty to the
-  hopping amplitudes, encouraging model sparsity (i.e., small hopping amplitudes to
-  vanish). Setting to `nothing` disables the LASSO penalty.
+- `lasso` (default, `nothing`): if set to a positive number, applies a LASSO penalty to the
+  hopping amplitudes, encouraging model sparsity (i.e., encouraging small hopping amplitudes
+  to vanish). Setting to `nothing` disables the LASSO penalty.
 - `init` (default, `nothing`): if provided, a vector of hopping amplitudes used as the
   deterministic first multi-start trial, replacing the first-moment (trace) fit.
 

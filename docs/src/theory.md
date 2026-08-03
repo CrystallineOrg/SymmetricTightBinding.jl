@@ -434,7 +434,7 @@ As we have discussed previously, in reciprocal space the Hamiltonian term involv
 
 In order to encode such Hamiltonian term, we will need to do some previous steps.
 
-The first step we need to do is to list all the possible hopping distances that can be found between this two EBRs. Obviously, that set will be infinite so we need to impose a particular cutoff. As explained above, we will impose it by constraining the hopping terms to a particular set of lattice translations — and obviously their symmetry partners. This complex structure is computed in the function `obtain_symmetry_related_hoppings`, where we provide a set of representatives of hopping distances which which is associated with a set of hopping terms that are symmetry related.
+The first step we need to do is to list all the possible hopping distances that can be found between these two EBRs. Obviously, that set will be infinite so we need to impose a particular cutoff. As explained above, we will impose it by constraining the hopping terms to a particular set of lattice translations — and obviously their symmetry partners. This complex structure is computed in the function `obtain_symmetry_related_hoppings`, where we provide a set of representatives of hopping distances which is associated with a set of hopping terms that are symmetry related.
 
 Within each representative we find different hopping distances $δs = [δ_1, δ_2, …, δ_n]$, which will be associated with different hopping terms:
 
