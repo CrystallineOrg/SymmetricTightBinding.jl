@@ -65,7 +65,7 @@ using GLMakie
 Em_fit = spectrum(ptbm_fit, kpi)
 plot(
     kpi, Em_ref, Em_fit;
-    color = [:gray, :crimson], linestyle = [nothing, :dash], linewidth = [5, 2]
+    color = [:gray, :crimson], linestyle = [nothing, :dash], linewidth = [5, 3]
 )
 ```
 
@@ -84,7 +84,7 @@ Em_short_fit = spectrum(ptbm_short_fit, kpi)
 
 plot(
     kpi, Em_long_ref, Em_short_fit;
-    color = [:gray, :crimson], linestyle = [nothing, :dash], linewidth = [5, 2]
+    color = [:gray, :crimson], linestyle = [nothing, :dash], linewidth = [5, 3]
 )
 ```
 
@@ -124,8 +124,8 @@ ptbm_6 = fit(truncated_chain(6), Em_1d, kpi_1d)
 
 faxp = plot(
     kpi_1d, Em_1d, spectrum(ptbm_2, kpi_1d), spectrum(ptbm_6, kpi_1d);
-    color = [:gray, :cornflowerblue, :crimson],
-    linestyle = [nothing, :dash, :dash], linewidth = [5, 2, 2],
+    color = [:gray, :royalblue, :crimson],
+    linestyle = [nothing, :dash, :dash], linewidth = [5, 3, 3],
     label = ["Reference", "Fit: 2 terms", "Fit: 6 terms"]
 )
 axislegend(; framevisible=false)
@@ -158,7 +158,7 @@ Here the reference was generated with next-nearest-neighbor hopping, so the erro
 
 ### Sparsity-encouraged fitting
 
-If we want to *encourage sparsity* -- letting the fit decide which longer-range terms are actually (or merely primarily) needed -- we can set the `lasso` keyword to a positive value ``\lambda``. This adds an ``\ell_1`` penalty ``\lambda\sum_i|c_i|`` to the loss, which shrinks weakly-supported amplitudes and, when successful, drives them to zero outright.
+If we want to *encourage sparsity* -- letting the fit decide which longer-range terms are actually (or merely primarily) needed -- we can set the `lasso` keyword to a positive value ``\lambda``. This adds an [``\ell_1`` penalty](https://en.wikipedia.org/wiki/Lasso_(statistics)) ``\lambda\sum_i|c_i|`` to the loss, which shrinks weakly-supported amplitudes and, when successful, drives them to zero outright.
 
 The setting this targets is the one described above: data produced by something other than a tight-binding model -- a DFT or other wave-equation calculation -- for which no finite-range parameterization is exact. There are then no "true" amplitudes to recover, and the goal shifts to finding the *simplest* model that still tracks the data closely. Since we cannot know in advance how many hopping ranges the data will support, the practical approach is to include generously many and let the penalty prune those that do not earn their place.
 
@@ -166,9 +166,9 @@ The setting this targets is the one described above: data produced by something 
     As a synthetic stand-in for such data, we generate a reference from a 20-term model whose five leading amplitudes are ``\mathcal{O}(1)`` and whose remaining fifteen form a small, long-ranged tail. We then fit it with a 15-term model: fewer terms than the reference, but still far more than we would like to end up with.
 
     ```@example fitting
-    ranges_20 = [[0,0], [1,0], [1,1], [1,2], [2,2], [0,3], [1,3], [2,3], [3,3], [1,4], [2,4]]
-    tbm_20 = tb_hamiltonian(cbr, ranges_20)      # reference model
-    tbm_15 = tb_hamiltonian(cbr, ranges_20[1:8]) # fitting model
+    Rs_20  = [[0,0], [1,0], [1,1], [1,2], [2,2], [0,3], [1,3], [2,3], [3,3], [1,4], [2,4]]
+    tbm_20 = tb_hamiltonian(cbr, Rs_20)      # reference model
+    tbm_15 = tb_hamiltonian(cbr, Rs_20[1:8]) # fitting model
     (length(tbm_20), length(tbm_15))
     ```
 
@@ -183,16 +183,16 @@ The setting this targets is the one described above: data produced by something 
 
     ```@example fitting
     Random.seed!(3)
-    ptbm_dense  = fit(tbm_15, Em_20, kpi)              # unpenalized
-    ptbm_sparse = fit(tbm_15, Em_20, kpi; lasso = 1.0) # ℓ₁-penalized
-    round.([ptbm_dense.cs ptbm_sparse.cs]; digits = 3) # amplitudes, side by side
+    ptbm_dense = fit(tbm_15, Em_20, kpi)              # unpenalized
+    ptbm_lasso = fit(tbm_15, Em_20, kpi; lasso = 1.0) # ℓ₁-penalized
+    round.([ptbm_dense.cs ptbm_lasso.cs]; digits = 3) # amplitudes, side by side
     ```
 
     The unpenalized fit puts amplitude on every term available to it, while the penalized fit switches a third of them off entirely:
 
     ```@example fitting
-    (dense  = count(>(1e-2), abs.(ptbm_dense.cs)),
-     sparse = count(>(1e-2), abs.(ptbm_sparse.cs)))
+    (dense = count(>(1e-3), abs.(ptbm_dense.cs)),
+     lasso = count(>(1e-3), abs.(ptbm_lasso.cs)))
     ```
 
     The spectral price for this is modest -- measured as an RMS energy error relative to the bandwidth of the reference bands:
@@ -200,14 +200,25 @@ The setting this targets is the one described above: data produced by something 
     ```@example fitting
     bandwidth = maximum(Em_20) - minimum(Em_20)
     rel_rms(ptbm) = 100norm(spectrum(ptbm, kpi) - Em_20) / sqrt(length(Em_20)) / bandwidth
-    (dense  = round(rel_rms(ptbm_dense);  sigdigits = 2), # RMS error, % of bandwidth
-     sparse = round(rel_rms(ptbm_sparse); sigdigits = 2))
+    (dense = round(rel_rms(ptbm_dense); sigdigits = 2), # RMS error, % of bandwidth
+     lasso = round(rel_rms(ptbm_lasso); sigdigits = 2))
     ```
 
-    Both models track the reference to well under 1% of its bandwidth, so the sparser one is arguably the better answer: it is very nearly as faithful, with a third fewer amplitudes to interpret.
+    Both models track the reference to well under 1% of its bandwidth, so the sparser one is arguably the better answer: it is very nearly as faithful, but involves only two thirds as many hopping terms. A visual comparison is instructive also:
+
+    ```@example fitting
+    faxp = plot(
+        kpi, Em_20, spectrum(ptbm_dense, kpi), spectrum(ptbm_lasso, kpi),
+        color = [:gray, :royalblue, :crimson],
+        linestyle = [nothing, :dash, :dash], linewidth = [5, 3, 3],
+        label = ["Reference", "Fit (dense)", "Fit (lasso)"]
+    )
+    axislegend(; framevisible = false, position = :cb)
+    faxp # hide
+    ```
 
 !!! warning "`lasso` is a blunt instrument"
-    The penalty's sparsifying tendency is not systematic. Whether a given term is driven to zero depends on ``\lambda``, on the model, and on which local minimum the search happens to settle in -- and the number of surviving terms need not even decrease monotonically with ``\lambda``. Treat `lasso` as a knob worth exploring rather than a dependable model-selection procedure, and always inspect the resulting spectrum and amplitudes.
+    The [Lasso](https://en.wikipedia.org/wiki/Lasso_(statistics)) penalty's sparsifying tendency is not systematic. Whether a given term is driven to zero depends on ``\lambda``, on the model, and on which local minimum the search happens to settle in -- and the number of surviving terms need not even decrease monotonically with ``\lambda``. Treat `lasso` as a knob worth exploring rather than a dependable model-selection procedure.
 
 ## Under the hood
 
