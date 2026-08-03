@@ -28,6 +28,13 @@
 # module code: `@eval`-ing into another (closed) module is disallowed during precompilation,
 # and extensions — unlike plain scripts — are precompiled.
 function __patch_optim_tr_subproblem!()
+    # `__init__` runs at precompile time too, whenever a *downstream* package (e.g.,
+    # PhotonicTightBinding.jl) is precompiled: this extension is then loaded into the
+    # precompilation process so it can be baked into that package's cache. `@eval`-ing into
+    # the closed `Optim` module errors there ("breaks incremental compilation"), so bail
+    # out — the patch is applied anew when the downstream package is actually loaded.
+    ccall(:jl_generating_output, Cint, ()) == 1 && return nothing
+
     _has_bug = if !isdefined(Optim, :solve_tr_subproblem!)
         false
     else
