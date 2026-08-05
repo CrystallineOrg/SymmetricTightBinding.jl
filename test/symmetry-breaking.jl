@@ -1,6 +1,7 @@
 using Test
 using SymmetricTightBinding
-using SymmetricTightBinding: _group_terms_by_block_and_orbit
+using SymmetricTightBinding: _group_terms_by_block_and_orbit, _subduced_complement,
+                             _issubgroup
 using Crystalline
 
 @testset "Symmetry breaking" begin
@@ -72,7 +73,19 @@ using Crystalline
         cbr = @composite brs[1] + brs[end-1] # (4d|A) + (2a|A₂) (3 bands)
         tbm = tb_hamiltonian(cbr, [[0,0,0],])
 
-        @test length(subduced_complement(tbm, 82)) == 2
+        Δtbm = subduced_complement(tbm, 82)
+        @test length(Δtbm) == 2
+
+        # completeness: `(4d|A)` of ⋕121 splits into `2c ⊕ 2d` in ⋕82, and `(2a|A₂)` maps
+        # to one of `(2a|A/B)`; every such 3-band composite of ⋕82 has 6 = 4 + 2 terms
+        brs82 = calc_bandreps(82, Val(3); timereversal = true)
+        for (i, j, k) in Iterators.product((4, 5), (1, 2), (10, 11)) # 2c, 2d, 2a
+            cbr82 = CompositeBandRep([n ∈ (i,j,k) ? 1 : 0 for n in eachindex(brs82)], brs82)
+            @test length(tb_hamiltonian(cbr82, [[0,0,0],])) == length(tbm) + length(Δtbm)
+        end
+
+        # having added the complement, there is nothing further to find in ⋕82
+        @test length(subduced_complement(vcat(tbm, Δtbm), 82)) == 0
     end
 
     @testset "composite band representations at a shared Wyckoff position" begin
@@ -98,7 +111,11 @@ using Crystalline
         # the complement must be *complete*: breaking time-reversal in G should give the
         # same number of terms as building the model without time-reversal from the start
         brs′ = calc_bandreps(47, Val(3); timereversal = false)
-        cbr′ = @composite brs′[57] + brs′[60] # same (1a|Ag) + (1a|B₁ᵤ) labels
+        cbr′ = @composite brs′[57] + brs′[60]
+        # ⋕57 & ⋕60 index the same band representations with and without time-reversal, but
+        # that is a property of `calc_bandreps`' ordering rather than something we control
+        @test string.((brs[57], brs[60])) == ("(1a|Ag)", "(1a|B₁ᵤ)")
+        @test string.((brs′[57], brs′[60])) == ("(1a|Ag)", "(1a|B₁ᵤ)")
         @test length(tb_hamiltonian(cbr′, Rs)) == length(tbm_nn) + length(Δtbm_nn)
 
         # the extended model must still be Hermitian
@@ -157,5 +174,17 @@ using Crystalline
         @test length(subduced_complement(tbm, 12; timereversal = false)) == 1 # break TR
         @test length(subduced_complement(tbm, 5)) == 2                       # break mirror
         @test length(subduced_complement(tbm, 8)) == 2                       # break C₂ & -1
+    end
+
+    @testset "subgroup precondition" begin
+        # `_subduced_complement` asserts that `gensᴴ` generate a subgroup of G, given in G's
+        # conventional setting; unreachable via `subduced_complement`, but check it can fire
+        brs2d = calc_bandreps(11, Val(2); timereversal = true) # p4mm
+        tbm = tb_hamiltonian((@composite brs2d[1]), [[0,0], [1,0]])
+
+        @test _issubgroup([S"y,x"], 11)     # mₓᵧ ∈ p4mm
+        @test !_issubgroup([S"-y,x+y"], 11) # 6⁺ ∉ p4mm
+        @test length(_subduced_complement(tbm, [S"y,x"])) isa Int
+        @test_throws AssertionError _subduced_complement(tbm, [S"-y,x+y"])
     end
 end
