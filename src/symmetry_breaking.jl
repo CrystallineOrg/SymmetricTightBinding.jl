@@ -101,20 +101,26 @@ function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) w
     _gensᴴ = generators(sgnumᴴ, SpaceGroup{D}) # in H setting
     gensᴴ = transform.(_gensᴴ, Ref(Pᴴ²ᴳ), Ref(pᴴ²ᴳ))
 
-    return subduced_complement(tbm, gensᴴ; kws...)
+    return _subduced_complement(tbm, gensᴴ; kws...)
 end
 
 """
-    subduced_complement(tbm::TightBindingModel{D}, gensᴴ::AbstractVector{SymOperation{D}};
-                        timereversal)                       --> TightBindingModel{D}
+    _subduced_complement(tbm::TightBindingModel{D}, gensᴴ::AbstractVector{SymOperation{D}};
+                         timereversal)                      --> TightBindingModel{D}
 
-Variant of [`subduced_complement`](@ref) taking the generators `gensᴴ` of the subgroup ``H``
-directly, rather than its space group number.
+Implementation of [`subduced_complement`](@ref), taking the generators `gensᴴ` of the
+subgroup ``H`` rather than its space group number.
 
-The generators must be given in the *conventional* setting of the original group ``G``
-(i.e., in the setting of `tbm`); they are converted internally to the primitive setting.
+`gensᴴ` must be given in the *conventional* setting of the original group ``G`` (i.e., in
+the setting of `tbm`); they are converted to the primitive setting internally. This is why
+the method is not part of the public API: obtaining `gensᴴ` in G's setting requires the
+transformation dance of the `sgnumᴴ` method, which is not reasonable to ask of a caller.
+
+!!! warning
+    This function is an internal helper function for `subduced_complement` and is not part
+    of the public API.
 """
-function subduced_complement(
+function _subduced_complement(
     tbm::TightBindingModel{D, S},
     gensᴴ::AbstractVector{SymOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal
@@ -126,12 +132,17 @@ function subduced_complement(
         )
     end
 
+    sgnumᴳ = num(tbm.cbr)
+    @assert _issubgroup(gensᴴ, sgnumᴳ) LazyString(
+        "`gensᴴ` must generate a subgroup of G (⋕", sgnumᴳ, ") and be given in G's \
+         conventional setting, but ", gensᴴ, " is not a subset of the operations of G")
+
     # the constraint machinery in `_obtain_basis_free_parameters` works in the primitive
     # setting (cf. `obtain_basis_free_parameters`), but `gensᴴ` is given in the conventional
     # setting of G: convert, lest we compare conventional-setting operations against the
     # primitivized site symmetry groups of `sgrep_induced_by_siteir` (which finds no
     # matching coset and errors out)
-    cntr = centering(num(tbm.cbr), D)
+    cntr = centering(sgnumᴳ, D)
     gensᴴ′ = cntr ∈ ('P', 'p') ? gensᴴ : primitivize.(gensᴴ, cntr)
 
     # we need to go through the terms of `tbm` in groups that share a coefficient basis -
@@ -251,6 +262,24 @@ function subduced_complement(
         end
     end
     return TightBindingModel{D, S}(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
+end
+
+"""
+    _issubgroup(gensᴴ::AbstractVector{SymOperation{D}}, sgnumᴳ::Int)  --> Bool
+
+Return whether every operation of `gensᴴ` is an operation of the space group `sgnumᴳ` (up to
+lattice translations), i.e., whether `gensᴴ` generates a subgroup ``H ≤ G``.
+
+`gensᴴ` is assumed given in the conventional setting of ``G``.
+
+!!! warning
+    This function is an internal helper function for `subduced_complement` and is not part
+    of the public API.
+"""
+function _issubgroup(gensᴴ::AbstractVector{SymOperation{D}}, sgnumᴳ::Int) where {D}
+    cntr = centering(sgnumᴳ, D)
+    opsᴳ = spacegroup(sgnumᴳ, Val(D))
+    return all(opᴴ -> any(opᴳ -> isapprox(opᴳ, opᴴ, cntr), opsᴳ), gensᴴ)
 end
 
 """
