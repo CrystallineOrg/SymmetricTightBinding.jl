@@ -101,10 +101,26 @@ function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) w
     _gensᴴ = generators(sgnumᴴ, SpaceGroup{D}) # in H setting
     gensᴴ = transform.(_gensᴴ, Ref(Pᴴ²ᴳ), Ref(pᴴ²ᴳ))
 
-    return subduced_complement(tbm, gensᴴ; kws...)
+    return _subduced_complement(tbm, gensᴴ; kws...)
 end
 
-function subduced_complement(
+"""
+    _subduced_complement(tbm::TightBindingModel{D}, gensᴴ::AbstractVector{SymOperation{D}};
+                         timereversal)                      --> TightBindingModel{D}
+
+Implementation of [`subduced_complement`](@ref), taking the generators `gensᴴ` of the
+subgroup ``H`` rather than its space group number.
+
+`gensᴴ` must be given in the *conventional* setting of the original group ``G`` (i.e., in
+the setting of `tbm`); they are converted to the primitive setting internally. This is why
+the method is not part of the public API: obtaining `gensᴴ` in G's setting requires the
+transformation dance of the `sgnumᴴ` method, which is not reasonable to ask of a caller.
+
+!!! warning
+    This function is an internal helper function for `subduced_complement` and is not part
+    of the public API.
+"""
+function _subduced_complement(
     tbm::TightBindingModel{D, S},
     gensᴴ::AbstractVector{SymOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal
@@ -116,23 +132,22 @@ function subduced_complement(
         )
     end
 
-    # we need to go through the terms of `tbm` in "groups of the same orbit" - each orbit
-    # will have some coefficient basis, and it is this basis we need to compare. So first,
-    # we figure out the groupings into these orbits by just looking at `tbt.block.h_orbit`
-    grouped_orbits_idxs = UnitRange{Int}[]
-    current_h_orbit = first(tbm.terms).block.h_orbit
-    i₁ = 1
-    i₂ = 0
-    for tbt in tbm.terms
-        if current_h_orbit == tbt.block.h_orbit
-            i₂ += 1
-        else
-            push!(grouped_orbits_idxs, i₁:i₂)
-            current_h_orbit = tbt.block.h_orbit
-            i₁ = i₂ = i₂ + 1
-        end
-    end
-    i₂ == length(tbm.terms) && push!(grouped_orbits_idxs, i₁:i₂)
+    sgnumᴳ = num(tbm.cbr)
+    @assert _issubgroup(gensᴴ, sgnumᴳ) LazyString(
+        "`gensᴴ` must generate a subgroup of G (⋕", sgnumᴳ, ") and be given in G's \
+         conventional setting, but ", gensᴴ, " is not a subset of the operations of G")
+
+    # the constraint machinery in `_obtain_basis_free_parameters` works in the primitive
+    # setting (cf. `obtain_basis_free_parameters`), but `gensᴴ` is given in the conventional
+    # setting of G: convert, lest we compare conventional-setting operations against the
+    # primitivized site symmetry groups of `sgrep_induced_by_siteir` (which finds no
+    # matching coset and errors out)
+    cntr = centering(sgnumᴳ, D)
+    gensᴴ′ = cntr ∈ ('P', 'p') ? gensᴴ : primitivize.(gensᴴ, cntr)
+
+    # we need to go through the terms of `tbm` in groups that share a coefficient basis -
+    # it is this basis we need to compare. So first, we figure out those groupings
+    grouped_orbits_idxs = _group_terms_by_block_and_orbit(tbm)
 
     # now we can compute a new coefficient basis in H and compare with our original basis,
     # progressing "group by group"
@@ -148,7 +163,7 @@ function subduced_complement(
             tbb.ordering1,
             tbb.ordering2,
             tbb.Mm,
-            gensᴴ,
+            gensᴴ′,
             timereversal,
             tbt.block_ij[1] == tbt.block_ij[2], #= .diagonal_block =#
             S,                                  #= hermiticity =#
@@ -156,10 +171,20 @@ function subduced_complement(
         # check output dimensions
         if length(tₐᵦ_basis_reimᴴ_vs) < length(idxs)
             error(
-                "unexpectedly found lower-dimensional basis space for model in subduced \
-                 group; unexpected and unhandled - make sure the generators are a subset \
-                 of the original generators (i.e., that fewer constraints apply than \
-                 originally)",
+                LazyString(
+                    "unexpectedly found lower-dimensional basis space for model in \
+                     subduced group (dim ",
+                    length(tₐᵦ_basis_reimᴴ_vs),
+                    " < ",
+                    length(idxs),
+                    " terms, for block ",
+                    tbt.block_ij,
+                    " & orbit ",
+                    representative(tbb.h_orbit),
+                    "); unexpected and unhandled - make sure the generators are a subset \
+                     of the original generators (i.e., that fewer constraints apply than \
+                     originally)",
+                ),
             )
         elseif length(tₐᵦ_basis_reimᴴ_vs) == length(idxs)
             continue # basis must then be unchanged; nothing to add for this index group
@@ -199,6 +224,10 @@ function subduced_complement(
                         Nᴴ,
                         " σs = ",
                         σs,
+                        ", for block ",
+                        tbt.block_ij,
+                        " & orbit ",
+                        representative(tbb.h_orbit),
                         ")",
                     ),
                 )
@@ -233,4 +262,52 @@ function subduced_complement(
         end
     end
     return TightBindingModel{D, S}(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
+end
+
+"""
+    _issubgroup(gensᴴ::AbstractVector{SymOperation{D}}, sgnumᴳ::Int)  --> Bool
+
+Return whether every operation of `gensᴴ` is an operation of the space group `sgnumᴳ` (up to
+lattice translations), i.e., whether `gensᴴ` generates a subgroup ``H ≤ G``.
+
+`gensᴴ` is assumed given in the conventional setting of ``G``.
+
+!!! warning
+    This function is an internal helper function for `subduced_complement` and is not part
+    of the public API.
+"""
+function _issubgroup(gensᴴ::AbstractVector{SymOperation{D}}, sgnumᴳ::Int) where {D}
+    cntr = centering(sgnumᴳ, D)
+    opsᴳ = spacegroup(sgnumᴳ, Val(D))
+    return all(opᴴ -> any(opᴳ -> isapprox(opᴳ, opᴴ, cntr), opsᴳ), gensᴴ)
+end
+
+"""
+    _group_terms_by_block_and_orbit(tbm::TightBindingModel{D})  --> Vector{Vector{Int}}
+
+Group the indices of the terms of `tbm` that share a coefficient basis, i.e., that share
+both a block (`block_ij`) and a hopping orbit (`h_orbit`). Groups are returned in order of
+first appearance.
+
+Note that it is not sufficient to group by `h_orbit` alone: distinct blocks whose band
+representations sit at the same Wyckoff position have equal (`==`) hopping orbits, since
+`HoppingOrbit` compares structurally. Nor can the terms of a group be assumed contiguous:
+models may be assembled by `vcat` or by indexing into an existing model.
+"""
+function _group_terms_by_block_and_orbit(tbm::TightBindingModel{D}) where {D}
+    idxs_groups = Vector{Int}[]
+    group_keys = Tuple{NTuple{2, Int}, HoppingOrbit{D}}[]
+    for (i, tbt) in enumerate(tbm.terms)
+        block_ij, h_orbit = tbt.block_ij, tbt.block.h_orbit
+        j = findfirst(group_keys) do (block_ij′, h_orbit′)
+            block_ij′ == block_ij && h_orbit′ == h_orbit
+        end
+        if isnothing(j)
+            push!(group_keys, (block_ij, h_orbit))
+            push!(idxs_groups, [i])
+        else
+            push!(idxs_groups[j], i)
+        end
+    end
+    return idxs_groups
 end
