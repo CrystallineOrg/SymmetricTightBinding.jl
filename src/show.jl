@@ -168,3 +168,16 @@ function Base.show(
     end
     print(io, "]")
 end
+
+
+# ---------------------------------------------------------------------------------------- #
+
+function Base.show(io::IO, cache::TightBindingCache{D, S}) where {D, S}
+    N = cache.tbm.N
+    Nᵏ = length(cache.ks)
+    print(io,
+        length(cache.tbm), "-term ", N, "×", N,
+        " TightBindingCache{", D, ", …} (", lowercase(string(S)), ") ",
+        "over ", Nᵏ, " k-point", Nᵏ == 1 ? "" : "s",
+    )
+end

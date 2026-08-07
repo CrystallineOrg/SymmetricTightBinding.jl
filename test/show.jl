@@ -85,15 +85,17 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
     end
 
     @testset "TightBindingCache" begin
-        str = """
-        TightBindingCache{2} over 2 k-points:
-         2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁)"""
-        test_tp_show(TightBindingCache(tbm, [[0.0, 0.0], [1/2, 0.0]]), str)
+        cache = TightBindingCache(tbm, [[0.0, 0.0], [1/2, 0.0]])
+        test_show(sprint(show, cache),
+                  "2-term 2×2 TightBindingCache{2, …} (hermitian) over 2 k-points")
 
-        str = """
-        TightBindingCache{2} over 1 k-point:
-         2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁)"""
-        test_tp_show(TightBindingCache(tbm, [[0.0, 0.0]]), str)
+        # `show` is defined for the 2-argument form, so the "text/plain" MIME rendering used
+        # by the REPL falls back to it rather than needing a method of its own
+        test_show(repr(MIME"text/plain"(), cache), sprint(show, cache))
+
+        cache¹ = TightBindingCache(tbm, [[0.0, 0.0]])
+        test_show(sprint(show, cache¹),
+                  "2-term 2×2 TightBindingCache{2, …} (hermitian) over 1 k-point") # singular
     end
 
     @testset "TightBindingElementString" begin

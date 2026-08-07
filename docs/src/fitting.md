@@ -139,6 +139,70 @@ round.([ptbm_6.cs tₙ.(0:6)]; sigdigits = 3) # fitted amplitudes vs. exact tₙ
 ```
 
 
+### An example with real data
+
+As a demonstration on non-synthetic data, we fit the band structure of face-centered cubic lead (Pb) near the Fermi level, using the reference data of [Wannier90's tutorial 2](https://github.com/wannier-developers/wannier90/tree/develop/tutorials/tutorial02) (four bands along L–Γ–X–U–Γ, [digitized](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/docs/src/assets/lead-wannier90-bands.dat) from its [`lead.pdf` example](https://github.com/wannier-developers/wannier90/blob/e9f448e1ff4199ab5f983ec7265adca06b6363e8/docs/solution_booklet/figure/example02/lead.pdf)).
+Full details in the fold-out below.
+
+!!! details "Example: the band structure of lead"
+    The four bands associate with an *sp*³ orbital set at the 4a Wyckoff position of space group 225 (*Fm*-3*m*), which, in the EBR language corresponds to the (4a|A₁g) ⊕ (4a|T₁ᵤ) band representations:
+
+    ```@example fitting
+    sgnum = 225
+    brs_pb = calc_bandreps(sgnum, Val(3))
+    cbr_pb = @composite brs_pb[end-9] + brs_pb[end-2] # (4a|A₁g) ⊕ (4a|T₁ᵤ)
+    ```
+
+    Next, we load the reference band structure data from a stored .dat file:
+    ```@example fitting
+    using DelimitedFiles
+
+    Em_pb = readdlm(joinpath(pkgdir(SymmetricTightBinding), "docs", "src", "assets",
+                             "lead-wannier90-bands.dat"), Float64; comments = true)
+    size(Em_pb) # 379 k-points × 4 bands (eV)
+    ```
+
+    The corresponding reference **k**-path is a uniform sampling of the L–Γ–X–U–Γ path, which we reconstruct manually:
+
+    ```@example fitting
+    using Crystalline: SVector
+
+    points = Dict(:Γ => SVector(0.0, 0, 0), :L => SVector(0.5, 0.5, 0.5),
+                  :X => SVector(0.5, 0, 0.5), :U => SVector(0.625, 0.25, 0.625))
+    labels = Dict(1 => :L, 101 => :Γ, 216 => :X, 257 => :U, 379 => :Γ)
+    kpaths = vcat(range(points[:L], points[:Γ], 101-1+1)[1:end-1],
+                  range(points[:Γ], points[:X], 216-101+1)[1:end-1],
+                  range(points[:X], points[:U], 257-216+1)[1:end-1],
+                  range(points[:U], points[:Γ], 379-257+1)[1:end])
+    Gs = primitivize(dualbasis(directbasis(sgnum, Val(3))), centering(sgnum, 3)) # recip. lattice
+    kpi_pb = KPathInterpolant([kpaths], [labels], Gs, Ref(Brillouin.LATTICE))
+    nothing # hide
+    ```
+
+    We then build a model with hoppings along the [100] direction out to two cells. Of the resulting 12 terms, 3 carry negligible amplitude (identified by a `lasso`-penalized trial fit) and are dropped. Finally, we fit the model to the reference data and compare the fit and reference visually:
+
+    ```@example fitting
+    tbm_pb_full = tb_hamiltonian(cbr_pb, [[0,0,0], [1,0,0], [2,0,0]])
+    tbm_pb = tbm_pb_full[[1:6..., 8, 9, 11]] # drop neglible terms
+    Random.seed!(1)
+    ptbm_pb = fit(tbm_pb, Em_pb, kpi_pb; max_multistarts = 50)
+    ```
+
+    ```@example fitting
+    E_F = 5.27 # Fermi level (eV)
+    faxp = plot(
+        kpi_pb, fill(E_F, length(kpi_pb), 1), Em_pb, spectrum(ptbm_pb, kpi_pb);
+        ylabel = "Energy (eV)", label = [rich("E", subscript("F")), "Reference", "Fit"],
+        color = [:gray50, :gray, :crimson], linewidth = [1, 5, 3],
+        linestyle = [:dash, nothing, :dash]
+    )
+    axislegend(; framevisible = false, position = (:center, :top))
+    faxp # hide
+    ```
+
+    The agreement is good across the entire k-path, even with just 9 amplitudes. It must be noted, however, that the reference data is itself Wannier-interpolated, i.e., is effectively already a (long-ranged) tight-binding model: a genuinely *ab initio* reference would in general be harder to fit this readily, mainly due to the difficulty of first obtaining a set of spectrally isolated bands.
+
+
 ## Choosing the number of terms
 
 The set of hopping ranges passed to [`tb_hamiltonian`](@ref) determines how many free amplitudes the fit has to work with. Too few, and the model cannot represent the reference; too many, and one runs the risk of overfitting (and, in addition, a more challenging fitting convergence due to a preponderance of local minima). A useful diagnostic is to fit models of increasing range and monitor the residual error:
@@ -219,65 +283,6 @@ The setting this targets is the one described above: data produced by something 
 
 !!! warning "`lasso` is a blunt instrument"
     The [Lasso](https://en.wikipedia.org/wiki/Lasso_(statistics)) penalty's sparsifying tendency is not systematic. Whether a given term is driven to zero depends on ``\lambda``, on the model, and on which local minimum the search happens to settle in -- and the number of surviving terms need not even decrease monotonically with ``\lambda``. Treat `lasso` as a knob worth exploring rather than a dependable model-selection procedure.
-
-## An example with real data
-
-As a demonstration on non-synthetic data, we fit the band structure of face-centered cubic lead (Pb) near the Fermi level, using the reference data of [Wannier90's tutorial 2](https://github.com/wannier-developers/wannier90/tree/develop/tutorials/tutorial02) (four bands along L–Γ–X–U–Γ, digitized from its `lead.pdf` figure and included [here](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/blob/main/docs/src/assets/lead-wannier90-bands.dat)).
-
-!!! details "Example: the band structure of lead"
-    The four bands originate from the *sp*³ manifold at the 4a Wyckoff position of space group 225 (*Fm*-3*m*), which decomposes into the (4a|A₁g) ⊕ (4a|T₁ᵤ) band representations:
-
-    ```@example fitting
-    using DelimitedFiles
-
-    sgnum = 225
-    brs_pb = calc_bandreps(sgnum, Val(3))
-    cbr_pb = @composite brs_pb[end-9] + brs_pb[end-2] # (4a|A₁g) ⊕ (4a|T₁ᵤ)
-    ```
-
-    The reference **k**-path is a uniform sampling of the L–Γ–X–U–Γ path, which we reconstruct explicitly (379 points in total, with 101, 116, 42, and 123 points per segment, end-points included):
-
-    ```@example fitting
-    using Crystalline: SVector
-
-    kvs = Dict(:Γ => SVector(0.0, 0, 0),   :L => SVector(0.5, 0.5, 0.5),
-               :X => SVector(0.5, 0, 0.5), :U => SVector(0.625, 0.25, 0.625))
-    labs, Ns = [:L, :Γ, :X, :U, :Γ], [101, 116, 42, 123]
-    ks = mapreduce(vcat, 1:4) do i
-        seg = range(kvs[labs[i]], kvs[labs[i+1]], Ns[i])
-        i == 4 ? seg : seg[1:end-1] # drop the end-point shared with the next segment
-    end
-    Gs = primitivize(dualbasis(directbasis(sgnum, Val(3))), centering(sgnum, 3))
-    kpi_pb = KPathInterpolant([ks], [Dict(1 => :L, 101 => :Γ, 216 => :X, 257 => :U, 379 => :Γ)],
-                              Gs, Ref(Brillouin.LATTICE))
-
-    Em_pb = readdlm(joinpath(pkgdir(SymmetricTightBinding), "docs", "src", "assets",
-                             "lead-wannier90-bands.dat"), Float64; comments = true)
-    size(Em_pb) # 379 k-points × 4 bands (eV)
-    ```
-
-    We then build a model with hoppings along the [100] direction out to two cells and fit it. Of the resulting 12 terms, 3 carry negligible amplitude (identified by a `lasso`-penalized trial fit) and are dropped, leaving a 9-term model:
-
-    ```@example fitting
-    tbm_pb = tb_hamiltonian(cbr_pb, [[0,0,0], [1,0,0], [2,0,0]])[[1:6..., 8, 9, 11]]
-    Random.seed!(1)
-    ptbm_pb = fit(tbm_pb, Em_pb, kpi_pb; max_multistarts = 50)
-    nothing # hide
-    ```
-
-    ```@example fitting
-    E_F = 5.27 # Fermi level (eV)
-    faxp = plot(
-        kpi_pb, fill(E_F, length(kpi_pb), 1), Em_pb, spectrum(ptbm_pb, kpi_pb);
-        ylabel = "Energy (eV)", label = [rich("E", subscript("F")), "Reference", "Fit"],
-        color = [:gray50, :gray, :crimson], linewidth = [1, 5, 3],
-        linestyle = [:dash, nothing, :dash]
-    )
-    axislegend(; framevisible = false, position = (:center, :top))
-    faxp # hide
-    ```
-
-    The agreement is good across the entire path, from just 9 amplitudes. Note, however, that the reference data is itself Wannier-interpolated, i.e., is effectively already a (long-ranged) tight-binding model: a genuinely *ab initio* reference would generally be harder to match this closely.
 
 ## Under the hood
 

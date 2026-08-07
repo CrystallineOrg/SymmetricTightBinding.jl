@@ -27,7 +27,6 @@ export Hermiticity, HERMITIAN, ANTIHERMITIAN, NONHERMITIAN
 export hermiticity
 export TightBindingModel
 export ParameterizedTightBindingModel
-include("show.jl")
 include("site_representations.jl")
 export sgrep_induced_by_siteir
 include("tightbinding.jl")
@@ -59,6 +58,7 @@ include("dos.jl")
 export densityofstates
 include("symmetry_breaking.jl")
 export subduced_complement
+include("show.jl")
 
 # --- Re-exports ------------------------------------------------------------------------- #
 

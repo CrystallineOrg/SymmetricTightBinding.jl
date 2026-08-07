@@ -1,6 +1,8 @@
 # Band energies (eV) of lead (Pb) from Wannier90's tutorial 02, digitized from the
-# `lead.pdf` figure of https://github.com/wannier-developers/wannier90/tree/develop/tutorials/tutorial02
-# 379 k-points (rows) along L-Γ-X-U-Γ × 4 bands (columns, ascending).
+# `lead.pdf` figure associated with https://github.com/wannier-developers/wannier90/tree/develop/tutorials/tutorial02
+# [at https://github.com/wannier-developers/wannier90/blob/e9f448e1ff4199ab5f983ec7265adca06b6363e8/docs/solution_booklet/figure/example02/lead.pdf]
+# 379 k-points (rows) along L-Γ-X-U-Γ × 4 bands (columns, ascending), with special
+# k-points at 1 (L), 101 (Γ), 216 (X), 257 (U), 379 (Γ) and Fermi energy at 5.27 eV.
   -2.7521    1.1671   10.8357   10.8357
   -2.7594    1.1671   10.8357   10.8357
   -2.7666    1.1815   10.8429   10.8429
