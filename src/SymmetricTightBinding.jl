@@ -27,7 +27,6 @@ export Hermiticity, HERMITIAN, ANTIHERMITIAN, NONHERMITIAN
 export hermiticity
 export TightBindingModel
 export ParameterizedTightBindingModel
-include("show.jl")
 include("site_representations.jl")
 export sgrep_induced_by_siteir
 include("tightbinding.jl")
@@ -49,6 +48,8 @@ export energy_gradient_wrt_hopping
 export gradient_wrt_momentum
 export TightBindingModelMomentumGradient
 export energy_gradient_wrt_momentum
+include("caching.jl")
+export TightBindingCache
 include("berry.jl")
 export berrycurvature
 export chern
@@ -57,6 +58,7 @@ include("dos.jl")
 export densityofstates
 include("symmetry_breaking.jl")
 export subduced_complement
+include("show.jl")
 
 # --- Re-exports ------------------------------------------------------------------------- #
 
@@ -64,8 +66,12 @@ export collect_compatible, collect_irrep_annotations # extended functions from C
 
 # --- Function defs. & exports for extensions -------------------------------------------- #
 
-function fit end # for Optim.jl extension
-export fit
+# fitting functionality; all implemented in the Optim.jl extension
+function fit end
+function multistart_fit end     # ┐ stubs, overloaded in the extension, so that the fitting
+function make_fit_objective end # │ machinery can be reused from dependent packages (e.g.,
+function spectralmoments end    # ┘ PhotonicTightBinding.jl) without `Base.get_extension`
+export fit, multistart_fit, make_fit_objective
 
 # ---------------------------------------------------------------------------------------- #
 end # module

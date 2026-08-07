@@ -4,7 +4,7 @@ SymmetricTightBinding.jl provides tools for the construction and manipulation of
 
 Put more simply, SymmetricTightBinding.jl will automatically generate all possible tight-binding Hamiltonians that are compatible with a global (space group) symmetry, as well as a selection of orbitals with specified local symmetries (i.e., transforming as specific site symmetry irreps), each situated at specified positions in the unit cell (i.e., at specific Wyckoff positions).
 
-The underlying physics is that the Bloch Hamiltonian of a Wannierizable set of bands must transform under under a site-symmetry induced representation (also called band representation) $D(g)$ for operations $g$ in the associated space group. That is, the Bloch Hamiltonian $\mathbf{h}(\mathbf{k})$ must be symmetric in the sense:
+The underlying physics is that the Bloch Hamiltonian of a Wannierizable set of bands must transform under a site-symmetry induced representation (also called band representation) $D(g)$ for operations $g$ in the associated space group. That is, the Bloch Hamiltonian $\mathbf{h}(\mathbf{k})$ must be symmetric in the sense:
 
 ```math
 \mathbf{D}_\mathbf{k}(g) \mathbf{h}_{\mathbf{k}} \mathbf{D}_\mathbf{k}^\dagger(g) = \mathbf{h}_{g\mathbf{k}}

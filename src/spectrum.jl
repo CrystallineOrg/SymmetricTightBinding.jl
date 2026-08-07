@@ -21,8 +21,8 @@ bands. If `S == HERMITIAN`, the element types (energies) are `Float64`, and othe
 
 ## Example
 
-As an example, we evaluating the band structure of graphene.
-Below, we first construct and parameterize a tight-binding model for the the (2b|A₁) EBR in
+As an example, we evaluate the band structure of graphene.
+Below, we first construct and parameterize a tight-binding model for the (2b|A₁) EBR in
 plane group 17, corresponding to the highest-lying orbitals in graphene.
 Next, we construct a path along high-symmetry directions of the Brillouin zone using
 [Brillouin.jl](https://github.com/thchr/Brillouin.jl), calculate the spectrum across this

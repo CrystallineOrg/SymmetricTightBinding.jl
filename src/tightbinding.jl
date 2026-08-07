@@ -1053,7 +1053,7 @@ NB: This is equivalent to `occupation(br)`..!
 function occupation(br::NewBandRep{D}) where {D}
     mult = multiplicity(position(br)) # multiplicity in conventional setting
     # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
-    # divide by the the number of centering-translations
+    # divide by the number of centering-translations
     cntr = centering(num(br), D)
     denom = centering_volume_fraction(cntr, Val(D), Val(D))
     mult = div(mult, denom)

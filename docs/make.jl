@@ -1,5 +1,6 @@
 using Documenter
 using SymmetricTightBinding
+using Optim # load the Optim extension so its docstrings (`fit`, …) are available to `@docs`
 
 # use SymmetricTightBinding as the default module for doctests, and also load Crystalline
 DocMeta.setdocmeta!(
@@ -12,7 +13,13 @@ DocMeta.setdocmeta!(
 makedocs(;
     sitename = "SymmetricTightBinding.jl",
     authors = "Antonio Morales Perez <antonio.morales@dipc.org>, Thomas Christensen <thomas@dtu.dk>, and contributors",
-    modules = [SymmetricTightBinding],
+    # `fit` & `multistart_fit` are stubs in the main package, with their methods and
+    # docstrings attached in the Optim extension; that module must be listed here for
+    # Documenter to find those docstrings
+    modules = [
+        SymmetricTightBinding,
+        Base.get_extension(SymmetricTightBinding, :SymmetricTightBindingOptimExt),
+    ],
     repo = Remotes.GitHub("CrystallineOrg", "SymmetricTightBinding.jl"),
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", nothing) == "true",
@@ -27,6 +34,7 @@ makedocs(;
         "Density of states" => "dos.md",
         "Symmetry breaking" => "symmetry-breaking.md",
         "Non-Hermitian models" => "nonhermitian.md",
+        "Fitting to band structures" => "fitting.md",
         "API" => "api.md",
         "Internal API" => "internal-api.md",
         "Theory" => "theory.md",

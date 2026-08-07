@@ -3,7 +3,7 @@
                                                         --> TightBindingModel{D}
 
 Given a model `tbm` associated with a space group ``G``, determine the new, independent
-tight-binding terms (i.e., the the orthogonal complement of terms) that become 
+tight-binding terms (i.e., the orthogonal complement of terms) that become 
 symmetry-allowed when the model's space group is reduced to a subgroup ``H ≤ G`` with space
 group number `sgnumᴴ` and time-reversal symmetry `timereversal`.
 

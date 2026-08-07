@@ -384,9 +384,9 @@ evaluation at input momenta `k`.
 
 ## Functor over momenta
 
-A `ParameterizedTightBindingModel` `ptbm` can be be evaluated at any ´D`-dimensional
+A `ParameterizedTightBindingModel` `ptbm` can be evaluated at any `D`-dimensional
 momentum `k` by using `ptbm` as a functor. That is, `ptbm(k)` returns a numerical
-representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.`
+representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.
 """
 struct ParameterizedTightBindingModel{D, S}
     tbm::TightBindingModel{D, S}
