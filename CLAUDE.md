@@ -84,18 +84,20 @@ ext/
   SymmetricTightBindingMakieExt.jl   # Makie visualization recipes
   SymmetricTightBindingOptimExt.jl   # Optim.jl fitting
 test/
-  runtests.jl               # test runner
+  runtests.jl               # test runner; `TESTFILES` + selector logic (see "Running tests")
   pg_tb_hamiltonian.jl      # plane group tests (graphene, p4mm, p3, p2)
   sg_tb_hamiltonian.jl      # space group tests (SG 2, 16, 47, 225; 1D SG 2)
   site_representations.jl   # representation matrix tests
   symmetry-breaking.jl      # subduced complement tests
-  symmetry_analysis.jl      # comprehensive symmetry tests (commented out; see PR #89)
-  symmetry_analysis_stopgap.jl # interim symmetry vector tests (see PR #89)
+  symmetry_analysis.jl      # ⚠️ full sweep over every EBR of every SG in 1D-3D; very slow
+  symmetry_analysis_manual.jl # paired-down, manual version of above (see PR #89)
   berry.jl                  # Berry curvature + Chern number tests
   dos.jl                    # density of states (per-cell formula + sum-rule tests)
   spectrum.jl               # band eigenvalue tests
   show.jl                   # regression tests for show/summary methods
+  nonhermitian.jl           # NONHERMITIAN model tests
   gradients.jl              # hopping/momentum gradient tests
+  misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough
   theory.md                 # mathematical framework (polished)
@@ -111,18 +113,34 @@ docs/src/
 
 ## Running tests
 
+**Do not run the full test suite to check a limited change.** `test/symmetry_analysis.jl`
+constructs a tight-binding model for every EBR of every space group in 1D, 2D, and 3D. It
+dominates the suite, taking tens of minutes to hours of CPU time and a great deal of memory
+— enough that a full run will often stall or be OOM-killed rather than finish. Leave the
+full sweep to CI.
+
+Instead, run only the test files that cover what you changed, by passing selectors to
+`Pkg.test`:
+
 ```bash
 cd /path/to/SymmetricTightBinding
-julia --project -e 'using Pkg; Pkg.test()'
+julia --project -e 'using Pkg; Pkg.test(; test_args = ["show", "gradients"])'
 ```
 
-Or interactively:
-```julia
-using Pkg; Pkg.activate(".")
-include("test/runtests.jl")
+Selectors are matched as substrings against the file names listed in `TESTFILES` at the top
+of `test/runtests.jl` (so `"symmetry_analysis"` selects both symmetry-analysis files). A
+selector that matches nothing is an error, so a typo fails loudly instead of quietly running
+no tests. With no arguments, every file runs — which is what CI does:
+
+```bash
+julia --project -e 'using Pkg; Pkg.test()'   # full suite; expect it to be very slow
 ```
 
-Tests take ~2 minutes.
+Two practical notes when running tests non-interactively:
+- Redirecting output to a file block-buffers stdout, so per-file `Test Summary:` lines do
+  not appear until the process exits. A silent log is not evidence of a hang.
+- `Pkg.test` runs the suite in a subprocess with `--check-bounds=yes`, which makes the
+  numerically heavy tests substantially slower than an interactive `include`.
 
 ## Known issues
 
@@ -153,7 +171,7 @@ analysis fix). Remaining: Phase 5 (refactoring).
 - The codebase uses Convention 1 Fourier transform everywhere; be careful with phases
 - Prefer using Crystalline.jl's API over reimplementing group-theoretic operations
 - Don't add new functionality without tests
-- Always run tests after making changes
+- Always run tests after making changes — but only the relevant ones; see "Running tests"
 - Keep comments brief but include enough detail for non-obvious physics/math
 - Work in separate branches for each groupable change (for PR review with collaborators)
 
