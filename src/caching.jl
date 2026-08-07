@@ -107,3 +107,10 @@ function energy_gradient_wrt_hopping(
 
     return eachcol(∇ᶜEs)
 end
+
+# (kept here, rather than in show.jl, since `caching.jl` is included after `show.jl`)
+function Base.show(io::IO, ::MIME"text/plain", cache::TightBindingCache{D}) where {D}
+    Nᵏ = length(cache.ks)
+    print(io, "TightBindingCache{", D, "} over ", Nᵏ, " k-point", Nᵏ == 1 ? "" : "s", ":\n ")
+    summary(io, cache.tbm)
+end

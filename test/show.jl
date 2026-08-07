@@ -84,6 +84,18 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         test_tp_show(ptbm, str)
     end
 
+    @testset "TightBindingCache" begin
+        str = """
+        TightBindingCache{2} over 2 k-points:
+         2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁)"""
+        test_tp_show(TightBindingCache(tbm, [[0.0, 0.0], [1/2, 0.0]]), str)
+
+        str = """
+        TightBindingCache{2} over 1 k-point:
+         2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁)"""
+        test_tp_show(TightBindingCache(tbm, [[0.0, 0.0]]), str)
+    end
+
     @testset "TightBindingElementString" begin
         context = :color => true # enable color (ANSI codes) in `sprint` below
         @test sprint(show, TightBindingElementString("c₁e(δ₁)", true);  context) == "\e[34mc₁e(δ₁)\e[39m" # `active = true`  => blue

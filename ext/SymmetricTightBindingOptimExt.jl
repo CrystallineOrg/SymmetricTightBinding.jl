@@ -72,12 +72,6 @@ function fgh!(
     return F
 end
 
-# value-only loss evaluation (hits `fgh!`'s eigenvalue-only fast-path); used by
-# global-search stages that only need to rank candidate coefficient vectors
-function f(cs, cache::TightBindingCache, Em_r; lasso::Union{Nothing,Real} = nothing)
-    return fgh!(0.0, nothing, nothing, cs, cache, Em_r; lasso)
-end
-
 """
     make_fit_objective(_fgh!)
     make_fit_objective(cache::TightBindingCache, Em_r; lasso=nothing)
