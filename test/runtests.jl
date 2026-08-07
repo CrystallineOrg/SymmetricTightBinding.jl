@@ -1,109 +1,55 @@
 using SymmetricTightBinding, Test
 
-include("pg_tb_hamiltonian.jl")    # plane groups
-include("sg_tb_hamiltonian.jl")    # space groups
-include("site_representations.jl") # site representations
-include("symmetry-breaking.jl")    # symmetry breaking
-include("berry.jl")                # berry curvature and chern numbers
-include("dos.jl")                  # density of states (Gilat–Raubenheimer)
-include("spectrum.jl")             # spectrum evaluation
-include("show.jl")                 # show/display methods
-include("nonhermitian.jl")         # NONHERMITIAN models
-include("gradients.jl")            # hopping and momentum gradients
-include("fitting.jl")              # fitting (Optim extension) + TightBindingCache
-include("symmetry_analysis.jl")    # each tb model is symmetry compatible w/ its constituent EBRs
-include("symmetry_analysis_manual.jl") # paired-down, manual version of above, testing individual cases
+# The test files, in run order. `Pkg.test` forwards its `test_args` here as `ARGS`: with no
+# arguments every file runs, while each argument selects a file, and each "-"-prefixed
+# argument excludes one. Exclusions alone run everything else; alongside inclusions, they are
+# subtracted from those. A selector must name a file below exactly, with or without its ".jl"
+# extension; anything else is an error.
+#
+#     Pkg.test(; test_args = ["show", "gradients"])   # just these two
+#     Pkg.test(; test_args = ["-symmetry_analysis"])  # all but the slow sweep
+#
+# CLAUDE.md's "Running tests" gives per-file timings and the recommended local invocation.
+const TESTFILES = [
+    "pg_tb_hamiltonian.jl",        # plane groups
+    "sg_tb_hamiltonian.jl",        # space groups
+    "site_representations.jl",     # site representations
+    "symmetry-breaking.jl",        # symmetry breaking
+    "berry.jl",                    # berry curvature and chern numbers
+    "dos.jl",                      # density of states (Gilat–Raubenheimer)
+    "spectrum.jl",                 # spectrum evaluation
+    "show.jl",                     # show/display methods
+    "nonhermitian.jl",             # NONHERMITIAN models
+    "gradients.jl",                # hopping and momentum gradients
+    "fitting.jl",                  # fitting (Optim extension) + TightBindingCache
+    "symmetry_analysis.jl",        # ⚠️ every EBR of every SG in 1D-3D; minutes to hours
+    "symmetry_analysis_manual.jl", # paired-down, manual version of above, individual cases
+    "misc.jl",                     # AbstractArray interface & assorted issue regressions
+]
 
-@testset "AbstractArray interface" begin
-    brs = calc_bandreps(16, Val(2))
-    cbr = @composite brs[3]
-    tbm = tb_hamiltonian(cbr, [[0,0],[1,0]])
-    @testset "AbstractArray indexing into TightBindingModel" begin
-        @test length(tbm) == 4
-        tbm_subset1 = tbm[1:3]
-        tbm_subset2 = tbm[[1,2,3]]
-        @test length(tbm_subset1) == 3
-        @test tbm_subset1 == tbm_subset2
-        tbm_subset3 = tbm[[1, 4]]
-        @test length(tbm_subset3) == 2
-        @test tbm_subset3[1] == tbm[1] && tbm_subset3[2] == tbm[4]
-
-        # sub-selection preserves type
-        @test typeof(tbm_subset1) == typeof(tbm_subset2) == typeof(tbm)
-    end
-
-    @testset "Concatenation of TightBindingModels (`vcat`)" begin
-        @test vcat(tbm[1:2], tbm[3:4]) == tbm
-        @test vcat(tbm[1:2], tbm[3:3]) == tbm[1:3]
-        @test vcat(tbm[1:2], tbm[4:4]) != tbm
-    end
+"Resolve a selector to the test file it names, erroring if it names none."
+function match_testfile(selector)
+    testfile = endswith(selector, ".jl") ? selector : selector * ".jl"
+    testfile ∈ TESTFILES || error(
+        "unknown test selector \"$selector\"; must name one of: $(join(TESTFILES, ", "))")
+    return testfile
 end
 
-@testset "Issue #73: multi-EBR without TR" begin
-    sgnum = 22
-    brs = calc_bandreps(sgnum, Val(3); timereversal=false)
-    cbr = @composite brs[9]+brs[9+4] # (4b|A) + (4a|A) (2 bands)
-    # simply test that it doesn't error
-    @test tb_hamiltonian(cbr, [[1,1,1]]) isa TightBindingModel
-end
-
-@testset "Issue #85" begin
-    sgnum = 4
-    brs = calc_bandreps(sgnum, Val(2))
-
-    # Sub-issue 1: Wyckoff positions in orbit outside primitive unit cell [0,1)ᴰ
-    br_small_αβγ = SymmetricTightBinding.pin_free(brs[1], [.1, .2])
-    orbit_small_αβγ = orbit(group(br_small_αβγ))
-    @test all(q -> all(qᵢ -> 0 ≤ qᵢ < 1, q()), orbit_small_αβγ)
-
-    br_big_αβγ = SymmetricTightBinding.pin_free(brs[1], [.9, .8])
-    orbit_big_αβγ = orbit(group(br_big_αβγ))
-    @test all(q -> all(qᵢ -> 0 ≤ qᵢ < 1, q()), orbit(group(br_big_αβγ)))
-
-    # Sub-issue 2: missing merging of time-reversal related "partial" orbits
-    for br in [br_small_αβγ, br_big_αβγ]
-        h_orbits = obtain_symmetry_related_hoppings([[0,0]], br, br)
-        @test length(h_orbits) == 2
-        @test length(h_orbits[1].orbit) == 1 # on-site
-        @test length(h_orbits[2].orbit) == 4 # hopping; combination of two orbits, merged by TR
+function select_testfiles(args)
+    isempty(args) && return TESTFILES
+    included, excluded = String[], String[]
+    for arg in args
+        if startswith(arg, '-')
+            push!(excluded, match_testfile(arg[nextind(arg, 1):end]))
+        else
+            push!(included, match_testfile(arg))
+        end
     end
+    isempty(included) && (included = TESTFILES) # exclusions alone ⇒ run everything else
+    # filtering over `TESTFILES` de-duplicates and restores the canonical run order
+    return filter(testfile -> testfile ∈ included && testfile ∉ excluded, TESTFILES)
 end
 
-@testset "Finnicky case in space group 153 (PR 88)" begin
-    # issue related to a zero translation vector R being detected as different across
-    # hopping terms, due to small numerical floating point differences; fixed in PR #87
-    sgnum = 153
-    brs = calc_bandreps(sgnum, Val(3))
-    cbr = @composite brs[3]
-    br = brs[3]
-    h_orbits = obtain_symmetry_related_hoppings([[0,0,0]], br, br)
-    for h_orbit in h_orbits
-        # check we have consistent number (i.e., the same) of hoppings per orbit element
-        hoppings = h_orbit.hoppings
-        N = length(first(hoppings))
-        @test all(h -> length(h) == N, hoppings)
-    end
-end
-
-@testset "≥ 2 Wyckoff position diagonal-block hermiticity-paired hoppings" begin
-    # this is a corner-case related to the hermiticity-pairing of hoppings in an orbit;
-    # previously, it was such that the last term of `tbm` below (5th term) could only be
-    # generated by specifying `Rs` as containing _both_ `[1,0]` _and_ `[-1,0]`; this
-    # only manifested in diagonal blocks featuring an EBR with more than one Wyckoff pos.
-    
-    # the test below checks that the term is generated always for `Rs` containing `[1,0]`
-    # example is from docs/src/nonhermitian.md
-    brs = calc_bandreps(10, Val(2); timereversal = true)
-    cbr = @composite brs[1] # (2c|A)
-    tbm = tb_hamiltonian(cbr, [[1,0]])
-    @test length(tbm) == 4
-    tbt = tbm[3] # diagonally-directed hopping term, embodying the issue
-    @test length(orbit(tbt.block.h_orbit)) == 4
-    @test all(hops -> length(hops) == 2, tbt.block.h_orbit.hoppings)
-    @test RVec{2}([3/2, -1/2]) ∈ orbit(tbt.block.h_orbit)
-
-    # also check non-Hermitian counterpart: there are two off-diagonal hopping terms above,
-    # each of which split under non-Hermitian conditions, so we should have 5+2=7 terms
-    tbm_NH = tb_hamiltonian(cbr, [[1,0]], Val(NONHERMITIAN))
-    @test length(tbm_NH) == 6
+for testfile in select_testfiles(ARGS)
+    include(testfile)
 end
