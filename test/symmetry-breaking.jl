@@ -1,7 +1,7 @@
 using Test
 using SymmetricTightBinding
 using SymmetricTightBinding: _group_terms_by_block_and_orbit, _subduced_complement,
-                             _issubgroup
+                             _issubgroup, _subduction_groups
 using Crystalline
 
 @testset "Symmetry breaking" begin
@@ -174,6 +174,97 @@ using Crystalline
         @test length(subduced_complement(tbm, 12; timereversal = false)) == 1 # break TR
         @test length(subduced_complement(tbm, 5)) == 2                       # break mirror
         @test length(subduced_complement(tbm, 8)) == 2                       # break C₂ & -1
+    end
+
+    @testset "orbits that are empty in the parent group (issue #117)" begin
+        # a (block, orbit) pair on which *every* coefficient is forbidden in G carries no
+        # term, and so cannot be found without `Rs` - even though the symmetry reduction
+        # may be exactly what allows it
+        Rs = [[0,0,0], [1,0,0], [0,1,0], [0,0,1]]
+        brs = calc_bandreps(47, Val(3); timereversal = true) # P4/mmm
+        cbr = @composite brs[57] + brs[60] # (1a|Ag) + (1a|B₁ᵤ): s & p_z on a shared site
+        tbm = tb_hamiltonian(cbr, Rs)
+        @test length(tbm) == 9
+
+        # the (1,2) block is forbidden on the x and y bonds in P4/mmm; dropping m_z (while
+        # keeping inversion and TR) frees the bond along the retained 2-fold axis
+        gensᴴ = [S"x,-y,-z", S"-x,-y,-z"] # 2ₓ & -1, i.e. 2/m with unique axis a
+        @test length(_subduced_complement(tbm, gensᴴ)) == 0      # without `Rs`: misses it
+        Δtbm = _subduced_complement(tbm, Rs, gensᴴ)              # over `Rs`: finds it
+        @test length(Δtbm) == 1
+        @test only(Δtbm).block_ij == (1, 2)
+        @test length(subduced_complement(tbm, Rs, 10)) == 1      # ⋕10 = P2/m
+
+        # completeness: the direct P2/m model over the same range has exactly one more term
+        brs10 = calc_bandreps(10, Val(3); timereversal = true)
+        @test string.((brs10[29], brs10[32])) == ("(1a|Ag)", "(1a|Bᵤ)")
+        tbm10 = tb_hamiltonian((@composite brs10[29] + brs10[32]), Rs)
+        @test length(tbm10) == length(tbm) + length(Δtbm)
+
+        # the extended model must still be Hermitian, and have nothing further to give
+        tbm′ = vcat(tbm, Δtbm)
+        ptbm′ = tbm′(rand(length(tbm′)))
+        for k in (ReciprocalPoint(0.1, 0.2, 0.3), ReciprocalPoint(0.5, 0.0, 0.25))
+            @test ptbm′(k) ≈ ptbm′(k)' # NB: `ptbm(k)` returns a reused buffer
+        end
+        @test length(subduced_complement(tbm′, Rs, 10)) == 0
+
+        # `Rs` must add the pairs that carry no term, and only those
+        groups = _subduction_groups(tbm, Rs)
+        @test sum(length(idxs) for (_, idxs) in groups) == length(tbm)
+        @test count(((_, idxs),) -> isempty(idxs), groups) > 0
+        @test [idxs for (_, idxs) in _subduction_groups(tbm, nothing)] ==
+              _group_terms_by_block_and_orbit(tbm)
+    end
+
+    @testset "hopping range `Rs`" begin
+        brs = calc_bandreps(11, Val(2); timereversal = true) # p4mm
+        cbr = @composite brs[1] # (2c|A₁)
+        Rs = [[0,0], [1,0]]
+        tbm = tb_hamiltonian(cbr, Rs)
+
+        # when the model already spans every orbit over `Rs`, both forms must agree
+        for (sgnumᴴ, timereversal) in ((11, true), (10, true), (11, false), (10, false),
+                                       (6, true), (6, false))
+            @test length(subduced_complement(tbm, Rs, sgnumᴴ; timereversal)) ==
+                  length(subduced_complement(tbm, sgnumᴴ; timereversal))
+        end
+        @test length(subduced_complement(tbm, Rs, 11)) == 0 # subducing to G itself
+
+        # over `Rs`, a dropped term always comes back, whether or not the rest of its orbit
+        # survived; without `Rs`, only the former (cf. issue #117)
+        @test _group_terms_by_block_and_orbit(tbm) == [[1], [2], [3, 4], [5]]
+        @test length(subduced_complement(tbm[[1,2,3,5]], Rs, 11)) == 1 # dropped term 4
+        @test length(subduced_complement(tbm[[1,2,3,5]], 11)) == 1
+        @test length(subduced_complement(tbm[1:4], Rs, 11)) == 1       # dropped term 5
+        @test length(subduced_complement(tbm[1:4], 11)) == 0           # ← the asymmetry
+
+        # a narrower `Rs` cannot report terms already in `tbm` as new
+        @test length(subduced_complement(tbm, [[0,0]], 11)) == 0
+        @test length(subduced_complement(tbm, [[0,0]], 10)) ==
+              length(subduced_complement(tbm, 10))
+
+        # a wider `Rs` also picks up longer-range terms
+        Rs_big = [[0,0], [1,0], [1,1]]
+        @test length(subduced_complement(tbm, Rs_big, 11)) ==
+              length(tb_hamiltonian(cbr, Rs_big)) - length(tbm)
+
+        # completeness against a directly-built subgroup model: the 2c orbit of p4mm splits
+        # into 1c ⊕ 1b of p2mm. The orbits are those of p4mm, and reach further than `Rs`,
+        # so the ⋕6 model must be built over a range covering the same hopping vectors
+        brs6 = calc_bandreps(6, Val(2); timereversal = true)
+        cbr6 = CompositeBandRep([n ∈ (5, 9) ? 1 : 0 for n in eachindex(brs6)], brs6)
+        @test string(cbr6) == "(1c|A₁) + (1b|A₁)"
+        @test length(tb_hamiltonian(cbr6, [[0,0], [1,0], [0,1], [-1,0]])) ==
+              length(tbm) + length(subduced_complement(tbm, Rs, 6))
+
+        # non-Hermitian models iterate over all blocks, not just the upper-triangular ones
+        tbm_nh = tb_hamiltonian(cbr, Rs, Val(NONHERMITIAN))
+        @test length(subduced_complement(tbm_nh, Rs, 11)) == 0
+        for sgnumᴴ in (10, 6)
+            @test length(subduced_complement(tbm_nh, Rs, sgnumᴴ)) ==
+                  length(subduced_complement(tbm_nh, sgnumᴴ))
+        end
     end
 
     @testset "subgroup precondition" begin
