@@ -65,8 +65,9 @@ at each element of `energies`, using the (generalized) Gilat–Raubenheimer meth
 
 The DOS is returned as a `Vector{Float64}` of the same length as `energies`. It is
 normalized *per unit cell*, i.e., ``\\int g(E)\\,\\mathrm{d}E = N`` where `N` is the number
-of bands. This is the physical states-per-unit-cell DOS and is independent of the lattice
-basis. See the *Algorithm* section below for details.
+of bands included (all of them, unless `bands` restricts the sum). This is the physical
+states-per-unit-cell DOS and is independent of the lattice basis. See the *Algorithm*
+section below for details.
 
 ## Arguments
 - `ptbm :: ParameterizedTightBindingModel{D, HERMITIAN}`. Currently, only Hermitian models
@@ -89,6 +90,22 @@ basis. See the *Algorithm* section below for details.
   to a transformed spectral variable (e.g. `sqrt` to go from `ω²`-like eigenvalues to
   frequencies `ω`). When not `nothing`, both the eigenvalues and band velocities used by the
   GGR method are transformed.
+- `bands` (default, `nothing` ~ all bands): an optional collection of band indices, in
+  `1:N`, restricting the sum to those bands. Bands are indexed in ascending energy at each
+  **k**-point, as returned by [`spectrum`](@ref). The result is then the partial DOS of that
+  sub-manifold, integrating to `length(bands)` rather than to `N`.
+
+  This is useful when some bands of the model are not physical states of the system being
+  described, and would otherwise swamp the DOS. The motivating case is a photonic model, in
+  which the transverse (physical) bands are accompanied by longitudinal ones pinned at zero
+  frequency: under `transform = sqrt` the whole longitudinal manifold collapses into the
+  lowest energy bin, producing a spike orders of magnitude above the transverse DOS.
+  Restricting to the transverse bands gives the physically meaningful partial DOS directly.
+
+  Note that band indices are assigned by energy ordering at each **k** independently, so a
+  fixed index tracks a *sorted position*, not a band connected through the Brillouin zone.
+  For a sub-manifold separated from the rest by a gap — as the longitudinal/transverse split
+  is — the two coincide; where bands cross the selected manifold, they do not.
 
 ## Algorithm
 
@@ -134,6 +151,7 @@ function densityofstates(
     Nk::Integer = 50,
     offset::Union{Real, Tuple{Vararg{Real, D}}} = ntuple(_ -> 0.0, Val(D)),
     transform::F = nothing,
+    bands::Union{Nothing, AbstractVector{<:Integer}} = nothing,
 ) where {D, S, F}
     if S !== HERMITIAN
         error("`densityofstates` is only implemented for HERMITIAN models (got $S): a \
@@ -157,11 +175,24 @@ function densityofstates(
 
     # sweep the GR mesh, depositing every (cell, band)'s contribution into `accum`
     Nᵇ = ptbm.tbm.N
+    # `bandidxs` is the set of bands summed over; `nothing` means all of them. We `collect`
+    # in both branches so that `bandidxs` has one concrete type regardless of what `bands`
+    # was given as (a range, a vector, or omitted), rather than being union-typed at the
+    # loop below
+    bandidxs = if bands === nothing
+        collect(1:Nᵇ)
+    else
+        isempty(bands) && error("`bands` must not be empty")
+        allunique(bands) || error("`bands` must not contain duplicate indices")
+        all(n -> 1 ≤ n ≤ Nᵇ, bands) ||
+            error(lazy"`bands` must index into 1:$Nᵇ; got $(collect(bands))")
+        collect(Int, bands)
+    end
     ∇Hs = ntuple(_ -> Matrix{ComplexF64}(undef, Nᵇ, Nᵇ), Val(D)) # reused scratch across the mesh
     for (k, weight) in _dos_kmesh(Val(D), Nk, offset)
         Es, us = solve(ptbm, k; bloch_phase = Val(false))
         vs = energy_gradient_wrt_momentum(ptbm, k, (Es, us); ∇Hs) # group velocities
-        for n in 1:Nᵇ
+        for n in bandidxs
             # remap the eigenvalues & velocity to the transformed variable φₙ = transform(Eₙ),
             # rescaling the velocity by the chain rule, vφ = transform'(Eₙ)·v
             Eₙ = Es[n]

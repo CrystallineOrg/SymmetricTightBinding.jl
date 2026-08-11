@@ -38,5 +38,26 @@ sum(dos) * step(Es)
 
 In some settings -- e.g., photonic tight-binding models -- the model eigenvalues ``E`` represent a frequency-quantity ``\omega^2`` rather than the energy itself. The `transform` keyword maps each eigenvalue ``E`` to ``transform(E)`` and applies the corresponding chain-rule rescaling of the group velocity, so that the eigenvalues are interpreted in the transformed setting. For instance, to obtain a DOS as a function of ``\omega = \sqrt{E}`` for a model whose (nonnegative) eigenvalues ``E`` represent ``\omega^2``, we may simply pass `transform = sqrt` as a keyword argument.
 
+## Partial DOS via `bands`
+
+By default every band contributes. The `bands` keyword restricts the sum to a chosen subset, giving the partial DOS of that sub-manifold; the sum rule then reads ``\int \mathrm{DOS}(E)\,\mathrm{d}E =`` `length(bands)`. For graphene's two bands, the lower one carries unit weight:
+
+```@example dos
+dos_lower = densityofstates(ptbm, Es; Nk = 200, bands = [1])
+sum(dos_lower) * step(Es)
+```
+
+Partial DOSs partition the total, so a partition of the band indices recovers the full DOS:
+
+```@example dos
+dos_upper = densityofstates(ptbm, Es; Nk = 200, bands = [2])
+maximum(abs, (dos_lower .+ dos_upper) .- dos)
+```
+
+This matters when some bands of a model are not physical states of the system described. In a photonic model of the kind mentioned above, the transverse (physical) bands are accompanied by longitudinal ones pinned at zero frequency; under `transform = sqrt` that entire manifold collapses into the lowest energy bin, producing a spike orders of magnitude above the transverse DOS. Restricting to the transverse bands gives the meaningful partial DOS directly.
+
+!!! note "Band indices are energy-ordered"
+    Bands are indexed by ascending energy at each **k**-point independently, as returned by [`spectrum`](@ref). A fixed index thus tracks a *sorted position*, not a band followed continuously through the Brillouin zone. Where a sub-manifold is separated from the rest by a gap -- as the longitudinal/transverse split is -- the two coincide; where bands cross into the selected manifold, they do not.
+
 
 [^1]: B. Liu, L. Lu, *et al.*, *Generalized Gilat--Raubenheimer method for density-of-states calculation in photonic crystals*, [J. Opt. **20**, 044005 (2018)](https://doi.org/10.1088/2040-8986/aaae52). The original method is due to G. Gilat & L.J. Raubenheimer, *Accurate Numerical Method for Calculating Frequency-Distribution Functions in Solids*, [Phys. Rev. **144**, 390 (1966)](https://doi.org/10.1103/PhysRev.144.390).
