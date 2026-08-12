@@ -38,5 +38,9 @@ sum(dos) * step(Es)
 
 In some settings -- e.g., photonic tight-binding models -- the model eigenvalues ``E`` represent a frequency-quantity ``\omega^2`` rather than the energy itself. The `transform` keyword maps each eigenvalue ``E`` to ``transform(E)`` and applies the corresponding chain-rule rescaling of the group velocity, so that the eigenvalues are interpreted in the transformed setting. For instance, to obtain a DOS as a function of ``\omega = \sqrt{E}`` for a model whose (nonnegative) eigenvalues ``E`` represent ``\omega^2``, we may simply pass `transform = sqrt` as a keyword argument.
 
+## Partial DOS via `bands`
+
+By default, the DOS sums over every band. The `bands` keyword restricts the sum to a range of band indices -- ordered by ascending energy at each **k**-point -- so that the result is the partial DOS of that sub-manifold, integrating to `length(bands)` rather than ``N_{\text{b}}``. This is useful when some bands are not physical states of the system described: in a photonic model, for instance, longitudinal bands pinned at zero frequency collapse into the lowest energy bin under `transform = sqrt` and swamp the transverse DOS; restricting to the transverse bands avoids this.
+
 
 [^1]: B. Liu, L. Lu, *et al.*, *Generalized Gilat--Raubenheimer method for density-of-states calculation in photonic crystals*, [J. Opt. **20**, 044005 (2018)](https://doi.org/10.1088/2040-8986/aaae52). The original method is due to G. Gilat & L.J. Raubenheimer, *Accurate Numerical Method for Calculating Frequency-Distribution Functions in Solids*, [Phys. Rev. **144**, 390 (1966)](https://doi.org/10.1103/PhysRev.144.390).

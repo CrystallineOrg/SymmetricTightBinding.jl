@@ -65,8 +65,8 @@ at each element of `energies`, using the (generalized) Gilat–Raubenheimer meth
 
 The DOS is returned as a `Vector{Float64}` of the same length as `energies`. It is
 normalized *per unit cell*, i.e., ``\\int g(E)\\,\\mathrm{d}E = N`` where `N` is the number
-of bands. This is the physical states-per-unit-cell DOS and is independent of the lattice
-basis. See the *Algorithm* section below for details.
+of bands summed over (cf. `bands`). This is the physical states-per-unit-cell DOS and is
+independent of the lattice basis. See the *Algorithm* section below for details.
 
 ## Arguments
 - `ptbm :: ParameterizedTightBindingModel{D, HERMITIAN}`. Currently, only Hermitian models
@@ -89,6 +89,9 @@ basis. See the *Algorithm* section below for details.
   to a transformed spectral variable (e.g. `sqrt` to go from `ω²`-like eigenvalues to
   frequencies `ω`). When not `nothing`, both the eigenvalues and band velocities used by the
   GGR method are transformed.
+- `bands` (default, `1:N` ~ all bands): a range of band indices to restrict the sum to,
+  with bands indexed by ascending energy at each **k**-point. The DOS then integrates to
+  `length(bands)` rather than to `N`.
 
 ## Algorithm
 
@@ -134,6 +137,7 @@ function densityofstates(
     Nk::Integer = 50,
     offset::Union{Real, Tuple{Vararg{Real, D}}} = ntuple(_ -> 0.0, Val(D)),
     transform::F = nothing,
+    bands::AbstractUnitRange{<:Integer} = 1:ptbm.tbm.N,
 ) where {D, S, F}
     if S !== HERMITIAN
         error("`densityofstates` is only implemented for HERMITIAN models (got $S): a \
@@ -157,11 +161,12 @@ function densityofstates(
 
     # sweep the GR mesh, depositing every (cell, band)'s contribution into `accum`
     Nᵇ = ptbm.tbm.N
+    first(bands) ≥ 1 && last(bands) ≤ Nᵇ || error(lazy"`bands` must index into 1:$Nᵇ; got $bands")
     ∇Hs = ntuple(_ -> Matrix{ComplexF64}(undef, Nᵇ, Nᵇ), Val(D)) # reused scratch across the mesh
     for (k, weight) in _dos_kmesh(Val(D), Nk, offset)
         Es, us = solve(ptbm, k; bloch_phase = Val(false))
         vs = energy_gradient_wrt_momentum(ptbm, k, (Es, us); ∇Hs) # group velocities
-        for n in 1:Nᵇ
+        for n in bands
             # remap the eigenvalues & velocity to the transformed variable φₙ = transform(Eₙ),
             # rescaling the velocity by the chain rule, vφ = transform'(Eₙ)·v
             Eₙ = Es[n]

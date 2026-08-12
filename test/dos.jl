@@ -104,7 +104,8 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
             brs = calc_bandreps(2, Val(3); timereversal=true)
             cbr = @composite brs[1] + brs[end] # 2 bands
             tbm = tb_hamiltonian(cbr, [[1,0,0],[0,1,0],[0,0,1]])
-            ptbm = tbm(randn(Random.MersenneTwister(7), length(tbm)))
+            Random.seed!(1)
+            ptbm = tbm(randn(length(tbm)))
             @test dos_integral(ptbm; Nk=24) ≈ 2 rtol=4e-2
         end
     end
@@ -147,6 +148,41 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
         # a `transform` returning a non-`Float64` `Real` is coerced internally (no MethodError)
         g32 = densityofstates(ptbm, Float32.(Es); Nk=40, transform = E -> Float32(E))
         @test all(isfinite, g32)
+    end
+
+    # ------------------------------------------------------------------------------------ #
+    @testset "`bands` keyword (partial DOS)" begin
+        # partial DOSs must partition the total: restricting to a set of bands drops exactly
+        # those bands' contributions and nothing else.
+        brs = calc_bandreps(2, Val(3); timereversal=true)
+        cbr = @composite brs[1] + brs[end] # 2 bands
+        tbm = tb_hamiltonian(cbr, [[1,0,0],[0,1,0],[0,0,1]])
+        Random.seed!(1)
+        ptbm = tbm(randn(length(tbm)))
+        Nᵇ = tbm.N
+
+        Es = range(-8, 8, 201)
+        dE = step(Es)
+        g_all = densityofstates(ptbm, Es; Nk=16)
+
+        # each single-band partial DOS carries unit weight, and together they reproduce the
+        # total DOS pointwise
+        g_each = [densityofstates(ptbm, Es; Nk=16, bands=n:n) for n in 1:Nᵇ]
+        for g in g_each
+            @test sum(g)*dE ≈ 1 rtol=5e-2
+            @test all(≥(0), g)
+        end
+        @test sum(g_each) ≈ g_all
+
+        # passing every band is identical to omitting the keyword
+        @test densityofstates(ptbm, Es; Nk=16, bands=1:Nᵇ) ≈ g_all
+
+        # composes with `transform`: restricting commutes with transforming, since the chain
+        # rule is applied per band
+        tf = E -> E + 0.05E^3
+        g_lo_t = densityofstates(ptbm, Es; Nk=16, bands=1:1, transform=tf)
+        g_hi_t = densityofstates(ptbm, Es; Nk=16, bands=2:Nᵇ, transform=tf)
+        @test g_lo_t .+ g_hi_t ≈ densityofstates(ptbm, Es; Nk=16, transform=tf)
     end
 
     # ------------------------------------------------------------------------------------ #
