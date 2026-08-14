@@ -183,7 +183,7 @@ function Base.show(io::IO, ::MIME"text/plain", ctbm::CompositeTightBindingModel{
         header_kws = (; color=HERMITIAN_COLOR, italic=true),
         trim_line_color = HERMITIAN_COLOR
     )
-    return _show_textplain(
+    _show_textplain(
         io, tbm_a;
         header = "Anti-Hermitian",
         header_kws = (; color=ANTIHERMITIAN_COLOR, italic=true),
