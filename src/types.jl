@@ -43,7 +43,7 @@ end
 Base.getindex(o::OrbitalOrdering, i::Int) = o.ordering[i]
 Base.size(o::OrbitalOrdering) = size(o.ordering)
 Base.setindex!(::OrbitalOrdering, v, i::Int) = error("setindex! is not supported")
-Base.IndexStyle(::Type{OrbitalOrdering}) = IndexLinear()
+Base.IndexStyle(::Type{<:OrbitalOrdering}) = IndexLinear()
 Base.iterate(o::OrbitalOrdering) = iterate(o.ordering)
 Base.iterate(o::OrbitalOrdering, i) = iterate(o.ordering, i)
 
