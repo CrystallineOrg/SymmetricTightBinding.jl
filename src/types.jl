@@ -313,7 +313,9 @@ Concrete subtypes are
 Subtypes of `AbstractTightBindingModel` must extend the following methods:
 - `hermiticity`: return a value of the `Hermiticity` enum.
 - `orbital_positions`: return the positions of orbitals in the model.
+- `orbital_count`: return the number of orbitals in the model.
 - `Crystalline.CompositeBandRep`: return the `CompositeBandRep` underlying the model.
+- `size` & `getindex`: as required of any `AbstractVector` (here, of tight-binding terms).
 """
 abstract type AbstractTightBindingModel{T<:TightBindingTerm} <: AbstractVector{T} end
 Crystalline.dim(atbm::AbstractTightBindingModel{<:TightBindingTerm{D}}) where D = D
@@ -361,8 +363,8 @@ function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
 end
 
 """
-    hermiticity(tbt::TightBindingTerm)                        -> Hermiticity
-    hermiticity(atbm::AbstractTightBindingModel)              -> Hermiticity
+    hermiticity(tbt::TightBindingTerm)                         -> Hermiticity
+    hermiticity(atbm::AbstractTightBindingModel)               -> Hermiticity
     hermiticity(aptbm::AbstractParameterizedTightBindingModel) -> Hermiticity
 
 Return the [`Hermiticity`](@ref) of the input.
@@ -376,7 +378,6 @@ orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
 
 # number of orbitals in a model, i.e., the size of its associated Hamiltonian matrix
-# (cf. `orbital_positions`, which returns the positions of these orbitals)
 orbital_count(tbm::TightBindingModel) = tbm.N
 
 function TightBindingModel(

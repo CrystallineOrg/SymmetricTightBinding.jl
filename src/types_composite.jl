@@ -1,6 +1,5 @@
 # Composite tight-binding models for generally non-Hermitian Hamiltonians, built from a
-# Hermitian and an anti-Hermitian `TightBindingModel`. Split out from `types.jl` since the
-# content is self-contained; the associated `show` methods live in `show.jl`.
+# Hermitian and an anti-Hermitian `TightBindingModel`.
 
 # ---------------------------------------------------------------------------------------- #
 
@@ -86,7 +85,6 @@ orbital_count(ctbm::CompositeTightBindingModel) = orbital_count(ctbm.tbm_h)
 Crystalline.dim(::CompositeTightBindingModel{D}) where D = D
 
 # AbstractVector interface
-# NB: `eltype` follows from the `AbstractVector{HorAH_TBT{D}}` supertype; no method needed.
 # NB: `similar` is intentionally _not_ extended: it is handed only the requested `dims`,
 #     never the indices, so it cannot know how a request splits across the Hermitian and
 #     anti-Hermitian parts. Index-preserving slicing is instead provided directly by the
@@ -128,7 +126,7 @@ function Base.getindex(
     ctbm::CompositeTightBindingModel{D},
     idxs::AbstractVector{<:Integer}
 ) where D
-    for i in idxs
+    @boundscheck for i in idxs
         checkbounds(ctbm, i)
     end
     if !issorted(idxs; lt = ≤) # i.e., not strictly increasing (also rejects duplicates)
@@ -137,6 +135,9 @@ function Base.getindex(
                before all anti-Hermitian terms; use `collect(ctbm)[idxs]` to obtain an \
                arbitrarily ordered `Vector` of terms instead")
     end
+    # NB: indexing each part with an index vector returns a `TightBindingModel` again, so
+    #     the two sub-models below come for free; the intermediate index vectors are a
+    #     small price for that
     Nʰ = length(ctbm.tbm_h)
     idxsʰ = [i for i in idxs if i ≤ Nʰ]
     idxsᵃ = [i - Nʰ for i in idxs if i > Nʰ]
@@ -236,12 +237,12 @@ function (pctbm::ParameterizedCompositeTightBindingModel{D})(
     # NB: `cs[1:length(tbm_h)]` are the coefficients for the Hermitian terms (`tbm_h`), and
     #     `cs[length(tbm_h)+1:end]` are for the anti-Hermitian terms (`tbm_a`); below, we
     #     split the loop explicitly to restore type-stability
-    for (tbt, c) in zip(tbm_h.terms, @view pctbm.cs[1:length(tbm_h)])
-        evaluate_tight_binding_term!(tbt::TightBindingTerm{D, HERMITIAN}, k, c, H) # modifies `H` in-place
+    for (tbt, c) in zip(tbm_h, @view pctbm.cs[1:length(tbm_h)])
+        evaluate_tight_binding_term!(tbt, k, c, H) # modifies `H` in-place
     end
     cs_offset = length(tbm_h)
-    for (tbt, c) in zip(tbm_a.terms, @view pctbm.cs[cs_offset+1:end])
-        evaluate_tight_binding_term!(tbt::TightBindingTerm{D, ANTIHERMITIAN}, k, c, H) # modifies `H` in-place
+    for (tbt, c) in zip(tbm_a, @view pctbm.cs[cs_offset+1:end])
+        evaluate_tight_binding_term!(tbt, k, c, H) # modifies `H` in-place
     end
     
     return H
