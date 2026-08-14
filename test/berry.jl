@@ -1,7 +1,7 @@
 using Test
 using Crystalline
 using SymmetricTightBinding
-using LinearAlgebra: dot
+using LinearAlgebra: ⋅
 
 @testset "Berry curvature" begin
     @testset "Berry phase of π around a perturbatively gapped Dirac point" begin
