@@ -1,26 +1,11 @@
 using Test
 using SymmetricTightBinding
 using Crystalline
-using DeepDiffs: deepdiff
 using LinearAlgebra: ishermitian
 using SymmetricTightBinding: orbital_count, orbital_positions, solve, TightBindingTerm
 
-# as in test/show.jl: print a nice diff on show-regression failures (this duplicates the
-# helper there, since the two files are independently includable)
-function test_show_composite(expected::AbstractString, observed::AbstractString)
-    if expected == observed
-        @test true
-    else
-        old = Base.have_color
-        @eval Base have_color = true
-        try
-            println(deepdiff(expected, observed))
-        finally
-            @eval Base have_color = $old
-        end
-        @test :expected == :observed
-    end
-end
+# `test_show` & `test_tp_show`; guarded so this file also runs standalone
+isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
 @testset "CompositeTightBindingModel" begin
 
@@ -162,7 +147,7 @@ end
     end
 
     @testset "Show methods" begin
-        test_show_composite(repr(MIME"text/plain"(), ctbm),
+        test_show(repr(MIME"text/plain"(), ctbm),
         """
         (5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′):
         ┌─ Hermitian
@@ -200,7 +185,7 @@ end
             "(5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′)"
 
         pctbm = ctbm([0.3*cospi(0.73*k) for k in 1:6])
-        test_show_composite(repr(MIME"text/plain"(), pctbm),
+        test_show(repr(MIME"text/plain"(), pctbm),
         """
         (5+1)-term 2×2 ParameterizedCompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′) \
         with amplitudes:

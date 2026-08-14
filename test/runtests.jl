@@ -51,6 +51,8 @@ function select_testfiles(args)
     return filter(testfile -> testfile ∈ included && testfile ∉ excluded, TESTFILES)
 end
 
+include("test_utils.jl") # shared test helpers; always loaded, never selectable
+
 for testfile in select_testfiles(ARGS)
     include(testfile)
 end

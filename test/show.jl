@@ -1,26 +1,10 @@
 using Test
 using SymmetricTightBinding
 using Crystalline
-using DeepDiffs: deepdiff
 using SymmetricTightBinding: TightBindingElementString
 
-# test print with nicely printed diff on failures
-# (adapted from Crystalline.jl's test/show.jl)
-function test_show(expected::AbstractString, observed::AbstractString)
-    if expected == observed
-        @test true
-    else
-        old = Base.have_color
-        @eval Base have_color = true
-        try
-            println(deepdiff(expected, observed))
-        finally
-            @eval Base have_color = $old
-        end
-        @test :expected == :observed
-    end
-end
-test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v), expected)
+# `test_show` & `test_tp_show`; guarded so this file also runs standalone
+isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
 @testset "Show methods" begin
     # set up graphene model (plane group 17, (2b|A₁) EBR)
