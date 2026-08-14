@@ -25,6 +25,7 @@ export HoppingOrbit
 export TightBindingBlock
 export Hermiticity, HERMITIAN, ANTIHERMITIAN, NONHERMITIAN
 export hermiticity
+export orbital_positions, orbital_count
 export TightBindingModel
 export ParameterizedTightBindingModel
 include("types_composite.jl")

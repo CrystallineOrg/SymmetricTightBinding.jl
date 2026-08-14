@@ -377,7 +377,13 @@ hermiticity(::TightBindingModel{D, S}) where {D, S} = S
 orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
 
-# number of orbitals in a model, i.e., the size of its associated Hamiltonian matrix
+"""
+    orbital_count(atbm::AbstractTightBindingModel)               -> Int
+    orbital_count(aptbm::AbstractParameterizedTightBindingModel) -> Int
+
+Return the number of orbitals in a model, i.e., the size of its associated Hamiltonian
+matrix.
+"""
 orbital_count(tbm::TightBindingModel) = tbm.N
 
 function TightBindingModel(

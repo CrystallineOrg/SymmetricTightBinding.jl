@@ -135,9 +135,7 @@ function Base.getindex(
                before all anti-Hermitian terms; use `collect(ctbm)[idxs]` to obtain an \
                arbitrarily ordered `Vector` of terms instead")
     end
-    # NB: indexing each part with an index vector returns a `TightBindingModel` again, so
-    #     the two sub-models below come for free; the intermediate index vectors are a
-    #     small price for that
+    # NB: indexing each part with an index vector returns a `TightBindingModel` again
     Nʰ = length(ctbm.tbm_h)
     idxsʰ = [i for i in idxs if i ≤ Nʰ]
     idxsᵃ = [i - Nʰ for i in idxs if i > Nʰ]

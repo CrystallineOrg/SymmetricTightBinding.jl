@@ -2,7 +2,7 @@ using Test
 using SymmetricTightBinding
 using Crystalline
 using LinearAlgebra: ishermitian
-using SymmetricTightBinding: orbital_count, orbital_positions, solve, TightBindingTerm
+using SymmetricTightBinding: solve, TightBindingTerm # (`orbital_count` &c are exported)
 
 # `test_show` & `test_tp_show`; guarded so this file also runs standalone
 isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
