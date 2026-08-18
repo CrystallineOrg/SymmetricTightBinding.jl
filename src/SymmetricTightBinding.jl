@@ -25,8 +25,12 @@ export HoppingOrbit
 export TightBindingBlock
 export Hermiticity, HERMITIAN, ANTIHERMITIAN, NONHERMITIAN
 export hermiticity
+export orbital_positions, orbital_count
 export TightBindingModel
 export ParameterizedTightBindingModel
+include("types_composite.jl")
+export CompositeTightBindingModel
+export ParameterizedCompositeTightBindingModel
 include("site_representations.jl")
 export sgrep_induced_by_siteir
 include("tightbinding.jl")

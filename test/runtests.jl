@@ -20,6 +20,7 @@ const TESTFILES = [
     "spectrum.jl",                 # spectrum evaluation
     "show.jl",                     # show/display methods
     "nonhermitian.jl",             # NONHERMITIAN models
+    "composite.jl",                # composite Hermitian ⊕ anti-Hermitian models
     "gradients.jl",                # hopping and momentum gradients
     "fitting.jl",                  # fitting (Optim extension) + TightBindingCache
     "symmetry_analysis.jl",        # ⚠️ every EBR of every SG in 1D-3D; minutes to hours
@@ -49,6 +50,8 @@ function select_testfiles(args)
     # filtering over `TESTFILES` de-duplicates and restores the canonical run order
     return filter(testfile -> testfile ∈ included && testfile ∉ excluded, TESTFILES)
 end
+
+include("test_utils.jl") # shared test helpers; always loaded, never selectable
 
 for testfile in select_testfiles(ARGS)
     include(testfile)

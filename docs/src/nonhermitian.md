@@ -284,6 +284,42 @@ xlims!(-1/2, 1/2)
 f # hide
 ```
 
+## [Construction from Hermitian and anti-Hermitian parts](@id composite-nonhermitian)
+
+Rather than requesting a `NONHERMITIAN` model directly, a non-Hermitian model can also be assembled from a Hermitian and an anti-Hermitian model, obtained separately and combined with `+`:
+
+```@example nonhermitian-ssh
+tbm_h = tb_hamiltonian(cbr, [[0], [2]], Val(HERMITIAN))
+tbm_a = tb_hamiltonian(cbr, [[0], [2]], Val(ANTIHERMITIAN))
+ctbm = tbm_h + tbm_a
+```
+
+The result is a [`CompositeTightBindingModel`](@ref), which keeps the two parts separate and prints them under separate headings.
+
+The compositely-assembled model `ctbm` obtained in this manner is equivalent to the model obtained directly from `tb_hamiltonian(…, …, Val(NONHERMITIAN))` in the previous section: the Hermitian and anti-Hermitian terms together span exactly the same space as the terms of the corresponding `NONHERMITIAN` model: 6 `HERMITIAN` + 2 `ANTIHERMITIAN` = 8 `NONHERMITIAN` terms, either way. The difference is merely one of basis choice.
+
+As before, we can select a subset of terms by indexing (the indexing here happens to pick the same basis span as that of `tbm`, post-subsetting):
+
+```@example nonhermitian-ssh
+ctbm = ctbm[5:8] # retain only the inter-orbital terms
+```
+
+What the composite model buys is that its coefficients are grouped by their behavior under Hermitian conjugation, and can be set as two separate groups:
+
+```@example nonhermitian-ssh
+ctbm([1.0, 0.4], [0.3, 0.0])
+```
+
+Here, the first vector parameterizes the Hermitian terms and the second the anti-Hermitian ones.
+In terms of the SSH parameterization above, this trades the pairs $(t_1, t_2)$ and $(t_1', t_2')$ for their symmetric and antisymmetric combinations $\tfrac{1}{2}(t_i + t_i')$ and $\tfrac{1}{2}(t_i - t_i')$.
+Setting the anti-Hermitian coefficients to zero recovers a Hermitian model, and scaling them tunes the degree of non-Hermiticity.
+
+The grouping is exact at the level of the Bloch Hamiltonian: at every $k$, the Hermitian terms evaluate to $\tfrac{1}{2}[\mathbf{H}(k) + \mathbf{H}^{\dagger}(k)]$ and the anti-Hermitian terms to $\tfrac{1}{2}[\mathbf{H}(k) - \mathbf{H}^{\dagger}(k)]$.
+This also makes a composite model a convenient way to read a non-Hermitian model, separating the Hermitian terms from those that break Hermiticity.
+
+Composite models are otherwise used just like ordinary models: they evaluate as functors of $k$, and work with [`spectrum`](@ref) and `solve`.
+As above, terms can be dropped by indexing with a range or a vector of (strictly increasing) indices.
+
 ## 2D model: exceptional lines in *p*4
 
 We can also construct more complicated examples where symmetry plays a role.
