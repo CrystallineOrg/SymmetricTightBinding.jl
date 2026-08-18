@@ -49,6 +49,14 @@ This allows three additional terms. Conversely, we could have also tried to brea
 
 [^1]: For mirror symmetry-breaking, the absence of new terms is a result of looking only at a limited set of hopping orbits (in the original model `tb_hamiltonian(cbr, [[0,0], [1,0]])`): by including longer-range hopping orbits, we would eventually find new mirror-symmetry-broken terms. This is not so for time-reversal breaking, however: in *p*4mm, mirror symmetry and hermiticity jointly impose an effective time-reversal symmetry.
 
+!!! note "Searching over a hopping range"
+    Called as above, `subduced_complement` searches only the hopping orbits already carried by a term of `tbm` -- here, deliberately so, since we restricted `tbm` to its four simplest terms. In general that is incomplete, since an orbit on which *every* term is forbidden in the original group carries no term to be found. Pass the hopping range as a second argument to search over it instead, just as when building the model:
+    ```julia
+    Rs   = [[0,0], [1,0]]
+    tbm  = tb_hamiltonian(cbr, Rs)
+    Δtbm = subduced_complement(tbm, Rs, 6)
+    ```
+
 However, by breaking both mirror and time-reversal symmetry simultaneously, additional terms do appear:
 
 We can also break both symmetry simultaneously:
