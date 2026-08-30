@@ -34,6 +34,24 @@ function Base.:(==)(s1::HoppingOrbit{D}, s2::HoppingOrbit{D}) where {D}
 end
 Base.:(==)(::HoppingOrbit, ::HoppingOrbit) = false # different dimensions (less specific)
 
+"""
+    canonical_orbit_element(δs, n) --> (m, negated)
+
+Return the index `m` of the canonical representative of `δs[n]` under the equivalence
+δ ~ -δ, together with a boolean `negated` indicating whether `δs[n] == -δs[m]`.
+
+The canonical representative is the earliest element of `δs` that equals ±`δs[n]`; i.e.,
+`m ≤ n`, with `m == n` (and `negated == false`) if `-δs[n]` does not occur earlier in `δs`.
+This is used when printing, to make sign-relations between orbit elements apparent.
+"""
+function canonical_orbit_element(δs::AbstractVector{RVec{D}}, n::Int) where {D}
+    δ = δs[n]
+    m = findfirst(@view δs[1:n-1]) do δ′
+        isapprox(-δ, δ′, nothing, false; atol = VEC_CMP_ATOL)
+    end
+    return isnothing(m) ? (n, false) : (something(m), true)
+end
+
 # ---------------------------------------------------------------------------------------- #
 # constructor defined in /src/tightbinding.jl
 
@@ -254,10 +272,12 @@ function _getindex(
 
         δ = tbb.h_orbit.orbit[n]
         if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(-2πi𝐤⋅δ)
+            # refer to the canonical representative of ±δ, so that sign-related orbit
+            # elements are printed as 𝕖(δₘ) and 𝕖(-δₘ) rather than as unrelated symbols
+            m, negated = canonical_orbit_element(tbb.h_orbit.orbit, n)
             print(io, "𝕖(")
-            # TODO: could do a little better here, since we know that `-δ` is in the orbit?
-            conjugate && print(io, "-")
-            print(io, "δ", Crystalline.subscriptify(string(n)), ")")
+            (negated ⊻ conjugate) && print(io, "-")
+            print(io, "δ", Crystalline.subscriptify(string(m)), ")")
         else
             print(io, "1")
         end

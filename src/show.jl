@@ -72,23 +72,16 @@ function _print_orbit_elements(
 )
     δs = tbt.block.h_orbit.orbit
     length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. 𝕖(0) = 1)
+    # only list the canonical representatives of each ±δ pair: their partners are referred
+    # to as `-δₘ` in the printed matrix elements, so listing them separately is redundant
+    is = filter(i -> !last(canonical_orbit_element(δs, i)), eachindex(δs))
     if !isnothing(pretext)
         printstyled(io, pretext; stylekws...)
     end
-    for (i, δ) in enumerate(δs)
+    for (n, i) in enumerate(is)
         printstyled(io, "δ", Crystalline.subscriptify(string(i)), "="; stylekws...)
-        rev_idx = findfirst(δ′ -> isapprox(-δ, δ′, nothing, false), @view δs[1:i-1])
-        if isnothing(rev_idx)
-            printstyled(io, replace(string(δ), ", " => ","); stylekws...)
-        else
-            printstyled(
-                io,
-                "-δ",
-                Crystalline.subscriptify(string(something(rev_idx)));
-                stylekws...,
-            )
-        end
-        i == length(δs) || printstyled(io, ", "; stylekws...)
+        printstyled(io, replace(string(δs[i]), ", " => ","); stylekws...)
+        n == length(is) || printstyled(io, ", "; stylekws...)
     end
 end
 

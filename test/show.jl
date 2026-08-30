@@ -2,7 +2,7 @@ using Test
 using SymmetricTightBinding
 using Crystalline
 using DeepDiffs: deepdiff
-using SymmetricTightBinding: TightBindingElementString
+using SymmetricTightBinding: TightBindingElementString, canonical_orbit_element
 
 # test print with nicely printed diff on failures
 # (adapted from Crystalline.jl's test/show.jl)
@@ -48,6 +48,17 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         test_tp_show(hop_orbits[2], str)
     end
 
+    @testset "canonical_orbit_element" begin
+        # `hop_orbits[2].orbit` is `[δ₁, δ₂, δ₃, -δ₁, -δ₂, -δ₃]`: the first occurrence of
+        # each ±δ pair is the canonical representative
+        δs = hop_orbits[2].orbit
+        @test [canonical_orbit_element(δs, i) for i in eachindex(δs)] ==
+              [(1, false), (2, false), (3, false), (1, true), (2, true), (3, true)]
+
+        δs⁰ = hop_orbits[1].orbit # `[[0,0]]`: δ = -δ, so it is its own representative
+        @test canonical_orbit_element(δs⁰, 1) == (1, false)
+    end
+
     @testset "TightBindingTerm" begin
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
@@ -57,9 +68,9 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0                  𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆)
-         𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                
-        δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃"""
+         0                  𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃)
+         𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                   
+        δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm[2], str)
     end
 
@@ -71,9 +82,9 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         │  ⎣ 0  1 ⎦
         └─ (2b|A₁) self-term
         ┌─
-        2. ⎡ 0                  𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆) ⎤
-        │  ⎣ 𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                 ⎦
-        └─ (2b|A₁) self-term:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃"""
+        2. ⎡ 0                  𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃) ⎤
+        │  ⎣ 𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                    ⎦
+        └─ (2b|A₁) self-term:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm, str)
     end
 
