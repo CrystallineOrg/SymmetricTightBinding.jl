@@ -49,20 +49,20 @@ time-reversal symmetry.
 julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
 2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
-1. ⎡ iz₁+iz₂+iz₃-iz̄₁-iz̄₂-iz̄₃  0                        ⎤
-│  ⎣ 0                        -iz₁-iz₂-iz₃+iz̄₁+iz̄₂+iz̄₃ ⎦
-└─ (2b|A₁) self-term.  δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]
+1. ⎡ -iz₁-iz₂+iz₃+iz̄₁+iz̄₂-iz̄₃  0                       ⎤
+│  ⎣ 0                         iz₁+iz₂-iz₃-iz̄₁-iz̄₂+iz̄₃ ⎦
+└─ (2b|A₁) self-term.  δ₁=[1,0], δ₂=[0,1], δ₃=[1,1]
 ┌─
-2. ⎡ 0                  z₁+z₂+z₃-z₇-z₈-z₉ ⎤
-│  ⎣ z̄₁+z̄₂+z̄₃-z̄₇-z̄₈-z̄₉  0                 ⎦
-└─ (2b|A₁) self-term.  δ₁=[-4/3,1/3], δ₂=[-1/3,-5/3], δ₃=[5/3,4/3], δ₇=[-1/3,4/3], δ₈=[5/3,1/3], δ₉=[-4/3,-5/3]
+2. ⎡ 0                  z₃-z₅+z̄₁+z̄₂-z̄₄-z̄₆ ⎤
+│  ⎣ z₁+z₂-z₄-z₆+z̄₃-z̄₅  0                 ⎦
+└─ (2b|A₁) self-term.  δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[5/3,4/3], δ₄=[1/3,-4/3], δ₅=[5/3,1/3], δ₆=[4/3,5/3]
 ```
 The first of the of these terms is not diagonal at K and so opens a gap at the Dirac point:
 ```julia-repl
 julia> Δtbm[1](ReciprocalPoint(1/3, 1/3))
 2×2 Matrix{ComplexF64}:
- -5.19615+1.73195e-14im      0.0+0.0im
-      0.0+0.0im          5.19615+1.43774e-14im
+ -5.19615+2.77556e-16im      0.0+0.0im
+      0.0+0.0im          5.19615+4.996e-16im
 ```
 
 ### Adding symmetry-breaking terms to the original model

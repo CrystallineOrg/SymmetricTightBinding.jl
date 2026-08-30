@@ -29,7 +29,7 @@ tbm = tb_hamiltonian(cbr, [[0,0], [0,1]])
 The terms in `tbm` form a basis for many possible Hamiltonians, including for the Haldane model. By comparing term by term with Haldane's expressions, the correct parameterization can be determined to be:
 
 ```@example berry
-haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), t₂*sin(ϕ), -m, t₂*cos(ϕ), -t₂*sin(ϕ), t₁, 0])
+haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), -t₂*sin(ϕ), -m, t₂*cos(ϕ), t₂*sin(ϕ), t₁, 0])
 ```
 
 This realizes the Haldane Hamiltonian with nearest-neighbor hopping $t_1$, a staggered mass term $m$, and a complex next-nearest-neighbor hopping $t_2 \exp(\pm\mathrm{i}\phi)$ with Haldane's zero-flux pattern. The model is gapless for $m/t_2 = 3\sqrt{3}|\sin\phi|$ and otherwise gapped when $|t_2 / t_1| < 1/3$.

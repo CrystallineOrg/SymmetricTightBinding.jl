@@ -41,10 +41,10 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         HoppingOrbit{2} (b + R + δ = a):
          δ₁ = [1/3, -1/3]:  [([1/3, 2/3] + [0, 0] → [2/3, 1/3])]
          δ₂ = [1/3, 2/3]:   [([1/3, 2/3] + [0, -1] → [2/3, 1/3])]
-         δ₃ = [-2/3, -1/3]: [([1/3, 2/3] + [1, 0] → [2/3, 1/3])]
+         δ₃ = [2/3, 1/3]:   [([2/3, 1/3] + [-1, 0] → [1/3, 2/3])]
          δ₄ = [-1/3, 1/3]:  [([2/3, 1/3] + [0, 0] → [1/3, 2/3])]  (= -δ₁)
          δ₅ = [-1/3, -2/3]: [([2/3, 1/3] + [0, 1] → [1/3, 2/3])]  (= -δ₂)
-         δ₆ = [2/3, 1/3]:   [([2/3, 1/3] + [-1, 0] → [1/3, 2/3])] (= -δ₃)"""
+         δ₆ = [-2/3, -1/3]: [([1/3, 2/3] + [1, 0] → [2/3, 1/3])]  (= -δ₃)"""
         test_tp_show(hop_orbits[2], str)
     end
 
@@ -75,9 +75,9 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0         z̄₁+z̄₂+z̄₃
-         z₁+z₂+z₃  0       
-        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+         0         z₃+z̄₁+z̄₂
+         z₁+z₂+z̄₃  0       
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
         test_tp_show(tbm[2], str)
     end
 
@@ -89,9 +89,9 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         │  ⎣ 0  1 ⎦
         └─ (2b|A₁) self-term.
         ┌─
-        2. ⎡ 0         z̄₁+z̄₂+z̄₃ ⎤
-        │  ⎣ z₁+z₂+z₃  0        ⎦
-        └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+        2. ⎡ 0         z₃+z̄₁+z̄₂ ⎤
+        │  ⎣ z₁+z₂+z̄₃  0        ⎦
+        └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
         test_tp_show(tbm, str)
 
         # the `zᵢ` key is omitted entirely if every term is a zero-δ on-site term
