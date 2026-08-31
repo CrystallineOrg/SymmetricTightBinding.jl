@@ -269,13 +269,13 @@ function _getindex(
         print(io, v_str)
 
         δ = tbb.h_orbit.orbit[n]
-        if !iszero(δ) # print the exponential: our notation is 𝕖(δ) ≡ exp(-2πi𝐤⋅δ)
+        if !iszero(δ) # print the exponential: our notation is {δ} ≡ exp(-2πi𝐤⋅δ)
             # refer to the canonical representative of ±δ, so that sign-related orbit
-            # elements are printed as 𝕖(δₘ) and 𝕖(-δₘ) rather than as unrelated symbols
+            # elements are printed as {δₘ} and {-δₘ} rather than as unrelated symbols
             m, negated = canonical_orbit_element(tbb.h_orbit.orbit, n)
-            print(io, "𝕖(")
+            print(io, "{")
             (negated ⊻ conjugate) && print(io, "-")
-            print(io, "δ", Crystalline.subscriptify(string(m)), ")")
+            print(io, "δ", Crystalline.subscriptify(string(m)), "}")
         else
             print(io, "1")
         end

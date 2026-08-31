@@ -92,7 +92,7 @@ function _print_orbit_elements(
     stylekws...,
 )
     δs = tbt.block.h_orbit.orbit
-    length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. 𝕖(0) = 1)
+    length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. {0} = 1)
     # only list the canonical representatives of each ±δ pair: their partners are referred
     # to as `-δₘ` in the printed matrix elements, so listing them separately is redundant
     is = filter(i -> !last(canonical_orbit_element(δs, i)), eachindex(δs))
