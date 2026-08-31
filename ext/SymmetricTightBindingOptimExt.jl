@@ -6,6 +6,8 @@ using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, pinv, tr
 using Optim
 using Optim: NLSolversBase
 import SymmetricTightBinding: fit, multistart_fit, make_fit_objective, spectralmoments
+import SymmetricTightBinding: isolate_irrep
+using SymmetricTightBinding: IrrepIsolationObjective, uniform_kmesh
 
 # Basin-hopping exploration constants (cf. `multistart_fit` & `hop_start`).
 # A "hop" perturbs the incumbent best by `step .* randn .* (abs.(best_cs) .+ FLOOR*ρ)`,
@@ -164,6 +166,36 @@ function SpectralMoments(tbm::TightBindingModel, Em_r::AbstractMatrix{<:Real}, k
     return SpectralMoments(TightBindingCache(tbm, ks), Em_r)
 end
 
+"""
+    SpectralMoments(cache::TightBindingCache; scale::Real = 1.0)
+
+Moment-derived quantities for a *design* problem, i.e., one posed by an objective rather
+than by a reference spectrum (cf. `isolate_irrep`), and hence with no `Em_r` to take moments
+of.
+
+The Gram matrix `Q̄` is as in the reference-based constructor, but the reference moments are
+replaced by a caller-supplied energy `scale`: the second moment is set to that of a spectrum
+with root-mean-square band energy `scale`, and the first-moment seed `c₀` — which the
+reference alone could fix — is set to zero. The exploration scales `ρ`/`ρs` then just say
+what size of hopping amplitudes produces a spectrum of the requested scale, which is all
+that `multistart_fit`'s random restarts need. Since `c₀ = 0` is a degenerate starting point
+(an identically vanishing Hamiltonian), `multistart_fit` replaces it by a random
+moment-scaled draw when handed reference-free moments.
+"""
+function SpectralMoments(cache::TightBindingCache; scale::Real = 1.0)
+    hs = cache.hs
+    Nᶜ = length(cache.tbm)
+    Q̄  = [sum(hsₖ -> real(dot(hsₖ[i], hsₖ[j])), hs) for i in 1:Nᶜ, j in 1:Nᶜ]
+    M₂ = length(hs) * cache.tbm.N * float(scale)^2 # ∑ₖₙ E² at an RMS band energy of `scale`
+    c₀ = zeros(Float64, Nᶜ)
+    ρ  = sqrt(M₂ / max(tr(Q̄), eps()))
+    ρs = sqrt.(M₂ ./ (Nᶜ .* max.(diag(Q̄), eps())))
+    return SpectralMoments(c₀, Q̄, M₂, ρ, ρs)
+end
+function spectralmoments(cache::TightBindingCache; kws...)
+    return SpectralMoments(cache; kws...)
+end
+
 # implementation of the `SymmetricTightBinding.spectralmoments` stub: the struct itself is
 # deliberately extension-local (small inter-package interface); the stub lets dependent
 # packages (e.g., PhotonicTightBinding.jl) construct it for use with `multistart_fit`
@@ -240,8 +272,13 @@ must be explicitly loaded to use this function.
   search. The default is deliberately loose, suiting the low-precision demands of the
   multi-start search.
 - `polish` (default, `true`): whether to polish off the multi-start optimization with a
-  final local optimization step using default Optim.jl options. This is useful to ensure
-  that the best candidate from the multi-start search is fully converged.
+  final local optimization step, at the tighter `polish_options` tolerances. This is useful
+  to ensure that the best candidate from the multi-start search is fully converged.
+- `polish_options` (default, `Optim.Options()`, i.e., Optim.jl's own defaults): options for
+  that final step. Worth loosening — `Optim.Options(g_abstol=1e-6, f_reltol=1e-9)`, say —
+  whenever the loss is not smooth enough for the gradient norm to reach Optim's default
+  `g_abstol` of `1e-8`: the polish then simply runs to the 1000-iteration cap, which can
+  cost more time than the entire multi-start search that preceded it.
 - `lasso` (default, `nothing`): if set to a positive number, applies a LASSO penalty to the
   hopping amplitudes, encouraging model sparsity (i.e., encouraging small hopping amplitudes
   to vanish). Setting to `nothing` disables the LASSO penalty.
@@ -298,6 +335,7 @@ function fit(
         f_reltol = 1e-5,
     ),
     polish::Bool = true,
+    polish_options::Optim.Options = Optim.Options(),
     lasso::Union{Nothing,Real} = nothing,
     init::Union{Nothing, AbstractVector{<:Real}} = nothing,
 ) where D
@@ -308,7 +346,7 @@ function fit(
     tol = length(ks) * tbm.N * atol^2 # sum of absolute squares tolerance
     best_cs, _ = multistart_fit(obj, moments;
                                 optimizer, max_multistarts, restart_every, tol, options,
-                                polish, verbose, init)
+                                polish, polish_options, verbose, init)
     return tbm(best_cs)
 end
 
@@ -340,12 +378,13 @@ around the incumbent best is far more effective than independent restarts. Concr
 Returns `(best_cs, best_loss)`, returning early if the loss drops to (or below) `tol`.
 
 ## Keyword arguments
-- `optimizer`, `max_multistarts`, `restart_every`, `options`, `polish`, `verbose`: as in
-  `fit`.
+- `optimizer`, `max_multistarts`, `restart_every`, `options`, `polish`, `polish_options`,
+  `verbose`: as in `fit`.
 - `tol` (default, `0.0`): early-return threshold on the *loss value* (for `fit`'s
   mean-error-per-band-and-k-point semantics, pass `length(ks) * N * atol^2`).
 - `init` (default, `nothing`): if provided, replaces `moments.c₀` as the deterministic
-  first start.
+  first start. If `moments.c₀` vanishes identically — as it does for the reference-free
+  moments of a design problem — a random moment-scaled draw is used instead.
 """
 function multistart_fit(
     obj,
@@ -356,6 +395,7 @@ function multistart_fit(
     tol::Real = 0.0,
     options::Optim.Options = Optim.Options(; g_abstol = 1e-2, f_reltol = 1e-5),
     polish::Bool = true,
+    polish_options::Optim.Options = Optim.Options(),
     verbose::Bool = false,
     init::Union{Nothing, AbstractVector{<:Real}} = nothing,
 )
@@ -367,8 +407,12 @@ function multistart_fit(
         kind = t == 1 ? :start : (t % restart_every == 0 ? :restart : :hop)
         verbose && (print("   trial #$t "); printstyled("[", kind, "]"; color=:light_blue))
         init_cs = if kind === :start
-            # deterministic first start: user-provided `init` or first-moment (trace) fit
-            isnothing(init) ? copy(moments.c₀) : convert(Vector{Float64}, init)
+            # deterministic first start: user-provided `init` or first-moment (trace) fit —
+            # except for reference-free moments, whose `c₀` is an identically vanishing (and
+            # hence useless) Hamiltonian, which we replace by a random moment-scaled draw
+            isnothing(init) ? (iszero(moments.c₀) ? moment_start(moments) :
+                                                    copy(moments.c₀)) :
+                              convert(Vector{Float64}, init)
         elseif kind === :hop
             hop_start(moments, best_cs, since_improve)
         else # kind === :restart
@@ -400,7 +444,7 @@ function multistart_fit(
             break
         end
     end
-    if verbose && best_loss > tol
+    if verbose && isfinite(tol) && best_loss > tol
         printstyled(
             "   `max_multistarts` exceeded: tolerance not met\n   (consider increasing the number of tight-binding terms)\n";
             color = :yellow,
@@ -410,7 +454,7 @@ function multistart_fit(
     # polish off the best result
     if polish
         verbose && print("Polishing off ")
-        o = optimize(obj, best_cs, optimizer)
+        o = optimize(obj, best_cs, optimizer, polish_options)
         if o.minimum < best_loss
             best_loss = o.minimum
             best_cs = o.minimizer
@@ -426,6 +470,111 @@ function multistart_fit(
     end
 
     return best_cs, best_loss
+end
+
+# ---------------------------------------------------------------------------------------- #
+# design drivers
+
+"""
+    isolate_irrep(tbm::TightBindingModel{D, HERMITIAN}, irlab::AbstractString; kws...)
+                                                    --> ParameterizedTightBindingModel{D}
+
+Search for hopping amplitudes of `tbm` that make the band multiplet transforming as the
+irrep `irlab` (e.g., `"Γ₄⁺"`) *energy-isolated*: away from the irrep's own **k**-point, no
+band may attain the multiplet's energy — the multiplet's own bands included, which must
+split cleanly into a set below and a set above it.
+
+This is the design counterpart of [`fit`](@ref): the least-squares loss against a reference
+spectrum is replaced by [`IrrepIsolationObjective`](@ref) — a smooth soft-minimum of the
+(scale-normalized) energetic separation between the multiplet and every other band — but the
+search engine, `multistart_fit`, is the same. Whether the returned model actually achieves
+isolation, and by what margin, is not guaranteed by construction and should be verified
+independently, on a finer **k**-mesh, with [`isolation_report`](@ref).
+
+The function is defined as an Optim.jl extension to SymmetricTightBinding.jl: i.e., Optim.jl
+must be explicitly loaded to use this function.
+
+## Keyword arguments
+- `Nk`, `ks`, `kexclude`, `split`, `β`, `λ_scale`, `σ₀`, `λ_shift`, `lasso`: forwarded to
+  [`IrrepIsolationObjective`](@ref); in particular, `Nk` (default, `6`) sets the density of
+  the **k**-mesh that isolation is imposed over -- or `ks` the **k**-points outright, e.g.,
+  a decimated `irrfbz_path` from Brillouin.jl -- and `kexclude` (default, `0.1`) the radius
+  of the neighbourhood of the irrep's **k**-point that is exempted from the constraints
+  (necessarily so: the gap closes at the degeneracy itself). `lasso` (default, `nothing`)
+  adds a scale-invariant ``\\ell_1`` penalty on the amplitudes, trading attained gap for a
+  sparser model, exactly as in [`fit`](@ref).
+- `scale` (default, `1.0`): the energy scale of the spectra explored by the multi-start
+  restarts (cf. `SpectralMoments`). Only meaningful relative to `σ₀`, since the objective
+  itself is scale-invariant.
+- `optimizer` (default, `LBFGS()`): a *first-order* Optim.jl optimizer; the objective
+  supplies an analytic (Feynman–Hellmann) gradient, but no Hessian.
+- `max_multistarts` (default, `max(60, 10length(tbm))`), `restart_every`, `tol` (default,
+  `-Inf`, i.e., no early return), `options`, `polish`, `verbose`: as in `multistart_fit`.
+  Design searches are markedly harder than fits and generally need *many* starts: the SG 224
+  example below finds nothing at all with 50 starts and succeeds with 200.
+- `polish_options` (default, `Optim.Options(g_abstol=1e-6, f_reltol=1e-9)`): deliberately
+  looser than Optim.jl's defaults, which the soft-minimum loss cannot meet — it would run
+  to the 1000-iteration cap and spend more time than the whole search, for a fraction of a
+  percent of loss.
+- `init` (default, `nothing`): a warm start for the deterministic first trial, given either
+  as a vector of amplitudes or as a [`ParameterizedTightBindingModel`](@ref) to take them
+  from. Subsequent trials still hop around it, so a warm start biases the search without
+  confining it — useful for refining an earlier result against a denser `ks`, a smaller
+  `kexclude`, or a `lasso` weight, each of which changes the landscape only gradually.
+
+## Example
+
+```julia-repl
+julia> using Crystalline, SymmetricTightBinding, Optim, Random
+
+julia> brs = calc_bandreps(224);
+
+julia> cbr = @composite brs[18] + brs[23]; # (4b|A₂g) + (2a|A₂), 6 bands
+
+julia> tbm = tb_hamiltonian(cbr, [[0,0,0], [1,0,0]]);
+
+julia> Random.seed!(1); # `Nk` divisible by 6, and many starts: cf. the keywords above
+
+julia> ptbm = isolate_irrep(tbm, "Γ₄⁺"; Nk = 6, max_multistarts = 200);
+
+julia> report = isolation_report(ptbm, "Γ₄⁺"; Nk = 24);
+
+julia> report.isolated, report.bands, report.split # 2 of the 3 bands below Et, 1 above
+(true, 3:5, 2)
+```
+"""
+function isolate_irrep(
+    tbm::TightBindingModel{D, HERMITIAN},
+    irlab::AbstractString;
+    Nk::Integer = 6,
+    ks::AbstractVector = uniform_kmesh(Val(D), Nk),
+    kexclude::Real = 0.1,
+    split::Union{Nothing, Integer} = nothing,
+    β::Real = 20.0,
+    λ_scale::Real = 0.1,
+    σ₀::Real = 1.0,
+    λ_shift::Real = 0.1,
+    lasso::Union{Nothing, Real} = nothing,
+    scale::Real = 1.0,
+    optimizer::Optim.AbstractOptimizer = LBFGS(),
+    max_multistarts::Integer = max(60, 10length(tbm)),
+    restart_every::Integer = BASIN_RESTART_EVERY,
+    tol::Real = -Inf,
+    options::Optim.Options = Optim.Options(; g_abstol = 1e-4, f_reltol = 1e-6),
+    polish::Bool = true,
+    polish_options::Optim.Options = Optim.Options(; g_abstol = 1e-6, f_reltol = 1e-9),
+    verbose::Bool = false,
+    init::Union{Nothing, AbstractVector{<:Real}, ParameterizedTightBindingModel{D}} = nothing,
+) where D
+    _fgh! = IrrepIsolationObjective(tbm, irlab; ks, kexclude, split, β, λ_scale, σ₀,
+                                    λ_shift, lasso)
+    obj = make_fit_objective(_fgh!)
+    moments = SpectralMoments(_fgh!.cache; scale)
+    init_cs = init isa ParameterizedTightBindingModel ? init.cs : init
+    best_cs, _ = multistart_fit(obj, moments;
+                                optimizer, max_multistarts, restart_every, tol, options,
+                                polish, polish_options, verbose, init = init_cs)
+    return tbm(best_cs)
 end
 
 end # module SymmetricTightBindingOptimExt

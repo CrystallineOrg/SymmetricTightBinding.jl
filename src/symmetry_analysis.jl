@@ -123,22 +123,46 @@ function symmetry_eigenvalues(
     #     To be able to interface with Crystalline.jl, and until thchr/Crystalline.jl/#12 is
     #     resolved, we thus actually return `χ_Crystalline = conj(χ_Convention1)`.
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
+    Ms = symmetry_operator_matrices(sgreps, orbital_positions(ptbm), k)
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
-    v_kpG = similar(vs, size(vs, 1)) # preallocate for Θᴳ * v
-    for (j, sgrep) in enumerate(sgreps)
+    for (j, M) in enumerate(Ms), (n, v) in enumerate(eachcol(vs))
+        # Convention 1: χ = (Θᴳv)† D_k v = v†Mv; [⚠️ phase]: conjugated to Crystalline's
+        symeigs[j, n] = conj(dot(v, M, v))
+    end
+    return symeigs
+end
+
+"""
+    symmetry_operator_matrices(
+        sgreps::AbstractVector{SiteInducedSGRepElement{D}},
+        positions::AbstractVector{DirectPoint{D}},
+        k::ReciprocalPointLike{D}
+    )                                             --> Vector{Matrix{ComplexF64}}
+
+The per-operation matrices ``M^g = (\\Theta^{\\mathbf{G}})^\\dagger D_{\\mathbf{k}}(g)``
+that convert eigenvectors of ``H(\\mathbf{k})`` (in the Convention 1 basis) into symmetry
+eigenvalues, via ``\\chi_n(g) = (v_n^\\dagger M^g v_n)^*``, with the outer conjugation
+supplying Crystalline.jl's character convention (cf. `symmetry_eigenvalues`'s `[⚠️ phase]`
+note).
+
+Since the matrices depend only on the band representation and on `k` — and not on any
+hopping amplitudes — they can be computed once and reused across many models; this is what
+makes repeated irrep identification (cf. `locate_multiplet`) cheap inside an optimization
+loop.
+"""
+function symmetry_operator_matrices(
+    sgreps::AbstractVector{SiteInducedSGRepElement{D}},
+    positions::AbstractVector{DirectPoint{D}},
+    k::ReciprocalPointLike{D},
+) where D
+    return map(sgreps) do sgrep
         g = sgrep.op
         gk = compose(g, ReciprocalPoint{D}(k)) # NB: for k ∈ Gₖ, there exist G st g∘k = k+G
         G = gk - k # the possible reciprocal vector-difference G between k & g∘k; for Θᴳ
-        Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G)
+        Θᴳ = reciprocal_translation_phase(positions, G)
         D_k = sgrep(k) # = D_k(g) = e^{-2πi(gk)·t} ρ(h) (Convention 1)
-        for (n, v) in enumerate(eachcol(vs))
-            v_kpG = mul!(v_kpG, Θᴳ, v) # = Θᴳ * v (without re-allocating `v_kpG`)
-            χ = dot(v_kpG, D_k, v)  # Convention 1: (Θ_G w)† D_k w
-            χ_Crystalline = conj(χ) # [⚠️ phase]: convert to Crystalline.jl's convention
-            symeigs[j, n] = χ_Crystalline
-        end
+        Matrix{ComplexF64}(Θᴳ' * D_k)
     end
-    return symeigs
 end
 
 function symmetry_eigenvalues(

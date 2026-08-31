@@ -35,6 +35,7 @@ makedocs(;
         "Symmetry breaking" => "symmetry-breaking.md",
         "Non-Hermitian models" => "nonhermitian.md",
         "Fitting to band structures" => "fitting.md",
+        "Designing models to an objective" => "design.md",
         "API" => "api.md",
         "Internal API" => "internal-api.md",
         "Theory" => "theory.md",

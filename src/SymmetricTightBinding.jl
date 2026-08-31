@@ -58,6 +58,11 @@ include("dos.jl")
 export densityofstates
 include("symmetry_breaking.jl")
 export subduced_complement
+include("design.jl")
+export uniform_kmesh
+export IrrepTarget, locate_multiplet
+export IrrepIsolationObjective
+export isolation_report
 include("show.jl")
 
 # --- Re-exports ------------------------------------------------------------------------- #
@@ -72,6 +77,10 @@ function multistart_fit end     # ┐ stubs, overloaded in the extension, so tha
 function make_fit_objective end # │ machinery can be reused from dependent packages (e.g.,
 function spectralmoments end    # ┘ PhotonicTightBinding.jl) without `Base.get_extension`
 export fit, multistart_fit, make_fit_objective
+
+# objective-driven design (cf. `src/design.jl`); driver implemented in the Optim.jl extension
+function isolate_irrep end
+export isolate_irrep
 
 # ---------------------------------------------------------------------------------------- #
 end # module

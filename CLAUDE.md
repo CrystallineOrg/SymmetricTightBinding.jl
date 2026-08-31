@@ -44,6 +44,19 @@ hopping ranges, the package:
   `energy_gradient_wrt_momentum` (group velocity ∇ₖEₙ via Feynman–Hellmann, degenerate-aware) (`src/gradients.jl`)
 - `subduced_complement(tbm, sgnum_H)` — new terms from symmetry breaking (`src/symmetry_breaking.jl`)
 
+### Objective-driven design (`src/design.jl`)
+- `isolate_irrep(tbm, irlab)` — find amplitudes making an irrep's multiplet energy-isolated
+  (Optim extension; the design counterpart of `fit`)
+- `IrrepIsolationObjective` — the `fgh!`-style loss it minimizes: a softmin of the
+  normalized signed gaps enforcing (i) that no band outside the multiplet reaches `Et`, and
+  (ii) that the multiplet's own `d` bands split `p` below / `d-p` above `Et` away from the
+  node (`kexclude` exempts a neighbourhood of it from (ii) only). Supports `lasso`
+  (sparsification) and `split` (fixing `p`)
+- `IrrepTarget`/`locate_multiplet` identify the multiplet at each evaluation by character
+  matching; `isolation_report` verifies an outcome on a finer k-sampling
+- `uniform_kmesh(Val(D), Nk)` — Γ-inclusive uniform mesh over the reduced BZ; use `Nk`
+  divisible by 6, else symmetry-enforced degeneracies at ⅓-type points go unsampled
+
 ### Utilities
 - `pin_free!(brs, idx2abc)` — fix free Wyckoff parameters (`src/utils.jl`)
 - `solve(ptbm, k; bloch_phase)` — eigenvalues + eigenvectors (in `src/types.jl`)
@@ -51,7 +64,8 @@ hopping ranges, the package:
 
 ### Extensions
 - `SymmetricTightBindingMakieExt` — Makie recipes for hopping orbits and band structures
-- `SymmetricTightBindingOptimExt` — model fitting via Optim.jl (multi-start LBFGS)
+- `SymmetricTightBindingOptimExt` — model fitting (`fit`) & objective-driven design
+  (`isolate_irrep`) via Optim.jl (moment-seeded, basin-hopping multi-start)
 
 ## Fourier convention
 
@@ -78,11 +92,12 @@ src/
   timereversal.jl           # TRS constraint: H(k) = H*(-k)
   zassenhaus.jl             # Zassenhaus algorithm for subspace intersection
   symmetry_breaking.jl      # subduced complement for translationengleiche subgroups
+  design.jl                 # objective-driven design: irrep-isolation objective & targets
   utils.jl                  # orbital positions, pin_free!, split_complex, etc.
   show.jl                   # pretty-printing for all types
 ext/
   SymmetricTightBindingMakieExt.jl   # Makie visualization recipes
-  SymmetricTightBindingOptimExt.jl   # Optim.jl fitting
+  SymmetricTightBindingOptimExt.jl   # Optim.jl fitting & design drivers
 test/
   runtests.jl               # test runner; `TESTFILES` + selector logic (see "Running tests")
   pg_tb_hamiltonian.jl      # plane group tests (graphene, p4mm, p3, p2)
@@ -98,6 +113,7 @@ test/
   nonhermitian.jl           # NONHERMITIAN model tests
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
+  design.jl                 # irrep isolation: objective gradients, `isolate_irrep`
   misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough
@@ -105,6 +121,7 @@ docs/src/
   band-symmetry.md          # symmetry analysis example
   symmetry-breaking.md      # symmetry reduction example
   berry.md                  # Haldane model, Chern numbers
+  design.md                 # designing to an objective (irrep isolation)
   devdocs/
     README.md               # index of developer docs
     trs_notes.md            # co-representation theory, TRS quantization, realification
@@ -148,7 +165,7 @@ first-call compilation):
 | `sg_tb_hamiltonian.jl`        | 49 s    | | `show.jl`                 | 5 s  |
 | `symmetry_analysis_manual.jl` | 41 s    | | `spectrum.jl`             | 2 s  |
 | `dos.jl`                      | 34 s    | | `misc.jl`                 | 2 s  |
-| `symmetry-breaking.jl`        | 19 s    | |                           |      |
+| `symmetry-breaking.jl`        | 19 s    | | `design.jl`               | 9 s  |
 
 † timed on its own rather than in sequence, so it carries all of the first-call compilation;
 its marginal cost within a larger run is smaller.
