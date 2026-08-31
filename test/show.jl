@@ -68,8 +68,8 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0                  𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃)
-         𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                   
+         0               {-δ₁}+{-δ₂}+{-δ₃}
+         {δ₁}+{δ₂}+{δ₃}  0                
         δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm[2], str)
     end
@@ -82,8 +82,8 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         │  ⎣ 0  1 ⎦
         └─ (2b|A₁) self-term
         ┌─
-        2. ⎡ 0                  𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃) ⎤
-        │  ⎣ 𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                    ⎦
+        2. ⎡ 0               {-δ₁}+{-δ₂}+{-δ₃} ⎤
+        │  ⎣ {δ₁}+{δ₂}+{δ₃}  0                 ⎦
         └─ (2b|A₁) self-term:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm, str)
     end
