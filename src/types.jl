@@ -348,7 +348,6 @@ struct TightBindingModel{D, S} <: AbstractTightBindingModel{TightBindingTerm{D, 
     positions::Vector{DirectPoint{D}} # positions associated to each orbital
     N::Int # total number of orbitals, i.e., matrix size
 end
-Base.eltype(::Type{TightBindingModel{D, S}}) where {D, S} = TightBindingTerm{D, S}
 Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
 Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
 Base.setindex!(tbm::TightBindingModel, v, i::Int) = setindex!(tbm.terms, v, i)
