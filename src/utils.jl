@@ -75,14 +75,20 @@ inversion(::Val{1}) = S"-x"
 inversion(::Val) = error("unsupported dimension")
 
 ## --------------------------------------------------------------------------------------- #
-# Extracting a list of positions associated with our convention for orbital ordering of a
-# `NewBandRep` or a `CompositeBandRep`. For a `NewBandRep`, the orbitals are arranged such
-# that the first `irdim(br.siteir)` orbitals associate to the first element of the orbit
-# of its Wyckoff positions; the next `irdim(br.siteir)` orbitals associate to the second
-# element of the orbit, and so on. For a `CompositeBandRep`, the orbitals of each
-# `NewBandRep` are concatenated, in the order of their coefficients. For coefficients
-# greater than 1, the positions are repeated `cᵢ-1` times.
+"""
+    orbital_positions(br::NewBandRep{D})                         -> Vector{DirectPoint{D}}
+    orbital_positions(cbr::CompositeBandRep{D})                  -> Vector{DirectPoint{D}}
+    orbital_positions(atbm::AbstractTightBindingModel)           -> Vector{DirectPoint}
+    orbital_positions(aptbm::AbstractParameterizedTightBindingModel) -> Vector{DirectPoint}
 
+Return a list of positions associated with our convention for orbital ordering of a
+`NewBandRep` or a `CompositeBandRep`. For a `NewBandRep`, the orbitals are arranged such
+that the first `irdim(br.siteir)` orbitals associate to the first element of the orbit
+of its Wyckoff positions; the next `irdim(br.siteir)` orbitals associate to the second
+element of the orbit, and so on. For a `CompositeBandRep`, the orbitals of each
+`NewBandRep` are concatenated, in the order of their coefficients. For coefficients
+greater than 1, the positions are repeated `cᵢ-1` times.
+"""
 function orbital_positions(br::NewBandRep{D}) where D
     dim = irdim(br.siteir)
     wps = primitivized_orbit(br)
