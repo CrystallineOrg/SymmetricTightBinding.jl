@@ -47,15 +47,15 @@ the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) whil
 time-reversal symmetry.
 ```julia-repl
 julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
-2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁):
+2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
-1. ⎡ i𝕖(δ₁)+i𝕖(δ₂)+i𝕖(δ₃)-i𝕖(-δ₁)-i𝕖(-δ₂)-i𝕖(-δ₃)  0                                             ⎤
-│  ⎣ 0                                             -i𝕖(δ₁)-i𝕖(δ₂)-i𝕖(δ₃)+i𝕖(-δ₁)+i𝕖(-δ₂)+i𝕖(-δ₃) ⎦
-└─ (2b|A₁) self-term:  δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]
+1. ⎡ iz₁+iz₂+iz₃-iz̄₁-iz̄₂-iz̄₃  0                        ⎤
+│  ⎣ 0                        -iz₁-iz₂-iz₃+iz̄₁+iz̄₂+iz̄₃ ⎦
+└─ (2b|A₁) self-term.  δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]
 ┌─
-2. ⎡ 0                                          𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)-𝕖(δ₇)-𝕖(δ₈)-𝕖(δ₉) ⎤
-│  ⎣ 𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃)-𝕖(-δ₇)-𝕖(-δ₈)-𝕖(-δ₉)  0                                   ⎦
-└─ (2b|A₁) self-term:  δ₁=[-4/3,1/3], δ₂=[-1/3,-5/3], δ₃=[5/3,4/3], δ₇=[-1/3,4/3], δ₈=[5/3,1/3], δ₉=[-4/3,-5/3]
+2. ⎡ 0                  z₁+z₂+z₃-z₇-z₈-z₉ ⎤
+│  ⎣ z̄₁+z̄₂+z̄₃-z̄₇-z̄₈-z̄₉  0                 ⎦
+└─ (2b|A₁) self-term.  δ₁=[-4/3,1/3], δ₂=[-1/3,-5/3], δ₃=[5/3,4/3], δ₇=[-1/3,4/3], δ₈=[5/3,1/3], δ₉=[-4/3,-5/3]
 ```
 The first of the of these terms is not diagonal at K and so opens a gap at the Dirac point:
 ```julia-repl
