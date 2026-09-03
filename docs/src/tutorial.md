@@ -42,9 +42,9 @@ tbm = tb_hamiltonian(cbr)
 
 The output lists the "basis terms" of the tight-binding Bloch Hamiltonian, each implicitly parameterized by a free on-site energy or hopping amplitude.
 
-!!! note "The short-hand notation 𝕖(δᵢ)"
-    The notation `𝕖(δᵢ)` is used for brevity in the above output, to short-hand the complex momentum-dependent exponential $\mathrm{e}^{-\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$. Here $\boldsymbol{\delta}_i$ denotes a hopping vector (pointing from the annihilated to the created site); in turn, these vectors are expressed above as `δᵢ`, given in the basis of the primitive direct lattice $\{\mathbf{a}_i\}$. A term like `δ₁ = [1/3, -1/3]` consequently represents $\boldsymbol{\delta}_1 = \tfrac{1}{3}\mathbf{a}_1 - \tfrac{1}{3}\mathbf{a}_2$.
-    Terms of the form `𝕖(-δᵢ)` denote the corresponding hopping in the opposite direction, i.e., $\mathrm{e}^{+\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$; we compress the listing of such pairs of forward and backward hopping terms via a sign on one term, although both hopping directions are stored under the hood.
+!!! note "The short-hand notation `zᵢ`"
+    The notation `zᵢ` is used for brevity in the above output, to short-hand the complex momentum-dependent exponential $z_i = \mathrm{e}^{-\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$. Here $\boldsymbol{\delta}_i$ denotes a hopping vector (pointing from the annihilated to the created site); in turn, these vectors are expressed above as `δᵢ`, given in the basis of the primitive direct lattice $\{\mathbf{a}_i\}$. A term like `δ₁ = [1/3, -1/3]` consequently represents $\boldsymbol{\delta}_1 = \tfrac{1}{3}\mathbf{a}_1 - \tfrac{1}{3}\mathbf{a}_2$.
+    Terms of the form `z̄ᵢ` denote the complex conjugate $\bar{z}_i = \mathrm{e}^{+\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$, i.e., the corresponding hopping in the opposite direction; we compress the listing of such pairs of forward and backward hopping vectors to the forward member alone, although both hopping directions are stored under the hood.
 
 
 ## Visualization

@@ -89,16 +89,18 @@ function _print_orbit_elements(
     io::IO,
     tbt::TightBindingTerm;
     pretext = nothing,
+    key::Bool = true, # print the `zᵢ=exp(-ik·δᵢ)` short-hand key ahead of the δᵢ listing
     stylekws...,
 )
     δs = tbt.block.h_orbit.orbit
-    length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. 𝕖(0) = 1)
-    # only list the canonical representatives of each ±δ pair: their partners are referred
-    # to as `-δₘ` in the printed matrix elements, so listing them separately is redundant
+    length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. z = 1)
+    # only list the canonical representatives of each ±δ pair: their partners enter the
+    # printed matrix elements as `z̄ₘ`, so listing them separately is redundant
     is = filter(i -> !last(canonical_orbit_element(δs, i)), eachindex(δs))
     if !isnothing(pretext)
         printstyled(io, pretext; stylekws...)
     end
+    key && printstyled(io, "zᵢ=exp(-ik·δᵢ): "; stylekws...)
     for (n, i) in enumerate(is)
         printstyled(io, "δ", Crystalline.subscriptify(string(i)), "="; stylekws...)
         printstyled(io, replace(string(δs[i]), ", " => ","); stylekws...)
@@ -123,6 +125,10 @@ Base.summary(io::IO, tbm::TightBindingModel) = _summary_like(io, tbm, "TightBind
 function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where {D}
     summary(io, tbm)
     length(tbm) == 0 && return
+    # define the `zᵢ` short-hand once here, rather than repeating it for every term below
+    if any(tbt -> any(!iszero, tbt.block.h_orbit.orbit), tbm)
+        print(io, ", where zᵢ=exp(-ik·δᵢ)")
+    end
     print(io, ":")
     N = tbm.N
     ioc = IOContext(io, :displaysize => displaysize(io) .- (0, 5))
@@ -143,7 +149,8 @@ function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where 
         end
         printstyled(io, "└─ "; color = :light_black)
         _print_tightbindingterm_block_summary(io, tbt)
-        _print_orbit_elements(io, tbt; color = :light_black, pretext = ":  ")
+        printstyled(io, "."; color = :light_black)
+        _print_orbit_elements(io, tbt; color = :light_black, pretext = "  ", key = false)
     end
 end
 function _print_tightbindingterm_block_summary(io::IO, tbt::TightBindingTerm{D}) where {D}
