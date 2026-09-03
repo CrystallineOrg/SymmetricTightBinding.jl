@@ -77,13 +77,13 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
          0         z̄₁+z̄₂+z̄₃
          z₁+z₂+z₃  0       
-        zᵢ=exp(-ik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm[2], str)
     end
 
     @testset "TightBindingModel" begin
         str = """
-        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-ik·δᵢ):
+        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
         ┌─
         1. ⎡ 1  0 ⎤
         │  ⎣ 0  1 ⎦

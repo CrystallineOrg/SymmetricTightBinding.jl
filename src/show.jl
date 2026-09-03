@@ -89,7 +89,7 @@ function _print_orbit_elements(
     io::IO,
     tbt::TightBindingTerm;
     pretext = nothing,
-    key::Bool = true, # print the `zᵢ=exp(-ik·δᵢ)` short-hand key ahead of the δᵢ listing
+    key::Bool = true, # print the `zᵢ=exp(-2πik·δᵢ)` short-hand key ahead of the δᵢ listing
     stylekws...,
 )
     δs = tbt.block.h_orbit.orbit
@@ -100,7 +100,7 @@ function _print_orbit_elements(
     if !isnothing(pretext)
         printstyled(io, pretext; stylekws...)
     end
-    key && printstyled(io, "zᵢ=exp(-ik·δᵢ): "; stylekws...)
+    key && printstyled(io, "zᵢ=exp(-2πik·δᵢ): "; stylekws...)
     for (n, i) in enumerate(is)
         printstyled(io, "δ", Crystalline.subscriptify(string(i)), "="; stylekws...)
         printstyled(io, replace(string(δs[i]), ", " => ","); stylekws...)
@@ -127,7 +127,7 @@ function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where 
     length(tbm) == 0 && return
     # define the `zᵢ` short-hand once here, rather than repeating it for every term below
     if any(tbt -> any(!iszero, tbt.block.h_orbit.orbit), tbm)
-        print(io, ", where zᵢ=exp(-ik·δᵢ)")
+        print(io, ", where zᵢ=exp(-2πik·δᵢ)")
     end
     print(io, ":")
     N = tbm.N
