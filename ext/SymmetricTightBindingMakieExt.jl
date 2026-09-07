@@ -4,9 +4,11 @@ module SymmetricTightBindingMakieExt
 
 using SymmetricTightBinding
 using SymmetricTightBinding: TightBindingTerm, PRUNE_ATOL_DEFAULT, VEC_CMP_ATOL
+import SymmetricTightBinding: bondplot, bondplot! # recipe below extends these stubs
 using Crystalline: DirectBasis, crystal, constant, isapproxin
 using LinearAlgebra: normalize, norm
 using Makie
+using Makie.GeometryBasics: Cylinder, Sphere, Tessellation, normal_mesh
 
 ## --------------------------------------------------------------------------------------- #
 
@@ -65,16 +67,17 @@ function Makie.plot!(
         context = merge(context, default_context_attributes)
     end
 
-    P, V = Point{D, Float32}, Vec{D, Float32}
+    P = Point{D, Float32}
     Rm = stack(Rs)
 
     # compute creation (`destination`) and annihilation (`origin`) sites for each hopping,
     # accounting for `t` if given
     origins, destinations = if isnothing(t)
-        _origins_and_destinations_from_hoppingorbit(h, Rm)
+        _origins_and_destinations_from_hoppingorbit(h)
     else
-        _origins_and_destinations_from_coefficients(h, t, Rm)
+        _origins_and_destinations_from_coefficients(h, t)
     end
+    origins, destinations = to_cartesian(Rm, origins), to_cartesian(Rm, destinations)
 
     # For D = 1: lift to 2D for Makie calls; keep D-dimensional originals for context loop
     # Thus, `plot_origins` is either 2D or 3D, while `origins` is D-dimensional; similar for
@@ -83,30 +86,7 @@ function Makie.plot!(
     plot_destinations = D == 1 ? lift_coordinates_to_2D(destinations) : destinations
 
     # plot parallepiped unit cell (with lower left corner at origin)
-    rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
-    pts = P.(Ref(Rm) .* Makie.GeometryBasics.coordinates(rect))
-    if D == 3
-        push!(pts, P(NaN))
-        unitcell = pts[[1, 3, 4, 2, 1, 5, 6, 2, 9, 6, 8, 7, 5, 9, 8, 4, 9, 7, 3]]
-    elseif D == 2
-        unitcell = pts[[1, 2, 3, 4, 1]]
-    elseif D == 1
-        # Makie cannot do 1D plotting, so we manually convert the 1D unit cell to a thin
-        # 2D unit cell; similarly so, all other coordinates in 1D case are given a y-coord.
-        # equal to zero (via `lift_coordinates_to_2D`)
-        x_width_1d = if !isnothing(context.limits[])
-            (context.limits[] :: Rect{1, Float32}).widths[1]
-        else
-            max_x = max(maximum(first, origins), maximum(first, destinations), maximum(first, pts))
-            min_x = min(minimum(first, origins), minimum(first, destinations), minimum(first, pts))
-            max_x - min_x
-        end
-        y_height = x_width_1d * 0.2f0 # y-height = 20% of x-width
-        unitcell = lift_1D_unit_cell_to_2D(pts, y_height) # only vertical lines; NaN-breaks to avoid horizontal lines
-        pts = unitcell[[1, 2, 4, 5]] # skip the NaN break so we can draw with `poly!`
-    else
-        error("unsupported dimension $D")
-    end
+    pts, unitcell = unitcell_geometry(Rm, origins, destinations, context.limits[], Val(D))
 
     if D == 1 || D == 2
         poly!(pts; color=p.unitcell[].patchcolor)
@@ -181,14 +161,7 @@ function Makie.plot!(
 
     # set square axis limits, centered around unit cell center
     bbox = if isnothing(context.limits[])
-        bbox_coords = Makie.GeometryBasics.coordinates(data_limits(p))
-        cntr = sum(Rs) ./ 2
-        max_dist = maximum(abs,
-            ntuple(d->maximum(v->abs(cntr[d]-getindex(v, d)), bbox_coords), Val(D)))
-        pad = maximum(abs, 
-            ntuple(d -> splat(-)(extrema(v -> getindex(v, d), filter(!isnan, pts))), Val(D)))
-        width = max_dist + pad*0.1
-        Rect{D, Float32}(cntr-V(width), V(2*width))
+        square_bbox(data_limits(p), Rs, pts, Val(D))
     else
         context.limits[] :: Rect{D, Float32}
     end
@@ -294,6 +267,64 @@ function _arrows_offsets(
 end
 
 ## --------------------------------------------------------------------------------------- #
+# shared geometry helpers
+
+# corner points `pts` of the parallepiped unit cell (lower left corner at origin) and a
+# point-list `unitcell` that traces out its edges (NaN-separated where the trace must break).
+# For D = 1, both are lifted to 2D, with a height set by the extent of the plotted data.
+function unitcell_geometry(
+    Rm #= stack(Rs) =#,
+    origins, # Cartesian, D-dimensional
+    destinations, # Cartesian, D-dimensional
+    limits::Union{Nothing, Rect{D, Float32}},
+    ::Val{D}
+) where D
+    P, V = Point{D, Float32}, Vec{D, Float32}
+    rect = Rect{D, Float32}(P(0), V(1)) # unit cube at origin
+    pts = P.(Ref(Rm) .* Makie.GeometryBasics.coordinates(rect))
+    if D == 3
+        push!(pts, P(NaN))
+        unitcell = pts[[1, 3, 4, 2, 1, 5, 6, 2, 9, 6, 8, 7, 5, 9, 8, 4, 9, 7, 3]]
+    elseif D == 2
+        unitcell = pts[[1, 2, 3, 4, 1]]
+    elseif D == 1
+        # Makie cannot do 1D plotting, so we manually convert the 1D unit cell to a thin
+        # 2D unit cell; similarly so, all other coordinates in 1D case are given a y-coord.
+        # equal to zero (via `lift_coordinates_to_2D`)
+        x_width_1d = if !isnothing(limits)
+            limits.widths[1]
+        else
+            max_x = max(maximum(first, origins), maximum(first, destinations), maximum(first, pts))
+            min_x = min(minimum(first, origins), minimum(first, destinations), minimum(first, pts))
+            max_x - min_x
+        end
+        y_height = x_width_1d * 0.2f0 # y-height = 20% of x-width
+        unitcell = lift_1D_unit_cell_to_2D(pts, y_height) # only vertical lines; NaN-breaks to avoid horizontal lines
+        pts = unitcell[[1, 2, 4, 5]] # skip the NaN break so we can draw with `poly!`
+    else
+        error("unsupported dimension $D")
+    end
+    return pts, unitcell
+end
+
+# a square (cubic) bounding box, centered on the unit cell center, enclosing `data_bbox`
+# (plus a bit of padding, set by the size of the unit cell corner points `pts`). NB: the
+# dimension of `data_bbox` may exceed `D` (e.g., Makie returns 3D data limits for 2D `poly`
+# plots); we simply disregard the excess dimensions
+function square_bbox(data_bbox::Rect, Rs::DirectBasis{D}, pts, ::Val{D}) where D
+    V = Vec{D, Float32}
+    bbox_coords = Makie.GeometryBasics.coordinates(data_bbox)
+    cntr = sum(Rs) ./ 2
+    max_dist = maximum(abs,
+        ntuple(d->maximum(v->abs(cntr[d]-getindex(v, d)), bbox_coords), Val(D)))
+    pad = maximum(abs,
+        ntuple(d -> splat(-)(extrema(v -> getindex(v, d), filter(!isnan, pts))), Val(D)))
+    width = max_dist + pad*0.1
+    # TODO: the padding and added width should surely not be the same in all dimensions
+    return Rect{D, Float32}(cntr-V(width), V(2*width))
+end
+
+## --------------------------------------------------------------------------------------- #
 # 1D to 2D conversion helpers
 
 function lift_1D_unit_cell_to_2D(pts::Vector{Point{1, Float32}}, y_height::Float32)
@@ -317,24 +348,23 @@ end
 
 ## --------------------------------------------------------------------------------------- #
 
+# NB: the functions below return coordinates in _fractional_ (lattice) coordinates; use
+#     `to_cartesian(Rm, …)` to convert to Cartesian coordinates. Fractional coordinates are
+#     retained since they are needed to tile hoppings by lattice translations (`tile_bonds`)
+
 # Simple case: take no account of a coefficient vector, just plot all hoppings in `h`.
 # The hopping `δ` is such that `δ = a-b-R`, so the hopping direction is from `b+R`
 # (annihilated) to `a` (created).
-function _origins_and_destinations_from_hoppingorbit(
-    h::HoppingOrbit{D},
-    Rm::AbstractMatrix{<:Real}
-) where D
-    P = Point{D, Float32}
+function _origins_and_destinations_from_hoppingorbit(h::HoppingOrbit{D}) where D
+    P = Point{D, Float64}
     destinations = mapreduce(vcat, h.hoppings) do hs
         map(hs) do h
-            a = Rm * constant(h[1])
-            P(a)
+            P(constant(h[1])) # a
         end
     end
     origins = mapreduce(vcat, h.hoppings) do hs
         map(hs) do h
-            b_plus_R = Rm * (constant(h[2]) + constant(h[3]))
-            P(b_plus_R)
+            P(constant(h[2]) + constant(h[3])) # b + R
         end
     end
     return origins, destinations
@@ -345,7 +375,6 @@ end
 function _origins_and_destinations_from_coefficients(
     h::HoppingOrbit{D},
     t::AbstractVector{<:Number},
-    Rm::AbstractMatrix{<:Real}
 ) where D
     # reshape `t` to a tensor version `T` with [k, j, i] indices, and `i` denoting `i`th
     # orbit, `j` denoting `j`th hopping in that orbit, and `k` denoting a multi-index into
@@ -359,7 +388,7 @@ function _origins_and_destinations_from_coefficients(
     Tr = reshape((@view t[1:N]), (K, J, I))
     Ti = reshape((@view t[(N+1):(2N)]), (K, J, I))
 
-    P = Point{D, Float32}
+    P = Point{D, Float64}
     origins, destinations = Vector{P}(), Vector{P}()
     for (i, hs) in enumerate(h.hoppings)
         # key aim: only add a hopping term if any of its associated coefficients are nonzero
@@ -367,13 +396,39 @@ function _origins_and_destinations_from_coefficients(
             has_hop = (any(x -> abs(x) > PRUNE_ATOL_DEFAULT, @view Tr[:, j, i]) ||
                        any(x -> abs(x) > PRUNE_ATOL_DEFAULT, @view Ti[:, j, i]))
             has_hop || continue
-            a = P(Rm * constant(h[1]))
-            b_plus_R = P(Rm * (constant(h[2]) + constant(h[3])))
+            a = P(constant(h[1]))
+            b_plus_R = P(constant(h[2]) + constant(h[3]))
             push!(destinations, a)
             push!(origins, b_plus_R)
         end
     end
     return origins, destinations
+end
+
+# fractional -> Cartesian coordinates
+function to_cartesian(Rm::AbstractMatrix{<:Real}, rs::AbstractVector{Point{D, Float64}}) where D
+    return [Point{D, Float32}(Rm * r) for r in rs]
+end
+
+# the hoppings of a `HoppingOrbit` are stored as a minimal "tiling" set: each hopping occurs
+# exactly once, with the tiling of the lattice by lattice translations then generating every
+# hopping. For visualization, it is more natural to instead show _every_ hopping that enters
+# or leaves the home unit cell. Since the sites `a` and `b` of a hopping `(a, b, R)` both lie
+# in the home unit cell, this simply amounts to translating each hopping such that either of
+# its end points lands in the home unit cell (giving at most two copies per hopping).
+function tile_bonds(
+    origins::AbstractVector{Point{D, Float64}},
+    destinations::AbstractVector{Point{D, Float64}}
+) where D
+    tiled_origins, tiled_destinations = similar(origins, 0), similar(destinations, 0)
+    for (o, d) in zip(origins, destinations)
+        for r in (o, d) # anchor the translation on either end point of the bond
+            T = -floor.(r .+ VEC_CMP_ATOL) # translation taking `r` into the home unit cell
+            push!(tiled_origins, o .+ T)
+            push!(tiled_destinations, d .+ T)
+        end
+    end
+    return tiled_origins, tiled_destinations
 end
 ## --------------------------------------------------------------------------------------- #
 # hack overload to set default axis attributes
@@ -453,31 +508,44 @@ end
 # Plotting entire tight-binding models by tiling their hopping terms
 import Makie.SpecApi as S
 
+const TightBindingModelLike{D} = Union{
+    AbstractVector{TightBindingTerm{D}},
+    TightBindingModel{D},
+    ParameterizedTightBindingModel{D}
+}
+
 function Makie.convert_arguments(
     ::Type{<:Plot},
-    tbm::Union{
-            AbstractVector{TightBindingTerm{D}},
-            TightBindingModel{D}, 
-            ParameterizedTightBindingModel{D}
-        },
+    tbm::TightBindingModelLike{D},
     Rs::DirectBasis{D} = _cubic_basis(Val(D));
     # kws..., TODO: how to add these with SpecApi?
 ) where D
     typeof(tbm) === ParameterizedTightBindingModel{D} && (tbm = tbm.tbm)
+    bbox = layout_limits(tbm, Rs)
+    return model_gridlayout(
+        tbm, Rs, S.HoppingOrbitPlot, bbox,
+        (; context = Attributes(; limits = bbox), markersize = 0.1)
+    )
+end
+
+# lay out the terms of a model in a grid of axes, each showing a single term via the plot
+# type constructed by `specfunc` (a `Makie.SpecApi` plot constructor) with attributes
+# `plot_kws`; `bbox` fixes shared axis limits across all the terms
+function model_gridlayout(
+    tbm, Rs::DirectBasis{D}, specfunc, bbox::Rect{D, Float32}, plot_kws::NamedTuple
+) where D
     Nt = length(tbm)
     n, m = layout_in_grid(Nt)
 
-    bbox = layout_limits(tbm, Rs)
     AT = D == 3 ? S.Axis3 : S.Axis
     axs = D == 3 ? Matrix{typeof(AT())}(undef, n, m) : Matrix{typeof(AT())}(undef, n, m)
     for idx in LinearIndices(axs)
         if idx ≤ length(tbm)
             tbt = tbm[idx]
             plots = [
-                S.HoppingOrbitPlot(
+                specfunc(
                     _orbit(tbt), Rs, _coefficients(tbt), _offdiag(tbt);
-                    context = Attributes(; limits = bbox),
-                    markersize = 0.1,
+                    plot_kws...
                 )
             ]
         else
@@ -545,7 +613,11 @@ function layout_in_grid(p::Int)
     return (n′, m′)
 end
 
-function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) where D
+function layout_limits(
+    hs::AbstractVector{HoppingOrbit{D}},
+    Rs::DirectBasis{D};
+    tile::Bool = false
+) where D
     P, V = Point{D, Float32}, Vec{D, Float32}
     Rm = stack(Rs)
 
@@ -554,17 +626,13 @@ function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) 
     rect_coords = Makie.GeometryBasics.coordinates(rect)
     sites = P.(Ref(Rm) .* rect_coords)
     filter!(!isnan, sites)
-    pts = @view sites[1:end] # for later referencing only the unit cell
+    pts = sites[1:end] # for later referencing only the unit cell
 
     # add points from hoppings
     for h in hs
-        for _hs in h.hoppings
-            for _h in _hs
-                a = P(Rm * constant(_h[1]))                            # origin
-                b_plus_R = P(Rm * (constant(_h[2]) + constant(_h[3]))) # destination
-                push!(sites, a, b_plus_R)
-            end
-        end
+        origins, destinations = _origins_and_destinations_from_hoppingorbit(h)
+        tile && ((origins, destinations) = tile_bonds(origins, destinations))
+        append!(sites, to_cartesian(Rm, origins), to_cartesian(Rm, destinations))
     end
     unique!(sites)
 
@@ -572,21 +640,15 @@ function layout_limits(hs::AbstractVector{HoppingOrbit{D}}, Rs::DirectBasis{D}) 
     lower_bound = ntuple(d -> minimum(v -> getindex(v, d), sites), Val(D))
     upper_bound = ntuple(d -> maximum(v -> getindex(v, d), sites), Val(D))
     data_bbox = Rect{D, Float32}(P(lower_bound), V(upper_bound .- lower_bound))
-    bbox_coords = Makie.GeometryBasics.coordinates(data_bbox)
-    cntr = sum(Rs) ./ 2
-    max_dist = maximum(abs,
-        ntuple(d->maximum(v->abs(cntr[d]-getindex(v, d)), bbox_coords), Val(D)))
-    pad = maximum(abs, 
-        ntuple(d -> splat(-)(extrema(v -> getindex(v, d), filter(!isnan, pts))), Val(D)))
-    width = max_dist + pad*0.1
-    # TODO: the padding and added width should surely not be the same in all dimensions
-    return Rect{D, Float32}(cntr-V(width), V(2*width))
+    return square_bbox(data_bbox, Rs, pts, Val(D))
 end
-function layout_limits(tbm::TightBindingModel{D}, Rs::DirectBasis{D}) where D
-    layout_limits([tbt.block.h_orbit for tbt in tbm], Rs)
+function layout_limits(tbm::TightBindingModel{D}, Rs::DirectBasis{D}; kws...) where D
+    layout_limits([tbt.block.h_orbit for tbt in tbm], Rs; kws...)
 end
-function layout_limits(tbts::AbstractVector{TightBindingTerm{D}}, Rs::DirectBasis{D}) where D
-    layout_limits([tbt.block.h_orbit for tbt in tbts], Rs)
+function layout_limits(
+    tbts::AbstractVector{TightBindingTerm{D}}, Rs::DirectBasis{D}; kws...
+) where D
+    layout_limits([tbt.block.h_orbit for tbt in tbts], Rs; kws...)
 end
 
 function bbox_to_limits(bbox::Rect{D}) where D
@@ -601,6 +663,303 @@ function bbox_to_limits(bbox::Rect{D}) where D
         end
     end
     return limits
+end
+
+## --------------------------------------------------------------------------------------- #
+# `bondplot`: a "ball-and-stick" style visualization of hopping terms
+
+# default atom & bond radii, relative to the reference length ℓ (cf. `reference_length`)
+const ATOMSIZE_DEFAULT = 0.15
+const BONDSIZE_DEFAULT = 0.045
+
+@recipe BondPlot (h, Rs, t, offdiag) begin
+    "Attributes (`color`, `label`) of the annihilation sites `b+R`"
+    origins = Attributes(; color = :royalblue1, label = "Annihilation site (b+R)")
+    "Attributes (`color`, `label`) of the creation sites `a`"
+    destinations = Attributes(; color = :firebrick2, label = "Creation sites (a)")
+    "Attributes (`color`, `label`) of the bonds"
+    bonds = Attributes(; color = :gray70, label = "Bonds")
+    "Attributes (`color`, `linewidth`, `label`, `patchcolor`) of the unit cell"
+    unitcell = Attributes(; color = :gray55, linewidth = 2.0, label = "Unit cell",
+                            patchcolor = :gray94)
+    "Radius of the atom spheres, relative to the reference length ℓ (see `lengthscale`)"
+    atomsize = ATOMSIZE_DEFAULT
+    "Radius of the bond cylinders, relative to the reference length ℓ (see `lengthscale`)"
+    bondsize = BONDSIZE_DEFAULT
+    """
+    Whether to show every hopping that enters or leaves the home unit cell (`true`), rather
+    than just the minimal set of hoppings that tiles the lattice (`false`)
+    """
+    tile = true
+    """
+    The reference length ℓ that `atomsize` and `bondsize` are measured in; if `nothing`, it
+    is set to the smallest of the lattice vector lengths and the plotted bond lengths
+    """
+    lengthscale = nothing
+    "Axis limits, as a `Rect{D, Float32}`; if `nothing`, set from the plotted data"
+    limits = nothing
+    # TODO: as for `HoppingOrbitPlot`, the `Attributes`-valued kwargs above are not merged
+    #       with caller-provided (partial) attributes; cf. Makie v0.24 bug noted there.
+end
+
+"""
+    bondplot(h::HoppingOrbit{D}, [Rs::DirectBasis{D}])
+    bondplot(tbb::TightBindingBlock{D}, [Rs::DirectBasis{D}])
+    bondplot(tbt::TightBindingTerm{D}, [Rs::DirectBasis{D}])
+    bondplot(tbm::TightBindingModel{D}, [Rs::DirectBasis{D}])
+
+Visualize the hoppings of `h` - or of a parent structure `tbb`, `tbt`, or `tbm` embedding a
+`HoppingOrbit` - in a "ball-and-stick" style, i.e., with atoms shown as spheres and bonds as
+cylinders, akin to conventional chemistry visualizations.
+
+This is an alternative to [`plot`](@ref), which instead shows the hoppings as arrows: unlike
+`plot`, `bondplot` does not indicate the direction of each hopping (but the hopping direction
+is always from an origin atom, `b+R`, to a destination atom, `a`).
+
+By default, `bondplot` shows _every_ hopping that enters or leaves the home unit cell,
+including atoms outside the home unit cell if - and only if - they take part in such a
+hopping. Set `tile = false` to instead show the minimal set of hoppings that tiles the
+lattice (i.e., what `plot` shows).
+
+The `Rs` argument should be a _primitive_ basis associated with the lattice underlying `h`.
+If omitted, a cubic basis is used.
+
+## Sizes
+The atom and bond radii are set by the `atomsize` and `bondsize` attributes, in units of a
+reference length ℓ (the `lengthscale` attribute), which, by default, is the smallest of the
+lattice vector lengths ‖**R**ᵢ‖ and the plotted bond lengths.
+"""
+function Makie.plot!(
+    p::BondPlot{<:Tuple{
+        HoppingOrbit{D},    # h
+        DirectBasis{D},     # Rs
+        <:MaybeCoefficient, # t
+        Bool                # offdiag
+    }},
+) where {D}
+    h = p.h[] # TODO: as for `HoppingOrbitPlot`, we do not react to Observable updates
+    Rs = p.Rs[]
+    t = p.t[]
+    # NB: `p.offdiag[]` is irrelevant here: the "reversed" hoppings of an off-diagonal block
+    #     coincide with the drawn bonds, since bonds carry no direction
+
+    Rm = stack(Rs)
+    limits = p.limits[]
+
+    # compute creation (`destination`) and annihilation (`origin`) sites for each hopping,
+    # accounting for `t` if given
+    origins, destinations = if isnothing(t)
+        _origins_and_destinations_from_hoppingorbit(h)
+    else
+        _origins_and_destinations_from_coefficients(h, t)
+    end
+    if p.tile[] # show every hopping into/out of the home unit cell, not just a tiling set
+        origins, destinations = tile_bonds(origins, destinations)
+    end
+    origins, destinations = to_cartesian(Rm, origins), to_cartesian(Rm, destinations)
+
+    # For D = 1, lift to 2D for the Makie calls (cf. `HoppingOrbitPlot`)
+    plot_origins = D == 1 ? lift_coordinates_to_2D(origins) : origins
+    plot_destinations = D == 1 ? lift_coordinates_to_2D(destinations) : destinations
+
+    # plot parallepiped unit cell (with lower left corner at origin)
+    pts, unitcell = unitcell_geometry(Rm, origins, destinations, limits, Val(D))
+    if D == 1 || D == 2
+        poly!(p, pts; color = p.unitcell[].patchcolor)
+    end
+    lines!(
+        p,
+        unitcell;
+        color = p.unitcell[].color,
+        linewidth = p.unitcell[].linewidth,
+        label = p.unitcell[].label,
+    )
+
+    # atom & bond radii, in absolute units
+    ℓ = something(p.lengthscale[], reference_length(Rs, origins, destinations))
+    atom_radius, bond_radius = p.atomsize[] * ℓ, p.bondsize[] * ℓ
+
+    # plot bonds; the drawn bonds are undirected, so we only keep one of each ±δ pair, and
+    # we skip on-site terms (which would give degenerate, zero-length cylinders)
+    bond_origins, bond_destinations = unique_undirected_bonds(plot_origins, plot_destinations)
+    draw_bonds!(
+        p, bond_origins, bond_destinations, bond_radius, p.bonds[], Val(D)
+    )
+
+    # plot atoms
+    plot_destinations_u = unique(plot_destinations)
+    plot_origins_u = filter!(
+        r -> !isapproxin(r, plot_destinations_u; atol=VEC_CMP_ATOL),
+        unique(plot_origins)
+    ) # skip if already plotted as destination
+    draw_atoms!(p, plot_destinations_u, atom_radius, p.destinations[], Val(D))
+    draw_atoms!(p, plot_origins_u, atom_radius, p.origins[], Val(D))
+
+    # set square axis limits, centered around unit cell center
+    bbox = if isnothing(limits)
+        square_bbox(data_limits(p), Rs, pts, Val(D))
+    else
+        limits :: Rect{D, Float32}
+    end
+    if D == 1
+        limits!(lift_1D_bbox_to_2D(bbox, 2*abs(unitcell[1][2])))
+    else
+        limits!(bbox)
+    end
+
+    return p
+end
+
+function Makie.convert_arguments(::Type{<:BondPlot}, h::HoppingOrbit{D}) where D
+    return (h, _cubic_basis(Val(D)), nothing, false)
+end
+
+function Makie.args_preferred_axis(
+    ::Type{<:BondPlot},
+    ::HoppingOrbit{D},
+    ::DirectBasis{D},
+    ::MaybeCoefficient,
+    ::Bool
+) where D
+    return D == 3 ? Axis3 : Axis
+end
+
+# ---------------------------------------------------------------------------------------- #
+# tessellation quality of the bond cylinders & atom spheres
+const CYLINDER_NVERTICES = 32
+const SPHERE_NVERTICES = 48
+
+# drawing of atoms & bonds; in 3D, we use actual 3D geometry (spheres & cylinders), while in
+# 1D and 2D, we use flat, "cross-sectional" equivalents (circles & rectangles)
+
+function draw_atoms!(p, rs, radius, attributes, ::Val{3})
+    isempty(rs) && return
+    sphere = normal_mesh(Tessellation(Sphere(Point3f(0), 1.0f0), SPHERE_NVERTICES))
+    return meshscatter!(
+        p, rs;
+        marker = sphere,
+        markersize = radius,
+        color = attributes.color,
+        label = attributes.label
+    )
+end
+function draw_atoms!(p, rs, radius, attributes, ::Val{D}) where D
+    isempty(rs) && return
+    circles = [Circle(Point2f(r), Float32(radius)) for r in rs]
+    return poly!(
+        p, circles; color = attributes.color, label = attributes.label, strokewidth = 0
+    )
+end
+
+function draw_bonds!(p, origins, destinations, radius, attributes, ::Val{3})
+    isempty(origins) && return
+    meshes = map(origins, destinations) do o, d
+        cylinder = Cylinder(Point3f(o), Point3f(d), Float32(radius))
+        normal_mesh(Tessellation(cylinder, CYLINDER_NVERTICES))
+    end
+    return mesh!(p, merge(meshes); color = attributes.color, label = attributes.label)
+end
+function draw_bonds!(p, origins, destinations, radius, attributes, ::Val{D}) where D
+    isempty(origins) && return
+    quads = map(origins, destinations) do o, d
+        n̂ = normalize(Point2f(-(d[2] - o[2]), d[1] - o[1])) * Float32(radius) # ⊥ to bond
+        Point2f[o - n̂, o + n̂, d + n̂, d - n̂]
+    end
+    return poly!(
+        p, quads; color = attributes.color, label = attributes.label, strokewidth = 0
+    )
+end
+# the reference length ℓ that sets the atom & bond radii: the smallest of the lattice vector
+# lengths and the (nonzero) bond lengths
+function reference_length(Rs::DirectBasis, origins, destinations)
+    ℓ = Float32(minimum(norm, Rs))
+    for (o, d) in zip(origins, destinations)
+        l = norm(d - o)
+        l > VEC_CMP_ATOL && (ℓ = min(ℓ, l))
+    end
+    return ℓ
+end
+
+# bonds are drawn without a direction, so a bond and its reverse are the same bond; we also
+# drop the on-site "bonds" (i.e., δ = 0), which have no spatial extent
+function unique_undirected_bonds(origins, destinations)
+    kept_origins, kept_destinations = similar(origins, 0), similar(destinations, 0)
+    for (o, d) in zip(origins, destinations)
+        isapprox(o, d; atol=VEC_CMP_ATOL) && continue # skip on-site terms
+        any(zip(kept_origins, kept_destinations)) do (o′, d′)
+            ((isapprox(o, o′; atol=VEC_CMP_ATOL) && isapprox(d, d′; atol=VEC_CMP_ATOL)) ||
+             (isapprox(o, d′; atol=VEC_CMP_ATOL) && isapprox(d, o′; atol=VEC_CMP_ATOL)))
+        end && continue
+        push!(kept_origins, o)
+        push!(kept_destinations, d)
+    end
+    return kept_origins, kept_destinations
+end
+
+# ---------------------------------------------------------------------------------------- #
+# hack overloads to set default axis attributes (cf. equivalent overloads of `Makie.plot`)
+
+function bondplot(
+    h::HoppingOrbit{D},
+    Rs::DirectBasis{D} = _cubic_basis(Val(D)),
+    t::MaybeCoefficient = nothing,
+    offdiag::Bool = false;
+    axis = NamedTuple(),
+    figure = NamedTuple(),
+    kws...,
+) where D
+    # figure & axis setup
+    f = Figure(; figure...)
+    ax = if D == 3
+        Axis3(f[1, 1]; aspect = :data, viewmode = :fit, axis...)
+    else
+        Axis(f[1, 1]; aspect = DataAspect(), axis...)
+    end
+    Makie.hidespines!(ax)
+    Makie.hidedecorations!(ax)
+    D == 3 && (ax.protrusions[] = 0) # cf. https://github.com/MakieOrg/Makie.jl/issues/2259
+
+    p = bondplot!(ax, h, Rs, t, offdiag; kws...)
+
+    return Makie.FigureAxisPlot(f, ax, p)
+end
+
+function bondplot(
+    tbt_or_tbb::Union{TightBindingTerm{D}, TightBindingBlock{D}},
+    Rs::DirectBasis{D} = _cubic_basis(Val(D));
+    kws...,
+) where D
+    bondplot(_orbit(tbt_or_tbb), Rs, _coefficients(tbt_or_tbb), _offdiag(tbt_or_tbb); kws...)
+end
+
+# plotting an entire model: one axis per term, with shared limits and a shared length scale
+function bondplot(
+    tbm::TightBindingModelLike{D},
+    Rs::DirectBasis{D} = _cubic_basis(Val(D));
+    tile::Bool = true,
+    lengthscale::Union{Nothing, Real} = nothing,
+    atomsize::Real = ATOMSIZE_DEFAULT,
+    kws...,
+) where D
+    tbm isa ParameterizedTightBindingModel && (tbm = tbm.tbm)
+    if isnothing(lengthscale) # use a common length scale across all terms
+        Rm = stack(Rs)
+        lengthscale = minimum(tbm) do tbt
+            origins, destinations = _origins_and_destinations_from_hoppingorbit(_orbit(tbt))
+            reference_length(Rs, to_cartesian(Rm, origins), to_cartesian(Rm, destinations))
+        end
+    end
+    # the shared limits are computed from the site positions, so we must pad them by the
+    # atom radius to avoid clipping the outermost atoms
+    bbox = expand_bbox(layout_limits(tbm, Rs; tile), atomsize * lengthscale)
+    layout = model_gridlayout(
+        tbm, Rs, S.BondPlot, bbox, (; limits = bbox, tile, lengthscale, atomsize, kws...)
+    )
+    return plot(layout)
+end
+
+function expand_bbox(bbox::Rect{D, T}, pad::Real) where {D, T}
+    return Rect{D, T}(bbox.origin .- T(pad), bbox.widths .+ T(2pad))
 end
 
 ## --------------------------------------------------------------------------------------- #

@@ -73,5 +73,11 @@ function make_fit_objective end # │ machinery can be reused from dependent pac
 function spectralmoments end    # ┘ PhotonicTightBinding.jl) without `Base.get_extension`
 export fit, multistart_fit, make_fit_objective
 
+# plotting functionality; all implemented in the Makie.jl extension. `bondplot` is a Makie
+# recipe (defined in the extension), but we must own the name here to be able to export it
+function bondplot end
+function bondplot! end
+export bondplot, bondplot!
+
 # ---------------------------------------------------------------------------------------- #
 end # module
