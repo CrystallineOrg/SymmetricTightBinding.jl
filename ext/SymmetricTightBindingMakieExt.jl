@@ -3,7 +3,7 @@ module SymmetricTightBindingMakieExt
 ## --------------------------------------------------------------------------------------- #
 
 using SymmetricTightBinding
-using SymmetricTightBinding: TightBindingTerm, PRUNE_ATOL_DEFAULT
+using SymmetricTightBinding: TightBindingTerm, PRUNE_ATOL_DEFAULT, VEC_CMP_ATOL
 using Crystalline: DirectBasis, crystal, constant, isapproxin
 using LinearAlgebra: normalize, norm
 using Makie
@@ -16,8 +16,8 @@ const default_context_attributes = Attributes(;
 ) # TODO: we define this so we can manually merge: remove this hack once Makie v0.25 is out
 
 @recipe HoppingOrbitPlot (h, Rs, t, offdiag) begin
-    origins = Attributes(; color = :firebrick2, label = "Annihilation site (b+R)")
-    destinations = Attributes(; color = :royalblue1, label = "Creation sites (a)")
+    origins = Attributes(; color = :royalblue1, label = "Annihilation site (b+R)")
+    destinations = Attributes(; color = :firebrick2, label = "Creation sites (a)")
     markersize = 0.05
     bonds = Attributes(; color = :gray37, linewidth = 2.0, label = "Bonds")
     unitcell = Attributes(; color = :gray55, linewidth = 2.0, label = "Unit cell",
@@ -154,9 +154,15 @@ function Makie.plot!(
     end
 
     # plot atoms
+    plot_origins_u = unique(plot_origins)
+    plot_destinations_u = unique(plot_destinations)
+    plot_origins_u = filter!(
+        r -> !isapproxin(r, plot_destinations_u; atol=VEC_CMP_ATOL),
+        plot_origins_u
+    ) # skip if already plotted as destination
     scatter!(
         p,
-        unique(plot_destinations);
+        plot_destinations_u;
         marker = :circle,
         markersize = 14,
         color = p.destinations[].color,
@@ -165,7 +171,7 @@ function Makie.plot!(
     )
     scatter!(
         p,
-        unique(plot_origins);
+        plot_origins_u;
         marker = :circle,
         markersize = 14,
         color = p.origins[].color,
