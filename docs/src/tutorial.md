@@ -57,7 +57,8 @@ Rs = directbasis(sgnum, Val(2)) # a direct lattice basis, to allow plotting in a
 plot(tbm[2], Rs)
 ```
 
-Here, red markers indicate "source" sites while blue markers indicat "drains"; electrons hop from sources to drains, as also indicated by the arrowheads. The visualization (and the internal representation of `tbm`) includes only the hoppings for a *single* unit cell, such that tiling unit cells do not lead to counting hoppings multiple times.
+Here, blue markers indicate "source" sites while red markers indicate "drains"; electrons hop from sources to drains, as also indicated by the arrowheads. The visualization (and the internal representation of `tbm`) includes only the hoppings for a *single* unit cell, such that tiling unit cells do not lead to counting hoppings multiple times.
+The shown unit cell is in general a parallellepiped, spanning $\sum_i c_i \mathbf{a}_i$ with $0 \leq c_i \leq 1$.
 
 We might want to go beyond nearest-neighbor in our tight-binding model. To do so, we must provide `tb_hamiltonian` with a second argument that gives a set of possible direct-lattice vector separations of sources and drains (in addition to an intra-lattice term). It is enough to include a representative direct lattice vector; if e.g., `[1,0]` and `[0,1]` are symmetry-related, the latter will be automatically included by providing the former. 
 For the graphene example, we might include direct lattice separations `[0,0]` (default, if a second argument is not provided) and `[1,0]`:
