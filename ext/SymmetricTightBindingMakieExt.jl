@@ -72,10 +72,10 @@ function Makie.plot!(
 
     # compute creation (`destination`) and annihilation (`origin`) sites for each hopping,
     # accounting for `t` if given
-    origins, destinations = if isnothing(t)
-        _origins_and_destinations_from_hoppingorbit(h)
+    origins, destinations, _ = if isnothing(t)
+        _bonds_from_hoppingorbit(h)
     else
-        _origins_and_destinations_from_coefficients(h, t)
+        _bonds_from_coefficients(h, t)
     end
     origins, destinations = to_cartesian(Rm, origins), to_cartesian(Rm, destinations)
 
@@ -354,25 +354,24 @@ end
 
 # Simple case: take no account of a coefficient vector, just plot all hoppings in `h`.
 # The hopping `δ` is such that `δ = a-b-R`, so the hopping direction is from `b+R`
-# (annihilated) to `a` (created).
-function _origins_and_destinations_from_hoppingorbit(h::HoppingOrbit{D}) where D
+# (annihilated) to `a` (created). The lattice translations `R` are returned alongside, since
+# they are needed by `tile_bonds`.
+function _bonds_from_hoppingorbit(h::HoppingOrbit{D}) where D
     P = Point{D, Float64}
-    destinations = mapreduce(vcat, h.hoppings) do hs
-        map(hs) do h
-            P(constant(h[1])) # a
+    origins, destinations, translations = Vector{P}(), Vector{P}(), Vector{P}()
+    for hs in h.hoppings
+        for h in hs
+            push!(destinations, P(constant(h[1])))                  # a
+            push!(origins, P(constant(h[2]) + constant(h[3])))      # b + R
+            push!(translations, P(constant(h[3])))                  # R
         end
     end
-    origins = mapreduce(vcat, h.hoppings) do hs
-        map(hs) do h
-            P(constant(h[2]) + constant(h[3])) # b + R
-        end
-    end
-    return origins, destinations
+    return origins, destinations, translations
 end
 
 # complicated case: account for a coefficient vector `t`, which may mean that some hoppings
 # in `h` actually do not appear
-function _origins_and_destinations_from_coefficients(
+function _bonds_from_coefficients(
     h::HoppingOrbit{D},
     t::AbstractVector{<:Number},
 ) where D
@@ -389,20 +388,19 @@ function _origins_and_destinations_from_coefficients(
     Ti = reshape((@view t[(N+1):(2N)]), (K, J, I))
 
     P = Point{D, Float64}
-    origins, destinations = Vector{P}(), Vector{P}()
+    origins, destinations, translations = Vector{P}(), Vector{P}(), Vector{P}()
     for (i, hs) in enumerate(h.hoppings)
         # key aim: only add a hopping term if any of its associated coefficients are nonzero
         for (j, h) in enumerate(hs)
             has_hop = (any(x -> abs(x) > PRUNE_ATOL_DEFAULT, @view Tr[:, j, i]) ||
                        any(x -> abs(x) > PRUNE_ATOL_DEFAULT, @view Ti[:, j, i]))
             has_hop || continue
-            a = P(constant(h[1]))
-            b_plus_R = P(constant(h[2]) + constant(h[3]))
-            push!(destinations, a)
-            push!(origins, b_plus_R)
+            push!(destinations, P(constant(h[1])))              # a
+            push!(origins, P(constant(h[2]) + constant(h[3])))   # b + R
+            push!(translations, P(constant(h[3])))               # R
         end
     end
-    return origins, destinations
+    return origins, destinations, translations
 end
 
 # fractional -> Cartesian coordinates
@@ -414,19 +412,22 @@ end
 # exactly once, with the tiling of the lattice by lattice translations then generating every
 # hopping. For visualization, it is more natural to instead show _every_ hopping that enters
 # or leaves the home unit cell. Since the sites `a` and `b` of a hopping `(a, b, R)` both lie
-# in the home unit cell, this simply amounts to translating each hopping such that either of
-# its end points lands in the home unit cell (giving at most two copies per hopping).
+# in the home unit cell, this amounts to including, besides the stored hopping `a ← b+R` (a
+# hopping _into_ the home cell), also its `-R` translate `a-R ← b` (a hopping _out of_ it).
+# NB: it is essential that the translations are anchored on the sites `a` and `b` and not,
+#     say, on a wrapping into the parallelepiped spanned by `Rs`: the home unit cell's sites
+#     need not lie inside that parallelepiped, and, unlike the site set, it is generally not
+#     invariant under the space group's operations - wrapping into it would consequently
+#     break the symmetry of the drawn bonds.
 function tile_bonds(
     origins::AbstractVector{Point{D, Float64}},
-    destinations::AbstractVector{Point{D, Float64}}
+    destinations::AbstractVector{Point{D, Float64}},
+    translations::AbstractVector{Point{D, Float64}}
 ) where D
     tiled_origins, tiled_destinations = similar(origins, 0), similar(destinations, 0)
-    for (o, d) in zip(origins, destinations)
-        for r in (o, d) # anchor the translation on either end point of the bond
-            T = -floor.(r .+ VEC_CMP_ATOL) # translation taking `r` into the home unit cell
-            push!(tiled_origins, o .+ T)
-            push!(tiled_destinations, d .+ T)
-        end
+    for (o, d, R) in zip(origins, destinations, translations)
+        push!(tiled_origins, o, o - R)      # b+R (as stored) and b (in the home cell)
+        push!(tiled_destinations, d, d - R) # a (in the home cell) and a-R
     end
     return tiled_origins, tiled_destinations
 end
@@ -630,8 +631,8 @@ function layout_limits(
 
     # add points from hoppings
     for h in hs
-        origins, destinations = _origins_and_destinations_from_hoppingorbit(h)
-        tile && ((origins, destinations) = tile_bonds(origins, destinations))
+        origins, destinations, translations = _bonds_from_hoppingorbit(h)
+        tile && ((origins, destinations) = tile_bonds(origins, destinations, translations))
         append!(sites, to_cartesian(Rm, origins), to_cartesian(Rm, destinations))
     end
     unique!(sites)
@@ -748,19 +749,24 @@ function Makie.plot!(
 
     # compute creation (`destination`) and annihilation (`origin`) sites for each hopping,
     # accounting for `t` if given
-    origins, destinations = if isnothing(t)
-        _origins_and_destinations_from_hoppingorbit(h)
+    origins, destinations, translations = if isnothing(t)
+        _bonds_from_hoppingorbit(h)
     else
-        _origins_and_destinations_from_coefficients(h, t)
+        _bonds_from_coefficients(h, t)
     end
+    # the creation sites `a` lie in the home unit cell, by convention; we keep them aside,
+    # since they are what distinguishes the home cell's atoms from those of adjacent cells
+    home_destinations = to_cartesian(Rm, destinations)
     if p.tile[] # show every hopping into/out of the home unit cell, not just a tiling set
-        origins, destinations = tile_bonds(origins, destinations)
+        origins, destinations = tile_bonds(origins, destinations, translations)
     end
     origins, destinations = to_cartesian(Rm, origins), to_cartesian(Rm, destinations)
 
     # For D = 1, lift to 2D for the Makie calls (cf. `HoppingOrbitPlot`)
     plot_origins = D == 1 ? lift_coordinates_to_2D(origins) : origins
     plot_destinations = D == 1 ? lift_coordinates_to_2D(destinations) : destinations
+    plot_home_destinations = D == 1 ? lift_coordinates_to_2D(home_destinations) :
+                                      home_destinations
 
     # plot parallepiped unit cell (with lower left corner at origin)
     pts, unitcell = unitcell_geometry(Rm, origins, destinations, limits, Val(D))
@@ -786,23 +792,28 @@ function Makie.plot!(
         p, bond_origins, bond_destinations, bond_radius, p.bonds[], Val(D)
     )
 
-    # plot atoms
-    plot_destinations_u = unique(plot_destinations)
+    # plot atoms: the creation sites `a` of the home unit cell are shown in the destination
+    # color; every other drawn site is a site of an adjacent unit cell (or a `b` site of an
+    # off-diagonal block) and is shown in the origin color
+    plot_destinations_u = unique(plot_home_destinations)
     plot_origins_u = filter!(
         r -> !isapproxin(r, plot_destinations_u; atol=VEC_CMP_ATOL),
-        unique(plot_origins)
-    ) # skip if already plotted as destination
+        unique(vcat(plot_origins, plot_destinations))
+    ) # skip if already plotted as a home-cell destination
     draw_atoms!(p, plot_destinations_u, atom_radius, p.destinations[], Val(D))
     draw_atoms!(p, plot_origins_u, atom_radius, p.origins[], Val(D))
 
-    # set square axis limits, centered around unit cell center
+    # set square axis limits, centered around unit cell center; note that `data_limits` only
+    # accounts for the atom _positions_, so we must pad by the atom radius to avoid clipping
+    # through the atoms
     bbox = if isnothing(limits)
-        square_bbox(data_limits(p), Rs, pts, Val(D))
+        expand_bbox(square_bbox(data_limits(p), Rs, pts, Val(D)), atom_radius)
     else
         limits :: Rect{D, Float32}
     end
     if D == 1
-        limits!(lift_1D_bbox_to_2D(bbox, 2*abs(unitcell[1][2])))
+        y_height = max(2*abs(unitcell[1][2]), 2.1f0*Float32(atom_radius))
+        limits!(lift_1D_bbox_to_2D(bbox, y_height))
     else
         limits!(bbox)
     end
@@ -945,7 +956,7 @@ function bondplot(
     if isnothing(lengthscale) # use a common length scale across all terms
         Rm = stack(Rs)
         lengthscale = minimum(tbm) do tbt
-            origins, destinations = _origins_and_destinations_from_hoppingorbit(_orbit(tbt))
+            origins, destinations, _ = _bonds_from_hoppingorbit(_orbit(tbt))
             reference_length(Rs, to_cartesian(Rm, origins), to_cartesian(Rm, destinations))
         end
     end
