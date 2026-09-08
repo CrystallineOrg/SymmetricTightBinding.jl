@@ -59,6 +59,13 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         @test canonical_orbit_element(δs⁰, 1) == (1, false)
     end
 
+    @testset "z̄ alignment" begin
+        # `z̄`'s combining macron is zero-width, so matrix rows line up in `textwidth` but
+        # not in `length`; anything measuring the printout must use the former
+        rows = split(repr(MIME"text/plain"(), tbm[2]), '\n')[2:3]
+        @test allequal(textwidth.(rows))
+    end
+
     @testset "TightBindingTerm" begin
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
@@ -68,24 +75,34 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0                  𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃)
-         𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                   
-        δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+         0         z̄₁+z̄₂+z̄₃
+         z₁+z₂+z₃  0       
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm[2], str)
     end
 
     @testset "TightBindingModel" begin
         str = """
-        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁):
+        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
         ┌─
         1. ⎡ 1  0 ⎤
         │  ⎣ 0  1 ⎦
-        └─ (2b|A₁) self-term
+        └─ (2b|A₁) self-term.
         ┌─
-        2. ⎡ 0                  𝕖(-δ₁)+𝕖(-δ₂)+𝕖(-δ₃) ⎤
-        │  ⎣ 𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                    ⎦
-        └─ (2b|A₁) self-term:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+        2. ⎡ 0         z̄₁+z̄₂+z̄₃ ⎤
+        │  ⎣ z₁+z₂+z₃  0        ⎦
+        └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm, str)
+
+        # the `zᵢ` key is omitted entirely if every term is a zero-δ on-site term
+        cbr⁰ = @composite brs[end] # (1a|E₁)
+        str = """
+        1-term 2×2 TightBindingModel{2} (hermitian) over (1a|E₁):
+        ┌─
+        1. ⎡ 1  0 ⎤
+        │  ⎣ 0  1 ⎦
+        └─ (1a|E₁) self-term."""
+        test_tp_show(tb_hamiltonian(cbr⁰, [[0, 0]]), str)
     end
 
     @testset "ParameterizedTightBindingModel" begin
