@@ -157,9 +157,8 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
 
     @testset "Formerly-broken example due to near-singular Hessian" begin
         # The following example used to error due to an Optim.jl bug (proposed fix at
-        # https://github.com/JuliaNLSolvers/Optim.jl/pull/1266). It's now covered by the
-        # local `ext/optim_trsubproblem_patch.jl` workaround, applied automatically whenever
-        # the Optim extension loads.
+        # https://github.com/JuliaNLSolvers/Optim.jl/pull/1266). Fixed in Optim.jl
+        # v2.2.2+.
 
         # SG 221: (3d|A₁g) ⊕ (3d|B₂g); 6 bands, 3D (the `fit` docstring example)
         brs = calc_bandreps(221, Val(3))

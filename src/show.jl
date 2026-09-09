@@ -4,12 +4,15 @@ const ANTIHERMITIAN_COLOR = :red
 # ---------------------------------------------------------------------------------------- #
 
 function Base.show(io::IO, ::MIME"text/plain", ho::HoppingOrbit)
-    # before getting started, determine maximum length of δᵢ entries, to align:
+    # before getting started, determine maximum length of δᵢ entries, and of the associated
+    # hopping listings, to align:
     aligns = map(enumerate(ho.orbit)) do (i, δᵢ)
         s = sprint(print, Crystalline.subscriptify(string(i)), δᵢ)
         textwidth(s)
     end
     max_align = maximum(aligns)
+    hop_aligns = map(abRs -> textwidth(sprint(_print_hoppings, abRs)), ho.hoppings)
+    max_hop_align = maximum(hop_aligns)
     # now print info about each orbit element and its hopping terms
     print(io, typeof(ho), " (")
     printstyled(io, "b"; color = :red)
@@ -29,20 +32,38 @@ function Base.show(io::IO, ::MIME"text/plain", ho::HoppingOrbit)
             underline = i == 1,
         )
         print(io)
-        print(io, ": ", " "^(max_align - aligns[i]), "[")
-        for (j, (a, b, R)) in enumerate(abRs)
-            printstyled(io, "("; color = :light_black)
-            printstyled(io, b; color = :red)
-            print(io, " + ")
-            printstyled(io, R; color = :blue)
-            print(io, " → ")
-            printstyled(io, a; color = :green)
-            printstyled(io, ")"; color = :light_black)
-            j ≠ length(abRs) && print(io, ", ")
+        print(io, ": ", " "^(max_align - aligns[i]))
+        _print_hoppings(io, abRs)
+        # if δᵢ is the sign-flipped partner of an earlier orbit element, note the relation:
+        # it is what the printed Hamiltonian terms refer to (cf. `_print_orbit_elements`)
+        m, negated = canonical_orbit_element(ho.orbit, i)
+        if negated
+            print(io, " "^(max_hop_align - hop_aligns[i]))
+            printstyled(
+                io,
+                " (= -δ",
+                Crystalline.subscriptify(string(m)),
+                ")";
+                color = :light_black,
+            )
         end
-        print(io, "]")
         i ≠ length(ho.orbit) && println(io)
     end
+end
+
+function _print_hoppings(io::IO, abRs)
+    print(io, "[")
+    for (j, (a, b, R)) in enumerate(abRs)
+        printstyled(io, "("; color = :light_black)
+        printstyled(io, b; color = :red)
+        print(io, " + ")
+        printstyled(io, R; color = :blue)
+        print(io, " → ")
+        printstyled(io, a; color = :green)
+        printstyled(io, ")"; color = :light_black)
+        j ≠ length(abRs) && print(io, ", ")
+    end
+    print(io, "]")
 end
 
 # ---------------------------------------------------------------------------------------- #
@@ -73,27 +94,22 @@ function _print_orbit_elements(
     io::IO,
     tbt::TightBindingTerm;
     pretext = nothing,
+    key::Bool = true, # print the `zᵢ=exp(-2πik·δᵢ)` short-hand key ahead of the δᵢ listing
     stylekws...,
 )
     δs = tbt.block.h_orbit.orbit
-    length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. 𝕖(0) = 1)
+    length(δs) == 1 && iszero(δs[1]) && return # don't print zero vector (cf. z = 1)
+    # only list the canonical representatives of each ±δ pair: their partners enter the
+    # printed matrix elements as `z̄ₘ`, so listing them separately is redundant
+    is = filter(i -> !last(canonical_orbit_element(δs, i)), eachindex(δs))
     if !isnothing(pretext)
         printstyled(io, pretext; stylekws...)
     end
-    for (i, δ) in enumerate(δs)
+    key && printstyled(io, "zᵢ=exp(-2πik·δᵢ): "; stylekws...)
+    for (n, i) in enumerate(is)
         printstyled(io, "δ", Crystalline.subscriptify(string(i)), "="; stylekws...)
-        rev_idx = findfirst(δ′ -> isapprox(-δ, δ′, nothing, false), @view δs[1:i-1])
-        if isnothing(rev_idx)
-            printstyled(io, replace(string(δ), ", " => ","); stylekws...)
-        else
-            printstyled(
-                io,
-                "-δ",
-                Crystalline.subscriptify(string(something(rev_idx)));
-                stylekws...,
-            )
-        end
-        i == length(δs) || printstyled(io, ", "; stylekws...)
+        printstyled(io, replace(string(δs[i]), ", " => ","); stylekws...)
+        n == length(is) || printstyled(io, ", "; stylekws...)
     end
 end
 
@@ -162,12 +178,23 @@ function _show_textplain(
         end
         printstyled(io, "└─ "; color=trim_line_color)
         _print_tightbindingterm_block_summary(io, tbt)
-        _print_orbit_elements(io, tbt; color = :light_black, pretext = ":  ")
+        printstyled(io, "."; color = :light_black)
+        _print_orbit_elements(io, tbt; color = :light_black, pretext = "  ", key = false)
     end
+end
+function _show_zi_shorthand(io::IO, tbm::TightBindingModel)
+    # print the `zᵢ` short-hand; intended to be used immediately after a `summary` call, to
+    # avoid state the short-hand *once*, as opposed to repeating it for every term
+    if any(tbt -> any(!iszero, tbt.block.h_orbit.orbit), tbm)
+        print(io, ", where zᵢ=exp(-2πik·δᵢ)")
+        return true
+    end
+    return false # returns false, if nothing was printed
 end
 function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel{D}) where {D}
     summary(io, tbm)
     length(tbm) == 0 && return
+    _show_zi_shorthand(io, tbm)
     print(io, ":")
     return _show_textplain(io, tbm)
 end
@@ -176,6 +203,7 @@ function Base.show(io::IO, ::MIME"text/plain", ctbm::CompositeTightBindingModel{
     length(ctbm) == 0 && return
     tbm_h = ctbm.tbm_h
     tbm_a = ctbm.tbm_a
+    _show_zi_shorthand(io, tbm_h) || _show_zi_shorthand(io, tbm_a)
     print(io, ":")
     _show_textplain(
         io, tbm_h;

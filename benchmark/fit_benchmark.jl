@@ -18,10 +18,6 @@ Pkg.activate(@__DIR__; io = devnull)
 using Crystalline, SymmetricTightBinding, Optim, Chairmarks
 using Random, Statistics, Printf, LinearAlgebra
 
-# the near-singular-Hessian NaN workaround for `solve_tr_subproblem!` (hit by the SG 221
-# scenario) now lives in `ext/optim_trsubproblem_patch.jl` and is applied automatically by
-# `SymmetricTightBindingOptimExt` as soon as `Optim` is loaded above.
-
 # include(joinpath(@__DIR__, "fit_mmd.jl")) # annealed-MMD prototype: superseded by
 #                                           # basin-hopping `fit` (kept for reference)
 
