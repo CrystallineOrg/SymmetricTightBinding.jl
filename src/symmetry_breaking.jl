@@ -49,12 +49,12 @@ time-reversal symmetry.
 julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
 2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
-1. ⎡ -iz₁-iz₂+iz₃+iz̄₁+iz̄₂-iz̄₃  0                       ⎤
-│  ⎣ 0                         iz₁+iz₂-iz₃-iz̄₁-iz̄₂+iz̄₃ ⎦
+1. ⎡ -iz₁+iz̄₁-iz₂+iz̄₂+iz₃-iz̄₃  0                       ⎤
+│  ⎣ 0                         iz₁-iz̄₁+iz₂-iz̄₂-iz₃+iz̄₃ ⎦
 └─ (2b|A₁) self-term.  δ₁=[1,0], δ₂=[0,1], δ₃=[1,1]
 ┌─
-2. ⎡ 0                  z₃-z₅+z̄₁+z̄₂-z̄₄-z̄₆ ⎤
-│  ⎣ z₁+z₂-z₄-z₆+z̄₃-z̄₅  0                 ⎦
+2. ⎡ 0                  z̄₁+z̄₂+z₃-z̄₄-z₅-z̄₆ ⎤
+│  ⎣ z₁+z₂+z̄₃-z₄-z̄₅-z₆  0                 ⎦
 └─ (2b|A₁) self-term.  δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[5/3,4/3], δ₄=[1/3,-4/3], δ₅=[5/3,1/3], δ₆=[4/3,5/3]
 ```
 The first of the of these terms is not diagonal at K and so opens a gap at the Dirac point:

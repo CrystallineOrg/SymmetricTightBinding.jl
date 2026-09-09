@@ -75,7 +75,7 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0         z₃+z̄₁+z̄₂
+         0         z̄₁+z̄₂+z₃
          z₁+z₂+z̄₃  0       
         zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
         test_tp_show(tbm[2], str)
@@ -89,7 +89,7 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         │  ⎣ 0  1 ⎦
         └─ (2b|A₁) self-term.
         ┌─
-        2. ⎡ 0         z₃+z̄₁+z̄₂ ⎤
+        2. ⎡ 0         z̄₁+z̄₂+z₃ ⎤
         │  ⎣ z₁+z₂+z̄₃  0        ⎦
         └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
         test_tp_show(tbm, str)
@@ -116,8 +116,8 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         # `δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]`
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         z₁+z₂+z₃+z̄₁+z̄₂+z̄₃  0                
-         0                  z₁+z₂+z₃+z̄₁+z̄₂+z̄₃
+         z₁+z̄₁+z₂+z̄₂+z₃+z̄₃  0                
+         0                  z₁+z̄₁+z₂+z̄₂+z₃+z̄₃
         zᵢ=exp(-2πik·δᵢ): δ₁=[1,0], δ₂=[0,1], δ₃=[1,1]"""
         test_tp_show(tbm′[3], str)
 
@@ -126,10 +126,20 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         # `δ₁, δ₂, δ₃` to `δ₇, δ₈, δ₉`
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0                  z₃+z₅+z̄₁+z̄₂+z̄₄+z̄₆
-         z₁+z₂+z₄+z₆+z̄₃+z̄₅  0                
+         0                  z̄₁+z̄₂+z₃+z̄₄+z₅+z̄₆
+         z₁+z₂+z̄₃+z₄+z̄₅+z₆  0                
         zᵢ=exp(-2πik·δᵢ): δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[5/3,4/3], δ₄=[1/3,-4/3], δ₅=[5/3,1/3], δ₆=[4/3,5/3]"""
         test_tp_show(tbm′[4], str)
+
+        # the invariant behind the two printouts above: the δ indices ascend within every
+        # matrix element. No ordering of the orbit itself can guarantee this, since a single
+        # matrix element may draw on both halves of a ±δ-paired orbit; the print order is
+        # sorted per element instead
+        subscript = Dict(c => i for (i, c) in enumerate("₁₂₃₄₅₆₇₈₉"))
+        for tbt in tbm′, i in axes(tbt, 1), j in axes(tbt, 2)
+            idxs = [subscript[c] for c in string(tbt[i, j]) if haskey(subscript, c)]
+            @test issorted(idxs)
+        end
     end
 
     @testset "ParameterizedTightBindingModel" begin

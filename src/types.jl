@@ -225,6 +225,13 @@ function Base.getindex(H::TightBindingTerm{D, S}, i::Int, j::Int) where {D, S}
     end
 end
 
+# the orbit elements whose amplitude in `MⁱʲtC` survives sparsification
+function _contributing_orbit_elements(MⁱʲtC)
+    return Iterators.filter(eachindex(MⁱʲtC)) do n
+        abs(MⁱʲtC[n]) ≥ SPARSIFICATION_ATOL_DEFAULT
+    end
+end
+
 function _getindex(
     tbb::TightBindingBlock{D, S},
     i::Int,
@@ -240,9 +247,21 @@ function _getindex(
         return TightBindingElementString("0", #=active=# true)
     end
 
+    # collect the contributing orbit elements, then print them in ascending canonical-index
+    # order: the two elements of a ±δ pair sit in opposite halves of the orbit, so iterating
+    # over `n` directly can print e.g. `z₃+z̄₁+z̄₂` where `z̄₁+z̄₂+z₃` is meant. No global
+    # ordering of the orbit can fix this for every matrix element at once, since a single
+    # element may draw from both halves; sorting per element can (cf. #129)
+    δs = tbb.h_orbit.orbit
+    contributions = map(_contributing_orbit_elements(MⁱʲtC)) do n
+        m, negated = canonical_orbit_element(δs, n)
+        return (; n, m, bar = negated ⊻ conjugate) # `bar` = printed as z̄ₘ rather than zₘ
+    end
+    sort!(contributions; by = c -> (c.m, c.bar)) # zₘ sorts before z̄ₘ
+
     first = true
-    for (n, v) in enumerate(MⁱʲtC)
-        abs(v) < SPARSIFICATION_ATOL_DEFAULT && continue
+    for (; n, m, bar) in contributions
+        v = MⁱʲtC[n]
         vᴿ, vᴵ = reim(v)
         if conjugate
             if S === ANTIHERMITIAN
@@ -271,13 +290,11 @@ function _getindex(
         end
         print(io, v_str)
 
-        δ = tbb.h_orbit.orbit[n]
-        if !iszero(δ) # print the exponential: our notation is zₙ ≡ exp(-2πi𝐤⋅δₙ)
+        if !iszero(δs[n]) # print the exponential: our notation is zₙ ≡ exp(-2πi𝐤⋅δₙ)
             # refer to the canonical representative of ±δ, so that sign-related orbit
             # elements are printed as zₘ and z̄ₘ (= conj(zₘ)) rather than as unrelated
             # symbols
-            m, negated = canonical_orbit_element(tbb.h_orbit.orbit, n)
-            print(io, (negated ⊻ conjugate) ? "z̄" : "z")
+            print(io, bar ? "z̄" : "z")
             print(io, Crystalline.subscriptify(string(m)))
         else
             print(io, "1")
