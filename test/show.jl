@@ -2,7 +2,7 @@ using Test
 using SymmetricTightBinding
 using Crystalline
 using DeepDiffs: deepdiff
-using SymmetricTightBinding: TightBindingElementString
+using SymmetricTightBinding: TightBindingElementString, canonical_orbit_element
 
 # test print with nicely printed diff on failures
 # (adapted from Crystalline.jl's test/show.jl)
@@ -42,10 +42,28 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
          δ₁ = [1/3, -1/3]:  [([1/3, 2/3] + [0, 0] → [2/3, 1/3])]
          δ₂ = [1/3, 2/3]:   [([1/3, 2/3] + [0, -1] → [2/3, 1/3])]
          δ₃ = [-2/3, -1/3]: [([1/3, 2/3] + [1, 0] → [2/3, 1/3])]
-         δ₄ = [-1/3, 1/3]:  [([2/3, 1/3] + [0, 0] → [1/3, 2/3])]
-         δ₅ = [-1/3, -2/3]: [([2/3, 1/3] + [0, 1] → [1/3, 2/3])]
-         δ₆ = [2/3, 1/3]:   [([2/3, 1/3] + [-1, 0] → [1/3, 2/3])]"""
+         δ₄ = [-1/3, 1/3]:  [([2/3, 1/3] + [0, 0] → [1/3, 2/3])]  (= -δ₁)
+         δ₅ = [-1/3, -2/3]: [([2/3, 1/3] + [0, 1] → [1/3, 2/3])]  (= -δ₂)
+         δ₆ = [2/3, 1/3]:   [([2/3, 1/3] + [-1, 0] → [1/3, 2/3])] (= -δ₃)"""
         test_tp_show(hop_orbits[2], str)
+    end
+
+    @testset "canonical_orbit_element" begin
+        # `hop_orbits[2].orbit` is `[δ₁, δ₂, δ₃, -δ₁, -δ₂, -δ₃]`: the first occurrence of
+        # each ±δ pair is the canonical representative
+        δs = hop_orbits[2].orbit
+        @test [canonical_orbit_element(δs, i) for i in eachindex(δs)] ==
+              [(1, false), (2, false), (3, false), (1, true), (2, true), (3, true)]
+
+        δs⁰ = hop_orbits[1].orbit # `[[0,0]]`: δ = -δ, so it is its own representative
+        @test canonical_orbit_element(δs⁰, 1) == (1, false)
+    end
+
+    @testset "z̄ alignment" begin
+        # `z̄`'s combining macron is zero-width, so matrix rows line up in `textwidth` but
+        # not in `length`; anything measuring the printout must use the former
+        rows = split(repr(MIME"text/plain"(), tbm[2]), '\n')[2:3]
+        @test allequal(textwidth.(rows))
     end
 
     @testset "TightBindingTerm" begin
@@ -57,24 +75,34 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0                  𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆)
-         𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                
-        δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃"""
+         0         z̄₁+z̄₂+z̄₃
+         z₁+z₂+z₃  0       
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm[2], str)
     end
 
     @testset "TightBindingModel" begin
         str = """
-        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁):
+        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
         ┌─
         1. ⎡ 1  0 ⎤
         │  ⎣ 0  1 ⎦
-        └─ (2b|A₁) self-term
+        └─ (2b|A₁) self-term.
         ┌─
-        2. ⎡ 0                  𝕖(δ₄)+𝕖(δ₅)+𝕖(δ₆) ⎤
-        │  ⎣ 𝕖(δ₁)+𝕖(δ₂)+𝕖(δ₃)  0                 ⎦
-        └─ (2b|A₁) self-term:  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3], δ₄=-δ₁, δ₅=-δ₂, δ₆=-δ₃"""
+        2. ⎡ 0         z̄₁+z̄₂+z̄₃ ⎤
+        │  ⎣ z₁+z₂+z₃  0        ⎦
+        └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
         test_tp_show(tbm, str)
+
+        # the `zᵢ` key is omitted entirely if every term is a zero-δ on-site term
+        cbr⁰ = @composite brs[end] # (1a|E₁)
+        str = """
+        1-term 2×2 TightBindingModel{2} (hermitian) over (1a|E₁):
+        ┌─
+        1. ⎡ 1  0 ⎤
+        │  ⎣ 0  1 ⎦
+        └─ (1a|E₁) self-term."""
+        test_tp_show(tb_hamiltonian(cbr⁰, [[0, 0]]), str)
     end
 
     @testset "ParameterizedTightBindingModel" begin

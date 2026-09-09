@@ -42,8 +42,9 @@ tbm = tb_hamiltonian(cbr)
 
 The output lists the "basis terms" of the tight-binding Bloch Hamiltonian, each implicitly parameterized by a free on-site energy or hopping amplitude.
 
-!!! note "The short-hand notation 𝕖(δᵢ)"
-    The notation `𝕖(δᵢ)` is used for brevity in the above output, to short-hand the complex momentum-dependent exponential $\mathrm{e}^{-\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$. Here $\boldsymbol{\delta}_i$ denotes a hopping vector (pointing from the annihilated to the created site); in turn, these vectors are expressed above as `δᵢ`, given in the basis of the primitive direct lattice $\{\mathbf{a}_i\}$. A term like `δ₁ = [1/3, -1/3]` consequently represents $\boldsymbol{\delta}_1 = \tfrac{1}{3}\mathbf{a}_1 - \tfrac{1}{3}\mathbf{a}_2$.
+!!! note "The short-hand notation `zᵢ`"
+    The notation `zᵢ` is used for brevity in the above output, to short-hand the complex momentum-dependent exponential $z_i = \mathrm{e}^{-\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$, with $\mathbf{k}$ and $\boldsymbol{\delta}_i$ read as honest vectors and $\mathbf{k}\cdot\boldsymbol{\delta}_i$ as their ordinary inner product. Here $\boldsymbol{\delta}_i$ denotes a hopping vector (pointing from the annihilated to the created site); in turn, these vectors are expressed above as `δᵢ`, given in the basis of the primitive direct lattice $\{\mathbf{a}_i\}$. A term like `δ₁ = [1/3, -1/3]` consequently represents $\boldsymbol{\delta}_1 = \tfrac{1}{3}\mathbf{a}_1 - \tfrac{1}{3}\mathbf{a}_2$. Momenta are correspondingly given in the basis of the primitive reciprocal lattice $\{\mathbf{b}_i\}$ (with $\mathbf{a}_i\cdot\mathbf{b}_j = 2\pi\delta_{ij}$) — and in such reduced coordinates the exponential instead reads `zᵢ=exp(-2πik·δᵢ)`, as printed in the output above and as implemented in the code. The two expressions are equally valid: they differ only in whether `k` and `δᵢ` are read as vectors or as coefficients.
+    Terms of the form `z̄ᵢ` denote the complex conjugate $\bar{z}_i = \mathrm{e}^{+\mathrm{i}\mathbf{k}\cdot\boldsymbol{\delta}_i}$, i.e., the corresponding hopping in the opposite direction; we compress the listing of such pairs of forward and backward hopping vectors to the forward member alone, although both hopping directions are stored under the hood.
 
 
 ## Visualization
@@ -56,7 +57,8 @@ Rs = directbasis(sgnum, Val(2)) # a direct lattice basis, to allow plotting in a
 plot(tbm[2], Rs)
 ```
 
-Here, red markers indicate "source" sites while blue markers indicat "drains"; electrons hop from sources to drains, as also indicated by the arrowheads. The visualization (and the internal representation of `tbm`) includes only the hoppings for a *single* unit cell, such that tiling unit cells do not lead to counting hoppings multiple times.
+Here, blue markers indicate "source" sites while red markers indicate "drains"; electrons hop from sources to drains, as also indicated by the arrowheads. The visualization (and the internal representation of `tbm`) includes only the hoppings for a *single* unit cell, such that tiling unit cells do not lead to counting hoppings multiple times.
+The shown unit cell is in general a parallellepiped, spanning $\sum_i c_i \mathbf{a}_i$ with $0 \leq c_i \leq 1$.
 
 We might want to go beyond nearest-neighbor in our tight-binding model. To do so, we must provide `tb_hamiltonian` with a second argument that gives a set of possible direct-lattice vector separations of sources and drains (in addition to an intra-lattice term). It is enough to include a representative direct lattice vector; if e.g., `[1,0]` and `[0,1]` are symmetry-related, the latter will be automatically included by providing the former. 
 For the graphene example, we might include direct lattice separations `[0,0]` (default, if a second argument is not provided) and `[1,0]`:
