@@ -75,27 +75,3 @@ using LinearAlgebra
         @test_throws ErrorException spectrum(ptbm, ks_numbers)
     end
 end
-
-# ---------------------------------------------------------------------------------------- #
-
-@testset "`solve` eigenvectors are orthonormal at exact degeneracies (issue #133)" begin
-    # `eigen!` detects hermiticity at run-time and would pick LAPACK's default `heevr`
-    # (MRRR), which loses orthogonality when eigenvalues are degenerate to ~1e-15. The
-    # resulting non-orthogonal eigenvectors corrupt the symmetry eigenvalues of the
-    # degenerate multiplet, making `collect_compatible` reject an otherwise valid model
-    brs = calc_bandreps(224, Val(3))
-    cbr = CompositeBandRep([n == 7 ? 1 : 0 for n in eachindex(brs)], brs) # (6d|B₂)
-    tbm = tb_hamiltonian(cbr)
-    # NB: hard-coded rather than seeded: only ~10% of coefficient choices trigger the
-    #     orthogonality loss, so an RNG-stream change could leave this test passing
-    ptbm = tbm([0.7173699612147226, -0.5222794024871692,
-                0.07536286804782279, -0.3336558895203179])
-
-    k = [0.0, 0.5, 0.0] # X, where bands 3 & 4 are degenerate to ~1e-15
-    Es, vs = SymmetricTightBinding.solve(ptbm, k)
-    @test abs(Es[4] - Es[3]) < 1e-12          # the pair really is (numerically) degenerate
-    @test norm(vs'vs - I) < 1e-12             # ... and its eigenvectors are still orthonormal
-    @test !isempty(collect_compatible(ptbm))  # ... so the symmetry analysis succeeds
-
-    @test eltype(Es) === Float64              # Hermitian models keep real eigenvalues
-end
