@@ -105,6 +105,33 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         test_tp_show(tb_hamiltonian(cbr⁰, [[0, 0]]), str)
     end
 
+    @testset "Sorted ±δ-paired orbit order" begin
+        # `sort_orbit_by_sign_pairs!` puts each orbit into a canonical `[δ₁, …, δₙ, -δ₁, …,
+        # -δₙ]` order. Its effect on printing shows up beyond nearest neighbors, so we go to
+        # a graphene model that also includes the `[1,0]` direct-lattice separation
+        tbm′ = tb_hamiltonian(cbr, [[0, 0], [1, 0]])
+
+        # the 2nd-neighbor orbit (|δ| = 1) connects each site to itself, and each ±δ pair is
+        # now listed by its sign-preferred element; unsorted, this read as the sign-mixed
+        # `δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]`
+        str = """
+        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+         z₁+z₂+z₃+z̄₁+z̄₂+z̄₃  0                
+         0                  z₁+z₂+z₃+z̄₁+z̄₂+z̄₃
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1,0], δ₂=[0,1], δ₃=[1,1]"""
+        test_tp_show(tbm′[3], str)
+
+        # the longer-range A↔B orbit (|δ| = √(7/3), 12 elements) interleaves its ±δ pairs;
+        # sorting makes the printed indices contiguous, where they previously skipped from
+        # `δ₁, δ₂, δ₃` to `δ₇, δ₈, δ₉`
+        str = """
+        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+         0                  z₃+z₅+z̄₁+z̄₂+z̄₄+z̄₆
+         z₁+z₂+z₄+z₆+z̄₃+z̄₅  0                
+        zᵢ=exp(-2πik·δᵢ): δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[5/3,4/3], δ₄=[1/3,-4/3], δ₅=[5/3,1/3], δ₆=[4/3,5/3]"""
+        test_tp_show(tbm′[4], str)
+    end
+
     @testset "ParameterizedTightBindingModel" begin
         str = """
         2-term 2×2 ParameterizedTightBindingModel{2} (hermitian) over (2b|A₁) with amplitudes:
