@@ -3,7 +3,7 @@
                                                         --> TightBindingModel{D}
 
 Given a model `tbm` associated with a space group ``G``, determine the new, independent
-tight-binding terms (i.e., the orthogonal complement of terms) that become 
+tight-binding terms (i.e., the orthogonal complement of terms) that become
 symmetry-allowed when the model's space group is reduced to a subgroup ``H ≤ G`` with space
 group number `sgnumᴴ` and time-reversal symmetry `timereversal`.
 
@@ -19,7 +19,7 @@ generally incomplete (see the extended help, via `??`).
 
 The function computes a basis of allowed tight-binding terms in the subgroup setting ``H``
 by simply restricting the constraints in ``G`` to generators in ``H``. This gives a basis
-for the tight-binding terms in the subduced ``G ↓ H`` setting. 
+for the tight-binding terms in the subduced ``G ↓ H`` setting.
 The space spanned by this basis is compared to the space spanned in the original model; in
 particular new terms are identified as the orthogonal complement of the spaces associated
 with ``G ↓ H`` relative to ``G``.
@@ -228,9 +228,33 @@ function _subduced_complement(
             continue # basis must then be unchanged; nothing to add for this index group
         end
 
-        # get "original" coefficient basis in G from `tbm[idxs]` (`idxs` may be empty, if
-        # the orbit carries no symmetry-allowed term in G: the G-space is then trivial and
-        # `Pᵪᴳ` below is the identity, so the entire H basis is returned as new)
+        if isempty(idxs)
+            # nothing is spanned in G, so the entire H basis is the complement
+            # it is already in the same sparsified form that the projection & SVD below would
+            # return it in, so we can store the terms directly
+            for tᴴ in tₐᵦ_basis_reimᴴ_vs
+                tbbᴴ = TightBindingBlock{D, S}(
+                    tbb.br1,
+                    tbb.br2,
+                    tbb.ordering1,
+                    tbb.ordering2,
+                    tbb.h_orbit,
+                    tbb.Mm,
+                    tᴴ,
+                    tbb.diagonal_block
+                )
+                h = TightBindingTerm{D, S}(
+                    tbt.axis,
+                    tbt.block_ij,
+                    tbbᴴ, #= .block =#
+                    tbt.brs,
+                )
+                push!(complement_tbs, h)
+            end
+            continue
+        end
+
+        # get "original" coefficient basis in G from `tbm[idxs]`
         tₐᵦ_basis_reimᴴ = stack(tₐᵦ_basis_reimᴴ_vs)
         tₐᵦ_basis_reimᴳ = Matrix{Float64}(undef, length(tbb.t), length(idxs))
         for (n, i) in enumerate(idxs)
