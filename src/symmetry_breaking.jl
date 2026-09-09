@@ -11,9 +11,12 @@ Practically, the function answers the question: which new tight-binding terms be
 if the symmetry of the model is reduced from space group ``G`` to subgroup ``H``?
 
 The translation-representatives `Rs` set the hopping range that is searched, exactly as in
-[`tb_hamiltonian`](@ref), and should ordinarily be the range `tbm` was built with. If
-omitted, only the hopping orbits already carried by a term of `tbm` are searched, which is
-generally incomplete (see the extended help, via `??`).
+[`tb_hamiltonian`](@ref).
+
+!!! warning "`Rs` must match `tbm`"
+    `Rs` must be the range that `tbm` was built with, and `tbm` must be the complete model
+    over that range, i.e. `tbm = tb_hamiltonian(cbr, Rs)`. Otherwise the returned terms
+    cannot be read as symmetry-breaking (see the extended help, via `??`).
 
 ## Implementation
 
@@ -53,7 +56,7 @@ Using `subduced_complement`, we can find the new terms that appear if we imagine
 the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) while also removing
 time-reversal symmetry.
 ```julia-repl
-julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
+julia> Δtbm = subduced_complement(tbm, Rs, 16; timereversal = false)
 2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
 1. ⎡ iz₁+iz₂+iz₃-iz̄₁-iz̄₂-iz̄₃  0                        ⎤
@@ -88,13 +91,13 @@ exist a transformation from ``G`` to ``H`` that preserves volume (i.e., has
 
 # Extended help
 
-Omitting `Rs` is not equivalent to passing the model's own range: a hopping orbit whose
-every term is forbidden in ``G`` carries no term in `tbm`, and so cannot be found at all
-without `Rs` - even though reduction to ``H`` may be exactly what allows it.
-
-Orbits carried by `tbm` are always searched, also outside the range of `Rs`; a too-small
-`Rs` thus narrows the search but cannot return terms already in `tbm`. A larger `Rs`
-returns longer-range terms too, whether or not ``G`` already allows them.
+That `Rs` is the same set of lattice vectors over which `tbm` was built is what makes the
+returned terms readable as symmetry-breaking, i.e. as exactly those that ``H`` allows and
+``G`` forbids. Passing anything else - a sub-selected `tbm`, or an `Rs` narrower or wider
+than the model's own range - instead gives the complement relative to whatever was passed
+e.g. `subduced_complement(tbm[1:4], Rs, sgnumᴳ)` returns the terms dropped by the
+sub-selection, even though ``G`` allows them. Omitting `Rs` searches only the orbits already
+carried by a term of `tbm`, which is incomplete for the same reason.
 
 The orbits are those of ``G``, closed under symmetries ``H`` lacks, so `vcat(tbm, Δtbm)`
 spans hopping vectors reaching beyond `Rs`; a model built directly in ``H`` matches it in
