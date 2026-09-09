@@ -522,7 +522,16 @@ function solve(
 ) where {D, S}
     length(k) == D || error("dimension mismatch")
     H = ptbm(k)
-    es, vs = eigen!(H; eigen_kws...)
+    # NB: for a Hermitian model we dispatch on `Hermitian` explicitly and ask for the
+    #     divide-and-conquer algorithm. `eigen!` would otherwise detect hermiticity at
+    #     run-time and pick LAPACK's default `heevr` (MRRR), which can return markedly
+    #     non-orthogonal eigenvectors when eigenvalues are degenerate to ~1e-15 - which
+    #     then corrupts the symmetry eigenvalues of the degenerate multiplet (issue #133).
+    es, vs = if S === HERMITIAN
+        eigen!(Hermitian(H); alg = LinearAlgebra.DivideAndConquer(), eigen_kws...)
+    else
+        eigen!(H; eigen_kws...)
+    end
     if bloch_phase === Val(true)
         Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
         # NB: we start in convention 1 for the returned eigenfunctions `vs`, so the Bloch 
