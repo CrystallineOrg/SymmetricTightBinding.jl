@@ -231,20 +231,26 @@ using Crystalline
         end
         @test length(subduced_complement(tbm, Rs, 11)) == 0 # subducing to G itself
 
-        # over `Rs`, a dropped term always comes back, whether or not the rest of its orbit
-        # survived; without `Rs`, only the former (cf. issue #117)
+        # the tests below pin what happens when the documented precondition is broken - a
+        # sub-selected `tbm`, or an `Rs` that is not the model's own range - so that the
+        # behavior is at least deterministic; none of them is a supported usage
+
+        # a sub-selected `tbm` gives the complement relative to the sub-selection, so terms
+        # dropped by it return as "new" even when subducing to G itself
         @test _group_terms_by_block_and_orbit(tbm) == [[1], [2], [3, 4], [5]]
         @test length(subduced_complement(tbm[[1,2,3,5]], Rs, 11)) == 1 # dropped term 4
         @test length(subduced_complement(tbm[[1,2,3,5]], 11)) == 1
         @test length(subduced_complement(tbm[1:4], Rs, 11)) == 1       # dropped term 5
-        @test length(subduced_complement(tbm[1:4], 11)) == 0           # ← the asymmetry
+        # without `Rs` the search runs over the model's own terms, so an orbit dropped
+        # whole is invisible, while one dropped in part is not (cf. issue #117)
+        @test length(subduced_complement(tbm[1:4], 11)) == 0
 
-        # a narrower `Rs` cannot report terms already in `tbm` as new
+        # a narrower `Rs` narrows the search, but cannot return terms already in `tbm`
         @test length(subduced_complement(tbm, [[0,0]], 11)) == 0
         @test length(subduced_complement(tbm, [[0,0]], 10)) ==
               length(subduced_complement(tbm, 10))
 
-        # a wider `Rs` also picks up longer-range terms
+        # a wider `Rs` returns the longer-range terms too, whether or not G allows them
         Rs_big = [[0,0], [1,0], [1,1]]
         @test length(subduced_complement(tbm, Rs_big, 11)) ==
               length(tb_hamiltonian(cbr, Rs_big)) - length(tbm)
