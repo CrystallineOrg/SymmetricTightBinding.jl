@@ -271,7 +271,8 @@ function evaluate_tight_binding_momentum_gradient_term!(
                 ∇Hᵢⱼ *= -2im * π # (-2πi) factor from ∂/∂kᵢ of e^{-2πik·δ}
                 isnothing(c) || (∇Hᵢⱼ *= c) # multiply by coefficient if provided
                 ∇H[i, j] += ∇Hᵢⱼ
-                if S !== NONHERMITIAN && i ≠ j # off-diagonal contribution (& don't double-add diagonal)
+                if S !== NONHERMITIAN && block_i ≠ block_j # hermiticity-related block
+                    # NB: only for off-diagonal blocks, cf. `evaluate_tight_binding_term!`
                     ∇H[j, i] += S == ANTIHERMITIAN ? -conj(∇Hᵢⱼ) : conj(∇Hᵢⱼ)
                 end
             end

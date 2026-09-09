@@ -498,7 +498,12 @@ function evaluate_tight_binding_term!(
             Hᵢⱼ = @inbounds dot(v_conj, @view MmtC[:, local_i, local_j])
             isnothing(c) || (Hᵢⱼ *= c) # multiply by coefficient if provided
             H[i, j] += Hᵢⱼ
-            if S !== NONHERMITIAN && i ≠ j # add off-diagonal hermiticity-related block
+            if S !== NONHERMITIAN && block_i ≠ block_j # add hermiticity-related block
+                # NB: only for off-diagonal blocks: a diagonal block is already covered in
+                #     full by the `is`×`js` loop (which runs over both of its triangles),
+                #     and `MmtC` already carries its hermiticity-related elements. Adding
+                #     the conjugate there too would double every off-diagonal element of
+                #     the block, while leaving its diagonal untouched
                 H[j, i] += S === ANTIHERMITIAN ? -conj(Hᵢⱼ) : conj(Hᵢⱼ)
             end
         end
