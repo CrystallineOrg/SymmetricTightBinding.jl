@@ -135,11 +135,19 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         # matrix element. No ordering of the orbit itself can guarantee this, since a single
         # matrix element may draw on both halves of a ±δ-paired orbit; the print order is
         # sorted per element instead
-        subscript = Dict(c => i for (i, c) in enumerate("₁₂₃₄₅₆₇₈₉"))
+        # (subscripts are parsed as whole numbers, so that e.g. `z₁₂` reads as 12; elements
+        # with fewer than two terms are skipped, and we check that some were not skipped, so
+        # that a change of notation cannot make the test pass vacuously)
+        subscript_to_int(s) = parse(Int, map(c -> '0' + (c - '₀'), s))
+        nchecked = 0
         for tbt in tbm′, i in axes(tbt, 1), j in axes(tbt, 2)
-            idxs = [subscript[c] for c in string(tbt[i, j]) if haskey(subscript, c)]
+            idxs = [subscript_to_int(m.captures[1])
+                    for m in eachmatch(r"z̄?([₀-₉]+)", string(tbt[i, j]))]
+            length(idxs) ≥ 2 || continue
             @test issorted(idxs)
+            nchecked += 1
         end
+        @test nchecked > 0
     end
 
     @testset "ParameterizedTightBindingModel" begin
