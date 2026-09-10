@@ -149,37 +149,37 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
     @testset "Show methods" begin
         test_show(repr(MIME"text/plain"(), ctbm),
         """
-        (5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′):
+        (5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′), where zᵢ=exp(-2πik·δᵢ):
         ┌─ Hermitian
         1. ⎡ 1  │  0 ⎤
         │  ⎢ ───┼─── ⎥
         │  ⎣ 0  │  0 ⎦
-        └─ (1b|A′) self-term
+        └─ (1b|A′) self-term.
         ┌─
-        2. ⎡ 𝕖(δ₁)+𝕖(δ₂)  │  0 ⎤
-        │  ⎢ ─────────────┼─── ⎥
-        │  ⎣ 0            │  0 ⎦
-        └─ (1b|A′) self-term:  δ₁=[-1], δ₂=-δ₁
+        2. ⎡ z₁+z̄₁  │  0 ⎤
+        │  ⎢ ───────┼─── ⎥
+        │  ⎣ 0      │  0 ⎦
+        └─ (1b|A′) self-term.  δ₁=[1]
         ┌─
         3. ⎡ 0  │  0 ⎤
         │  ⎢ ───┼─── ⎥
         │  ⎣ 0  │  1 ⎦
-        └─ (1a|A′) self-term
+        └─ (1a|A′) self-term.
         ┌─
-        4. ⎡ 0  │  0           ⎤
-        │  ⎢ ───┼───────────── ⎥
-        │  ⎣ 0  │  𝕖(δ₁)+𝕖(δ₂) ⎦
-        └─ (1a|A′) self-term:  δ₁=[-1], δ₂=-δ₁
+        4. ⎡ 0  │  0     ⎤
+        │  ⎢ ───┼─────── ⎥
+        │  ⎣ 0  │  z₁+z̄₁ ⎦
+        └─ (1a|A′) self-term.  δ₁=[1]
         ┌─
-        5. ⎡ 0              │  𝕖(δ₁)+𝕖(δ₂) ⎤
-        │  ⎢ ───────────────┼───────────── ⎥
-        │  ⎣ 𝕖(-δ₁)+𝕖(-δ₂)  │  0           ⎦
-        └─ (1b|A′)↔(1a|A′):  δ₁=[1/2], δ₂=-δ₁
+        5. ⎡ 0      │  z₁+z̄₁ ⎤
+        │  ⎢ ───────┼─────── ⎥
+        │  ⎣ z₁+z̄₁  │  0     ⎦
+        └─ (1b|A′)↔(1a|A′).  δ₁=[1/2]
         ┌─ Anti-Hermitian
-        6. ⎡ 0               │  𝕖(δ₁)+𝕖(δ₂) ⎤
-        │  ⎢ ────────────────┼───────────── ⎥
-        │  ⎣ -𝕖(-δ₁)-𝕖(-δ₂)  │  0           ⎦
-        └─ (1b|A′)↔(1a|A′):  δ₁=[1/2], δ₂=-δ₁""")
+        6. ⎡ 0       │  z₁+z̄₁ ⎤
+        │  ⎢ ────────┼─────── ⎥
+        │  ⎣ -z₁-z̄₁  │  0     ⎦
+        └─ (1b|A′)↔(1a|A′).  δ₁=[1/2]""")
 
         @test sprint(summary, ctbm) ==
             "(5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′)"
