@@ -68,3 +68,42 @@ _sg_coefficients(n) = [0.3*cospi(0.73*k) for k in 1:n]
         end
     end
 end
+
+# ---------------------------------------------------------------------------------------- #
+
+@testset "Diagonal-block terms are not double-counted (issue #131)" begin
+    # `evaluate_tight_binding_term!` adds the hermiticity-related block only for *off*-
+    # diagonal blocks: a diagonal block is already covered in full by the row/column loop.
+    # Adding it there too doubled every off-diagonal element of the block while leaving its
+    # diagonal alone - a uniform ×2 for terms confined to one triangle, but a *relative*
+    # distortion for terms straddling the block diagonal (multi-dimensional site irreps),
+    # which then broke the space-group symmetry outright.
+
+    @testset "graphene nearest-neighbor amplitude" begin
+        # textbook: with nearest-neighbor hopping t, |H₁₂(k=0)| = 3t and the bands span ±3t
+        brs = calc_bandreps(17, Val(2))
+        ptbm = tb_hamiltonian((@composite brs[5]), [[0,0]])([0.0, 1.0])
+        @test abs(ptbm([0.0, 0.0])[1, 2]) ≈ 3
+        Es = reduce(vcat, [spectrum_single_k(ptbm, [k1, k2])
+                           for k1 in range(-0.5, 0.5, 25), k2 in range(-0.5, 0.5, 25)])
+        @test maximum(Es) ≈ 3 rtol=1e-2
+    end
+
+    @testset "H(gk) is isospectral with H(k) at generic k" begin
+        # the irrep-based checks of `test/symmetry_analysis.jl` do not catch this, since
+        # they only probe high-symmetry k-points: a generic k is needed
+        for (sgnum, Dᵛ, idx, op, Rs) in (
+                (17,  Val(2), 5,  S"-y,x-y",   [[0,0], [1,0]]),      # (2b|A₁), 1D site irrep
+                (11,  Val(2), 1,  S"-y,x",     [[0,0], [1,0]]),      # (2c|A₁)
+                (147, Val(3), 14, S"-y,x-y,z", [[0,0,0], [1,0,0]]),  # (1a|Eᵤ), 2D site irrep
+                (147, Val(3), 10, S"-y,x-y,z", [[0,0,0], [1,0,0]]))  # (1b|Eᵤ)
+            brs = calc_bandreps(sgnum, Dᵛ)
+            cbr = CompositeBandRep([n == idx ? 1 : 0 for n in eachindex(brs)], brs)
+            tbm = tb_hamiltonian(cbr, Rs)
+            ptbm = tbm(_sg_coefficients(length(tbm)))
+            k = Dᵛ === Val(3) ? [0.13, 0.27, 0.19] : [0.13, 0.27]
+            gk = rotation(op)' \ k # `k` mapped by `op`, i.e. (R⁻¹)ᵀk
+            @test sort(spectrum_single_k(ptbm, k)) ≈ sort(spectrum_single_k(ptbm, gk))
+        end
+    end
+end

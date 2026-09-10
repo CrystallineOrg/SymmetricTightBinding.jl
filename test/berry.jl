@@ -31,7 +31,9 @@ using LinearAlgebra: ⋅
         for k in k_samples
             C₊ = berrycurvature(ptbm, k, 1)
             C₋ = berrycurvature(ptbm, -k, 1)
-            @test isapprox(C₊, C₋; atol=1e-10)
+            # NB: `rtol` is needed as well as `atol` here: at K the gap is tiny and the
+            #     curvature is ~1e6, so an absolute tolerance of 1e-10 is below one ulp
+            @test isapprox(C₊, C₋; atol=1e-10, rtol=1e-10)
         end
     end
 
