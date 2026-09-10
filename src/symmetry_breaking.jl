@@ -1,20 +1,28 @@
 """
-    subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; timereversal)
+    subduced_complement(tbm::TightBindingModel{D}, [Rs, ] sgnumᴴ::Int; timereversal)
                                                         --> TightBindingModel{D}
 
 Given a model `tbm` associated with a space group ``G``, determine the new, independent
-tight-binding terms (i.e., the orthogonal complement of terms) that become 
+tight-binding terms (i.e., the orthogonal complement of terms) that become
 symmetry-allowed when the model's space group is reduced to a subgroup ``H ≤ G`` with space
 group number `sgnumᴴ` and time-reversal symmetry `timereversal`.
 
 Practically, the function answers the question: which new tight-binding terms become allowed
 if the symmetry of the model is reduced from space group ``G`` to subgroup ``H``?
 
+The translation-representatives `Rs` set the hopping range that is searched, exactly as in
+[`tb_hamiltonian`](@ref).
+
+!!! warning "`Rs` must match `tbm`"
+    `Rs` must be the range that `tbm` was built with, and `tbm` must be the complete model
+    over that range, i.e. `tbm = tb_hamiltonian(cbr, Rs)`. Otherwise the returned terms
+    cannot be read as symmetry-breaking (see the extended help, via `??`).
+
 ## Implementation
 
 The function computes a basis of allowed tight-binding terms in the subgroup setting ``H``
 by simply restricting the constraints in ``G`` to generators in ``H``. This gives a basis
-for the tight-binding terms in the subduced ``G ↓ H`` setting. 
+for the tight-binding terms in the subduced ``G ↓ H`` setting.
 The space spanned by this basis is compared to the space spanned in the original model; in
 particular new terms are identified as the orthogonal complement of the spaces associated
 with ``G ↓ H`` relative to ``G``.
@@ -39,14 +47,16 @@ julia> brs = calc_bandreps(17, Val(2); timereversal = true);
 
 julia> cbr = @composite brs[5]
 
-julia> tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])
+julia> Rs = [[0,0], [1,0]];
+
+julia> tbm = tb_hamiltonian(cbr, Rs)
 ```
 Each of the 4 terms in this model is proportional to an identity matrix at K = (1/3, 1/3).
 Using `subduced_complement`, we can find the new terms that appear if we imagine lowering
 the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) while also removing
 time-reversal symmetry.
 ```julia-repl
-julia> Δtbm = subduced_complement(tbm, 16; timereversal = false)
+julia> Δtbm = subduced_complement(tbm, Rs, 16; timereversal = false)
 2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
 1. ⎡ iz₁+iz₂+iz₃-iz̄₁-iz̄₂-iz̄₃  0                        ⎤
@@ -78,8 +88,27 @@ The subgroup ``H`` must be a volume-preserving subgroup of the original group ``
 exist a transformation from ``G`` to ``H`` that preserves volume (i.e., has
 `det(t.P) == 1` for `t` denoting an element returned by Crystalline.jl's
 `conjugacy_relations`).
+
+# Extended help
+
+That `Rs` is the same set of lattice vectors over which `tbm` was built is what makes the
+returned terms readable as symmetry-breaking, i.e. as exactly those that ``H`` allows and
+``G`` forbids. Passing anything else - a sub-selected `tbm`, or an `Rs` narrower or wider
+than the model's own range - instead gives the complement relative to whatever was passed
+e.g. `subduced_complement(tbm[1:4], Rs, sgnumᴳ)` returns the terms dropped by the
+sub-selection, even though ``G`` allows them. Omitting `Rs` searches only the orbits already
+carried by a term of `tbm`, which is incomplete for the same reason.
+
+The orbits are those of ``G``, closed under symmetries ``H`` lacks, so `vcat(tbm, Δtbm)`
+spans hopping vectors reaching beyond `Rs`; a model built directly in ``H`` matches it in
+term count only over a range reaching the same vectors.
 """
-function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) where D
+function subduced_complement(
+    tbm::TightBindingModel{D},
+    Rs::Union{Nothing, AbstractVector{<:AbstractVector{<:Integer}}},
+    sgnumᴴ::Int;
+    kws...
+) where D
     sgnumᴳ = num(tbm.cbr)
     gr = maximal_subgroups(sgnumᴳ, SpaceGroup{D})
     ts = conjugacy_relations(gr, sgnumᴳ, sgnumᴴ)
@@ -101,11 +130,15 @@ function subduced_complement(tbm::TightBindingModel{D}, sgnumᴴ::Int; kws...) w
     _gensᴴ = generators(sgnumᴴ, SpaceGroup{D}) # in H setting
     gensᴴ = transform.(_gensᴴ, Ref(Pᴴ²ᴳ), Ref(pᴴ²ᴳ))
 
-    return _subduced_complement(tbm, gensᴴ; kws...)
+    return _subduced_complement(tbm, Rs, gensᴴ; kws...)
+end
+function subduced_complement(tbm::TightBindingModel, sgnumᴴ::Int; kws...)
+    return subduced_complement(tbm, nothing, sgnumᴴ; kws...)
 end
 
 """
-    _subduced_complement(tbm::TightBindingModel{D}, gensᴴ::AbstractVector{SymOperation{D}};
+    _subduced_complement(tbm::TightBindingModel{D}, [Rs,]
+                         gensᴴ::AbstractVector{SymOperation{D}};
                          timereversal)                      --> TightBindingModel{D}
 
 Implementation of [`subduced_complement`](@ref), taking the generators `gensᴴ` of the
@@ -121,7 +154,15 @@ transformation dance of the `sgnumᴴ` method, which is not reasonable to ask of
     of the public API.
 """
 function _subduced_complement(
+    tbm::TightBindingModel{D},
+    gensᴴ::AbstractVector{SymOperation{D}};
+    kws...
+) where {D}
+    return _subduced_complement(tbm, nothing, gensᴴ; kws...)
+end
+function _subduced_complement(
     tbm::TightBindingModel{D, S},
+    Rs::Union{Nothing, AbstractVector{<:AbstractVector{<:Integer}}},
     gensᴴ::AbstractVector{SymOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal
 ) where {D, S}
@@ -145,15 +186,15 @@ function _subduced_complement(
     cntr = centering(sgnumᴳ, D)
     gensᴴ′ = cntr ∈ ('P', 'p') ? gensᴴ : primitivize.(gensᴴ, cntr)
 
-    # we need to go through the terms of `tbm` in groups that share a coefficient basis -
-    # it is this basis we need to compare. So first, we figure out those groupings
-    grouped_orbits_idxs = _group_terms_by_block_and_orbit(tbm)
+    # we need to go through the model in groups that share a coefficient basis - it is this
+    # basis we need to compare. So first, we figure out those groupings; if `Rs` is given,
+    # this also covers the (block, orbit) pairs that carry no term in `tbm` (`idxs` empty)
+    groups = _subduction_groups(tbm, Rs)
 
     # now we can compute a new coefficient basis in H and compare with our original basis,
     # progressing "group by group"
     complement_tbs = TightBindingTerm{D, S}[]
-    for idxs in grouped_orbits_idxs
-        tbt = tbm.terms[first(idxs)]
+    for (tbt, idxs) in groups
         tbb = tbt.block
         # first, compute basis of coefficients for new subset of generators (`gensᴴ`)
         tₐᵦ_basis_reimᴴ_vs = _obtain_basis_free_parameters(
@@ -190,7 +231,33 @@ function _subduced_complement(
             continue # basis must then be unchanged; nothing to add for this index group
         end
 
-        # get "original" coefficient basis in G from `tbm[idxs]
+        if isempty(idxs)
+            # nothing is spanned in G, so the entire H basis is the complement
+            # it is already in the same sparsified form that the projection & SVD below would
+            # return it in, so we can store the terms directly
+            for tᴴ in tₐᵦ_basis_reimᴴ_vs
+                tbbᴴ = TightBindingBlock{D, S}(
+                    tbb.br1,
+                    tbb.br2,
+                    tbb.ordering1,
+                    tbb.ordering2,
+                    tbb.h_orbit,
+                    tbb.Mm,
+                    tᴴ,
+                    tbb.diagonal_block
+                )
+                h = TightBindingTerm{D, S}(
+                    tbt.axis,
+                    tbt.block_ij,
+                    tbbᴴ, #= .block =#
+                    tbt.brs,
+                )
+                push!(complement_tbs, h)
+            end
+            continue
+        end
+
+        # get "original" coefficient basis in G from `tbm[idxs]`
         tₐᵦ_basis_reimᴴ = stack(tₐᵦ_basis_reimᴴ_vs)
         tₐᵦ_basis_reimᴳ = Matrix{Float64}(undef, length(tbb.t), length(idxs))
         for (n, i) in enumerate(idxs)
@@ -310,4 +377,56 @@ function _group_terms_by_block_and_orbit(tbm::TightBindingModel{D}) where {D}
         end
     end
     return idxs_groups
+end
+
+"""
+    _subduction_groups(tbm::TightBindingModel{D, S}, Rs)
+                        --> Vector{Tuple{TightBindingTerm{D, S}, Vector{Int}}}
+
+The (block, hopping orbit) pairs that `subduced_complement` must visit, each given as a
+representative term - from which the block, orbit, and M-matrix are read - together with the
+indices of the terms of `tbm` that span its coefficient basis in ``G``.
+
+If `Rs` is `nothing`, this is just `_group_terms_by_block_and_orbit`. Otherwise, the pairs
+generated by `(tbm.cbr, Rs)` are appended - unless already carried by `tbm` - as pairs with
+*no* indices: their every coefficient is forbidden in ``G``, so they carry no term to be
+grouped, and only a search over `Rs` can find them (issue #117).
+
+!!! warning
+    This function is an internal helper function for `subduced_complement` and is not part
+    of the public API.
+"""
+function _subduction_groups(tbm::TightBindingModel{D, S}, Rs) where {D, S}
+    groups = [(tbm.terms[first(idxs)], idxs)
+              for idxs in _group_terms_by_block_and_orbit(tbm)]
+    (isnothing(Rs) || isempty(tbm.terms)) && return groups
+
+    # the block structure of the model, exactly as `tb_hamiltonian` built it
+    brs, axis = first(tbm.terms).brs, first(tbm.terms).axis
+    B = length(brs)
+    for d in _diagonal_indices(B, Val(S)), block_i in _row_indices(B, d, Val(S))
+        block_j = block_i + d
+        br1, br2 = brs[block_i], brs[block_j]
+        ordering1, ordering2 = OrbitalOrdering(br1), OrbitalOrdering(br2)
+        diagonal_block = d == 0
+        reverse_hop = S === NONHERMITIAN ? d < 0 : false
+        h_orbits = obtain_symmetry_related_hoppings(
+            Rs, br1, br2; diagonal_block, reverse_hop, nonhermitian = S === NONHERMITIAN)
+        for h_orbit in h_orbits
+            # skip pairs `tbm` already carries: its terms' coefficients are indexed by its
+            # own orbit, which a re-enumeration only reproduces as a set, not in order
+            any(groups) do (tbt, _)
+                tbt.block_ij == (block_i, block_j) &&
+                    isapproxin(representative(h_orbit), orbit(tbt.block.h_orbit),
+                               nothing, false; atol = VEC_CMP_ATOL)
+            end && continue
+            # a pair with no allowed term in G: stand it in with a zero-coefficient term
+            Mm = construct_M_matrix(h_orbit, br1, br2, ordering1, ordering2)
+            tbb = TightBindingBlock{D, S}(br1, br2, ordering1, ordering2, h_orbit, Mm,
+                                          zeros(2size(Mm, 2)), diagonal_block)
+            tbt = TightBindingTerm{D, S}(axis, (block_i, block_j), tbb, brs)
+            push!(groups, (tbt, Int[]))
+        end
+    end
+    return groups
 end
