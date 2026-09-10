@@ -104,6 +104,11 @@ function obtain_symmetry_related_hoppings(
         add_reversed_orbits!(h_orbits)
     end
 
+    # finally, sort the elements of each orbit into a canonical order (see
+    # `sort_orbit_by_sign_pairs!`): this is purely cosmetic, but makes for nicer default
+    # printing of the associated Hamiltonian terms
+    sort_orbit_by_sign_pairs!.(h_orbits)
+
     return h_orbits
 end
 
@@ -198,6 +203,81 @@ function _maybe_add_hoppings!(
     end
     return δ_orbit
 end
+
+# ---------------------------------------------------------------------------------------- #
+
+"""
+    sort_orbit_by_sign_pairs!(h_orbit::HoppingOrbit) --> HoppingOrbit
+
+Reorder the elements of `h_orbit` (and their associated hopping terms) so that, for every
+pair of sign-related elements δ and -δ, the "sign-preferred" element of the pair (see
+[`is_sign_preferred`](@ref)) precedes its partner - and, in fact, so that all such
+preferred elements (and any elements without a -δ partner) precede all their partners.
+
+For an orbit that is closed under δ → -δ, the resulting order is
+`[δ₁, …, δₙ, -δ₁, …, -δₙ]`, with each δᵢ sign-preferred over -δᵢ. Since the Hamiltonian's
+matrix elements are printed relative to the first element of each ±δ pair (see
+[`canonical_orbit_element`](@ref)), this makes the printed terms refer to a contiguous
+range δ₁, …, δₙ of "mostly positive" hopping vectors. Nothing except the aesthetics of
+printing depends on this ordering.
+
+Modifies `h_orbit.orbit` and `h_orbit.hoppings` in-place (`h_orbit.representative` is left
+unchanged, and hence need not be the first element of the sorted orbit).
+"""
+function sort_orbit_by_sign_pairs!(h_orbit::HoppingOrbit{D}) where {D}
+    δs = orbit(h_orbit)
+    N = length(δs)
+    partner = zeros(Int, N) # `partner[i] = j` if `δs[j] = -δs[i]`; `= 0` if no partner
+    for i in 1:N
+        partner[i] == 0 || continue
+        j = findfirst(i+1:N) do j′
+            partner[j′] == 0 &&
+                isapprox(-δs[i], δs[j′], nothing, false; atol = VEC_CMP_ATOL)
+        end
+        isnothing(j) && continue
+        partner[i] = something(j) + i
+        partner[partner[i]] = i
+    end
+
+    perm = Int[]      # sign-preferred elements (and elements without a partner)
+    perm′ = Int[]     # their sign-flipped partners, in matching order
+    sizehint!(perm, N)
+    for i in 1:N
+        j = partner[i]
+        if iszero(j) # no -δ partner in the orbit: nothing to prefer over
+            push!(perm, i)
+        elseif j > i # first-encountered element of a ±δ pair
+            preferred = is_sign_preferred(δs[i]) ? i : j
+            push!(perm, preferred)
+            push!(perm′, preferred == i ? j : i)
+        end
+    end
+    append!(perm, perm′)
+
+    permute!(δs, perm)
+    permute!(h_orbit.hoppings, perm)
+    return h_orbit
+end
+
+"""
+    is_sign_preferred(δ::RVec) --> Bool
+
+Return whether `δ` is preferred over `-δ` as the representative of the pair {δ, -δ}.
+
+The preferred element is the one with fewer negative components; if this is a tie, it is
+the one whose first nonzero component is positive. E.g., [1,-1] is preferred over [-1,1],
+and [2,1] over [-2,-1]. Free-parameter coefficients are compared after the constant parts.
+"""
+function is_sign_preferred(δ::RVec{D}) where {D}
+    v = (constant(δ)..., free(δ)...)
+    N⁻ = count(<(-VEC_CMP_ATOL), v)
+    N⁺ = count(>(VEC_CMP_ATOL), v)
+    N⁻ ≠ N⁺ && return N⁻ < N⁺
+    i = findfirst(>(VEC_CMP_ATOL) ∘ abs, v)
+    return isnothing(i) || v[something(i)] > 0
+end
+
+# ---------------------------------------------------------------------------------------- #
 
 """
     add_reversed_orbits!(h_orbits::Vector{HoppingOrbit{D}}) where {D}

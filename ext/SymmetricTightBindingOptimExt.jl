@@ -1,8 +1,8 @@
 module SymmetricTightBindingOptimExt
 
 using SymmetricTightBinding
-using SymmetricTightBinding: solve
-using LinearAlgebra: eigen!, eigvals!, Hermitian, diag, dot, pinv, tr
+using SymmetricTightBinding: _eigen!
+using LinearAlgebra: eigvals!, Hermitian, diag, dot, pinv, tr
 using Optim
 using Optim: NLSolversBase
 import SymmetricTightBinding: fit, multistart_fit, make_fit_objective, spectralmoments
@@ -41,7 +41,7 @@ function fgh!(
             Es = eigvals!(Hₖ)
             us = nothing
         else
-            Es, us = eigen!(Hₖ) # no Bloch phases, deliberately
+            Es, us = _eigen!(Hₖ) # no Bloch phases, deliberately
         end
 
         # MSE loss
