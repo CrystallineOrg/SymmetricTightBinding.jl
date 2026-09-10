@@ -522,16 +522,7 @@ function solve(
 ) where {D, S}
     length(k) == D || error("dimension mismatch")
     H = ptbm(k)
-    # NB: for a Hermitian model we dispatch on `Hermitian` explicitly and ask for the
-    #     divide-and-conquer algorithm. `eigen!` would otherwise detect hermiticity at
-    #     run-time and pick LAPACK's default `heevr` (MRRR), which can return markedly
-    #     non-orthogonal eigenvectors when eigenvalues are degenerate to ~1e-15 - which
-    #     then corrupts the symmetry eigenvalues of the degenerate multiplet (issue #133).
-    es, vs = if S === HERMITIAN
-        eigen!(Hermitian(H); alg = LinearAlgebra.DivideAndConquer(), eigen_kws...)
-    else
-        eigen!(H; eigen_kws...)
-    end
+    es, vs = _eigen!(H; eigen_kws...) # NB: use our `_eigen!` to avoid non-orthog. eigvecs
     if bloch_phase === Val(true)
         Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)
         # NB: we start in convention 1 for the returned eigenfunctions `vs`, so the Bloch 
@@ -549,6 +540,25 @@ end
 function solve(ptbm::ParameterizedTightBindingModel{D}, k::KVec{D}; kws...) where D
     isspecial(k) || error("input k-point has free parameters, i.e., is not definite")
     solve(ptbm, constant(k); kws...)
+end
+
+# NB: for a Hermitian model we dispatch on `Hermitian` explicitly; the default eigensolver
+#     picked by `eigen` is currently LAPACK's `heevr` (MRRR), which has the deficiency that
+#     it can return markedly non-orthogonal eigenvectors for near-degenerate eigenvalues
+#     (say, within ~1e-15); we want orthogonal eigenvectors, e.g., for computing correct
+#     symmetry eigenvalues (summed) for the the degenerate multiplet (issue #133); so we
+#     just have a thin wrapper over `eigen!` here, that picks either QR iteration or 
+#     divide-and-conquer in the Hermitian case (depending on the matrix size), and otherwise
+#     just calls `eigen!` directly; we cannot pick `alg` for the non-Hermitian case, since
+#     that feature only exists for symmetric matrices.
+_eigen!(H::AbstractMatrix{<:Number}; kws...) = eigen!(H; kws...)
+function _eigen!(H::Hermitian{<:Number}; kws...)
+    N = size(H, 1)
+    if N ≤ 24 # QR Iteration is faster for small matrices, but slower for larger ones
+        return eigen!(H; alg = LinearAlgebra.QRIteration(), kws...)
+    else      # Divide and conquer wins for N ⪆ 25 (measured on laptop)
+        return eigen!(H; alg = LinearAlgebra.DivideAndConquer(), kws...)
+    end
 end
 
 # ---------------------------------------------------------------------------------------- #
