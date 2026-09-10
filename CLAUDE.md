@@ -50,7 +50,8 @@ hopping ranges, the package:
 - `fit(tbm, E_ref, ks)` — least-squares fitting via Optim.jl extension
 
 ### Extensions
-- `SymmetricTightBindingMakieExt` — Makie recipes for hopping orbits and band structures
+- `SymmetricTightBindingMakieExt` — Makie recipes for hopping orbits and band structures;
+  `plot` gives the arrow-style view, `bondplot` a ball-and-stick view (spheres & cylinders)
 - `SymmetricTightBindingOptimExt` — model fitting via Optim.jl (multi-start LBFGS)
 
 ## Fourier convention
