@@ -2,6 +2,7 @@ using Test
 using SymmetricTightBinding
 using Crystalline
 using Crystalline: constant
+using SymmetricTightBinding: is_sign_preferred
 using LinearAlgebra
 
 @testset "TB examples in plane groups" begin
@@ -38,6 +39,14 @@ using LinearAlgebra
                     δᵢ_dist = norm(cartesianize(δᵢ(), Rs))
                     @test norm(δᵢ_dist) ≈ first_nn_dist # all 1st nn distances should be equal
                 end
+
+                # orbits are sorted so that the "sign-preferred" element of each ±δ pair
+                # comes first, and so that all such elements precede their partners
+                δs = first_nn.orbit
+                N = length(δs) ÷ 2
+                @test all(i -> isapprox(δs[i+N], -δs[i], nothing, false), 1:N)
+                @test all(is_sign_preferred, δs[1:N])
+                @test !any(is_sign_preferred, δs[N+1:end])
             end
         end # @testset "Hopping terms"
 

@@ -41,10 +41,10 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         HoppingOrbit{2} (b + R + δ = a):
          δ₁ = [1/3, -1/3]:  [([1/3, 2/3] + [0, 0] → [2/3, 1/3])]
          δ₂ = [1/3, 2/3]:   [([1/3, 2/3] + [0, -1] → [2/3, 1/3])]
-         δ₃ = [-2/3, -1/3]: [([1/3, 2/3] + [1, 0] → [2/3, 1/3])]
+         δ₃ = [2/3, 1/3]:   [([2/3, 1/3] + [-1, 0] → [1/3, 2/3])]
          δ₄ = [-1/3, 1/3]:  [([2/3, 1/3] + [0, 0] → [1/3, 2/3])]  (= -δ₁)
          δ₅ = [-1/3, -2/3]: [([2/3, 1/3] + [0, 1] → [1/3, 2/3])]  (= -δ₂)
-         δ₆ = [2/3, 1/3]:   [([2/3, 1/3] + [-1, 0] → [1/3, 2/3])] (= -δ₃)"""
+         δ₆ = [-2/3, -1/3]: [([1/3, 2/3] + [1, 0] → [2/3, 1/3])]  (= -δ₃)"""
         test_tp_show(hop_orbits[2], str)
     end
 
@@ -75,9 +75,9 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
 
         str = """
         2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
-         0         z̄₁+z̄₂+z̄₃
-         z₁+z₂+z₃  0       
-        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+         0         z̄₁+z̄₂+z₃
+         z₁+z₂+z̄₃  0       
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
         test_tp_show(tbm[2], str)
     end
 
@@ -89,9 +89,9 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         │  ⎣ 0  1 ⎦
         └─ (2b|A₁) self-term.
         ┌─
-        2. ⎡ 0         z̄₁+z̄₂+z̄₃ ⎤
-        │  ⎣ z₁+z₂+z₃  0        ⎦
-        └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[-2/3,-1/3]"""
+        2. ⎡ 0         z̄₁+z̄₂+z₃ ⎤
+        │  ⎣ z₁+z₂+z̄₃  0        ⎦
+        └─ (2b|A₁) self-term.  δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
         test_tp_show(tbm, str)
 
         # the `zᵢ` key is omitted entirely if every term is a zero-δ on-site term
@@ -103,6 +103,51 @@ test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v
         │  ⎣ 0  1 ⎦
         └─ (1a|E₁) self-term."""
         test_tp_show(tb_hamiltonian(cbr⁰, [[0, 0]]), str)
+    end
+
+    @testset "Sorted ±δ-paired orbit order" begin
+        # `sort_orbit_by_sign_pairs!` puts each orbit into a canonical `[δ₁, …, δₙ, -δ₁, …,
+        # -δₙ]` order. Its effect on printing shows up beyond nearest neighbors, so we go to
+        # a graphene model that also includes the `[1,0]` direct-lattice separation
+        tbm′ = tb_hamiltonian(cbr, [[0, 0], [1, 0]])
+
+        # the 2nd-neighbor orbit (|δ| = 1) connects each site to itself, and each ±δ pair is
+        # now listed by its sign-preferred element; unsorted, this read as the sign-mixed
+        # `δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]`
+        str = """
+        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+         z₁+z̄₁+z₂+z̄₂+z₃+z̄₃  0                
+         0                  z₁+z̄₁+z₂+z̄₂+z₃+z̄₃
+        zᵢ=exp(-2πik·δᵢ): δ₁=[1,0], δ₂=[0,1], δ₃=[1,1]"""
+        test_tp_show(tbm′[3], str)
+
+        # the longer-range A↔B orbit (|δ| = √(7/3), 12 elements) interleaves its ±δ pairs;
+        # sorting makes the printed indices contiguous, where they previously skipped from
+        # `δ₁, δ₂, δ₃` to `δ₇, δ₈, δ₉`
+        str = """
+        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+         0                  z̄₁+z̄₂+z₃+z̄₄+z₅+z̄₆
+         z₁+z₂+z̄₃+z₄+z̄₅+z₆  0                
+        zᵢ=exp(-2πik·δᵢ): δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[5/3,4/3], δ₄=[1/3,-4/3], δ₅=[5/3,1/3], δ₆=[4/3,5/3]"""
+        test_tp_show(tbm′[4], str)
+
+        # the invariant behind the two printouts above: the δ indices ascend within every
+        # matrix element. No ordering of the orbit itself can guarantee this, since a single
+        # matrix element may draw on both halves of a ±δ-paired orbit; the print order is
+        # sorted per element instead
+        # (subscripts are parsed as whole numbers, so that e.g. `z₁₂` reads as 12; elements
+        # with fewer than two terms are skipped, and we check that some were not skipped, so
+        # that a change of notation cannot make the test pass vacuously)
+        subscript_to_int(s) = parse(Int, map(c -> '0' + (c - '₀'), s))
+        nchecked = 0
+        for tbt in tbm′, i in axes(tbt, 1), j in axes(tbt, 2)
+            idxs = [subscript_to_int(m.captures[1])
+                    for m in eachmatch(r"z̄?([₀-₉]+)", string(tbt[i, j]))]
+            length(idxs) ≥ 2 || continue
+            @test issorted(idxs)
+            nchecked += 1
+        end
+        @test nchecked > 0
     end
 
     @testset "ParameterizedTightBindingModel" begin

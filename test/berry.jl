@@ -104,7 +104,7 @@ end
         # the below creates a Haldane model with mass term `m`, nearest-neighbor "graphene"
         # hopping `t₁`, and next-nearest-neighbor complex hopping with Haldane phase pattern
         # `t₂ exp(±iϕ)`
-        haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), t₂*sin(ϕ), -m, t₂*cos(ϕ), -t₂*sin(ϕ), t₁, 0])
+        haldane_model(t₁, m, t₂, ϕ) = tbm([m, t₂*cos(ϕ), -t₂*sin(ϕ), -m, t₂*cos(ϕ), t₂*sin(ϕ), t₁, 0])
 
         # below is a manual version of the Haldane model Hamiltonian, for testing that 
         # `haldane_model` indeed is the correct parameterization (taken from my notes on the
