@@ -93,7 +93,7 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 """
-    TightBindingBlock{D, S}
+    TightBindingBlock{D, S, IR, SIR}
 
 A structure for storing information about a matrix block of a tight-binding Hamiltonian of
 dimensionality `D` and [`Hermiticity`](@ref) `S`.
@@ -102,8 +102,8 @@ A block represents a hopping term from band representation `br1` to `br2` (and p
 from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 
 ## Fields
-- `br1 :: BandRep{D}`: first band representation
-- `br2 :: BandRep{D}`: second band representation
+- `br1 :: BandRep{D, IR, SIR}`: first band representation
+- `br2 :: BandRep{D, IR, SIR}`: second band representation
 - `ordering1 :: OrbitalOrdering{D}`: ordering of the orbitals in `br1`
 - `ordering2 :: OrbitalOrdering{D}`: ordering of the orbitals in `br2`
 - `h_orbit :: HoppingOrbit{D}`: hopping orbit associated to the block
@@ -113,9 +113,11 @@ from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 - `diagonal_block :: Bool`: whether this is a diagonal block in the overall Hamiltonian.
 """
 
-struct TightBindingBlock{D, S} <: AbstractMatrix{TightBindingElementString}
-    br1::BandRep{D, LGIrrep{D}, SiteIrrep{D}}
-    br2::BandRep{D, LGIrrep{D}, SiteIrrep{D}}
+struct TightBindingBlock{
+    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+} <: AbstractMatrix{TightBindingElementString}
+    br1::BandRep{D, IR, SIR}
+    br2::BandRep{D, IR, SIR}
     ordering1::OrbitalOrdering{D}
     ordering2::OrbitalOrdering{D}
     h_orbit::HoppingOrbit{D}
@@ -129,22 +131,22 @@ struct TightBindingBlock{D, S} <: AbstractMatrix{TightBindingElementString}
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function TightBindingBlock{D, S}(
-    br1::BandRep{D},
-    br2::BandRep{D},
+    br1::BandRep{D, IR, SIR},
+    br2::BandRep{D, IR, SIR},
     ordering1::OrbitalOrdering{D},
     ordering2::OrbitalOrdering{D},
     h_orbit::HoppingOrbit{D},
     Mm::AbstractArray{<:Integer, 4},
     t::AbstractVector{<:Real},
     diagonal_block::Bool
-) where {D, S}
+) where {D, S, IR, SIR}
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
     MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
     for i in axes(Mm, 3), j in axes(Mm, 4)
         MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
     end
-    tbb = TightBindingBlock{D, S}(
+    tbb = TightBindingBlock{D, S, IR, SIR}(
         br1, 
         br2, 
         ordering1, 
@@ -178,7 +180,7 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 """
-    TightBindingTerm{D, S}
+    TightBindingTerm{D, S, IR, SIR}
 
 A single term a tight-binding Hamiltonian, representing a single block or a
 hermiticity-related pair of blocks of the Hamiltonian matrix.
@@ -191,16 +193,19 @@ hermiticity-related pair of blocks of the Hamiltonian matrix.
   the term. If `S` is `NONHERMITIAN` or the term is diagonal, the key block is the only
   block represented by the term; otherwise, the term also represents the hermiticity-related
   block, whose global coordinates are `axis[reverse(block_ij)...]`.
-- `block :: TightBindingBlock{D, S}`: the `TightBindingBlock` associated to the key block.
-- `brs :: Vector{BandRep{D}}`: the set of band representations involved in the
+- `block :: TightBindingBlock{D, S, IR, SIR}`: the `TightBindingBlock` associated to the
+  key block.
+- `brs :: Vector{BandRep{D, IR, SIR}}`: the set of band representations involved in the
   Hamiltonian; each element corresponds to a block-index in `axis`, such that `axis[i, j]`
   gives the (block of) hopping amplitudes from `brs[j]` to `brs[i]`.
 """
-struct TightBindingTerm{D, S} <: AbstractBlockMatrix{TightBindingElementString}
+struct TightBindingTerm{
+    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+} <: AbstractBlockMatrix{TightBindingElementString}
     axis::BlockedOneTo{Int, Vector{Int}}
     block_ij::NTuple{2, Int}
-    block::TightBindingBlock{D, S}
-    brs::Vector{BandRep{D, LGIrrep{D}, SiteIrrep{D}}}
+    block::TightBindingBlock{D, S, IR, SIR}
+    brs::Vector{BandRep{D, IR, SIR}}
 end
 
 hermiticity(::TightBindingTerm{D, S}) where {D, S} = S
@@ -353,7 +358,8 @@ Crystalline.dim(atbm::AbstractTightBindingModel{<:TightBindingTerm{D}}) where D 
 # ---------------------------------------------------------------------------------------- #
 
 """
-    TightBindingModel{D, S} <: AbstractTightBindingModel{TightBindingTerm{D, S}}
+    TightBindingModel{D, S, IR, SIR}
+                       <: AbstractTightBindingModel{TightBindingTerm{D, S, IR, SIR}}
 
 A structure storing a list of `TightBindingTerm{D, S}`s. Each term is assumed to associated
 with an identical list of EBRs.
@@ -363,18 +369,22 @@ To associate a set of coefficients to each term, see
 
 ## Fields
 
-- `terms :: Vector{TightBindingTerm{D, S}}`: a vector of `TightBindingTerm{D}`s, each of
-   which represents a block (or conjugated pairs of blocks) of the Hamiltonian matrix.
+- `terms :: Vector{TightBindingTerm{D, S, IR, SIR}}`: a vector of `TightBindingTerm{D}`s,
+   each of which represents a block (or conjugated pairs of blocks) of the Hamiltonian
+   matrix.
    Associates to a `D`-dimensional lattice and with Hermitian-conjugation symmetry `S`.
-- `cbr :: CompositeBandRep{D}`: the composite band representation associated to the model.
+- `cbr :: CompositeBandRep{D, IR, SIR}`: the composite band representation associated to
+  the model.
 - `positions :: Vector{DirectPoint{D}}`: a vector of positions, specified in the lattice
   basis, associated to each orbital of the model.
 - `N :: Int`: the total number of orbitals in the model, i.e., the size of the Hamiltonian
   matrix associated to each element of `terms`.
 """
-struct TightBindingModel{D, S} <: AbstractTightBindingModel{TightBindingTerm{D, S}}
-    terms::Vector{TightBindingTerm{D, S}}
-    cbr::CompositeBandRep{D} # band representation associated to the model
+struct TightBindingModel{
+    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+} <: AbstractTightBindingModel{TightBindingTerm{D, S, IR, SIR}}
+    terms::Vector{TightBindingTerm{D, S, IR, SIR}}
+    cbr::CompositeBandRep{D, IR, SIR} # band representation associated to the model
     positions::Vector{DirectPoint{D}} # positions associated to each orbital
     N::Int # total number of orbitals, i.e., matrix size
 end
@@ -383,12 +393,12 @@ Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
 Base.setindex!(tbm::TightBindingModel, v, i::Int) = setindex!(tbm.terms, v, i)
 Base.IndexStyle(::Type{<:TightBindingModel}) = IndexLinear()
 function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
-    tbm::TightBindingModel{D, S},
-    ::Type{TightBindingTerm{D, S}}, # element_type
+    tbm::TightBindingModel{D, S, IR, SIR},
+    ::Type{TightBindingTerm{D, S, IR, SIR}}, # element_type
     dims::Tuple{Int} = size(tbm),
-) where {D, S}
-    similar_terms = similar(tbm.terms, TightBindingTerm{D, S}, dims)
-    return TightBindingModel{D, S}(similar_terms, tbm.cbr, tbm.positions, tbm.N)
+) where {D, S, IR, SIR}
+    similar_terms = similar(tbm.terms, TightBindingTerm{D, S, IR, SIR}, dims)
+    return TightBindingModel(similar_terms, tbm.cbr, tbm.positions, tbm.N)
 end
 
 """
@@ -416,16 +426,16 @@ matrix.
 orbital_count(tbm::TightBindingModel) = tbm.N
 
 function TightBindingModel(
-    terms::Vector{TightBindingTerm{D, S}},
-    cbr::CompositeBandRep{D},
-) where {D, S}
+    terms::Vector{TightBindingTerm{D, S, IR, SIR}},
+    cbr::CompositeBandRep{D, IR, SIR},
+) where {D, S, IR, SIR}
     positions = orbital_positions(cbr)
-    length(terms) == 0 && return TightBindingModel{D, S}(terms, cbr, positions, 0)
+    length(terms) == 0 && return TightBindingModel(terms, cbr, positions, 0)
     N = last(first(terms).axis)
-    return TightBindingModel{D, S}(terms, cbr, positions, N)
+    return TightBindingModel(terms, cbr, positions, N)
 end
-function (tbm::TightBindingModel{D, S})(cs::AbstractVector{<:Real}) where {D, S}
-    return ParameterizedTightBindingModel{D, S}(tbm, cs)
+function (tbm::TightBindingModel)(cs::AbstractVector{<:Real})
+    return ParameterizedTightBindingModel(tbm, cs)
 end
 
 # ---------------------------------------------------------------------------------------- #
@@ -455,7 +465,8 @@ const ReciprocalPointLike{D} =
 # ---------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedTightBindingModel{D, S} <: AbstractParameterizedTightBindingModel{D}
+    ParameterizedTightBindingModel{D, S, IR, SIR}
+                                   <: AbstractParameterizedTightBindingModel{D}
 
 A coefficient-parameterized tight-binding model, that can be used as a functor for
 evaluation at input momenta `k`.
@@ -480,19 +491,21 @@ representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.
     The returned matrix aliases the internal `scratch` buffer of `ptbm` and is overwritten
     by subsequent evaluations: `copy` it if it must outlive the next call.
 """
-struct ParameterizedTightBindingModel{D, S} <: AbstractParameterizedTightBindingModel{D}
-    tbm::TightBindingModel{D, S}
+struct ParameterizedTightBindingModel{
+    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+} <: AbstractParameterizedTightBindingModel{D}
+    tbm::TightBindingModel{D, S, IR, SIR}
     cs::Vector{Float64} # coefficients of the tight-binding model
     scratch::Matrix{ComplexF64} # scratch space for evaluation
     # inner constructor w/ checks & conversion of input
-    function ParameterizedTightBindingModel{D, S}(
-        tbm::TightBindingModel{D, S},
+    function ParameterizedTightBindingModel(
+        tbm::TightBindingModel{D, S, IR, SIR},
         cs::AbstractVector{<:Real},
         scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N),
-    ) where {D, S}
+    ) where {D, S, IR, SIR}
         length(tbm.terms) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm.terms, cs)
         size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
-        return new{D, S}(tbm, convert(Vector{Float64}, cs), scratch)
+        return new{D, S, IR, SIR}(tbm, convert(Vector{Float64}, cs), scratch)
     end
 end
 @noinline function _throw_scratch_size_mismatch(scratch, N)

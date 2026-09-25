@@ -54,8 +54,9 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
     @testset "AbstractVector interface" begin
         @test length(ctbm) == Nʰ + Nᵃ
         @test size(ctbm) == (Nʰ + Nᵃ,)
-        @test eltype(ctbm) == Union{TightBindingTerm{1, HERMITIAN},
-                                    TightBindingTerm{1, ANTIHERMITIAN}}
+        @test eltype(ctbm) == Union{
+            TightBindingTerm{1, HERMITIAN, LGIrrep{1}, SiteIrrep{1}},
+            TightBindingTerm{1, ANTIHERMITIAN, LGIrrep{1}, SiteIrrep{1}}}
         # Hermitian terms come first, then anti-Hermitian ones
         @test all(i -> ctbm[i] === tbm_h[i], 1:Nʰ)
         @test all(i -> ctbm[Nʰ+i] === tbm_a[i], 1:Nᵃ)

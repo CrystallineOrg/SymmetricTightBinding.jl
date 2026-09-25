@@ -121,10 +121,10 @@ transformation dance of the `sgnumᴴ` method, which is not reasonable to ask of
     of the public API.
 """
 function _subduced_complement(
-    tbm::TightBindingModel{D, S},
+    tbm::TightBindingModel{D, S, IR, SIR},
     gensᴴ::AbstractVector{SymOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal
-) where {D, S}
+) where {D, S, IR, SIR}
     timereversalᴳ = first(tbm.cbr.brs).timereversal
     if timereversalᴳ == false && timereversal == true
         error(
@@ -151,7 +151,7 @@ function _subduced_complement(
 
     # now we can compute a new coefficient basis in H and compare with our original basis,
     # progressing "group by group"
-    complement_tbs = TightBindingTerm{D, S}[]
+    complement_tbs = TightBindingTerm{D, S, IR, SIR}[]
     for idxs in grouped_orbits_idxs
         tbt = tbm.terms[first(idxs)]
         tbb = tbt.block
@@ -252,7 +252,7 @@ function _subduced_complement(
                 tᴴᵪᴳ,
                 tbb.diagonal_block
             )
-            h = TightBindingTerm{D, S}(
+            h = TightBindingTerm(
                 tbt.axis,
                 tbt.block_ij,
                 tbbᴴᵪᴳ, #= .block =#
@@ -261,7 +261,7 @@ function _subduced_complement(
             push!(complement_tbs, h)
         end
     end
-    return TightBindingModel{D, S}(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
+    return TightBindingModel(complement_tbs, tbm.cbr, tbm.positions, tbm.N)
 end
 
 """

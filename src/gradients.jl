@@ -1,5 +1,7 @@
-struct TightBindingModelHoppingGradient{D, S}
-   tbm :: TightBindingModel{D, S}
+struct TightBindingModelHoppingGradient{
+    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+}
+   tbm :: TightBindingModel{D, S, IR, SIR}
 end
 
 """
@@ -129,8 +131,10 @@ function energy_gradient_wrt_hopping(
 end
 
 # ---------------------------------------------------------------------------------------- #
-struct TightBindingModelMomentumGradient{D, S}
-   ptbm :: ParameterizedTightBindingModel{D, S}
+struct TightBindingModelMomentumGradient{
+    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+}
+   ptbm :: ParameterizedTightBindingModel{D, S, IR, SIR}
 end
 
 """

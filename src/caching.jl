@@ -36,8 +36,11 @@ Because evaluations share the internal work arrays, a cache must not be used fro
 threads concurrently (create one cache per thread instead; only the work arrays are then
 duplicated meaningfully).
 """
-struct TightBindingCache{D, S, T, K <: AbstractVector{<:ReciprocalPointLike{D}}}
-    tbm  :: TightBindingModel{D, S}
+struct TightBindingCache{
+    D, S, T, K<:AbstractVector{<:ReciprocalPointLike{D}},
+    IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+}
+    tbm  :: TightBindingModel{D, S, IR, SIR}
     ks   :: K                                   # the fixed k-points of the cache
     hs   :: Vector{Vector{Matrix{ComplexF64}}}  # hs[κ][i] = hᵢ(ks[κ])
     W    :: Matrix{ComplexF64}                  # assembly work array (N×N); see docstring
@@ -53,7 +56,7 @@ function TightBindingCache(
     W = Matrix{ComplexF64}(undef, N, N)
     T = S === HERMITIAN ? Float64 : ComplexF64 # cf. `energy_gradient_wrt_hopping`
     ∇ᶜEs = Matrix{T}(undef, Nᶜ, N)
-    return TightBindingCache{D, S, T, typeof(ks)}(tbm, ks, hs, W, ∇ᶜEs)
+    return TightBindingCache(tbm, ks, hs, W, ∇ᶜEs)
 end
 
 # Hamiltonian assembly at the `κ`th cached k-point: H(ks[κ]) = ∑ᵢ csᵢhᵢ(ks[κ]), accumulated

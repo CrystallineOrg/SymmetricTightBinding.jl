@@ -1018,10 +1018,10 @@ The returned [`TightBindingModel`](@ref) will generally feature several terms (i
 the symmetry operations of the underlying space group.
 """
 function tb_hamiltonian(
-    cbr::CompositeBandRep{D},
+    cbr::CompositeBandRep{D, IR, SIR},
     Rs::AbstractVector{<:AbstractVector{Int}} = [zeros(Int, D)], # "global" hopping translation-representatives
     Sᵛ::Val{S} = Val(HERMITIAN),
-) where {D, S}
+) where {D, S, IR, SIR}
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("the input composite band representation does not have a symmetric \
                tight-binding model: its expansion in EBRs contain negative or \
@@ -1033,7 +1033,7 @@ function tb_hamiltonian(
     coefs = round.(Int, cbr.coefs)
 
     # find all bandreps featured in the composite bandrep and build a "repeated" entry list
-    brs = Vector{BandRep{D}}(undef, sum(coefs))
+    brs = Vector{BandRep{D, IR, SIR}}(undef, sum(coefs))
     idx = 0
     for (i, c) in enumerate(coefs)
         for _ in 1:c
@@ -1051,7 +1051,7 @@ function tb_hamiltonian(
     # be divided into each of these representatives since they will be symmetry independent
     B = length(brs)
     axis = BlockArrays.BlockedOneTo((cumsum(occupation(br) for br in brs)))
-    tbs = Vector{TightBindingTerm{D, S}}()
+    tbs = Vector{TightBindingTerm{D, S, IR, SIR}}()
     # We iterate across diagonal blocks, going from the main diagonal and up toward the
     # upper block-diagonals: we do this to get a more natural sorting of the terms in the
     # model, with self-hoppings first, etc. For Hermitian/anti-Hermitian models, we only
@@ -1090,7 +1090,7 @@ function tb_hamiltonian(
                         t,
                         diagonal_block
                     )
-                    h = TightBindingTerm{D, S}(
+                    h = TightBindingTerm(
                         axis,
                         (block_i, block_j),
                         block,
