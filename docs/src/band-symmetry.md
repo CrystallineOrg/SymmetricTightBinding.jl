@@ -41,13 +41,13 @@ SymmetryVector(CompositeBandRep(ptbm))
 
 We can set up a more interesting situation by incorporating more band representations (i.e., more orbitals) into our model. E.g., below, we add three *s*-like orbitals placed at the 3c Wyckoff position (edges of the hexagonal unit cell; i.e., a kagome-like lattice) to the usual graphene model. First, we look at a situation without hybridization and with the bands of the two orbitals sets overlapping:
 ```@example band-symmetry
-cbr′ = @composite brs[3] + brs[5] # (2a|A₁) + (3c|B₂)
+cbr′ = @composite brs[3] + brs[5] # (3c|B₂) + (2b|A₁)
 tbm′ = tb_hamiltonian(cbr′)
 ptbm′ = tbm′([2.5, 0, 0.2, 0, -1, 0])
 plot(kpi, spectrum(ptbm′, kpi); annotations = collect_irrep_annotations(ptbm′))
 ```
 
-Next, we turn on hybridization (controlled by the fifth term of `tbm′`):
+Next, we turn on hybridization (controlled by the sixth term of `tbm′`):
 ```@example band-symmetry
 ptbm′′ = tbm′([2.5, 0, 0.2, 0, -1, .5])
 plot(kpi, spectrum(ptbm′′, kpi); annotations = collect_irrep_annotations(ptbm′′))

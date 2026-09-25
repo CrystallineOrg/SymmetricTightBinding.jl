@@ -248,7 +248,7 @@ The setting this targets is the one described above: data produced by something 
     ```@example fitting
     Random.seed!(3)
     ptbm_dense = fit(tbm_15, Em_20, kpi)              # unpenalized
-    ptbm_lasso = fit(tbm_15, Em_20, kpi; lasso = 1.0) # ℓ₁-penalized
+    ptbm_lasso = fit(tbm_15, Em_20, kpi; lasso = 0.5) # ℓ₁-penalized
     round.([ptbm_dense.cs ptbm_lasso.cs]; digits = 3) # amplitudes, side by side
     ```
 
@@ -268,7 +268,7 @@ The setting this targets is the one described above: data produced by something 
      lasso = round(rel_rms(ptbm_lasso); sigdigits = 2))
     ```
 
-    Both models track the reference to well under 1% of its bandwidth, so the sparser one is arguably the better answer: it is very nearly as faithful, but involves only two thirds as many hopping terms. A visual comparison is instructive also:
+    Both models track the reference to within 1% of its bandwidth, so the sparser one is arguably the better answer: it is very nearly as faithful, but involves only two thirds as many hopping terms. A visual comparison is instructive also:
 
     ```@example fitting
     faxp = plot(

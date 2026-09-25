@@ -472,6 +472,7 @@ Notice that, the ordering of $𝐭$ is a bit subtle: $𝐭$ should be interprete
 3. Finally, $𝐓[i][j][k][m]$ is a _single_ hopping term from the $k$-th partner function of $w_p$ site to the $m$-th partner function of $q_r$ site.
 
 If we are considering a diagonal block, i.e., $(𝐪|A) = (𝐰|B)$, then we also have to include the hermitian or anti-hermitian counterparts of each hopping term, i.e., for each hopping term from $w_p + 𝐆$ to $q_r$, we also have to include the "reversed" hopping term from $q_r - 𝐆$ to $w_p$.
+A diagonal block is consequently complete by itself, covering both of its triangles. When assembling the full Bloch Hamiltonian, only the off-diagonal blocks ($α ≠ β$) have their (anti-)Hermitian counterpart $𝐇^{βα}_𝐤 = ±[𝐇^{αβ}_𝐤]^†$ added separately.
 
 Then, each term of the Hamiltonian matrix $𝐇^{αβ}_𝐤$ can be written as bilinear form in the following way:
 
