@@ -13,12 +13,12 @@ brs = calc_bandreps(17, Val(2))
 cbr = @composite brs[5] # (2b|A₁), 2 bands
 ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0]) # zero on-site energy, unit nearest-neighbor hopping
 
-Es = range(-6.5, 6.5, 501)
+Es = range(-3.5, 3.5, 501)
 dos = densityofstates(ptbm, Es; Nk = 200)
 nothing # hide
 ```
 
-The result features the well-known graphene DOS hallmarks: a linear vanishing at the Dirac point (``E = 0``), logarithmic van Hove singularities at ``E = \pm 2``, and the band edges at ``E = \pm 6``.
+The result features the well-known graphene DOS hallmarks: a linear vanishing at the Dirac point (``E = 0``), logarithmic van Hove singularities at ``E = \pm 1``, and the band edges at ``E = \pm 3``.
 
 ```@example dos
 using GLMakie
