@@ -258,7 +258,7 @@ julia> using Crystalline, SymmetricTightBinding, Brillouin, Optim, Random
 
 julia> sgnum = 221;
 
-julia> brs = calc_bandreps(sgnum);
+julia> brs = bandreps(sgnum);
 
 julia> cbr = @composite brs[1] + brs[7];
 

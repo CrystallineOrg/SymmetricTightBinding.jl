@@ -64,7 +64,7 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
         # A 1-band 1D model has a pure-cosine dispersion E(k) = E₀ + W·cos(2πk), whose exact
         # per-unit-cell DOS is the van Hove form g(E) = 1/(π√(W² − (E−E₀)²)) for |E−E₀| < W
         # (note ∫g dE = 1, matching the single band). We test the full pipeline against it.
-        brs = calc_bandreps(2, Val(1))
+        brs = bandreps(2, Val(1))
         cbr = @composite brs[1] # 1 band
         ptbm = tb_hamiltonian(cbr, [[0], [1]])([0.3, 0.5])
         Es = [only(spectrum_single_k(ptbm, [k])) for k in range(-0.5, 0.5, 4001)]
@@ -94,14 +94,14 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
         end
 
         @testset "2D (graphene, pg 17)" begin
-            brs = calc_bandreps(17, Val(2))
+            brs = bandreps(17, Val(2))
             cbr = @composite brs[5] # (2b|A₁), 2 bands
             ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0]) # zero on-site, unit NN hopping
             @test dos_integral(ptbm; Nk=120) ≈ 2 rtol=2e-2
         end
 
         @testset "3D (SG 2)" begin
-            brs = calc_bandreps(2, Val(3); timereversal=true)
+            brs = bandreps(2, Val(3); timereversal=true)
             cbr = @composite brs[1] + brs[end] # 2 bands
             tbm = tb_hamiltonian(cbr, [[1,0,0],[0,1,0],[0,0,1]])
             Random.seed!(1)
@@ -114,7 +114,7 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
     @testset "Graphene DOS shape (Dirac dip)" begin
         # the graphene DOS vanishes linearly at the Dirac point (E = 0) and peaks at the van
         # Hove singularities (E=±2 here): a qualitative shape check against the global maximum
-        brs = calc_bandreps(17, Val(2))
+        brs = bandreps(17, Val(2))
         cbr = @composite brs[5]
         ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0]) # bands span [-6, 6]
 
@@ -129,7 +129,7 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
     @testset "`transform` keyword (chain rule on velocity)" begin
         # DOS in a transformed abscissa φ = transform(E) must satisfy g_φ(φ)·φ'(E) = g_E(E)
         # for a monotonic transform (conservation of states). Test with φ = E + a·E³.
-        brs = calc_bandreps(17, Val(2))
+        brs = bandreps(17, Val(2))
         cbr = @composite brs[5]
         ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0])
 
@@ -154,7 +154,7 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
     @testset "`bands` keyword (partial DOS)" begin
         # partial DOSs must partition the total: restricting to a set of bands drops exactly
         # those bands' contributions and nothing else.
-        brs = calc_bandreps(2, Val(3); timereversal=true)
+        brs = bandreps(2, Val(3); timereversal=true)
         cbr = @composite brs[1] + brs[end] # 2 bands
         tbm = tb_hamiltonian(cbr, [[1,0,0],[0,1,0],[0,0,1]])
         Random.seed!(1)
@@ -187,7 +187,7 @@ _trapz(x, y) = sum(i -> (x[i+1] - x[i]) * (y[i] + y[i+1]) / 2, 1:length(x)-1)
 
     # ------------------------------------------------------------------------------------ #
     @testset "errors & basic invariants" begin
-        brs = calc_bandreps(17, Val(2))
+        brs = bandreps(17, Val(2))
         cbr = @composite brs[5]
         tbm = tb_hamiltonian(cbr, [[0,0]])
         ptbm = tbm([0.0, 1.0])

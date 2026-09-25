@@ -114,7 +114,7 @@ considerably smoother than histogram or Gaussian-broadening schemes at equal mes
 
 ## Example
 ```julia
-brs = calc_bandreps(17, Val(2));                 # build nearest-neighbor graphene model
+brs = bandreps(17, Val(2));                 # build nearest-neighbor graphene model
 cbr = @composite brs[5];                         #   → (2b|A₁) EBR (2 bands)
 ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0]); #   → unit nearest-neighbor hopping
 

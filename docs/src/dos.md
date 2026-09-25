@@ -9,7 +9,7 @@ We build the standard nearest-neighbor graphene model -- the (2b|A₁) EBR of pl
 ```@example dos
 using Crystalline, SymmetricTightBinding
 
-brs = calc_bandreps(17, Val(2))
+brs = bandreps(17, Val(2))
 cbr = @composite brs[5] # (2b|A₁), 2 bands
 ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0]) # zero on-site energy, unit nearest-neighbor hopping
 

@@ -10,7 +10,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 @testset "CompositeTightBindingModel" begin
 
     # 1D non-Hermitian SSH model, (1b|A′) ⊕ (1a|A′) in 1D SG 2, as in test/nonhermitian.jl
-    brs = calc_bandreps(2, Val(1))
+    brs = bandreps(2, Val(1))
     cbr = @composite brs[1] + brs[3]
     Rs = [[0,], [1,]]
     tbm_h = tb_hamiltonian(cbr, Rs, Val(HERMITIAN))
@@ -42,7 +42,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         for (sgnum, Dᵛ, Rs′) in ((2, Val(1), [[0,], [1,]]),
                                  (10, Val(2), [[0,0], [1,0]]),
                                  (13, Val(2), [[0,0], [1,0]]))
-            brs′ = calc_bandreps(sgnum, Dᵛ)
+            brs′ = bandreps(sgnum, Dᵛ)
             cbr′ = sgnum == 2 ? (@composite brs′[1] + brs′[3]) : (@composite brs′[1])
             n_h = length(tb_hamiltonian(cbr′, Rs′, Val(HERMITIAN)))
             n_a = length(tb_hamiltonian(cbr′, Rs′, Val(ANTIHERMITIAN)))

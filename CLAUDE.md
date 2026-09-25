@@ -175,7 +175,7 @@ appear once the process exits, so a silent log is not evidence of a hang.
 
 4. **Symmetry eigenvalue convention mismatch (workaround in place):**
    `symmetry_eigenvalues` monkey-patches two phase corrections to match Crystalline.jl's
-   `calc_bandreps` convention (Crystalline.jl issue #12). Code locations are marked with
+   `bandreps` convention (Crystalline.jl issue #12). Code locations are marked with
    `[⚠️ phase]`. See `docs/src/devdocs/symmetry_eigenvalue_conventions.md` for details and
    recommended future cleanup (Option C: change `SiteInducedSGRepElement` convention).
 

@@ -35,7 +35,7 @@ construct the tight-binding model for graphene (via the (2a|A₁) band represent
 ```julia-repl
 julia> using SymmetricTightBinding, Crystalline
 
-julia> brs = calc_bandreps(17, Val(2); timereversal = true);
+julia> brs = bandreps(17, Val(2); timereversal = true);
 
 julia> cbr = @composite brs[5]
 

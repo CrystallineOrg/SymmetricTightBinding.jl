@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 using Crystalline, SymmetricTightBinding
 
 sgnum = 10
-brs = calc_bandreps(sgnum, Val(2))
+brs = bandreps(sgnum, Val(2))
 cbr = @composite brs[1] + brs[end]
 
 Rs = [[0, 0]]

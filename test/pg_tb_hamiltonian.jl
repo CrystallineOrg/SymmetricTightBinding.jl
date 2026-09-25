@@ -8,7 +8,7 @@ using LinearAlgebra
 @testset "TB examples in plane groups" begin
     @testset "Graphene" begin
         sgnum = 17
-        brs = calc_bandreps(sgnum, Val(2))
+        brs = bandreps(sgnum, Val(2))
         br = brs[5]
         cbr = @composite brs[5]
 
@@ -69,7 +69,7 @@ using LinearAlgebra
 
     @testset "Square lattice (PG 10, p4mm)" begin
         sgnum = 11 # p4mm
-        brs = calc_bandreps(sgnum, Val(2))
+        brs = bandreps(sgnum, Val(2))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0, 0]])
 
@@ -85,7 +85,7 @@ using LinearAlgebra
 
     @testset "Triangular lattice (PG 13, p3)" begin
         sgnum = 13 # p3
-        brs = calc_bandreps(sgnum, Val(2))
+        brs = bandreps(sgnum, Val(2))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0, 0]])
         @test length(tbm) ≥ 1
@@ -100,7 +100,7 @@ using LinearAlgebra
 
     @testset "Oblique lattice (PG 2, p2)" begin
         sgnum = 2 # p2
-        brs = calc_bandreps(sgnum, Val(2))
+        brs = bandreps(sgnum, Val(2))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0, 0], [1, 0]])
         @test length(tbm) > 0

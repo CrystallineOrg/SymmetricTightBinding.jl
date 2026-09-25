@@ -1,8 +1,8 @@
 """
     obtain_symmetry_related_hoppings(
         Rs::AbstractVector{V}, 
-        brₐ::NewBandRep{D}, 
-        brᵦ::NewBandRep{D};
+        brₐ::BandRep{D}, 
+        brᵦ::BandRep{D};
         diagonal_block::Bool = true,
         reverse_hop::Bool = false,
         nonhermitian::Bool = false
@@ -29,8 +29,8 @@ we check whether orbits that relate `δ` and `-δ` are present; if not, we add t
 """
 function obtain_symmetry_related_hoppings(
     Rs::AbstractVector{V}, # must be specified in the primitive basis
-    brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D};
+    brₐ::BandRep{D},
+    brᵦ::BandRep{D};
     diagonal_block::Bool = true, # whether to manually add "reversed" hoppings (if true),
     reverse_hop::Bool = false, # if hopping actually goes from a+R→b rather than a→b+R
                                # (used in NONHERMITIAN case, for lower-triangular blocks)
@@ -50,7 +50,7 @@ function obtain_symmetry_related_hoppings(
 
     # we only want to include the Wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
-    # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
+    # fortunately, the orbit returned for a `BandRep` do not include these redundant
     # operations - but is still specified in a conventional basis. So, below, we remove
     # redundant operations from the space group, and also change both the operations and the
     # positions from a conventional to a primitive basis
@@ -434,7 +434,7 @@ end
 # ---------------------------------------------------------------------------- #
 
 """
-    OrbitalOrdering(br::NewBandRep{D}) --> OrbitalOrdering{D}
+    OrbitalOrdering(br::BandRep{D}) --> OrbitalOrdering{D}
 
 Establishes a canonical, local ordering for the orbitals associated with a band representation
 `br`. This is the default ordering used when associating row/column indices in a
@@ -454,10 +454,10 @@ The total number of orbitals associated to a band representation, and hence the 
 `ordering`, is the product of the site-symmetry irrep dimensionality and the number of sites
 in the Wyckoff position orbit.
 """
-function OrbitalOrdering(br::NewBandRep{D}) where {D}
+function OrbitalOrdering(br::BandRep{D}) where {D}
     # we only want to include the wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
-    # fortunately, the orbit returned for a `NewBandRep` do not include these redundant
+    # fortunately, the orbit returned for a `BandRep` do not include these redundant
     # operations - but is still specified in a conventional basis. So, below, we remove
     # redundant operations from the space group, and also change both the operations and the
     # positions from a conventional to a primitive basis
@@ -478,7 +478,7 @@ end
 
 """
     construct_M_matrix(
-        h_orbit::HoppingOrbit{D}, br1::NewBandRep{D}, br2::NewBandRep{D},
+        h_orbit::HoppingOrbit{D}, br1::BandRep{D}, br2::BandRep{D},
         [ordering1, ordering2]) 
         --> Array{Int,4}
 
@@ -496,8 +496,8 @@ See `devdocs.md` for details.
 """
 function construct_M_matrix(
     h_orbit::HoppingOrbit{D},
-    br1::NewBandRep{D},
-    br2::NewBandRep{D},
+    br1::BandRep{D},
+    br2::BandRep{D},
     ordering1::OrbitalOrdering{D} = OrbitalOrdering(br1), # canonical orbital orderings for
     ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2),  # `br1` & `br2`, respectively
 ) where {D}
@@ -545,8 +545,8 @@ end
 """
     representation_constraints_matrices(
         Mm::AbstractArray{Int,4}, 
-        brₐ::NewBandRep{D},
-        brᵦ::NewBandRep{D}) --> Vector{Array{ComplexF64,4}}
+        brₐ::BandRep{D},
+        brᵦ::BandRep{D}) --> Vector{Array{ComplexF64,4}}
 
 Build the Q matrix for a particular symmetry operation (or, equivalently, a particular matrix
 from the site-symmetry representation), acting on the M matrix.
@@ -557,8 +557,8 @@ then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻�
 """
 function representation_constraint_matrices(
     Mm::AbstractArray{Int, 4},
-    brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brₐ::BandRep{D},
+    brᵦ::BandRep{D},
     gens::AbstractVector{SymOperation{D}},
 ) where {D}
     ρsₐₐ = sgrep_induced_by_siteir_excl_phase.(Ref(brₐ), gens)
@@ -585,8 +585,8 @@ end
 """
     obtain_basis_free_parameters(
         h_orbit::HoppingOrbit{D},
-        brₐ::NewBandRep{D}, 
-        brᵦ::NewBandRep{D}, 
+        brₐ::BandRep{D}, 
+        brᵦ::BandRep{D}, 
        [orderingₐ = OrbitalOrdering(brₐ), 
         orderingᵦ = OrbitalOrdering(brᵦ),
         diagonal_block::Bool = true,
@@ -602,8 +602,8 @@ The presence or absence of time-reversal symmetry is inferred implicitly from `b
 """
 function obtain_basis_free_parameters(
     h_orbit::HoppingOrbit{D},
-    brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brₐ::BandRep{D},
+    brᵦ::BandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
     diagonal_block::Bool = true,
@@ -643,8 +643,8 @@ end
 
 function _obtain_basis_free_parameters(
     h_orbit::HoppingOrbit{D},
-    brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brₐ::BandRep{D},
+    brᵦ::BandRep{D},
     orderingₐ::OrbitalOrdering{D},
     orderingᵦ::OrbitalOrdering{D},
     Mm::Array{Int, 4},
@@ -1033,7 +1033,7 @@ function tb_hamiltonian(
     coefs = round.(Int, cbr.coefs)
 
     # find all bandreps featured in the composite bandrep and build a "repeated" entry list
-    brs = Vector{NewBandRep{D}}(undef, sum(coefs))
+    brs = Vector{BandRep{D}}(undef, sum(coefs))
     idx = 0
     for (i, c) in enumerate(coefs)
         for _ in 1:c
@@ -1121,7 +1121,7 @@ function tb_hamiltonian(
 end
 #=
 """
-    occupation(br::NewBandRep{D}) --> Int
+    occupation(br::BandRep{D}) --> Int
 
 Counts the number of orbitals in a band representation `br`. This is done by taking 
 the multiplicity of the Wyckoff position associated to `br`, dividing it by the 
@@ -1130,7 +1130,7 @@ multiplying it by the dimension of the site irrep.
 
 NB: This is equivalent to `occupation(br)`..!
 """
-function occupation(br::NewBandRep{D}) where {D}
+function occupation(br::BandRep{D}) where {D}
     mult = multiplicity(position(br)) # multiplicity in conventional setting
     # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
     # divide by the number of centering-translations

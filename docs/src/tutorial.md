@@ -17,7 +17,7 @@ Using Crystalline, we can build the maximal *band representations* of plane grou
 
 ```@example basic-use
 sgnum = 17 # space group number of p6mm
-brs = calc_bandreps(sgnum, Val(2)) # `Val(2)` specifies the dimensionality (here, 2D)
+brs = bandreps(sgnum, Val(2)) # `Val(2)` specifies the dimensionality (here, 2D)
 ```
 
 The top row of the output lists the possible positions that a symmetrically placed orbital can reside, specified as a [Wyckoff position](https://en.wikipedia.org/wiki/Wyckoff_positions) label (e.g., 1a, 2b, 3c). In the second row, the possible local symmetry that an orbital placed there can have (e.g., A₁, A₂, B₁, …) are listed, specified in [Mulikken notation](https://en.wikipedia.org/wiki/List_of_character_tables_for_chemically_important_3D_point_groups). The remaining rows contain information about the projection of each band representation to band symmetries at high-symmetry **k**-points and which is not needed in the present context.

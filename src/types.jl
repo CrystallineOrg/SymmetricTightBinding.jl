@@ -102,8 +102,8 @@ A block represents a hopping term from band representation `br1` to `br2` (and p
 from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 
 ## Fields
-- `br1 :: NewBandRep{D}`: first band representation
-- `br2 :: NewBandRep{D}`: second band representation
+- `br1 :: BandRep{D}`: first band representation
+- `br2 :: BandRep{D}`: second band representation
 - `ordering1 :: OrbitalOrdering{D}`: ordering of the orbitals in `br1`
 - `ordering2 :: OrbitalOrdering{D}`: ordering of the orbitals in `br2`
 - `h_orbit :: HoppingOrbit{D}`: hopping orbit associated to the block
@@ -114,8 +114,8 @@ from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 """
 
 struct TightBindingBlock{D, S} <: AbstractMatrix{TightBindingElementString}
-    br1::NewBandRep{D}
-    br2::NewBandRep{D}
+    br1::BandRep{D, LGIrrep{D}, SiteIrrep{D}}
+    br2::BandRep{D, LGIrrep{D}, SiteIrrep{D}}
     ordering1::OrbitalOrdering{D}
     ordering2::OrbitalOrdering{D}
     h_orbit::HoppingOrbit{D}
@@ -129,8 +129,8 @@ struct TightBindingBlock{D, S} <: AbstractMatrix{TightBindingElementString}
 end
 Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
 function TightBindingBlock{D, S}(
-    br1::NewBandRep{D},
-    br2::NewBandRep{D},
+    br1::BandRep{D},
+    br2::BandRep{D},
     ordering1::OrbitalOrdering{D},
     ordering2::OrbitalOrdering{D},
     h_orbit::HoppingOrbit{D},
@@ -192,7 +192,7 @@ hermiticity-related pair of blocks of the Hamiltonian matrix.
   block represented by the term; otherwise, the term also represents the hermiticity-related
   block, whose global coordinates are `axis[reverse(block_ij)...]`.
 - `block :: TightBindingBlock{D, S}`: the `TightBindingBlock` associated to the key block.
-- `brs :: Vector{NewBandRep{D}}`: the set of band representations involved in the
+- `brs :: Vector{BandRep{D}}`: the set of band representations involved in the
   Hamiltonian; each element corresponds to a block-index in `axis`, such that `axis[i, j]`
   gives the (block of) hopping amplitudes from `brs[j]` to `brs[i]`.
 """
@@ -200,7 +200,7 @@ struct TightBindingTerm{D, S} <: AbstractBlockMatrix{TightBindingElementString}
     axis::BlockedOneTo{Int, Vector{Int}}
     block_ij::NTuple{2, Int}
     block::TightBindingBlock{D, S}
-    brs::Vector{NewBandRep{D}}
+    brs::Vector{BandRep{D, LGIrrep{D}, SiteIrrep{D}}}
 end
 
 hermiticity(::TightBindingTerm{D, S}) where {D, S} = S

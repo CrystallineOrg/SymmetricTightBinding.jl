@@ -19,5 +19,5 @@ user-facing theory exposition, see [`theory.md`](../theory.md).
 
 - **[`symmetry_eigenvalue_conventions.md`](symmetry_eigenvalue_conventions.md)** — Phase
   convention mismatch between the physical derivation (`theory.md`) and Crystalline.jl's
-  `calc_bandreps`, how `symmetry_eigenvalues` corrects for it, the centered-lattice
+  `bandreps`, how `symmetry_eigenvalues` corrects for it, the centered-lattice
   primitivization fix, and options for future cleanup.

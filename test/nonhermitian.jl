@@ -7,7 +7,7 @@ using LinearAlgebra: ishermitian, eigvals
 
     @testset "NH-SSH model (1D SG 2)" begin
         # (1b|A′) ⊕ (1a|A′) in 1D SG 2 (inversion symmetry); intra- and inter-cell hoppings
-        brs = calc_bandreps(2, Val(1))
+        brs = bandreps(2, Val(1))
         cbr = @composite brs[1] + brs[3]
         tbm_NH = tb_hamiltonian(cbr, [[0,], [1,]], Val(NONHERMITIAN))
         tbm_H  = tb_hamiltonian(cbr, [[0,], [1,]], Val(HERMITIAN))
@@ -37,7 +37,7 @@ using LinearAlgebra: ishermitian, eigvals
         # 2-site EBR on p4 lattice (C4, no mirrors); NN + on-site hoppings
         # C4 constrains all 4 NN directions into a single orbit; NONHERMITIAN adds
         # an independent lower-triangular off-diagonal block → more free parameters
-        brs = calc_bandreps(10, Val(2))
+        brs = bandreps(10, Val(2))
         cbr = @composite brs[1]
         tbm_NH = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(NONHERMITIAN))
         tbm_H  = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(HERMITIAN))
@@ -52,8 +52,8 @@ using LinearAlgebra: ishermitian, eigvals
     @testset "NONHERMITIAN without TR allows complex on-site (1D SG 2)" begin
         # single EBR (1b|A′) in 1D SG 2; with TR the on-site energy is forced real by
         # H(k) = H*(−k); without TR it can be complex (uniform gain/loss)
-        brs_TR   = calc_bandreps(2, Val(1))
-        brs_noTR = calc_bandreps(2, Val(1); timereversal = false)
+        brs_TR   = bandreps(2, Val(1))
+        brs_noTR = bandreps(2, Val(1); timereversal = false)
         cbr_TR   = @composite brs_TR[1]
         cbr_noTR = @composite brs_noTR[1]
         tbm_TR   = tb_hamiltonian(cbr_TR,   [[0,]], Val(NONHERMITIAN))

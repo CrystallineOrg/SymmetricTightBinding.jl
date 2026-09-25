@@ -5,7 +5,7 @@ using LinearAlgebra
 
 @testset "Spectrum" begin
     # set up graphene model (plane group 17, (2b|A₁) EBR)
-    brs = calc_bandreps(17, Val(2))
+    brs = bandreps(17, Val(2))
     cbr = @composite brs[5]
     tbm = tb_hamiltonian(cbr, [[0, 0]])
     cs = [0.0, 1.0]
@@ -57,7 +57,7 @@ using LinearAlgebra
     end
 
     @testset "D = 1 convenience method" begin
-        brs_1D = calc_bandreps(2, Val(1))
+        brs_1D = bandreps(2, Val(1))
         cbr_1D = @composite brs_1D[1]+brs_1D[3] # 2 bands
         tbm_1D = tb_hamiltonian(cbr_1D, [[0], [1]])
         ptbm_1D = tbm_1D([0.1, 0.2, -0.3, 0.4, -0.5])
@@ -83,7 +83,7 @@ end
     # (MRRR), which loses orthogonality when eigenvalues are degenerate to ~1e-15. The
     # resulting non-orthogonal eigenvectors corrupt the symmetry eigenvalues of the
     # degenerate multiplet, making `collect_compatible` reject an otherwise valid model
-    brs = calc_bandreps(224, Val(3))
+    brs = bandreps(224, Val(3))
     cbr = CompositeBandRep([n == 7 ? 1 : 0 for n in eachindex(brs)], brs) # (6d|B₂)
     tbm = tb_hamiltonian(cbr)
     # NB: hard-coded rather than seeded: only ~10% of coefficient choices trigger the

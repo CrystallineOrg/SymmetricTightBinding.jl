@@ -1,6 +1,6 @@
 
 """
-    sgrep_induced_by_siteir_excl_phase(br::NewBandRep, op::SymOperation)
+    sgrep_induced_by_siteir_excl_phase(br::BandRep, op::SymOperation)
     sgrep_induced_by_siteir_excl_phase(cbr::CompositeBandRep, op::SymOperation)
         --> Matrix{ComplexF64}
 
@@ -14,10 +14,10 @@ introduced as a global phase factor. This is not true if Convention 2 is used. S
 `/docs/src/theory.md` for more details.
 """
 function sgrep_induced_by_siteir_excl_phase(
-    br::NewBandRep{D},
+    br::BandRep{D},
     op::SymOperation{D},
 ) where {D}
-    # NB: `calc_bandreps` in Crystalline already applies `physical_realify` if
+    # NB: `bandreps` in Crystalline already applies `physical_realify` if
     #     `timereversal` is true, so we don't need to manually redo it for `siteir` below
     siteir = br.siteir
     siteir_dim = irdim(siteir)
@@ -130,7 +130,7 @@ end
 
 """
     sgrep_induced_by_siteir(
-        br::Union{NewBandRep, CompositeBandRep},
+        br::Union{BandRep, CompositeBandRep},
         op::SymOperation, [positions::Vector{<:DirectPoint}]
     )
     sgrep_induced_by_siteir(
@@ -147,7 +147,7 @@ A (possibly parameterized) tight-binding model `tbm` can be specified instead of
 in which case the latter is inferred from the former.
 """
 function sgrep_induced_by_siteir(
-    br::Union{NewBandRep{D}, CompositeBandRep{D}},
+    br::Union{BandRep{D}, CompositeBandRep{D}},
     op::SymOperation{D},
     positions::Vector{DirectPoint{D}} = orbital_positions(br),
 ) where D

@@ -17,7 +17,7 @@ We base the model on graphene: the (2b|A₁) elementary band representation of p
 using Crystalline, SymmetricTightBinding
 
 sgnum = 17
-brs = calc_bandreps(sgnum, Val(2))
+brs = bandreps(sgnum, Val(2))
 cbr = @composite brs[5] # (2b|A₁)
 tbm = tb_hamiltonian(cbr, [[0, 0], [1, 0], [1, 1]]) # on-site, NN, NNN
 ```
@@ -100,7 +100,7 @@ hopping_scale = sum(abs, ptbm_long_ref.cs[1:5]) / 5
 The example above is still representable in principle -- the reference merely has more terms than the fitting model. A sharper test is a reference that *no* finite-range model can represent. Consider a 1D chain with two orbitals per site, coupled across every distance with an exponentially decaying amplitude ``t_n = t_0 e^{-\gamma n}``. Summing the geometric series gives a closed-form Bloch Hamiltonian, ``H(k) = f(k)\sigma_x``, and hence exact bands ``\pm f(k)``:
 
 ```@example fitting
-brs_1d = calc_bandreps(2, Val(1)) # 1D space group 2
+brs_1d = bandreps(2, Val(1)) # 1D space group 2
 cbr_1d = @composite brs_1d[1] + brs_1d[1] # two orbitals per site
 
 tₙ(n, γ = 0.5, t₀ = 1.0) = t₀ * exp(-γ * abs(n)) # hopping amplitude across n cells
@@ -149,7 +149,7 @@ Full details in the fold-out below.
 
     ```@example fitting
     sgnum = 225
-    brs_pb = calc_bandreps(sgnum, Val(3))
+    brs_pb = bandreps(sgnum, Val(3))
     cbr_pb = @composite brs_pb[end-9] + brs_pb[end-2] # (4a|A₁g) ⊕ (4a|T₁ᵤ)
     ```
 
