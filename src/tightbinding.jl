@@ -1022,6 +1022,11 @@ function tb_hamiltonian(
     Rs::AbstractVector{<:AbstractVector{Int}} = [zeros(Int, D)], # "global" hopping translation-representatives
     Sᵛ::Val{S} = Val(HERMITIAN),
 ) where {D, S, IR, SIR}
+    if isspinful(cbr)
+        error("spinful (double-valued) band representations are not yet supported: time \
+               reversal squares to -1 for them, which the construction of the hopping \
+               terms does not yet account for")
+    end
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("the input composite band representation does not have a symmetric \
                tight-binding model: its expansion in EBRs contain negative or \

@@ -100,3 +100,10 @@ end
     tbm_NH = tb_hamiltonian(cbr, [[1,0]], Val(NONHERMITIAN))
     @test length(tbm_NH) == 6
 end
+
+@testset "Spinful band representations are rejected" begin
+    brs = bandreps(2, Val(3); spinful = Val(true))
+    cbr = @composite brs[1]
+    @test isspinful(cbr)
+    @test_throws ErrorException tb_hamiltonian(cbr)
+end
