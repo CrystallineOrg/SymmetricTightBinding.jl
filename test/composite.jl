@@ -23,8 +23,6 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         # all spellings are equivalent, and the argument order is immaterial
         for c in (CompositeTightBindingModel(tbm_h, tbm_a),
                   CompositeTightBindingModel(tbm_a, tbm_h),
-                  CompositeTightBindingModel{1}(tbm_h, tbm_a),
-                  CompositeTightBindingModel{1}(tbm_a, tbm_h),
                   tbm_h + tbm_a,
                   tbm_a + tbm_h)
             @test c.tbm_h === tbm_h && c.tbm_a === tbm_a

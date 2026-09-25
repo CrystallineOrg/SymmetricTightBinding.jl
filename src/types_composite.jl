@@ -56,10 +56,7 @@ struct CompositeTightBindingModel{
         return new{D, IR, SIR}(tbm_h, tbm_a)
     end
 end
-# NB: the `{D}` entry below must be spliced as an _expression_ (`:(…{D})`), not as a
-#     `Symbol("…{D}")`: the latter defines a stray function literally named `var"…{D}"`
-#     rather than a parametric constructor method
-for f in (:(CompositeTightBindingModel{D}), :CompositeTightBindingModel, :(Base.:+))
+for f in (:CompositeTightBindingModel, :(Base.:+))
     @eval function $f(
         tbm_h::TightBindingModel{D, HERMITIAN, IR, SIR},
         tbm_a::TightBindingModel{D, ANTIHERMITIAN, IR, SIR},
@@ -136,7 +133,7 @@ function Base.getindex(
     Nʰ = length(ctbm.tbm_h)
     idxsʰ = [i for i in idxs if i ≤ Nʰ]
     idxsᵃ = [i - Nʰ for i in idxs if i > Nʰ]
-    return CompositeTightBindingModel{D}(ctbm.tbm_h[idxsʰ], ctbm.tbm_a[idxsᵃ])
+    return CompositeTightBindingModel(ctbm.tbm_h[idxsʰ], ctbm.tbm_a[idxsᵃ])
 end
 # logical indexing (`ctbm[mask]`): defined separately since `Bool <: Integer`, which would
 # otherwise make the method above misinterpret a mask as a vector of indices
@@ -161,7 +158,8 @@ end
 ## --------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedCompositeTightBindingModel{D} <: AbstractParameterizedTightBindingModel{D}
+    ParameterizedCompositeTightBindingModel{D, IR, SIR}
+                                   <: AbstractParameterizedTightBindingModel{D}
 
 A coefficient-parameterized [`CompositeTightBindingModel`](@ref), that can be used as a
 functor for evaluation at input momenta `k`.
