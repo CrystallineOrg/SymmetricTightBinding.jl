@@ -73,6 +73,20 @@ And we now have four terms. We can visualize `tbm[3]` and `tbm[4]` as before, in
 plot(tbm, Rs)
 ```
 
+### Ball-and-stick visualization
+
+As an alternative to `plot`, [`bondplot`](@ref) visualizes the same terms in a "ball-and-stick" style, i.e., with atoms drawn as spheres and bonds as cylinders, akin to conventional chemistry visualizations:
+
+```@example basic-use
+bondplot(tbm, Rs)
+```
+
+Unlike `plot`, `bondplot` does not indicate the direction of each hopping. In exchange, it shows *every* hopping that enters or leaves the home unit cell - rather than just the minimal set of hoppings that tiles the lattice - so that each atom is shown with its full set of bonds. Correspondingly, atoms outside the home unit cell are included if - and only if - they take part in such a hopping. Set `tile = false` to instead show the same (tiling) set of hoppings as `plot`.
+The two sets coincide whenever the hopping orbit already contains both $\pm\boldsymbol{\delta}$, as it does for a term that couples a band representation to itself; the difference shows up for terms coupling *different* band representations, whose reverse hoppings are only implied by hermiticity.
+The sizes of the atoms and bonds are set by the `atomsize` and `bondsize` attributes, in units of a reference length that, by default, is the smaller of the shortest lattice vector and the shortest plotted bond.
+
+`bondplot` is often especially helpful for 3D models, where the arrowheads of `plot` can be hard to make out.
+
 ## Model evaluation & band structures
 
 To evaluate the tight-binding model, we must specify a set of (real) hopping amplitudes. To associate coefficients `c₁, c₂, c₃, c₄` to each of the basis terms of the model `tbm`, we can invoke it as a functor to create a [`ParameterizedTightBindingModel`](@ref):
