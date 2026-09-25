@@ -256,7 +256,7 @@ function pin_free(br::BandRep{D}, αβγ::AbstractVector{<:Real}) where D
         siteir.pglabel,
     )
 
-    return BandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
+    return BandRep(siteir_pin, br.n, br.timereversal)
 end
 
 function reciprocal_translation_phase(

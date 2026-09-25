@@ -20,7 +20,7 @@ julia> using Crystalline, SymmetricTightBinding
 julia> brs = bandreps(221);
 
 julia> cbr = @composite brs[1] + brs[2]
-40-irrep CompositeBandRep{3}:
+40-irrep CompositeBandRep{3} (spinless):
  (3d|A₁g) + (3d|A₁ᵤ) (6 bands)
 
 julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
@@ -28,9 +28,9 @@ julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
 julia> ptbm = tbm([1.0, 0.1, -1.0, 0.1]); # fix free coefficients
 
 julia> collect_compatible(ptbm)
-2-element Vector{SymmetryVector{3}}:
- [M₅⁺+M₁⁻, X₃⁺+X₁⁻+X₂⁻, Γ₁⁻+Γ₃⁻, R₄⁺] (3 bands)
- [M₁⁺+M₅⁻, X₁⁺+X₂⁺+X₃⁻, Γ₁⁺+Γ₃⁺, R₄⁻] (3 bands)
+2-element Vector{SymmetryVector{3, LGIrrep{3}}}:
+ [Γ₁⁻+Γ₃⁻, R₄⁺, M₅⁺+M₁⁻, X₃⁺+X₁⁻+X₂⁻] (3 bands)
+ [Γ₁⁺+Γ₃⁺, R₄⁻, M₁⁺+M₅⁻, X₁⁺+X₂⁺+X₃⁻] (3 bands)
 ```
 In the above example, the bands separate into two symmetry vectors, one for each of the
 original EBRs in `cbr`.
