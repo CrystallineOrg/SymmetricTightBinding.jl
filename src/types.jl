@@ -62,7 +62,7 @@ end
 Base.getindex(o::OrbitalOrdering, i::Int) = o.ordering[i]
 Base.size(o::OrbitalOrdering) = size(o.ordering)
 Base.setindex!(::OrbitalOrdering, v, i::Int) = error("setindex! is not supported")
-Base.IndexStyle(::Type{OrbitalOrdering}) = IndexLinear()
+Base.IndexStyle(::Type{<:OrbitalOrdering}) = IndexLinear()
 Base.iterate(o::OrbitalOrdering) = iterate(o.ordering)
 Base.iterate(o::OrbitalOrdering, i) = iterate(o.ordering, i)
 
@@ -89,6 +89,8 @@ function Base.show(io::IO, tbe_str::TightBindingElementString)
     )
     printstyled(io, s; color)
 end
+
+# ---------------------------------------------------------------------------------------- #
 
 """
     TightBindingBlock{D, S}
@@ -156,6 +158,8 @@ function TightBindingBlock{D, S}(
     return tbb
 end
 
+# ---------------------------------------------------------------------------------------- #
+
 """
     Hermiticity (enum)
 
@@ -171,6 +175,7 @@ Hermitian conjugation. Values:
     NONHERMITIAN
 end
 
+# ---------------------------------------------------------------------------------------- #
 
 """
     TightBindingTerm{D, S}
@@ -323,7 +328,32 @@ end
 # ---------------------------------------------------------------------------------------- #
 
 """
-    TightBindingModel{D, S}
+    AbstractTightBindingModel{T<:TightBindingTerm} <: AbstractVector{T}
+
+Abstract supertype of models featuring multiple tight-binding terms.
+
+Concrete subtypes are
+- [`TightBindingModel`](@ref): a simple collection of tight-binding terms with definite
+  hermiticity of each term.
+- [`CompositeTightBindingModel`](@ref): a model for non-Hermitian Hamiltonians, consisting
+  of separate collections of Hermitian and anti-Hermitian terms.
+
+## Interface
+
+Subtypes of `AbstractTightBindingModel` must extend the following methods:
+- `hermiticity`: return a value of the `Hermiticity` enum.
+- `orbital_positions`: return the positions of orbitals in the model.
+- `orbital_count`: return the number of orbitals in the model.
+- `Crystalline.CompositeBandRep`: return the `CompositeBandRep` underlying the model.
+- `size` & `getindex`: as required of any `AbstractVector` (here, of tight-binding terms).
+"""
+abstract type AbstractTightBindingModel{T<:TightBindingTerm} <: AbstractVector{T} end
+Crystalline.dim(atbm::AbstractTightBindingModel{<:TightBindingTerm{D}}) where D = D
+
+# ---------------------------------------------------------------------------------------- #
+
+"""
+    TightBindingModel{D, S} <: AbstractTightBindingModel{TightBindingTerm{D, S}}
 
 A structure storing a list of `TightBindingTerm{D, S}`s. Each term is assumed to associated
 with an identical list of EBRs.
@@ -342,7 +372,7 @@ To associate a set of coefficients to each term, see
 - `N :: Int`: the total number of orbitals in the model, i.e., the size of the Hamiltonian
   matrix associated to each element of `terms`.
 """
-struct TightBindingModel{D, S} <: AbstractVector{TightBindingTerm{D, S}}
+struct TightBindingModel{D, S} <: AbstractTightBindingModel{TightBindingTerm{D, S}}
     terms::Vector{TightBindingTerm{D, S}}
     cbr::CompositeBandRep{D} # band representation associated to the model
     positions::Vector{DirectPoint{D}} # positions associated to each orbital
@@ -351,7 +381,7 @@ end
 Base.size(tbm::TightBindingModel) = (length(tbm.terms),)
 Base.getindex(tbm::TightBindingModel, i::Int) = tbm.terms[i]
 Base.setindex!(tbm::TightBindingModel, v, i::Int) = setindex!(tbm.terms, v, i)
-Base.IndexStyle(::Type{TightBindingModel}) = IndexLinear()
+Base.IndexStyle(::Type{<:TightBindingModel}) = IndexLinear()
 function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
     tbm::TightBindingModel{D, S},
     ::Type{TightBindingTerm{D, S}}, # element_type
@@ -362,18 +392,28 @@ function Base.similar( # extending this makes e.g. `tbm[1:3]` & `vcat` work
 end
 
 """
-    hermiticity(tbt::TightBindingTerm)                -> Hermiticity
-    hermiticity(tbm::TightBindingModel)               -> Hermiticity
-    hermiticity(ptbm::ParameterizedTightBindingModel) -> Hermiticity
+    hermiticity(tbt::TightBindingTerm)                         -> Hermiticity
+    hermiticity(atbm::AbstractTightBindingModel)               -> Hermiticity
+    hermiticity(aptbm::AbstractParameterizedTightBindingModel) -> Hermiticity
 
 Return the [`Hermiticity`](@ref) of the input.
 
 If the input features multiple terms (i.e., is a sum of terms, as in a `TightBindingModel`),
-it is assumed that all terms have identical hermiticity.
+it is assumed that all terms have identical hermiticity. A `CompositeTightBindingModel`,
+which mixes Hermitian and anti-Hermitian terms, is `NONHERMITIAN`.
 """
 hermiticity(::TightBindingModel{D, S}) where {D, S} = S
 orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
+
+"""
+    orbital_count(atbm::AbstractTightBindingModel)               -> Int
+    orbital_count(aptbm::AbstractParameterizedTightBindingModel) -> Int
+
+Return the number of orbitals in a model, i.e., the size of its associated Hamiltonian
+matrix.
+"""
+orbital_count(tbm::TightBindingModel) = tbm.N
 
 function TightBindingModel(
     terms::Vector{TightBindingTerm{D, S}},
@@ -390,6 +430,24 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
+"""
+    AbstractParameterizedTightBindingModel{D}
+
+Abstract supertype of coefficient-parameterized tight-binding models.
+
+Concrete subtypes are
+- [`ParameterizedTightBindingModel`](@ref): a coefficient-parameterized `TightBindingModel`
+  for Hamiltonians with definite Hermitian, anti-Hermitian, or non-Hermitian symmetry.
+- [`ParameterizedCompositeTightBindingModel`](@ref): a coefficient-parameterized
+  `CompositeTightBindingModel` for non-Hermitian models composed of Hermitian and
+  anti-Hermitian terms.
+"""
+abstract type AbstractParameterizedTightBindingModel{D} end
+Crystalline.dim(::AbstractParameterizedTightBindingModel{D}) where D = D
+orbital_count(aptbm::AbstractParameterizedTightBindingModel) = orbital_count(aptbm.tbm)
+
+# ---------------------------------------------------------------------------------------- #
+
 # union-type for valid k-point input; defined to avoid repeating this everywhere
 const ReciprocalPointLike{D} =
     Union{AbstractVector{<:Real}, NTuple{D, <:Real}, ReciprocalPoint{D}}
@@ -397,7 +455,7 @@ const ReciprocalPointLike{D} =
 # ---------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedTightBindingModel{D, S}
+    ParameterizedTightBindingModel{D, S} <: AbstractParameterizedTightBindingModel{D}
 
 A coefficient-parameterized tight-binding model, that can be used as a functor for
 evaluation at input momenta `k`.
@@ -417,8 +475,12 @@ evaluation at input momenta `k`.
 A `ParameterizedTightBindingModel` `ptbm` can be evaluated at any `D`-dimensional
 momentum `k` by using `ptbm` as a functor. That is, `ptbm(k)` returns a numerical
 representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.
+
+!!! warning
+    The returned matrix aliases the internal `scratch` buffer of `ptbm` and is overwritten
+    by subsequent evaluations: `copy` it if it must outlive the next call.
 """
-struct ParameterizedTightBindingModel{D, S}
+struct ParameterizedTightBindingModel{D, S} <: AbstractParameterizedTightBindingModel{D}
     tbm::TightBindingModel{D, S}
     cs::Vector{Float64} # coefficients of the tight-binding model
     scratch::Matrix{ComplexF64} # scratch space for evaluation
@@ -462,7 +524,7 @@ function (ptbm::ParameterizedTightBindingModel{D, S})(
 
     # evaluate each block of the Hamiltonian terms, multiply by coefficients, & store in `H`
     for (tbt, c) in zip(tbm.terms, ptbm.cs)
-        evaluate_tight_binding_term!(tbt, k, c, _H) # modifies `H` in-place
+        evaluate_tight_binding_term!(tbt, k, c, _H) # modifies `_H` in-place
     end
     H = S == HERMITIAN ? Hermitian(_H) : _H # return Hermitian wrapper if S == HERMITIAN
     return H
@@ -525,11 +587,11 @@ function (tbt::TightBindingTerm{D})(k::ReciprocalPointLike{D}) where {D}
 end
 
 function solve(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::AbstractParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D};
     bloch_phase::Union{Val{true}, Val{false}} = Val(false),
     eigen_kws...,
-) where {D, S}
+) where {D}
     length(k) == D || error("dimension mismatch")
     H = ptbm(k)
     es, vs = _eigen!(H; eigen_kws...) # NB: use our `_eigen!` to avoid non-orthog. eigvecs
@@ -547,7 +609,7 @@ function solve(
     end
 end
 
-function solve(ptbm::ParameterizedTightBindingModel{D}, k::KVec{D}; kws...) where D
+function solve(ptbm::AbstractParameterizedTightBindingModel{D}, k::KVec{D}; kws...) where D
     isspecial(k) || error("input k-point has free parameters, i.e., is not definite")
     solve(ptbm, constant(k); kws...)
 end
@@ -570,11 +632,3 @@ function _eigen!(H::Hermitian{<:Number}; kws...)
         return eigen!(H; alg = LinearAlgebra.DivideAndConquer(), kws...)
     end
 end
-
-# ---------------------------------------------------------------------------------------- #
-#=
-struct NonHermitianTightBindingModel{D}
-    tbm_h::TightBindingModel{D, HERMITIAN}
-    tbm_a::TightBindingModel{D, ANTIHERMITIAN}
-end
-=#

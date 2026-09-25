@@ -1,15 +1,16 @@
 """
-    spectrum(ptbm::ParameterizedTightBindingModel{D, S}, ks; transform = identity)
+    spectrum(ptbm::AbstractParameterizedTightBindingModel{D}, ks; transform = identity)
 
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` over an iterable
 of input momenta `ks`. 
 
 Energies are returned as a matrix, with rows running over momenta and columns over distinct
-bands. If `S == HERMITIAN`, the element types (energies) are `Float64`, and otherwise
-`ComplexF64`.
+bands. If `hermiticity(ptbm) == HERMITIAN`, the element types (energies) are `Float64`, and
+otherwise `ComplexF64`.
 
 ## Arguments
-- `ptbm`: a [`ParameterizedTightBindingModel`](@ref) to evaluate the spectrum of.
+- `ptbm`: a [`ParameterizedTightBindingModel`](@ref) or
+  [`ParameterizedCompositeTightBindingModel`](@ref) to evaluate the spectrum of.
 - `ks`: An iterable of momenta. Each such momentum `ks[i]` must evaluate to a real
   `D`-dimensional abstract vector. If `D = 1` (1D models), `ks` can also be any abstract
   vector of real numbers.
@@ -47,15 +48,15 @@ julia> plot(kpi, spectrum(ptbm, kpi))
 ```
 """
 function spectrum(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::AbstractParameterizedTightBindingModel{D},
     ks;
     transform::F = nothing
-) where {D, S, F}
+) where {D, F}
     if !(eltype(ks) <: AbstractVector{<:Real})
         error("the elements of `ks` must subtype `AbstractVector{<:Real}`")
     end
-    ResultType = S === HERMITIAN ? Float64 : ComplexF64
-    Es = Matrix{ResultType}(undef, length(ks), ptbm.tbm.N)
+    ResultType = hermiticity(ptbm) === HERMITIAN ? Float64 : ComplexF64
+    Es = Matrix{ResultType}(undef, length(ks), orbital_count(ptbm))
     for (i, k) in enumerate(ks)
         es = spectrum_single_k(ptbm, k; transform)
         @inbounds Es[i, :] .= es
@@ -66,25 +67,25 @@ end
 # if the model is 1D (D==1), we also provide a convenience method that allows passing a
 # any abstract vector of real numbers, each an interpreted as independent momentum point
 function spectrum(
-    ptbm::ParameterizedTightBindingModel{1, S},
+    ptbm::AbstractParameterizedTightBindingModel{1},
     ks::AbstractVector{<:Real};
     transform::F = nothing
-) where {S, F}
+) where {F}
     ks = [[k] for k in ks]
     return spectrum(ptbm, ks; transform)
 end
 
 """
-    spectrum_single_k(ptbm::ParameterizedTightBindingModel, k::AbstractVector{<:Real})
+    spectrum_single_k(ptbm::AbstractParameterizedTightBindingModel, k::AbstractVector{<:Real})
 
 Evaluate the spectrum, i.e., energies, of the tight-binding model `ptbm` at a single
 momentum `k`, across all the bands of `ptbm`.
 """
 function spectrum_single_k(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::AbstractParameterizedTightBindingModel{D},
     k::AbstractVector{<:Real};
     transform::F = nothing
-) where {D, S, F}
+) where {D, F}
     length(k) == D ||
         error(lazy"dimension mismatch of momentum ($(length(k))) & model ($D)")
     H = ptbm(k)

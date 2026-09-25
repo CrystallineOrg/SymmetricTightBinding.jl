@@ -32,6 +32,11 @@ hopping ranges, the package:
 - `TightBindingTerm{D}` — block embedded in full matrix, with hermiticity info
 - `TightBindingModel{D}` — collection of terms; functor `tbm(cs)` -> parameterized model
 - `ParameterizedTightBindingModel{D}` — model with coefficients; functor `ptbm(k)` -> H(k)
+- `CompositeTightBindingModel{D}` — non-Hermitian model as a HERMITIAN ⊕ ANTIHERMITIAN pair,
+  built via `tbm_h + tbm_a` (`src/types_composite.jl`); functor `ctbm(cs_h, cs_a)`
+- `ParameterizedCompositeTightBindingModel{D}` — parameterized variant of the above
+- `AbstractTightBindingModel` / `AbstractParameterizedTightBindingModel` — supertypes of the
+  plain and composite variants; dispatch on these to cover both
 
 ### Analysis tools
 - `spectrum(ptbm, ks)` — band eigenvalues over k-path (`src/spectrum.jl`)
@@ -67,6 +72,7 @@ to Convention 2.
 src/
   SymmetricTightBinding.jl  # module definition, exports, constants
   types.jl                  # core data structures + evaluation functors
+  types_composite.jl        # composite HERMITIAN ⊕ ANTIHERMITIAN models
   tightbinding.jl           # constraint pipeline: M-matrix, nullspace, sparsification
   site_representations.jl   # coset-decomposition-based induced representations
   symmetry_analysis.jl      # irrep content at high-symmetry k-points
@@ -85,6 +91,7 @@ ext/
   SymmetricTightBindingOptimExt.jl   # Optim.jl fitting
 test/
   runtests.jl               # test runner; `TESTFILES` + selector logic (see "Running tests")
+  test_utils.jl             # shared helpers (`test_show`); always included, not selectable
   pg_tb_hamiltonian.jl      # plane group tests (graphene, p4mm, p3, p2)
   sg_tb_hamiltonian.jl      # space group tests (SG 2, 16, 47, 225; 1D SG 2)
   site_representations.jl   # representation matrix tests
@@ -96,6 +103,7 @@ test/
   spectrum.jl               # band eigenvalue tests
   show.jl                   # regression tests for show/summary methods
   nonhermitian.jl           # NONHERMITIAN model tests
+  composite.jl              # composite HERMITIAN ⊕ ANTIHERMITIAN model tests
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
   misc.jl                   # AbstractArray interface + assorted issue regressions
