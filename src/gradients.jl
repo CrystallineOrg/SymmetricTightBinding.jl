@@ -1,7 +1,5 @@
-struct TightBindingModelHoppingGradient{
-    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
-}
-   tbm :: TightBindingModel{D, S, IR, SIR}
+struct TightBindingModelHoppingGradient{TB<:AbstractTightBindingModel}
+   tbm :: TB
 end
 
 """
@@ -16,18 +14,17 @@ functor at `k`. I.e., `gradient(tbm)(k)` returns the gradient of the tight-bindi
 Hamiltonian with respect to all hoppping coefficients at momentum `k`. This gradient is a
 vector of matrices.
 """
-gradient_wrt_hopping(tbm::TightBindingModel) = TightBindingModelHoppingGradient(tbm)
-gradient_wrt_hopping(ptbm::ParameterizedTightBindingModel) = gradient_wrt_hopping(ptbm.tbm)
+gradient_wrt_hopping(tbm::AbstractTightBindingModel) = TightBindingModelHoppingGradient(tbm)
+function gradient_wrt_hopping(ptbm::AbstractParameterizedTightBindingModel)
+    return gradient_wrt_hopping(ptbm.tbm)
+end
 
-function (tbmg::TightBindingModelHoppingGradient{D})(k::ReciprocalPointLike{D}) where D
-    map(tbt->tbt(k), tbmg.tbm.terms)
+function (tbmg::TightBindingModelHoppingGradient)(k::ReciprocalPointLike)
+    map(tbt->tbt(k), tbmg.tbm)
 end
 
 # evaluate just the `i`th component of the coefficient gradient
-function (tbmg::TightBindingModelHoppingGradient{D})(
-    k::ReciprocalPointLike{D},
-    i::Int
-) where D
+function (tbmg::TightBindingModelHoppingGradient)(k::ReciprocalPointLike, i::Int)
     tbmg.tbm[i](k)
 end
 
@@ -101,7 +98,7 @@ The gradient is returned as column vectors, one for each band, with each column 
 the gradient of the corresponding energy with respect to the hopping coefficients of `ptbm`.
 """
 function energy_gradient_wrt_hopping(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}},
     k::ReciprocalPointLike{D},
     (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
     ;
@@ -131,10 +128,8 @@ function energy_gradient_wrt_hopping(
 end
 
 # ---------------------------------------------------------------------------------------- #
-struct TightBindingModelMomentumGradient{
-    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
-}
-   ptbm :: ParameterizedTightBindingModel{D, S, IR, SIR}
+struct TightBindingModelMomentumGradient{PTB<:AbstractParameterizedTightBindingModel}
+   ptbm :: PTB
 end
 
 """
@@ -154,7 +149,7 @@ function gradient_wrt_momentum(ptbm::ParameterizedTightBindingModel)
 end
 
 """
-    (∇ptbm::TightBindingModelMomentumGradient{D})(
+    (∇ptbm::TightBindingModelMomentumGradient)(
         k::ReciprocalPointLike{D},
         components::NTuple{C, Int},
         [∇Hs::NTuple{C, Matrix{ComplexF64}}]
@@ -194,7 +189,8 @@ where ``\\mathbf{B} = [\\mathbf{b}_1 \\mathbf{b}_2 \\mathbf{b}_3]`` is a matrix 
 columns are the primitive reciprocal lattice vectors and ``\\mathbf{B}^{-\\mathrm{T}}`` is
 its inverse transpose.
 """
-function (∇ptbm::TightBindingModelMomentumGradient{D})(
+function (∇ptbm::TightBindingModelMomentumGradient{
+            <:AbstractParameterizedTightBindingModel{D}})(
     k::ReciprocalPointLike{D},
     components::NTuple{C, Int},
     ∇Hs::NTuple{C, Matrix{ComplexF64}} = begin
@@ -314,7 +310,7 @@ The scratch argument `∇Hs` may be supplied to avoid reallocation when evaluati
 over many momenta (e.g. across a mesh).
 """
 function energy_gradient_wrt_momentum(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}},
     k::ReciprocalPointLike{D},
     (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
     ;

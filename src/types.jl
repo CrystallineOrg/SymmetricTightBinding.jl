@@ -412,6 +412,7 @@ If the input features multiple terms (i.e., is a sum of terms, as in a `TightBin
 it is assumed that all terms have identical hermiticity. A `CompositeTightBindingModel`,
 which mixes Hermitian and anti-Hermitian terms, is `NONHERMITIAN`.
 """
+hermiticity(::Type{<:TightBindingModel{D, S}}) where {D, S} = S
 hermiticity(::TightBindingModel{D, S}) where {D, S} = S
 orbital_positions(tbm::TightBindingModel) = tbm.positions
 Crystalline.CompositeBandRep(tbm::TightBindingModel) = tbm.cbr
@@ -465,16 +466,15 @@ const ReciprocalPointLike{D} =
 # ---------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedTightBindingModel{D, S, IR, SIR}
-                                   <: AbstractParameterizedTightBindingModel{D}
+    ParameterizedTightBindingModel{D, TB} <: AbstractParameterizedTightBindingModel{D}
 
 A coefficient-parameterized tight-binding model, that can be used as a functor for
 evaluation at input momenta `k`.
 
 ## Fields
 
-- `tbm :: TightBindingModel{D}`: A tight-binding model, consisting of a set of a list of
-  `TightBindingTerm{D}`s.
+- `tbm :: TB<:TightBindingModel{D}`: A tight-binding model, consisting of a set of a
+  list of `TightBindingTerm{D}`s.
 - `cs :: Vector{Float64}`: A vector of coefficients, each associated to a corresponding
   element of `tbm`.
 - `scratch :: Matrix{ComplexF64}`: A scratch space for evaluating the Hamiltonian matrix at
@@ -492,20 +492,20 @@ representation of the Hamiltonian matrix for `ptbm` evaluated at momentum `k`.
     by subsequent evaluations: `copy` it if it must outlive the next call.
 """
 struct ParameterizedTightBindingModel{
-    D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+    D, TB<:TightBindingModel{D}
 } <: AbstractParameterizedTightBindingModel{D}
-    tbm::TightBindingModel{D, S, IR, SIR}
+    tbm::TB
     cs::Vector{Float64} # coefficients of the tight-binding model
     scratch::Matrix{ComplexF64} # scratch space for evaluation
     # inner constructor w/ checks & conversion of input
     function ParameterizedTightBindingModel(
-        tbm::TightBindingModel{D, S, IR, SIR},
+        tbm::TightBindingModel{D},
         cs::AbstractVector{<:Real},
         scratch::Matrix{ComplexF64} = Matrix{ComplexF64}(undef, tbm.N, tbm.N),
-    ) where {D, S, IR, SIR}
+    ) where D
         length(tbm.terms) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm.terms, cs)
         size(scratch) ≠ (tbm.N, tbm.N) && _throw_scratch_size_mismatch(scratch, tbm.N)
-        return new{D, S, IR, SIR}(tbm, convert(Vector{Float64}, cs), scratch)
+        return new{D, typeof(tbm)}(tbm, convert(Vector{Float64}, cs), scratch)
     end
 end
 @noinline function _throw_scratch_size_mismatch(scratch, N)
@@ -518,11 +518,11 @@ end
     error("number of coefficients ($Nc) does not match number of model terms ($Nt)")
 end
 
-hermiticity(::ParameterizedTightBindingModel{D, S}) where {D, S} = S
+hermiticity(::ParameterizedTightBindingModel{D, TB}) where {D, TB} = hermiticity(TB)
 orbital_positions(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.positions
 Crystalline.CompositeBandRep(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.cbr
 
-function (ptbm::ParameterizedTightBindingModel{D, S})(
+function (ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}})(
     k::ReciprocalPointLike{D},
     scratch::Matrix{ComplexF64} = ptbm.scratch,
 ) where {D, S}

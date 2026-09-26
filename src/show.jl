@@ -258,9 +258,10 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
-function Base.show(io::IO, cache::TightBindingCache{D, S}) where {D, S}
+function Base.show(io::IO, cache::TightBindingCache{D}) where D
     N = cache.tbm.N
     Nᵏ = length(cache.ks)
+    S = hermiticity(cache.tbm)
     print(io,
         length(cache.tbm), "-term ", N, "×", N,
         " TightBindingCache{", D, ", …} (", lowercase(string(S)), ") ",

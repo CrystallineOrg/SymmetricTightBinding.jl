@@ -158,7 +158,7 @@ end
 ## --------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedCompositeTightBindingModel{D, IR, SIR}
+    ParameterizedCompositeTightBindingModel{D, CTB}
                                    <: AbstractParameterizedTightBindingModel{D}
 
 A coefficient-parameterized [`CompositeTightBindingModel`](@ref), that can be used as a
@@ -171,7 +171,7 @@ followed by the anti-Hermitian ones (`ctbm(cs)`), or with the two sets of coeffi
 provided separately (`ctbm(cs_h, cs_a)`).
 
 ## Fields
-- `tbm :: CompositeTightBindingModel{D, IR, SIR}`: the underlying composite tight-binding
+- `tbm :: CTB<:CompositeTightBindingModel{D}`: the underlying composite tight-binding
   model
 - `cs :: Vector{Float64}`: coefficients of each term of `tbm`, in the same order; i.e.,
   `cs[1:length(tbm.tbm_h)]` parameterize the Hermitian terms and `cs[length(tbm.tbm_h)+1:
@@ -188,21 +188,21 @@ numerical (generally non-Hermitian) Hamiltonian matrix at momentum `k`.
     by subsequent evaluations: `copy` it if it must outlive the next call.
 """
 struct ParameterizedCompositeTightBindingModel{
-    D, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+    D, CTB<:CompositeTightBindingModel{D}
 } <: AbstractParameterizedTightBindingModel{D}
-    tbm :: CompositeTightBindingModel{D, IR, SIR}
+    tbm :: CTB
     cs :: Vector{Float64} # coefficients of the tight-binding model
     scratch :: Matrix{ComplexF64} # scratch space for evaluation
     function ParameterizedCompositeTightBindingModel(
-        tbm :: CompositeTightBindingModel{D, IR, SIR},
+        tbm :: CompositeTightBindingModel{D},
         cs :: AbstractVector{<:Real},
         scratch :: Matrix{ComplexF64} = Matrix{ComplexF64}(
                                             undef, orbital_count(tbm), orbital_count(tbm)),
-    ) where {D, IR, SIR}
+    ) where D
         length(tbm) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm, cs)
         N = orbital_count(tbm)
         size(scratch) ≠ (N, N) && _throw_scratch_size_mismatch(scratch, N)
-        return new{D, IR, SIR}(tbm, convert(Vector{Float64}, cs), scratch)
+        return new{D, typeof(tbm)}(tbm, convert(Vector{Float64}, cs), scratch)
     end
 end
 

@@ -37,10 +37,9 @@ threads concurrently (create one cache per thread instead; only the work arrays 
 duplicated meaningfully).
 """
 struct TightBindingCache{
-    D, S, T, K<:AbstractVector{<:ReciprocalPointLike{D}},
-    IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+    D, T, K<:AbstractVector{<:ReciprocalPointLike{D}}, TB<:TightBindingModel{D}
 }
-    tbm  :: TightBindingModel{D, S, IR, SIR}
+    tbm  :: TB
     ks   :: K                                   # the fixed k-points of the cache
     hs   :: Vector{Vector{Matrix{ComplexF64}}}  # hs[κ][i] = hᵢ(ks[κ])
     W    :: Matrix{ComplexF64}                  # assembly work array (N×N); see docstring
@@ -61,7 +60,7 @@ end
 
 # Hamiltonian assembly at the `κ`th cached k-point: H(ks[κ]) = ∑ᵢ csᵢhᵢ(ks[κ]), accumulated
 # into the work array `cache.W` (cf. `TightBindingCache`'s docstring on aliasing/mutation)
-function (cache::TightBindingCache{D, S})(
+function (cache::TightBindingCache{D, <:Any, <:Any, <:TightBindingModel{D, S}})(
     cs::AbstractVector{<:Real},
     κ::Integer,
 ) where {D, S}
@@ -90,7 +89,7 @@ The returned column views alias the cache's internal buffer `cache.∇ᶜEs` and
 by the next gradient call.
 """
 function energy_gradient_wrt_hopping(
-    cache::TightBindingCache{D, S},
+    cache::TightBindingCache{D, <:Any, <:Any, <:TightBindingModel{D, S}},
     κ::Integer,
     (Es, us);
     degen_rtol::Float64 = 1e-12,

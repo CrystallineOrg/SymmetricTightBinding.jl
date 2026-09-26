@@ -69,7 +69,8 @@ of bands summed over (cf. `bands`). This is the physical states-per-unit-cell DO
 independent of the lattice basis. See the *Algorithm* section below for details.
 
 ## Arguments
-- `ptbm :: ParameterizedTightBindingModel{D, HERMITIAN}`. Currently, only Hermitian models
+- `ptbm :: ParameterizedTightBindingModel` over a `TightBindingModel{D, HERMITIAN}`.
+  Currently, only Hermitian models
   are supported.
 - `energies`: a real-valued, indexable iterable of energies at which to evaluate the DOS. 
   Must be
@@ -132,7 +133,7 @@ sum(dos) * step(energies)                        # DOS integral ≈ number of ba
     method is due to Gilat & Raubenheimer, Phys. Rev. **144**, 390 (1966).
 """
 function densityofstates(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}},
     energies;
     Nk::Integer = 50,
     offset::Union{Real, Tuple{Vararg{Real, D}}} = ntuple(_ -> 0.0, Val(D)),
