@@ -63,10 +63,10 @@ band and ``E_n`` denoting the energy of the `n`th band. The Berry curvature pseu
 
 Consider the following model in plane group **p**2, without time-reversal symmetry:
 ```jldoctest berry-curvature
-julia> brs = calc_bandreps(2, Val(2); timereversal=false);
+julia> brs = bandreps(2, Val(2); timereversal=false);
 
 julia> cbr = @composite brs[1] + brs[3]
-8-irrep CompositeBandRep{2}:
+8-irrep CompositeBandRep{2} (spinless):
  (1d|A) + (1c|A) (2 bands)
 
 julia> tbm = tb_hamiltonian(cbr, [[0,0], [1,0]]);

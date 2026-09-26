@@ -2,8 +2,8 @@
 """
     obtain_basis_free_parameters_hermiticity(
         h_orbit::HoppingOrbit{D},
-        brₐ::NewBandRep{D},
-        brᵦ::NewBandRep{D},
+        brₐ::BandRep{D},
+        brᵦ::BandRep{D},
         antihermitian::Bool,
         orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
@@ -25,8 +25,8 @@ For anti-Hermitian symmetry, we require `Hₛₜ(k) = -Hₜₛ*(k)`, which trans
 """
 function obtain_basis_free_parameters_hermiticity(
     h_orbit::HoppingOrbit{D},
-    brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brₐ::BandRep{D},
+    brᵦ::BandRep{D},
     antihermitian::Bool,
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),

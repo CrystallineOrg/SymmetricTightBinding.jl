@@ -76,20 +76,20 @@ inversion(::Val) = error("unsupported dimension")
 
 ## --------------------------------------------------------------------------------------- #
 """
-    orbital_positions(br::NewBandRep{D})                         -> Vector{DirectPoint{D}}
+    orbital_positions(br::BandRep{D})                         -> Vector{DirectPoint{D}}
     orbital_positions(cbr::CompositeBandRep{D})                  -> Vector{DirectPoint{D}}
     orbital_positions(atbm::AbstractTightBindingModel)           -> Vector{DirectPoint}
     orbital_positions(aptbm::AbstractParameterizedTightBindingModel) -> Vector{DirectPoint}
 
 Return a list of positions associated with our convention for orbital ordering of a
-`NewBandRep` or a `CompositeBandRep`. For a `NewBandRep`, the orbitals are arranged such
+`BandRep` or a `CompositeBandRep`. For a `BandRep`, the orbitals are arranged such
 that the first `irdim(br.siteir)` orbitals associate to the first element of the orbit
 of its Wyckoff positions; the next `irdim(br.siteir)` orbitals associate to the second
 element of the orbit, and so on. For a `CompositeBandRep`, the orbitals of each
-`NewBandRep` are concatenated, in the order of their coefficients. For coefficients
+`BandRep` are concatenated, in the order of their coefficients. For coefficients
 greater than 1, the positions are repeated `cᵢ-1` times.
 """
-function orbital_positions(br::NewBandRep{D}) where D
+function orbital_positions(br::BandRep{D}) where D
     dim = irdim(br.siteir)
     wps = primitivized_orbit(br)
     positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
@@ -131,7 +131,7 @@ function orbital_positions(cbr::CompositeBandRep{D}) where D
 end
 
 """
-    primitivized_orbit(br::NewBandRep{D}) where D
+    primitivized_orbit(br::BandRep{D}) where D
 
 Return the orbit of the Wyckoff position associated with the band representation `br`.
 The coordinates of positions in the orbit are given relative to the primitive unit cell.
@@ -143,7 +143,7 @@ The following checks are made, producing an error if violated:
 2. For every position, its coordinates, referred to the primitive basis, is in the range
    [0,1); i.e., every position lies in the parallepiped primitive unit cell [0,1)ᴰ.
 """
-function primitivized_orbit(br::NewBandRep{D}) where D
+function primitivized_orbit(br::BandRep{D}) where D
     wps = orbit(group(br))
     cntr = centering(num(br), D)
     wps′_pts = Vector{DirectPoint{D}}(undef, length(wps))
@@ -167,12 +167,12 @@ end
 
 """
     pin_free!(
-        brs::Collection{NewBandRep{D}},
+        brs::Collection{BandRep{D}},
         idx2αβγ::Pair{Int, <:AbstractVector{<:Real}}
     )
 
     pin_free!(
-        brs::Collection{NewBandRep{D}},
+        brs::Collection{BandRep{D}},
         idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}}
     )
 
@@ -185,7 +185,7 @@ representations.
 See also [`pin_free`](@ref) for non-mutated input.
 """
 function pin_free!(
-    brs::Collection{<:NewBandRep},
+    brs::Collection{<:BandRep},
     idx2αβγs::AbstractVector{<:Pair{Int, <:AbstractVector{<:Real}}},
 )
     foreach(Base.Fix1(pin_free!, brs), idx2αβγs)
@@ -193,7 +193,7 @@ function pin_free!(
 end
 
 function pin_free!(
-    brs::Collection{<:NewBandRep},
+    brs::Collection{<:BandRep},
     idx2αβγ::Pair{Int, <:AbstractVector{<:Real}},
 )
     idx, αβγ = idx2αβγ
@@ -204,7 +204,7 @@ function pin_free!(
 end
 
 """
-    pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
+    pin_free(br::BandRep{D}, αβγ::AbstractVector{<:Real}) where D
 
 Pin the free parameters of the Wyckoff position associated with the band representation `br`
 to the values in `αβγ`.
@@ -217,7 +217,7 @@ ensure that each position in the orbit lies within the primitive unit cell [0,1)
 if a choice of αβγ sends a position in the orbit outside the primitive unit cell, the
 position will be adjusted by integer lattice translations to lie within.
 """
-function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
+function pin_free(br::BandRep{D}, αβγ::AbstractVector{<:Real}) where D
     length(αβγ) == D || error(DimensionMismatch("length(αβγ) ≠ D"))
     if iszero(free(position(br)))
         error("attempting to pin a band representation without any free parameters")
@@ -256,7 +256,7 @@ function pin_free(br::NewBandRep{D}, αβγ::AbstractVector{<:Real}) where D
         siteir.pglabel,
     )
 
-    return NewBandRep{D}(siteir_pin, br.n, br.timereversal, br.spinful)
+    return BandRep(siteir_pin, br.n, br.timereversal)
 end
 
 function reciprocal_translation_phase(

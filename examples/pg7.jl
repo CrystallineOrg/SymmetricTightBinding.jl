@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 using Crystalline, SymmetricTightBinding
 
 sgnum, D = 7, 2
-brs = calc_bandreps(sgnum, Val(D))
+brs = bandreps(sgnum, Val(D))
 cbr = @composite brs[end-1] + brs[end] # pick (2a|A) and (2a|B) EBR
 tbs = tb_hamiltonian(cbr)
 

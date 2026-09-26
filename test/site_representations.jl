@@ -6,7 +6,7 @@ using Crystalline
 @testset "Site representations" begin
     @testset "SG #221" begin
         sgnum = 221
-        brs = calc_bandreps(sgnum, Val(3))
+        brs = bandreps(sgnum, Val(3))
         cbr = @composite brs[6]
 
         gens = generators(num(cbr), SpaceGroup{3})
@@ -46,7 +46,7 @@ using Crystalline
 
     @testset "SG #224" begin
         sgnum = 224
-        brs = calc_bandreps(sgnum, Val(3))
+        brs = bandreps(sgnum, Val(3))
         cbr = @composite brs[13] + brs[19]
 
         gens = generators(num(cbr), SpaceGroup{3})
@@ -111,7 +111,7 @@ using Crystalline
 
     @testset "Point Group #2 (-1)" begin
         sgnum = 2
-        brs = calc_bandreps(sgnum, Val(1))
+        brs = bandreps(sgnum, Val(1))
         cbr = @composite brs[2] + brs[3]
 
         gens = generators(num(cbr), SpaceGroup{1})
@@ -127,7 +127,7 @@ using Crystalline
 
     @testset "Graphene" begin
         sgnum = 17
-        brs = calc_bandreps(sgnum, Val(2))
+        brs = bandreps(sgnum, Val(2))
         cbr = @composite brs[5]
 
         gens = generators(num(cbr), SpaceGroup{2})
@@ -145,7 +145,7 @@ using Crystalline
 
     @testset "Plane Group #10 (4)" begin
         sgnum = 10
-        brs = calc_bandreps(sgnum, Val(2))
+        brs = bandreps(sgnum, Val(2))
         cbr = @composite brs[1] + brs[end]
 
         gens = generators(num(cbr), SpaceGroup{2})

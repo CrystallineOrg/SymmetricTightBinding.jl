@@ -1,7 +1,7 @@
 # Phase conventions in `symmetry_eigenvalues`: reconciling with Crystalline.jl
 
 This document explains the phase convention mismatch between the Convention 1 derivation in
-[`theory.md`](../theory.md) and Crystalline.jl's `calc_bandreps` and `lgirreps` and how
+[`theory.md`](../theory.md) and Crystalline.jl's `bandreps` and `lgirreps` and how
 `symmetry_eigenvalues` in SymmetricTightBinding.jl corrects for it, to align with Crystalline.jl's convention.
 
 ## Background: what `theory.md` derives
@@ -29,9 +29,9 @@ implements $\mathbf{D}_\mathbf{k}(g)$:
 Dₖ = cispi(-2dot(gk, v)) * sgrep.ρ   # = e^{-2πi(gk)·v} ρ(h)
 ```
 
-## What Crystalline.jl's `calc_bandreps` computes
+## What Crystalline.jl's `bandreps` computes
 
-In `Crystalline/src/calc_bandreps.jl` (line 179):
+In `Crystalline/src/bandreps.jl` (line 179):
 
 ```julia
 χᴳₖ += cis(2π*dot(kv′, tα′α′)) * χs[site_symmetry_index]
@@ -47,7 +47,7 @@ A comment in the source (lines 180–185) explicitly acknowledges this:
 [^1]: B. Bradlyn et al., "Topological quantum chemistry," Nature **547**, 298 (2017);
 L. Elcoro et al., "Double crystallographic groups [...]," J. Appl. Cryst. **50**, 1457 (2017).
 
-This means the band representation characters computed by `calc_bandreps` use conjugated
+This means the band representation characters computed by `bandreps` use conjugated
 phase signs for both the $\Theta_\mathbf{G}$ factor and the $\mathbf{D}_\mathbf{k}$ global phase,
 relative to the Convention 1 derivation. Crystalline.jl is **internally consistent**: its
 `LGIrrep` matrices also use these conjugated signs, so subduction (decomposing characters

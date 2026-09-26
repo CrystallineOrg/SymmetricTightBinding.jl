@@ -9,7 +9,7 @@ It is simple to build this model with SymmetricTightBinding.jl:
 
 ```@example hatano-nelson
 using Crystalline, SymmetricTightBinding
-brs = calc_bandreps(1, 1) # EBRs in line group 1, with time-reversal symmetry
+brs = bandreps(1, 1) # EBRs in line group 1, with time-reversal symmetry
 pin_free!(brs, [1=>[0]])  # the 1a Wyckoff position in line group 1 has a free parameter: set to 0 for definiteness
 cbr = @composite brs[1]   # single-site model
 tbm = tb_hamiltonian(cbr, [[1]], NONHERMITIAN) # nearest neighbor hoppings
@@ -51,7 +51,7 @@ The loop is associated with a quantized spectral winding $\nu = (2\pi \mathrm{i}
 We can also create models that do not assume time-reversal symmetry. In our context, this allows additional hopping terms, differing only from the time-reversal symmetric Hatano--Nelson terms by having overall imaginary prefactor:
 
 ```@example hatano-nelson
-brs_notr = calc_bandreps(1, 1; timereversal=false)  # EBRs in line group 1, without time-reversal symmetry
+brs_notr = bandreps(1, 1; timereversal=false)  # EBRs in line group 1, without time-reversal symmetry
 pin_free!(brs_notr, [1=>[0]])
 tbm_notr = tb_hamiltonian((@composite brs_notr[1]), [[0], [1]], NONHERMITIAN) # on-site terms _and_ nearest-neighbor hoppings
 ```
@@ -123,14 +123,14 @@ The spectrum is degenerate at $k = \pm 1/2$ as expected, generally complex, and 
 ### Exceptional points with PT symmetry
 
 Exceptional points are especially interesting in contexts where the Hamiltonian is not only non-Hermitian but also PT-symmetric (inversion and time).
-The previous Hatano--Nelson-like model, however, is T-symmetric (by default, `calc_bandreps` assumes time-reversal symmetry, and this assumption is propagated via `brs` and `cbr` to `tb_hamiltonian`) but inversion-broken, and so lacks PT-symmetry.
+The previous Hatano--Nelson-like model, however, is T-symmetric (by default, `bandreps` assumes time-reversal symmetry, and this assumption is propagated via `brs` and `cbr` to `tb_hamiltonian`) but inversion-broken, and so lacks PT-symmetry.
 
 We can build a variant, however, that breaks both P and T but retains PT symmetry.
 To do so, first construct the terms of a time-reversal model, starting now with a set of time-reversal broken EBRs:
 
 ```@example PT-symmetry
 using Crystalline, SymmetricTightBinding # hide
-brs = calc_bandreps(1, 1; timereversal=false) # a single EBR, as before, but now without assumption of time-reversal
+brs = bandreps(1, 1; timereversal=false) # a single EBR, as before, but now without assumption of time-reversal
 pin_free!(brs, [1=>[0]]) # as before, pin free parameters of the EBR's Wyckoff position
 cbr = @composite 2brs[1]
 tbm = tb_hamiltonian(cbr, [[0], [1]], Val(NONHERMITIAN))
@@ -209,7 +209,7 @@ By placing an $s$-like orbital at each position, we obtain the usual sublattice 
 ```@example nonhermitian-ssh
 using Crystalline, SymmetricTightBinding # hide
 # (1b|A′) ⊕ (1a|A′) in 1D line group 2 (inversion symmetry); with intra-cell hoppings & onsite terms
-brs = calc_bandreps(2, 1)
+brs = bandreps(2, 1)
 cbr = @composite brs[1] + brs[3]
 tbm = tb_hamiltonian(cbr, [[0], [2]], Val(NONHERMITIAN))
 tbm = tbm[5:8] # retain only inter-orbital (offdiagonal) terms for simplicity
@@ -327,7 +327,7 @@ Consider for example a non-Hermitian model on a 2D lattice with *p*4 symmetry, o
 
 ```@example nonhermitian-p4
 using Crystalline, SymmetricTightBinding # hide
-brs = calc_bandreps(10, 2)
+brs = bandreps(10, 2)
 cbr = @composite brs[1] # pick the (2c|A) EBR
 tbm_H  = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(HERMITIAN))
 tbm_NH = tb_hamiltonian(cbr, [[0,0], [1,0]], Val(NONHERMITIAN))

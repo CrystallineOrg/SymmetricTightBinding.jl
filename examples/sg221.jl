@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 using Crystalline, SymmetricTightBinding, GLMakie
 
 sgnum = 221
-brs = calc_bandreps(sgnum)
+brs = bandreps(sgnum)
 cbr = @composite brs[6]
 
 ordering = SymmetricTightBinding.OrbitalOrdering(cbr.brs[6])

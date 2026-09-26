@@ -4,3 +4,4 @@ Manifest.toml
 /examples/.CondaPkg/*
 /.devcontainer/
 /.claude/
+/docs/.CondaPkg/

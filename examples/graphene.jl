@@ -4,7 +4,7 @@ using Crystalline, SymmetricTightBinding
 using Brillouin, GLMakie
 
 sgnum, D = 17, 2
-brs = calc_bandreps(sgnum, Val(D))
+brs = bandreps(sgnum, Val(D))
 cbr = @composite brs[5]
 
 tbm = tb_hamiltonian(cbr)

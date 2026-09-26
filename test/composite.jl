@@ -10,7 +10,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 @testset "CompositeTightBindingModel" begin
 
     # 1D non-Hermitian SSH model, (1b|A′) ⊕ (1a|A′) in 1D SG 2, as in test/nonhermitian.jl
-    brs = calc_bandreps(2, Val(1))
+    brs = bandreps(2, Val(1))
     cbr = @composite brs[1] + brs[3]
     Rs = [[0,], [1,]]
     tbm_h = tb_hamiltonian(cbr, Rs, Val(HERMITIAN))
@@ -23,8 +23,6 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         # all spellings are equivalent, and the argument order is immaterial
         for c in (CompositeTightBindingModel(tbm_h, tbm_a),
                   CompositeTightBindingModel(tbm_a, tbm_h),
-                  CompositeTightBindingModel{1}(tbm_h, tbm_a),
-                  CompositeTightBindingModel{1}(tbm_a, tbm_h),
                   tbm_h + tbm_a,
                   tbm_a + tbm_h)
             @test c.tbm_h === tbm_h && c.tbm_a === tbm_a
@@ -42,7 +40,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         for (sgnum, Dᵛ, Rs′) in ((2, Val(1), [[0,], [1,]]),
                                  (10, Val(2), [[0,0], [1,0]]),
                                  (13, Val(2), [[0,0], [1,0]]))
-            brs′ = calc_bandreps(sgnum, Dᵛ)
+            brs′ = bandreps(sgnum, Dᵛ)
             cbr′ = sgnum == 2 ? (@composite brs′[1] + brs′[3]) : (@composite brs′[1])
             n_h = length(tb_hamiltonian(cbr′, Rs′, Val(HERMITIAN)))
             n_a = length(tb_hamiltonian(cbr′, Rs′, Val(ANTIHERMITIAN)))
@@ -54,8 +52,9 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
     @testset "AbstractVector interface" begin
         @test length(ctbm) == Nʰ + Nᵃ
         @test size(ctbm) == (Nʰ + Nᵃ,)
-        @test eltype(ctbm) == Union{TightBindingTerm{1, HERMITIAN},
-                                    TightBindingTerm{1, ANTIHERMITIAN}}
+        @test eltype(ctbm) == Union{
+            TightBindingTerm{1, HERMITIAN, LGIrrep{1}, SiteIrrep{1}},
+            TightBindingTerm{1, ANTIHERMITIAN, LGIrrep{1}, SiteIrrep{1}}}
         # Hermitian terms come first, then anti-Hermitian ones
         @test all(i -> ctbm[i] === tbm_h[i], 1:Nʰ)
         @test all(i -> ctbm[Nʰ+i] === tbm_a[i], 1:Nᵃ)
