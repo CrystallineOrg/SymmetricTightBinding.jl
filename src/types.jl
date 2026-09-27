@@ -405,6 +405,7 @@ end
     hermiticity(tbt::TightBindingTerm)                         -> Hermiticity
     hermiticity(atbm::AbstractTightBindingModel)               -> Hermiticity
     hermiticity(aptbm::AbstractParameterizedTightBindingModel) -> Hermiticity
+    hermiticity(cache::TightBindingCache)                      -> Hermiticity
 
 Return the [`Hermiticity`](@ref) of the input.
 
@@ -473,8 +474,8 @@ evaluation at input momenta `k`.
 
 ## Fields
 
-- `tbm :: TB<:TightBindingModel{D}`: A tight-binding model, consisting of a set of a
-  list of `TightBindingTerm{D}`s.
+- `tbm :: TB<:TightBindingModel{D}`: A tight-binding model, defining a list of
+  `TightBindingTerm{D}`s.
 - `cs :: Vector{Float64}`: A vector of coefficients, each associated to a corresponding
   element of `tbm`.
 - `scratch :: Matrix{ComplexF64}`: A scratch space for evaluating the Hamiltonian matrix at
@@ -522,10 +523,10 @@ hermiticity(::ParameterizedTightBindingModel{D, TB}) where {D, TB} = hermiticity
 orbital_positions(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.positions
 Crystalline.CompositeBandRep(ptbm::ParameterizedTightBindingModel) = ptbm.tbm.cbr
 
-function (ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}})(
+function (ptbm::ParameterizedTightBindingModel{D})(
     k::ReciprocalPointLike{D},
     scratch::Matrix{ComplexF64} = ptbm.scratch,
-) where {D, S}
+) where {D}
     if length(k) ≠ D
         error("momentum `k` must be a $D-dimensional vector to match the model dimension")
     end
@@ -539,7 +540,8 @@ function (ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}})(
     for (tbt, c) in zip(tbm.terms, ptbm.cs)
         evaluate_tight_binding_term!(tbt, k, c, _H) # modifies `_H` in-place
     end
-    H = S == HERMITIAN ? Hermitian(_H) : _H # return Hermitian wrapper if S == HERMITIAN
+    # return a `Hermitian` wrapper if the model is Hermitian
+    H = hermiticity(ptbm) == HERMITIAN ? Hermitian(_H) : _H
     return H
 end
 

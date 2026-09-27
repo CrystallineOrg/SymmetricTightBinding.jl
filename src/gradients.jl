@@ -2,6 +2,11 @@ struct TightBindingModelHoppingGradient{TB<:AbstractTightBindingModel}
    tbm :: TB
 end
 
+# a hopping gradient over a `D`-dimensional model; an alias, since `D` is only reachable
+# through the term type of `AbstractTightBindingModel` and the spelling is unwieldy
+const HoppingGradientOf{D} =
+    TightBindingModelHoppingGradient{<:AbstractTightBindingModel{<:TightBindingTerm{D}}}
+
 """
     gradient_wrt_hopping(tbm :: TightBindingModel)
     gradient_wrt_hopping(ptbm :: ParameterizedTightBindingModel)
@@ -19,12 +24,12 @@ function gradient_wrt_hopping(ptbm::AbstractParameterizedTightBindingModel)
     return gradient_wrt_hopping(ptbm.tbm)
 end
 
-function (tbmg::TightBindingModelHoppingGradient)(k::ReciprocalPointLike)
+function (tbmg::HoppingGradientOf{D})(k::ReciprocalPointLike{D}) where D
     map(tbt->tbt(k), tbmg.tbm)
 end
 
 # evaluate just the `i`th component of the coefficient gradient
-function (tbmg::TightBindingModelHoppingGradient)(k::ReciprocalPointLike, i::Int)
+function (tbmg::HoppingGradientOf{D})(k::ReciprocalPointLike{D}, i::Int) where D
     tbmg.tbm[i](k)
 end
 
@@ -98,13 +103,14 @@ The gradient is returned as column vectors, one for each band, with each column 
 the gradient of the corresponding energy with respect to the hopping coefficients of `ptbm`.
 """
 function energy_gradient_wrt_hopping(
-    ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}},
+    ptbm::ParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D},
     (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
     ;
     degen_rtol::Float64 = 1e-12,
     degen_atol::Float64 = 1e-12
-) where {D, S}
+) where {D}
+    S = hermiticity(ptbm)
     if S === NONHERMITIAN
         # TODO: requires left/right version of Feynman-Hellmann theorem + possibly handling
         #       of defective case
@@ -310,7 +316,7 @@ The scratch argument `∇Hs` may be supplied to avoid reallocation when evaluati
 over many momenta (e.g. across a mesh).
 """
 function energy_gradient_wrt_momentum(
-    ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}},
+    ptbm::ParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D},
     (Es, us) = solve(ptbm, k; bloch_phase=Val(false)) # "unperturbed" energies & eigenstates
     ;
@@ -319,7 +325,8 @@ function energy_gradient_wrt_momentum(
     ∇Hs::NTuple{D, Matrix{ComplexF64}} = begin
         ntuple(_ -> Matrix{ComplexF64}(undef, ptbm.tbm.N, ptbm.tbm.N), Val(D))
     end,
-) where {D, S}
+) where {D}
+    S = hermiticity(ptbm)
     if S === NONHERMITIAN
         error("energy gradient with respect to momentum is not currently implemented for \
                NONHERMITIAN models")

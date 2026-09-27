@@ -133,13 +133,14 @@ sum(dos) * step(energies)                        # DOS integral ≈ number of ba
     method is due to Gilat & Raubenheimer, Phys. Rev. **144**, 390 (1966).
 """
 function densityofstates(
-    ptbm::ParameterizedTightBindingModel{D, <:TightBindingModel{D, S}},
+    ptbm::ParameterizedTightBindingModel{D},
     energies;
     Nk::Integer = 50,
     offset::Union{Real, Tuple{Vararg{Real, D}}} = ntuple(_ -> 0.0, Val(D)),
     transform::F = nothing,
     bands::AbstractUnitRange{<:Integer} = 1:ptbm.tbm.N,
-) where {D, S, F}
+) where {D, F}
+    S = hermiticity(ptbm)
     if S !== HERMITIAN
         error("`densityofstates` is only implemented for HERMITIAN models (got $S): a \
                non-Hermitian spectrum is complex and the real-energy DOS is ill-defined")
