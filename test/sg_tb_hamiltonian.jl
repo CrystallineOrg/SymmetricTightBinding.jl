@@ -8,7 +8,7 @@ _sg_coefficients(n) = [0.3*cospi(0.73*k) for k in 1:n]
 
 @testset "TB examples in space groups" begin
     @testset "SG 2 (P-1), 3D, single-site EBR" begin
-        brs = calc_bandreps(2, Val(3))
+        brs = bandreps(2, Val(3))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0]])
         @test length(tbm) > 0
@@ -21,7 +21,7 @@ _sg_coefficients(n) = [0.3*cospi(0.73*k) for k in 1:n]
     end
 
     @testset "SG 16 (P222), 3D" begin
-        brs = calc_bandreps(16, Val(3))
+        brs = bandreps(16, Val(3))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0, 0, 0]])
 
@@ -34,7 +34,7 @@ _sg_coefficients(n) = [0.3*cospi(0.73*k) for k in 1:n]
     end
 
     @testset "SG 225 (Fm-3m), 3D" begin
-        brs = calc_bandreps(225, Val(3))
+        brs = bandreps(225, Val(3))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0, 0, 0]])
         @test tbm.N > 0
@@ -47,7 +47,7 @@ _sg_coefficients(n) = [0.3*cospi(0.73*k) for k in 1:n]
     end
 
     @testset "1D: SG 2 (p-1)" begin
-        brs = calc_bandreps(2, Val(1))
+        brs = bandreps(2, Val(1))
         cbr = @composite brs[1]
         tbm = tb_hamiltonian(cbr, [[0], [1]])
 
@@ -60,7 +60,7 @@ _sg_coefficients(n) = [0.3*cospi(0.73*k) for k in 1:n]
 
     @testset "Multi-EBR composite, SG 47 (Pmmm)" begin
         # SG 47: all Wyckoff positions are special (no free parameters)
-        brs = calc_bandreps(47, Val(3))
+        brs = bandreps(47, Val(3))
         if length(brs) ≥ 2
             cbr = @composite brs[1] + brs[2]
             tbm = tb_hamiltonian(cbr, [[0, 0, 0]])
@@ -81,7 +81,7 @@ end
 
     @testset "graphene nearest-neighbor amplitude" begin
         # textbook: with nearest-neighbor hopping t, |H₁₂(k=0)| = 3t and the bands span ±3t
-        brs = calc_bandreps(17, Val(2))
+        brs = bandreps(17, Val(2))
         ptbm = tb_hamiltonian((@composite brs[5]), [[0,0]])([0.0, 1.0])
         @test abs(ptbm([0.0, 0.0])[1, 2]) ≈ 3
         Es = reduce(vcat, [spectrum_single_k(ptbm, [k1, k2])
@@ -97,7 +97,7 @@ end
                 (11,  Val(2), 1,  S"-y,x",     [[0,0], [1,0]]),      # (2c|A₁)
                 (147, Val(3), 14, S"-y,x-y,z", [[0,0,0], [1,0,0]]),  # (1a|Eᵤ), 2D site irrep
                 (147, Val(3), 10, S"-y,x-y,z", [[0,0,0], [1,0,0]]))  # (1b|Eᵤ)
-            brs = calc_bandreps(sgnum, Dᵛ)
+            brs = bandreps(sgnum, Dᵛ)
             cbr = CompositeBandRep([n == idx ? 1 : 0 for n in eachindex(brs)], brs)
             tbm = tb_hamiltonian(cbr, Rs)
             ptbm = tbm(_sg_coefficients(length(tbm)))

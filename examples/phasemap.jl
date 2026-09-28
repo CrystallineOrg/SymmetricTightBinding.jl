@@ -5,7 +5,7 @@ const pm = pyimport("phasemap") # requires `pkg> conda pip_add PhaseMap`
 ## --------------------------------------------------------------------------------------- #
 # Define the tight-binding model we want to explore
 
-brs = calc_bandreps(2, Val(3))
+brs = bandreps(2, Val(3))
 cbr = @composite brs[1] + brs[3]
 
 tbm = tb_hamiltonian(cbr, [[0,0,0], [0,0,1]])

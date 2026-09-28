@@ -10,7 +10,7 @@ using Crystalline, SymmetricTightBinding
 ##- Compute the necessary things for obtaining the hoppings
 
 sgnum = 5
-brs = calc_bandreps(sgnum, Val(2))
+brs = bandreps(sgnum, Val(2))
 
 # needs to do that to find the WPs properly
 br = brs[1]

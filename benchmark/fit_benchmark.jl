@@ -61,7 +61,7 @@ end
 println("building models (not part of the benchmark timings)…")
 setup_t = @elapsed begin
     # graphene: (2b|A₁) EBR of plane group 17; 2 bands
-    brs17  = calc_bandreps(17, Val(2))
+    brs17  = bandreps(17, Val(2))
     cbr17  = @composite brs17[5]
     tbm_nn  = tb_hamiltonian(cbr17, [[0, 0]])         # on-site + nearest neighbor
     tbm_nnn = tb_hamiltonian(cbr17, [[0, 0], [1, 0]]) # + next-nearest neighbor
@@ -74,7 +74,7 @@ setup_t = @elapsed begin
     tbm17b  = tb_hamiltonian(cbr17b, [[0, 0], [1, 0]])
 
     # SG 221: (3d|A₁g) ⊕ (3d|B₂g); 6 bands, 3D (the `fit` docstring example)
-    brs221 = calc_bandreps(221)
+    brs221 = bandreps(221)
     cbr221 = @composite brs221[1] + brs221[7]
     tbm221 = tb_hamiltonian(cbr221)
     hs221  = [[0.0, 0.0, 0.0], [0.0, 1/2, 0.0], [1/2, 1/2, 0.0], [1/2, 1/2, 1/2]] # Γ,X,M,R

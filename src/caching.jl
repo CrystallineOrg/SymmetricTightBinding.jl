@@ -36,8 +36,10 @@ Because evaluations share the internal work arrays, a cache must not be used fro
 threads concurrently (create one cache per thread instead; only the work arrays are then
 duplicated meaningfully).
 """
-struct TightBindingCache{D, S, T, K <: AbstractVector{<:ReciprocalPointLike{D}}}
-    tbm  :: TightBindingModel{D, S}
+struct TightBindingCache{
+    D, T, K<:AbstractVector{<:ReciprocalPointLike{D}}, TB<:TightBindingModel{D}
+}
+    tbm  :: TB
     ks   :: K                                   # the fixed k-points of the cache
     hs   :: Vector{Vector{Matrix{ComplexF64}}}  # hs[κ][i] = hᵢ(ks[κ])
     W    :: Matrix{ComplexF64}                  # assembly work array (N×N); see docstring
@@ -53,31 +55,30 @@ function TightBindingCache(
     W = Matrix{ComplexF64}(undef, N, N)
     T = S === HERMITIAN ? Float64 : ComplexF64 # cf. `energy_gradient_wrt_hopping`
     ∇ᶜEs = Matrix{T}(undef, Nᶜ, N)
-    return TightBindingCache{D, S, T, typeof(ks)}(tbm, ks, hs, W, ∇ᶜEs)
+    return TightBindingCache(tbm, ks, hs, W, ∇ᶜEs)
 end
+
+hermiticity(cache::TightBindingCache) = hermiticity(cache.tbm)
 
 # Hamiltonian assembly at the `κ`th cached k-point: H(ks[κ]) = ∑ᵢ csᵢhᵢ(ks[κ]), accumulated
 # into the work array `cache.W` (cf. `TightBindingCache`'s docstring on aliasing/mutation)
-function (cache::TightBindingCache{D, S})(
-    cs::AbstractVector{<:Real},
-    κ::Integer,
-) where {D, S}
+function (cache::TightBindingCache)(cs::AbstractVector{<:Real}, κ::Integer)
     length(cs) ≠ length(cache.tbm) && _throw_term_coef_length_mismatch(cache.tbm.terms, cs)
     W = fill!(cache.W, zero(ComplexF64))
     for (c, h) in zip(cs, cache.hs[κ])
         W .+= c .* h
     end
-    return S == HERMITIAN ? Hermitian(W) : W
+    return hermiticity(cache) == HERMITIAN ? Hermitian(W) : W
 end
 
 """
     energy_gradient_wrt_hopping(
-        cache::TightBindingCache{D},
+        cache::TightBindingCache,
         κ::Integer,
         (Es, us);
         degen_rtol::Float64 = 1e-12,
         degen_atol::Float64 = 1e-12
-    ) where D
+    )
 
 Cached variant of `energy_gradient_wrt_hopping(ptbm, k, (Es, us))`, evaluated at the `κ`th
 cached k-point of `cache` using its tabulated term matrices hᵢ(ks[κ]): the eigensolution
@@ -87,12 +88,13 @@ The returned column views alias the cache's internal buffer `cache.∇ᶜEs` and
 by the next gradient call.
 """
 function energy_gradient_wrt_hopping(
-    cache::TightBindingCache{D, S},
+    cache::TightBindingCache,
     κ::Integer,
     (Es, us);
     degen_rtol::Float64 = 1e-12,
     degen_atol::Float64 = 1e-12,
-) where {D, S}
+)
+    S = hermiticity(cache)
     if S === NONHERMITIAN
         error("energy gradient with respect to hopping is not currently implemented for \
                NONHERMITIAN models")

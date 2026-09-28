@@ -463,7 +463,7 @@ function Makie.convert_arguments(
     Rs::DirectBasis{D} = _cubic_basis(Val(D));
     # kws..., TODO: how to add these with SpecApi?
 ) where D
-    typeof(tbm) === ParameterizedTightBindingModel{D} && (tbm = tbm.tbm)
+    tbm isa ParameterizedTightBindingModel && (tbm = tbm.tbm)
     Nt = length(tbm)
     n, m = layout_in_grid(Nt)
 

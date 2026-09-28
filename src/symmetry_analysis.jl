@@ -1,5 +1,5 @@
 # Note [⚠️ phase]: `symmetry_eigenvalues` returns the complex conjugate of the Convention 1
-#   character to match Crystalline.jl's `calc_bandreps` convention.
+#   character to match Crystalline.jl's `bandreps` convention.
 #   See `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
 
 """
@@ -17,10 +17,10 @@ compatibility-respecting (i.e., energy separable along high-symmetry **k**-lines
 ```julia-repl
 julia> using Crystalline, SymmetricTightBinding
 
-julia> brs = calc_bandreps(221);
+julia> brs = bandreps(221);
 
 julia> cbr = @composite brs[1] + brs[2]
-40-irrep CompositeBandRep{3}:
+40-irrep CompositeBandRep{3} (spinless):
  (3d|A₁g) + (3d|A₁ᵤ) (6 bands)
 
 julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
@@ -28,9 +28,9 @@ julia> tbm = tb_hamiltonian(cbr); # a 4-term, 6-band model
 julia> ptbm = tbm([1.0, 0.1, -1.0, 0.1]); # fix free coefficients
 
 julia> collect_compatible(ptbm)
-2-element Vector{SymmetryVector{3}}:
- [M₅⁺+M₁⁻, X₃⁺+X₁⁻+X₂⁻, Γ₁⁻+Γ₃⁻, R₄⁺] (3 bands)
- [M₁⁺+M₅⁻, X₁⁺+X₂⁺+X₃⁻, Γ₁⁺+Γ₃⁺, R₄⁻] (3 bands)
+2-element Vector{SymmetryVector{3, LGIrrep{3}}}:
+ [Γ₁⁻+Γ₃⁻, R₄⁺, M₅⁺+M₁⁻, X₃⁺+X₁⁻+X₂⁻] (3 bands)
+ [Γ₁⁺+Γ₃⁺, R₄⁻, M₁⁺+M₅⁻, X₁⁺+X₂⁺+X₃⁻] (3 bands)
 ```
 In the above example, the bands separate into two symmetry vectors, one for each of the
 original EBRs in `cbr`.
@@ -96,7 +96,7 @@ The symmetry eigenvalues are returned as a matrix, with rows running over the el
 !!! warning "⚠️ character phase convention"
     The symmetry eigenvalues returned by this function are the complex conjugate of the
     Convention 1 result (see `docs/src/devdocs/symmetry_eigenvalue_conventions.md`)
-    in order to match the convention used by Crystalline.jl's `calc_bandreps` and `lgirreps`
+    in order to match the convention used by Crystalline.jl's `bandreps` and `lgirreps`
     functions. See the above documentation for more details and 
     https://github.com/thchr/Crystalline.jl/issues/12 for the relevant issue in
     Crystalline.jl.
@@ -117,7 +117,7 @@ function symmetry_eigenvalues(
     #     the symmetry eigenvalues are then `χ[n] = (Θ_G vs[n])† D_k vs[n]` where Θ_G & D_k
     #     defined in `docs/src/theory.md` and `docs/src/devdocs/` (and methods below).
     #
-    # [⚠️ phase]: Crystalline.jl's `calc_bandreps` and `lgirreps` computes characters in a
+    # [⚠️ phase]: Crystalline.jl's `bandreps` and `lgirreps` computes characters in a
     #     convention that is the complex conjugate of the Convention 1 result (see
     #     thchr/Crystalline.jl/#12).
     #     To be able to interface with Crystalline.jl, and until thchr/Crystalline.jl/#12 is

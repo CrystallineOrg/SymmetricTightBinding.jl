@@ -8,7 +8,7 @@ using Crystalline
 @testset "Symmetry analysis (documentation example)" begin
     # Example 1
     sgnum = 17                         # plane group p6mm
-    brs = calc_bandreps(sgnum, Val(2)) # band representations
+    brs = bandreps(sgnum, Val(2)) # band representations
     cbr = @composite brs[5]            # (2b|A₁) EBR
     tbm = tb_hamiltonian(cbr)          # tight-binding model (nearest neighbors)
     ptbm = tbm([0, 1])                 # zero self-energy, nonzero nearest-neighbor hopping
@@ -61,7 +61,7 @@ end
         αβγ = D == 1 ? [.1] : D == 2 ? [.1, .2] : [.1, .2, .3] # for `pin_free!`
         for sgnum in 1:MAX_SGNUM[D]
             @testset "Space group $sgnum in dimension $D" begin
-                brs = calc_bandreps(sgnum, Val(D))
+                brs = bandreps(sgnum, Val(D))
                 for i in eachindex(brs)
                     _test_symmetry_analysis(brs, i, αβγ)
                 end

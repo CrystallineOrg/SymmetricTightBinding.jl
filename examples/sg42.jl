@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 using Crystalline, SymmetricTightBinding, GLMakie
 
 sgnum = 42
-brs = calc_bandreps(sgnum)
+brs = bandreps(sgnum)
 cbr = @composite brs[1] + brs[3]
 
 Rs = [[0, 0, 0]]

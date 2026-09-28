@@ -7,7 +7,7 @@ using Crystalline
 @testset "Symmetry breaking" begin
     @testset "2D example from docs" begin
         D = 2
-        brs = calc_bandreps(11, Val(D); timereversal = true)
+        brs = bandreps(11, Val(D); timereversal = true)
         cbr = @composite brs[1] # (2c|A₁)
         tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])
         
@@ -45,7 +45,7 @@ using Crystalline
 
         # breaking mirror and TR symmetry together should give the same basis as starting
         # directly with plane group p4 (#10) and breaking TR from the get-go
-        brs10 = calc_bandreps(10, Val(D); timereversal=false)
+        brs10 = bandreps(10, Val(D); timereversal=false)
         cbr10 = @composite brs10[1] # (2c|A) (unlike #11: two distinct M irreps, M₃ & M₄)
 
         tbm10 = tb_hamiltonian(cbr10, [[0,0], [1,0], [0,1]]) # (⋆)
@@ -61,7 +61,7 @@ using Crystalline
     @testset "3D example" begin
         # this is not a well-thought out example, but just added to test that things work
         # without erroring
-        brs = calc_bandreps(16, Val(3); timereversal = true)
+        brs = bandreps(16, Val(3); timereversal = true)
         cbr = @composite brs[1] + brs[end] #  (1h|A) + (1a|B₂) (2 bands)
         tbm = tb_hamiltonian(cbr, [[0,0,0],])
 
@@ -69,7 +69,7 @@ using Crystalline
     end
 
     @testset "3D example, body-centered (I) lattice" begin
-        brs = calc_bandreps(121, Val(3); timereversal = true)
+        brs = bandreps(121, Val(3); timereversal = true)
         cbr = @composite brs[1] + brs[end-1] # (4d|A) + (2a|A₂) (3 bands)
         tbm = tb_hamiltonian(cbr, [[0,0,0],])
 
@@ -78,7 +78,7 @@ using Crystalline
 
         # completeness: `(4d|A)` of ⋕121 splits into `2c ⊕ 2d` in ⋕82, and `(2a|A₂)` maps
         # to one of `(2a|A/B)`; every such 3-band composite of ⋕82 has 6 = 4 + 2 terms
-        brs82 = calc_bandreps(82, Val(3); timereversal = true)
+        brs82 = bandreps(82, Val(3); timereversal = true)
         for (i, j, k) in Iterators.product((4, 5), (1, 2), (10, 11)) # 2c, 2d, 2a
             cbr82 = CompositeBandRep([n ∈ (i,j,k) ? 1 : 0 for n in eachindex(brs82)], brs82)
             @test length(tb_hamiltonian(cbr82, [[0,0,0],])) == length(tbm) + length(Δtbm)
@@ -92,7 +92,7 @@ using Crystalline
         # terms belonging to *different* blocks can carry equal (`==`) hopping orbits, if
         # the associated band representations sit at the same Wyckoff position; such terms
         # must not be grouped together, since they do not share a coefficient basis
-        brs = calc_bandreps(47, Val(3); timereversal = true) # P4/mmm
+        brs = bandreps(47, Val(3); timereversal = true) # P4/mmm
         cbr = @composite brs[57] + brs[60] # (1a|Ag) + (1a|B₁ᵤ)
 
         tbm = tb_hamiltonian(cbr, [[0,0,0]]) # on-site only: blocks (1,1) & (2,2), both δ=0
@@ -110,10 +110,10 @@ using Crystalline
 
         # the complement must be *complete*: breaking time-reversal in G should give the
         # same number of terms as building the model without time-reversal from the start
-        brs′ = calc_bandreps(47, Val(3); timereversal = false)
+        brs′ = bandreps(47, Val(3); timereversal = false)
         cbr′ = @composite brs′[57] + brs′[60]
         # ⋕57 & ⋕60 index the same band representations with and without time-reversal, but
-        # that is a property of `calc_bandreps`' ordering rather than something we control
+        # that is a property of `bandreps`' ordering rather than something we control
         @test string.((brs[57], brs[60])) == ("(1a|Ag)", "(1a|B₁ᵤ)")
         @test string.((brs′[57], brs′[60])) == ("(1a|Ag)", "(1a|B₁ᵤ)")
         @test length(tb_hamiltonian(cbr′, Rs)) == length(tbm_nn) + length(Δtbm_nn)
@@ -136,7 +136,7 @@ using Crystalline
     @testset "term grouping" begin
         # terms sharing a coefficient basis must be grouped together regardless of whether
         # they appear contiguously in the model (models may be built by `vcat` or indexing)
-        brs2d = calc_bandreps(11, Val(2); timereversal = true)
+        brs2d = bandreps(11, Val(2); timereversal = true)
         tbm = tb_hamiltonian((@composite brs2d[1]), [[0,0], [1,0]])
         @test _group_terms_by_block_and_orbit(tbm) == [[1], [2], [3, 4], [5]]
 
@@ -149,7 +149,7 @@ using Crystalline
 
         # equal-orbit terms from distinct blocks must stay in distinct groups, also when
         # they are adjacent
-        brs = calc_bandreps(47, Val(3); timereversal = true)
+        brs = bandreps(47, Val(3); timereversal = true)
         tbm2 = tb_hamiltonian((@composite brs[57] + brs[57]), [[0,0,0], [1,0,0]])
         q = [1, 3, 5, 2, 4, 6] # interleave, so that equal orbits become adjacent
         @test [t.block_ij for t in tbm2.terms] ==
@@ -163,7 +163,7 @@ using Crystalline
         # the subgroup generators must be converted to the primitive setting before the
         # constraints are imposed; if not, centered lattices error out in
         # `sgrep_induced_by_siteir` (which compares against primitivized site groups)
-        brs = calc_bandreps(12, Val(3); timereversal = true) # C2/m (C-centered)
+        brs = bandreps(12, Val(3); timereversal = true) # C2/m (C-centered)
         cbr = @composite brs[1] # (4f|Ag)
         tbm = tb_hamiltonian(cbr, [[0,0,0], [1,0,0]])
         @test length(tbm) == 6
@@ -179,7 +179,7 @@ using Crystalline
     @testset "subgroup precondition" begin
         # `_subduced_complement` asserts that `gensᴴ` generate a subgroup of G, given in G's
         # conventional setting; unreachable via `subduced_complement`, but check it can fire
-        brs2d = calc_bandreps(11, Val(2); timereversal = true) # p4mm
+        brs2d = bandreps(11, Val(2); timereversal = true) # p4mm
         tbm = tb_hamiltonian((@composite brs2d[1]), [[0,0], [1,0]])
 
         @test _issubgroup([S"y,x"], 11)     # mₓᵧ ∈ p4mm

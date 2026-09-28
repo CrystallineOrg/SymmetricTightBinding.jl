@@ -69,7 +69,8 @@ of bands summed over (cf. `bands`). This is the physical states-per-unit-cell DO
 independent of the lattice basis. See the *Algorithm* section below for details.
 
 ## Arguments
-- `ptbm :: ParameterizedTightBindingModel{D, HERMITIAN}`. Currently, only Hermitian models
+- `ptbm :: ParameterizedTightBindingModel` over a `TightBindingModel{D, HERMITIAN}`.
+  Currently, only Hermitian models
   are supported.
 - `energies`: a real-valued, indexable iterable of energies at which to evaluate the DOS. 
   Must be
@@ -114,7 +115,7 @@ considerably smoother than histogram or Gaussian-broadening schemes at equal mes
 
 ## Example
 ```julia
-brs = calc_bandreps(17, Val(2));                 # build nearest-neighbor graphene model
+brs = bandreps(17, Val(2));                 # build nearest-neighbor graphene model
 cbr = @composite brs[5];                         #   → (2b|A₁) EBR (2 bands)
 ptbm = tb_hamiltonian(cbr, [[0,0]])([0.0, 1.0]); #   → unit nearest-neighbor hopping
 
@@ -132,13 +133,14 @@ sum(dos) * step(energies)                        # DOS integral ≈ number of ba
     method is due to Gilat & Raubenheimer, Phys. Rev. **144**, 390 (1966).
 """
 function densityofstates(
-    ptbm::ParameterizedTightBindingModel{D, S},
+    ptbm::ParameterizedTightBindingModel{D},
     energies;
     Nk::Integer = 50,
     offset::Union{Real, Tuple{Vararg{Real, D}}} = ntuple(_ -> 0.0, Val(D)),
     transform::F = nothing,
     bands::AbstractUnitRange{<:Integer} = 1:ptbm.tbm.N,
-) where {D, S, F}
+) where {D, F}
+    S = hermiticity(ptbm)
     if S !== HERMITIAN
         error("`densityofstates` is only implemented for HERMITIAN models (got $S): a \
                non-Hermitian spectrum is complex and the real-energy DOS is ill-defined")

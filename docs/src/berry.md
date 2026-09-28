@@ -13,7 +13,7 @@ The Haldane model [^1], featuring both an inversion-breaking mass term and a tim
 ```@example berry
 using Crystalline, SymmetricTightBinding
 sgnum = 13 # p3
-brs = calc_bandreps(sgnum, Val(2); timereversal = false)
+brs = bandreps(sgnum, Val(2); timereversal = false)
 brs[4], brs[1] = brs[1], brs[4]; # see below
 # (↑) We manually swap the positions of the (1b|A) and (1c|A) EBRs in `brs` above.
 #     Without this adjustment, the model we construct below would place the 1b

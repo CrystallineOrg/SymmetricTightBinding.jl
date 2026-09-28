@@ -9,7 +9,7 @@ To explore these tools, we first re-build the graphene model previously explored
     using Crystalline, SymmetricTightBinding
     using Brillouin, GLMakie           # for k-space path and plotting
     sgnum = 17                         # plane group p6mm
-    brs = calc_bandreps(sgnum, Val(2)) # band representations
+    brs = bandreps(sgnum, Val(2)) # band representations
     cbr = @composite brs[5]            # (2b|A₁) EBR
     tbm = tb_hamiltonian(cbr)          # tight-binding model (nearest neighbors)
     ptbm = tbm([0, 1])                 # zero self-energy, nonzero nearest-neighbor hopping

@@ -32,10 +32,10 @@ path; and finally, plot the band structure using Brillouin and GLMakie (or Plotl
 ```julia-repl
 julia> using Crystalline, SymmetricTightBinding
 
-julia> brs = calc_bandreps(17, Val(2));
+julia> brs = bandreps(17, Val(2));
 
 julia> cbr = @composite brs[5]
-13-irrep CompositeBandRep{2}:
+13-irrep CompositeBandRep{2} (spinless):
  (2b|A₁) (2 bands)
 
 julia> ptbm = tb_hamiltonian(cbr, [zeros(Int, dim(cbr))])([0.0, 1.0]);

@@ -5,7 +5,7 @@ using LinearAlgebra: ⋅
 
 @testset "Berry curvature" begin
     @testset "Berry phase of π around a perturbatively gapped Dirac point" begin
-        brs = calc_bandreps(16, Val(2); timereversal=false)
+        brs = bandreps(16, Val(2); timereversal=false)
         # pick the (2b|A) EBR, which is just the usual graphene EBR - but now since we break
         # TR, the EBR is not intrinsically connected
         cbr = @composite brs[3] # (2b|A)
@@ -38,7 +38,7 @@ using LinearAlgebra: ⋅
     end
 
     @testset "Berry curvature is odd in under TR symmetry with P breaking" begin
-        brs = calc_bandreps(13, Val(2); timereversal=true) # p3
+        brs = bandreps(13, Val(2); timereversal=true) # p3
         cbr = @composite brs[3] + brs[1] # (1c|A) + (1b|A)
         tbm = tb_hamiltonian(cbr, [[0,1]])
         # terms 1 and 2 break P; term 3 is graphene **next-**nearest-neighbor hopping
@@ -59,7 +59,7 @@ using LinearAlgebra: ⋅
 
     @testset "Berry curvature in 3D" begin
         # example in which the Berry curvature must be completely zero: both TR + P
-        brs = calc_bandreps(2, Val(3); timereversal = true) # P-1 with TR
+        brs = bandreps(2, Val(3); timereversal = true) # P-1 with TR
         cbr = @composite brs[1] + brs[end] # (1d|A) + (1a|B)
         tbm = tb_hamiltonian(cbr, [[1,0,0], [0,1,0], [0,0,1]])
 
@@ -69,7 +69,7 @@ using LinearAlgebra: ⋅
         @test all(≈(0.0), Ω)
 
         # example where the berry curvature should not vanish: only P
-        brs = calc_bandreps(2, Val(3); timereversal = false) # P-1 without TR
+        brs = bandreps(2, Val(3); timereversal = false) # P-1 without TR
         cbr = @composite brs[1] + brs[end] # (1d|A) + (1a|B)
         tbm = tb_hamiltonian(cbr, [[1,0,0], [0,1,0], [0,0,1]])
 
@@ -92,7 +92,7 @@ end
     @testset "Haldane model (p3 w/o TR)" begin
         sgnum = 13 # p3
 
-        brs = calc_bandreps(sgnum, Val(2); timereversal=false)
+        brs = bandreps(sgnum, Val(2); timereversal=false)
         # swap (1b|A) and (1c|A) so 1b falls in first orbital (so that Haldane's A position
         # is our "first orbital", and B position our "second orbital"; just makes comparison
         # easier)
@@ -170,7 +170,7 @@ end
     end
 
     @testset "An example in p4" begin
-        brs = calc_bandreps(10, Val(2); timereversal=false);
+        brs = bandreps(10, Val(2); timereversal=false);
         cbr = @composite brs[9] + brs[10] #  (1a|²E) + (1a|¹E) (2 bands)
         tbm = tb_hamiltonian(cbr, [[0,0], [1,0], [1,1]])
 

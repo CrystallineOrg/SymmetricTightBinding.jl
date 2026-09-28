@@ -6,7 +6,7 @@ using SymmetricTightBinding
 using Crystalline
 
 @testset "AbstractArray interface" begin
-    brs = calc_bandreps(16, Val(2))
+    brs = bandreps(16, Val(2))
     cbr = @composite brs[3]
     tbm = tb_hamiltonian(cbr, [[0,0],[1,0]])
     @testset "AbstractArray indexing into TightBindingModel" begin
@@ -32,7 +32,7 @@ end
 
 @testset "Issue #73: multi-EBR without TR" begin
     sgnum = 22
-    brs = calc_bandreps(sgnum, Val(3); timereversal=false)
+    brs = bandreps(sgnum, Val(3); timereversal=false)
     cbr = @composite brs[9]+brs[9+4] # (4b|A) + (4a|A) (2 bands)
     # simply test that it doesn't error
     @test tb_hamiltonian(cbr, [[1,1,1]]) isa TightBindingModel
@@ -40,7 +40,7 @@ end
 
 @testset "Issue #85" begin
     sgnum = 4
-    brs = calc_bandreps(sgnum, Val(2))
+    brs = bandreps(sgnum, Val(2))
 
     # Sub-issue 1: Wyckoff positions in orbit outside primitive unit cell [0,1)ᴰ
     br_small_αβγ = SymmetricTightBinding.pin_free(brs[1], [.1, .2])
@@ -64,7 +64,7 @@ end
     # issue related to a zero translation vector R being detected as different across
     # hopping terms, due to small numerical floating point differences; fixed in PR #87
     sgnum = 153
-    brs = calc_bandreps(sgnum, Val(3))
+    brs = bandreps(sgnum, Val(3))
     cbr = @composite brs[3]
     br = brs[3]
     h_orbits = obtain_symmetry_related_hoppings([[0,0,0]], br, br)
@@ -84,7 +84,7 @@ end
     
     # the test below checks that the term is generated always for `Rs` containing `[1,0]`
     # example is from docs/src/nonhermitian.md
-    brs = calc_bandreps(10, Val(2); timereversal = true)
+    brs = bandreps(10, Val(2); timereversal = true)
     cbr = @composite brs[1] # (2c|A)
     tbm = tb_hamiltonian(cbr, [[1,0]])
     @test length(tbm) == 4
@@ -99,4 +99,11 @@ end
     # so we should have 4+2=6 terms
     tbm_NH = tb_hamiltonian(cbr, [[1,0]], Val(NONHERMITIAN))
     @test length(tbm_NH) == 6
+end
+
+@testset "Spinful band representations are rejected" begin
+    brs = bandreps(2, Val(3); spinful = Val(true))
+    cbr = @composite brs[1]
+    @test isspinful(cbr)
+    @test_throws ErrorException tb_hamiltonian(cbr)
 end

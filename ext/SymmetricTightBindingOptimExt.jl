@@ -27,10 +27,11 @@ const BASIN_IMPROVE_RTOL  = 0.005 # relative improvement resetting the stagnatio
 # Define loss as sum of absolute squared error (MSE, up to scaling)
 
 function fgh!(
-    F, G, H, cs, cache::TightBindingCache{D, S}, Em_r;
+    F, G, H, cs, cache::TightBindingCache, Em_r;
     lasso::Union{Nothing,Real} = nothing
-) where {D, S}
-    S ≠ HERMITIAN && error("loss function can currently only handle HERMITIAN models")
+)
+    hermiticity(cache) ≠ HERMITIAN &&
+        error("loss function can currently only handle HERMITIAN models")
     isnothing(G) || fill!(G, zero(eltype(G)))
     isnothing(H) || fill!(H, zero(eltype(H)))
 
@@ -258,7 +259,7 @@ julia> using Crystalline, SymmetricTightBinding, Brillouin, Optim, Random
 
 julia> sgnum = 221;
 
-julia> brs = calc_bandreps(sgnum);
+julia> brs = bandreps(sgnum);
 
 julia> cbr = @composite brs[1] + brs[7];
 

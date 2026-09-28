@@ -213,7 +213,7 @@ Two distinct error classes, all in `src/symmetry_analysis.jl`:
 
 1. **Convention mismatch (net effect: complex conjugation)**: `symmetry_eigenvalues`
    computed the Convention 1 character `χ_C1 = (Θ_G w)† D_k w`, but Crystalline.jl's
-   `calc_bandreps` and `lgirreps` use a conjugated sign convention for both the `Θ_G`
+   `bandreps` and `lgirreps` use a conjugated sign convention for both the `Θ_G`
    factor and the global phase of `D_k` (cf. issue #12). These two conjugations together
    give `χ_Crystalline = conj(χ_C1)`. Fix: compute `χ_C1` as before, then return
    `conj(χ_C1)`. This resolved all 2D and 3D failures from the phase convention mismatch.
@@ -241,4 +241,4 @@ Changing the Hamiltonian phase sign would require re-deriving the correction in
 `symmetry_analysis.jl`.
 
 ### Relevant upstream issues
-- Crystalline.jl issue #12 (sign convention in `calc_bandreps`)
+- Crystalline.jl issue #12 (sign convention in `bandreps`)

@@ -15,7 +15,7 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
 
 @testset "Fitting (Optim extension)" begin
     # --- shared small models -------------------------------------------------------------
-    brs = calc_bandreps(17, Val(2))
+    brs = bandreps(17, Val(2))
     cbr = @composite brs[5]                                 # graphene honeycomb, (2b|A₁)
     tbm_nn  = tb_hamiltonian(cbr, [[0, 0], [1, 0]])         # on-site + nearest neighbour
     tbm_nnn = tb_hamiltonian(cbr, [[0, 0], [1, 0], [1, 1]]) # + next-nearest neighbour
@@ -23,7 +23,7 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
     # a 3D two-EBR model (SG 221, (3d|A₁g) ⊕ (3d|B₂g)): 6 bands, 4 terms. Terms 2 & 4 are the
     # inter-EBR coupling blocks and are purely off-diagonal (traceless at every k) — used by
     # both the 3D recovery test and the rank-deficient moment-seed regression below.
-    brs221 = calc_bandreps(221)
+    brs221 = bandreps(221)
     cbr221 = @composite brs221[1] + brs221[7]
     tbm221 = tb_hamiltonian(cbr221)
 
@@ -161,7 +161,7 @@ rms(A) = sqrt(sum(abs2, A) / length(A))
         # v2.2.2+.
 
         # SG 221: (3d|A₁g) ⊕ (3d|B₂g); 6 bands, 3D (the `fit` docstring example)
-        brs = calc_bandreps(221, Val(3))
+        brs = bandreps(221, Val(3))
         tbm = tb_hamiltonian(@composite brs[1] + brs[7])
 
         Random.seed!(0) # this value used to trigger the bug; seed 1 did not e.g.

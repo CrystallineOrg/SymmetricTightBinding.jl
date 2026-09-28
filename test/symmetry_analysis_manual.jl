@@ -32,7 +32,7 @@ end
 
     # ---- 1D ----
     @testset "1D: SG 2 (p-1)" begin
-        brs = calc_bandreps(2, Val(1))
+        brs = bandreps(2, Val(1))
         for i in eachindex(brs)
             @test _test_symmetry_analysis(brs, i)
         end
@@ -43,21 +43,21 @@ end
     # SGs 3-5 have only general-position EBRs.
 
     @testset "2D: SG 2 (p2)" begin
-        brs = calc_bandreps(2, Val(2))
+        brs = bandreps(2, Val(2))
         for i in eachindex(brs) # all 8 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 6 (p2mm)" begin
-        brs = calc_bandreps(6, Val(2))
+        brs = bandreps(6, Val(2))
         for i in eachindex(brs) # all 16 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 7 (p2mg)" begin
-        brs = calc_bandreps(7, Val(2))
+        brs = bandreps(7, Val(2))
         # EBRs 1-2 have free params (general positions); 3-6 are special and pass
         for i in 3:6
             @test _test_symmetry_analysis(brs, i)
@@ -65,63 +65,63 @@ end
     end
 
     @testset "2D: SG 8 (p2gg)" begin
-        brs = calc_bandreps(8, Val(2))
+        brs = bandreps(8, Val(2))
         for i in eachindex(brs) # all 4 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 9 (c2mm)" begin
-        brs = calc_bandreps(9, Val(2))
+        brs = bandreps(9, Val(2))
         for i in eachindex(brs) # all 10 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 10 (p4)" begin
-        brs = calc_bandreps(10, Val(2))
+        brs = bandreps(10, Val(2))
         for i in eachindex(brs) # all 8 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 11 (p4mm)" begin
-        brs = calc_bandreps(11, Val(2))
+        brs = bandreps(11, Val(2))
         for i in eachindex(brs) # all 14 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 12 (p4gm)" begin
-        brs = calc_bandreps(12, Val(2))
+        brs = bandreps(12, Val(2))
         for i in eachindex(brs) # all 7 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 13 (p3)" begin
-        brs = calc_bandreps(13, Val(2))
+        brs = bandreps(13, Val(2))
         for i in eachindex(brs) # all 6 EBRs pass (K-point phase issue fixed)
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 14 (p3m1)" begin
-        brs = calc_bandreps(14, Val(2))
+        brs = bandreps(14, Val(2))
         for i in eachindex(brs) # all 9 EBRs pass (K-point phase issue fixed)
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 15 (p31m)" begin
-        brs = calc_bandreps(15, Val(2))
+        brs = bandreps(15, Val(2))
         for i in eachindex(brs) # all 5 EBRs pass
             @test _test_symmetry_analysis(brs, i)
         end
     end
 
     @testset "2D: SG 16 (p6)" begin
-        brs = calc_bandreps(16, Val(2))
+        brs = bandreps(16, Val(2))
         # EBRs 1-2 (3c site): flaky due to K-point phase issue — skip
         for i in 3:8
             @test _test_symmetry_analysis(brs, i)     # 2b and 1a EBRs pass
@@ -129,7 +129,7 @@ end
     end
 
     @testset "2D: SG 17 (p6mm)" begin
-        brs = calc_bandreps(17, Val(2))
+        brs = bandreps(17, Val(2))
         for i in eachindex(brs) # all 13 EBRs pass (includes graphene)
             @test _test_symmetry_analysis(brs, i)
         end

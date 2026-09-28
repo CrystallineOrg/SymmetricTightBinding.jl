@@ -3,10 +3,12 @@
 
 # ---------------------------------------------------------------------------------------- #
 
-const HorAH_TBT{D} = Union{TightBindingTerm{D, HERMITIAN}, TightBindingTerm{D, ANTIHERMITIAN}}
+const HorAH_TBT{D, IR, SIR} = Union{TightBindingTerm{D, HERMITIAN, IR, SIR},
+                                    TightBindingTerm{D, ANTIHERMITIAN, IR, SIR}}
 
 """
-    CompositeTightBindingModel{D} <: AbstractTightBindingModel{HorAH_TBT{D}}
+    CompositeTightBindingModel{D, IR, SIR}
+                            <: AbstractTightBindingModel{HorAH_TBT{D, IR, SIR}}
 
 Composite tight-binding model for generally non-Hermitian Hamiltonians, featuring both
 Hermitian and anti-Hermitian terms, stored as separate `TightBindingModel`s.
@@ -30,16 +32,19 @@ To associate a set of coefficients to each term, see
 [`ParameterizedCompositeTightBindingModel`](@ref).
 
 ## Fields
-- `tbm_h :: TightBindingModel{D, HERMITIAN}`: the Hermitian part of the model
-- `tbm_a :: TightBindingModel{D, ANTIHERMITIAN}`: the anti-Hermitian part of the model
+- `tbm_h :: TightBindingModel{D, HERMITIAN, IR, SIR}`: the Hermitian part of the model
+- `tbm_a :: TightBindingModel{D, ANTIHERMITIAN, IR, SIR}`: the anti-Hermitian part of the
+  model
 """
-struct CompositeTightBindingModel{D} <: AbstractTightBindingModel{HorAH_TBT{D}}
-    tbm_h::TightBindingModel{D, HERMITIAN}
-    tbm_a::TightBindingModel{D, ANTIHERMITIAN}
-    function CompositeTightBindingModel{D}(
-        tbm_h::TightBindingModel{D, HERMITIAN},
-        tbm_a::TightBindingModel{D, ANTIHERMITIAN},
-    ) where D
+struct CompositeTightBindingModel{
+    D, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
+} <: AbstractTightBindingModel{HorAH_TBT{D, IR, SIR}}
+    tbm_h::TightBindingModel{D, HERMITIAN, IR, SIR}
+    tbm_a::TightBindingModel{D, ANTIHERMITIAN, IR, SIR}
+    function CompositeTightBindingModel{D, IR, SIR}(
+        tbm_h::TightBindingModel{D, HERMITIAN, IR, SIR},
+        tbm_a::TightBindingModel{D, ANTIHERMITIAN, IR, SIR},
+    ) where {D, IR, SIR}
         # validate inputs
         tbm_h.N == tbm_a.N || error("input models must have the same number of orbitals")
         if CompositeBandRep(tbm_h) ≠ CompositeBandRep(tbm_a)
@@ -48,31 +53,20 @@ struct CompositeTightBindingModel{D} <: AbstractTightBindingModel{HorAH_TBT{D}}
         if orbital_positions(tbm_h) ≠ orbital_positions(tbm_a)
             error("input models must have the same orbital positions")
         end
-        return new{D}(tbm_h, tbm_a)
+        return new{D, IR, SIR}(tbm_h, tbm_a)
     end
 end
-function CompositeTightBindingModel(
-    tbm_h::TightBindingModel{D, HERMITIAN},
-    tbm_a::TightBindingModel{D, ANTIHERMITIAN},
-) where D
-    return CompositeTightBindingModel{D}(tbm_h, tbm_a)
-end
-function Base.:+(
-    tbm_h::TightBindingModel{D, HERMITIAN},
-    tbm_a::TightBindingModel{D, ANTIHERMITIAN}
-) where D
-    return CompositeTightBindingModel{D}(tbm_h, tbm_a)
-end
-
-# inverted argument order variants
-# NB: the `{D}` entry below must be spliced as an _expression_ (`:(…{D})`), not as a
-#     `Symbol("…{D}")`: the latter defines a stray function literally named `var"…{D}"`
-#     rather than a parametric constructor method
-for f in (:(CompositeTightBindingModel{D}), :CompositeTightBindingModel, :(Base.:+))
+for f in (:CompositeTightBindingModel, :(Base.:+))
     @eval function $f(
-        tbm_a::TightBindingModel{D, ANTIHERMITIAN},
-        tbm_h::TightBindingModel{D, HERMITIAN},
-    ) where D
+        tbm_h::TightBindingModel{D, HERMITIAN, IR, SIR},
+        tbm_a::TightBindingModel{D, ANTIHERMITIAN, IR, SIR},
+    ) where {D, IR, SIR}
+        return CompositeTightBindingModel{D, IR, SIR}(tbm_h, tbm_a)
+    end
+    @eval function $f( # inverted argument order variant
+        tbm_a::TightBindingModel{D, ANTIHERMITIAN, IR, SIR},
+        tbm_h::TightBindingModel{D, HERMITIAN, IR, SIR},
+    ) where {D, IR, SIR}
         return $f(tbm_h, tbm_a)
     end
 end
@@ -139,7 +133,7 @@ function Base.getindex(
     Nʰ = length(ctbm.tbm_h)
     idxsʰ = [i for i in idxs if i ≤ Nʰ]
     idxsᵃ = [i - Nʰ for i in idxs if i > Nʰ]
-    return CompositeTightBindingModel{D}(ctbm.tbm_h[idxsʰ], ctbm.tbm_a[idxsᵃ])
+    return CompositeTightBindingModel(ctbm.tbm_h[idxsʰ], ctbm.tbm_a[idxsᵃ])
 end
 # logical indexing (`ctbm[mask]`): defined separately since `Bool <: Integer`, which would
 # otherwise make the method above misinterpret a mask as a vector of indices
@@ -148,23 +142,24 @@ function Base.getindex(ctbm::CompositeTightBindingModel, mask::AbstractVector{Bo
     return ctbm[findall(mask)]
 end
 
-function (ctbm::CompositeTightBindingModel{D})(cs::AbstractVector{<:Real}) where {D}
-    return ParameterizedCompositeTightBindingModel{D}(ctbm, cs)
+function (ctbm::CompositeTightBindingModel)(cs::AbstractVector{<:Real})
+    return ParameterizedCompositeTightBindingModel(ctbm, cs)
 end
 
-function (ctbm::CompositeTightBindingModel{D})(
+function (ctbm::CompositeTightBindingModel)(
     cs_h::AbstractVector{<:Real},
     cs_a::AbstractVector{<:Real}
-) where {D}
+)
     length(cs_h) == length(ctbm.tbm_h) || error("mismatched number of coefficients and terms for Hermitian part")
     length(cs_a) == length(ctbm.tbm_a) || error("mismatched number of coefficients and terms for anti-Hermitian part")
-    return ParameterizedCompositeTightBindingModel{D}(ctbm, vcat(cs_h, cs_a))
+    return ParameterizedCompositeTightBindingModel(ctbm, vcat(cs_h, cs_a))
 end
 
 ## --------------------------------------------------------------------------------------- #
 
 """
-    ParameterizedCompositeTightBindingModel{D} <: AbstractParameterizedTightBindingModel{D}
+    ParameterizedCompositeTightBindingModel{D, CTB}
+                                   <: AbstractParameterizedTightBindingModel{D}
 
 A coefficient-parameterized [`CompositeTightBindingModel`](@ref), that can be used as a
 functor for evaluation at input momenta `k`.
@@ -176,7 +171,8 @@ followed by the anti-Hermitian ones (`ctbm(cs)`), or with the two sets of coeffi
 provided separately (`ctbm(cs_h, cs_a)`).
 
 ## Fields
-- `tbm :: CompositeTightBindingModel{D}`: the underlying composite tight-binding model
+- `tbm :: CTB<:CompositeTightBindingModel{D}`: the underlying composite tight-binding
+  model
 - `cs :: Vector{Float64}`: coefficients of each term of `tbm`, in the same order; i.e.,
   `cs[1:length(tbm.tbm_h)]` parameterize the Hermitian terms and `cs[length(tbm.tbm_h)+1:
   end]` the anti-Hermitian terms
@@ -191,11 +187,13 @@ numerical (generally non-Hermitian) Hamiltonian matrix at momentum `k`.
     The returned matrix aliases the internal `scratch` buffer of `pctbm` and is overwritten
     by subsequent evaluations: `copy` it if it must outlive the next call.
 """
-struct ParameterizedCompositeTightBindingModel{D} <: AbstractParameterizedTightBindingModel{D}
-    tbm :: CompositeTightBindingModel{D}
+struct ParameterizedCompositeTightBindingModel{
+    D, CTB<:CompositeTightBindingModel{D}
+} <: AbstractParameterizedTightBindingModel{D}
+    tbm :: CTB
     cs :: Vector{Float64} # coefficients of the tight-binding model
     scratch :: Matrix{ComplexF64} # scratch space for evaluation
-    function ParameterizedCompositeTightBindingModel{D}(
+    function ParameterizedCompositeTightBindingModel(
         tbm :: CompositeTightBindingModel{D},
         cs :: AbstractVector{<:Real},
         scratch :: Matrix{ComplexF64} = Matrix{ComplexF64}(
@@ -204,7 +202,7 @@ struct ParameterizedCompositeTightBindingModel{D} <: AbstractParameterizedTightB
         length(tbm) ≠ length(cs) && _throw_term_coef_length_mismatch(tbm, cs)
         N = orbital_count(tbm)
         size(scratch) ≠ (N, N) && _throw_scratch_size_mismatch(scratch, N)
-        return new{D}(tbm, convert(Vector{Float64}, cs), scratch)
+        return new{D, typeof(tbm)}(tbm, convert(Vector{Float64}, cs), scratch)
     end
 end
 

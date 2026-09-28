@@ -26,7 +26,7 @@ using LinearAlgebra
     end
 
     # set up graphene model
-    brs = calc_bandreps(17, Val(2))
+    brs = bandreps(17, Val(2))
     cbr = @composite brs[5]
     tbm = tb_hamiltonian(cbr, [[0, 0]])
     cs = [0.0, 1.0]

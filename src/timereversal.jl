@@ -35,8 +35,8 @@
 """
     obtain_basis_free_parameters_TRS(
         h_orbit::HoppingOrbit{D}, 
-        brₐ::NewBandRep{D}, 
-        brᵦ::NewBandRep{D}, 
+        brₐ::BandRep{D}, 
+        brᵦ::BandRep{D}, 
         orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
         Mm::AbstractArray{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
@@ -49,8 +49,8 @@ Real and imaginary parts of the basis vectors are differentiated explicitly.
 """
 function obtain_basis_free_parameters_TRS(
     h_orbit::HoppingOrbit{D},
-    brₐ::NewBandRep{D},
-    brᵦ::NewBandRep{D},
+    brₐ::BandRep{D},
+    brᵦ::BandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
     Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),

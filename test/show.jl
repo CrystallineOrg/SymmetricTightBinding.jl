@@ -9,7 +9,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
 @testset "Show methods" begin
     # set up graphene model (plane group 17, (2b|A₁) EBR)
-    brs = calc_bandreps(17, Val(2))
+    brs = bandreps(17, Val(2))
     br = brs[5]
     cbr = @composite brs[5]
     hop_orbits = obtain_symmetry_related_hoppings([[0, 0]], br, br)
