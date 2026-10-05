@@ -88,19 +88,27 @@ root cause of the incorrect irrep labels reported in PR #89.
 
 ## The fix
 
-Since $\chi_\text{Crystalline} = \overline{\chi_\text{Convention 1}}$, the correction is simply to
-take the complex conjugate of the Convention 1 formula. In `symmetry_eigenvalues`:
+Conjugating the Convention 1 characters (the previous fix, Option A below) also conjugates
+the site irrep characters $\chi_\rho(h)$, so it is only exact for real site irreps, i.e.,
+with time-reversal symmetry. Without it, a model built from a complex site irrep $\rho$ was
+identified as built from $\rho^*$ (see
+[#137](https://github.com/CrystallineOrg/SymmetricTightBinding.jl/issues/137)).
 
-```julia
-Θᴳ = reciprocal_translation_phase(orbital_positions(ptbm), G)   # = Θ_G (positive G)
-ρ = sgrep(k)   # = D_k(g) = e^{-2πi(gk)·v} ρ(h) (Convention 1)
-for (n, v) in enumerate(eachcol(vs))
-    v_kpG = Θᴳ * v
-    χ = dot(v_kpG, ρ, v)          # Convention 1: (Θ_G w)† D_k w
-    χ_Crystalline = conj(χ)       # [⚠️ phase]: convert to Crystalline.jl's convention
-    symeigs[j, n] = χ_Crystalline
-end
-```
+The underlying reason is that Crystalline.jl's irreps assume Bloch states
+$e^{-i\mathbf{k}\cdot\mathbf{r}}u_\mathbf{k}$: its irreps at $\mathbf{k}$ describe our
+Bloch states at $-\mathbf{k}$. Instead of conjugating, `symmetry_eigenvalues` now returns
+the Convention 1 characters, and `collect_compatible` and `collect_irrep_annotations` first
+convert the irreps with the internal `flip_bloch_phase`, which places them at the
+**k**-point whose Bloch states they describe:
+
+1. If $g\mathbf{k} \equiv -\mathbf{k}$ for some space group operation $g$: the irreps
+   stay at $\mathbf{k}$, as $D'(g^{-1}hg) = D(h)$.
+2. Otherwise, with time-reversal: the irreps stay at $\mathbf{k}$, as $D'(h) = D(h)^*$.
+   This is used only by `collect_irrep_annotations`, since `collect_compatible` finds
+   multiplicities against the unconverted tables of the band representations.
+3. Otherwise, without time-reversal: the irreps are moved to $-\mathbf{k}$, which is
+   labelled by the tabulated partner point (e.g., KA for K in plane group *p*3). The
+   annotations at K are then named after KA; without time-reversal, this is unavoidable.
 
 Note: the eigenvectors `vs` are from `solve(ptbm, k; bloch_phase=Val(false))`, i.e.,
 they are eigenvectors of $H(\mathbf{k})$ in the Convention 1 coefficient basis. The
@@ -114,7 +122,7 @@ Hamiltonian phase ($e^{-i\mathbf{k}\cdot\boldsymbol{\delta}}$, i.e., `cispi(-2k�
 
 There are three options, each with different trade-offs:
 
-### Option A: Complex-conjugate in `symmetry_eigenvalues` (current approach)
+### Option A: Complex-conjugate in `symmetry_eigenvalues` (previous approach)
 
 `symmetry_eigenvalues` computes the Convention 1 character and conjugates it before
 returning.
@@ -124,6 +132,7 @@ returning.
   understand
 - **Con:** The returned characters differ by a global complex conjugation from what
   `theory.md` derives; downstream callers must be aware of this convention
+- **Con:** Incorrect without time-reversal symmetry, for complex site irreps (#137)
 
 ### Option B: Fix the root cause in Crystalline.jl (best, but harder)
 
