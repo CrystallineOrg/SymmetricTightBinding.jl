@@ -304,32 +304,10 @@ function add_reversed_orbits!(
 
         # check whether the orbit is already "good" (i.e., all δs have a -δ counterpart)
         if all(δ -> isapproxin(-δ, δs, nothing, false; atol = VEC_CMP_ATOL), δs)
-            # all δs have a -δ counterpart in the orbit: nominally, the orbit is good as-is
-            # there is a corner-case, however, since we must also ensure that for every δ
-            # hop a → b + R, the hermitian-partner hop b → a - R exists at -δ; this is not
-            # guaranteed automatically, as -δ may have entered the orbit through a symmetry
-            # operation that does not necessarily correspond to this "hermitian-partner" 
-            # ("reversed hop") relationship; so we check & add any missing "reversed hops"
-            hoppings_original = [copy(hops) for hops in h_orbit.hoppings]
-            for (idx, δ) in enumerate(δs)
-                idx′ = something(findfirst(δs) do δ′
-                    isapprox(-δ, δ′, nothing, false; atol = VEC_CMP_ATOL)
-                end)
-                hops = hoppings_original[idx]
-                hops′ = h_orbit.hoppings[idx′]
-                for hop in hops
-                    (qₐ, qᵦ, R) = hop
-                    rev_hop = (qᵦ, qₐ, -R) # reverse hop
-                    rev_qₐ, rev_qᵦ, rev_R = rev_hop
-                    has_counterpart = any(hops′) do hop′
-                        qₐ′, qᵦ′, R′ = hop′
-                        (isapprox(rev_qₐ, qₐ′, nothing, false; atol = VEC_CMP_ATOL) &&
-                         isapprox(rev_qᵦ, qᵦ′, nothing, false; atol = VEC_CMP_ATOL) &&
-                         isapprox(rev_R,  R′,  nothing, false; atol = VEC_CMP_ATOL))
-                    end
-                    has_counterpart || push!(hops′, rev_hop)
-                end
-            end
+            # all δs have a -δ counterpart in the orbit: nominally, the orbit is good as-is,
+            # but the hermitian-partner hops might still be missing; so `add_reversed_hops!`
+            # checks for this and adds any missing "reversed hops"
+            _add_reversed_hops!(h_orbit)
             continue # the orbit is now properly closed: nothing to merge & we continue
         end
 
@@ -346,6 +324,12 @@ function add_reversed_orbits!(
             # merge the orbits
             append!(h_orbit.orbit, h_orbit′.orbit)
             append!(h_orbit.hoppings, h_orbit′.hoppings)
+
+            # the hops at δ and -δ that we just merged came from different (a, b, R) sets,
+            # so the hermitian-partner hops may be missing on either side; so we need to
+            # call `_add_reversed_hops!` once more to make sure (this e.g., touched sg208
+            # models at 6f `Rs = [[1,0,0]]`, where δ had 1 hop, and -δ had 2)
+            _add_reversed_hops!(h_orbit)
 
             # remove the merged orbit
             deleteat!(h_orbits, n′)
@@ -370,6 +354,35 @@ function add_reversed_orbits!(
         append!(hoppings, hoppings′)
     end
     return h_orbits
+end
+
+# For every hop a → b + R at δ in `h_orbit`, ensure that its hermitian partner ("reversed
+# hop") b → a - R is included at -δ: this is not guaranteed automatically, as -δ may have
+# entered the orbit through a symmetry operation (or merge) that does not correspond to this
+# hermitian-partner ("reversed hop") relationship. NB: the function implicitly assumes
+# that every δ has a -δ counterpart in `h_orbit` (violating this is UB).
+function _add_reversed_hops!(h_orbit::HoppingOrbit)
+    δs = orbit(h_orbit)
+    hoppings_original = [copy(hops) for hops in h_orbit.hoppings]
+    for (idx, δ) in enumerate(δs)
+        idx′ = something(findfirst(δs) do δ′
+            isapprox(-δ, δ′, nothing, false; atol = VEC_CMP_ATOL)
+        end)
+        hops = hoppings_original[idx]
+        hops′ = h_orbit.hoppings[idx′]
+        for hop in hops
+            (qₐ, qᵦ, R) = hop
+            rev_hop = (qᵦ, qₐ, -R) # reverse hop
+            rev_qₐ, rev_qᵦ, rev_R = rev_hop
+            has_counterpart = any(hops′) do hop′
+                qₐ′, qᵦ′, R′ = hop′
+                (isapprox(rev_qₐ, qₐ′, nothing, false; atol = VEC_CMP_ATOL) &&
+                 isapprox(rev_qᵦ, qᵦ′, nothing, false; atol = VEC_CMP_ATOL) &&
+                 isapprox(rev_R,  R′,  nothing, false; atol = VEC_CMP_ATOL))
+            end
+            has_counterpart || push!(hops′, rev_hop)
+        end
+    end
 end
 
 # for NONHERMITIAN models, hermiticity no longer links a hop `a → b+R` to its conjugate

@@ -101,6 +101,33 @@ end
     @test length(tbm_NH) == 6
 end
 
+@testset "Merging of hermiticity-related orbits with unequal hop counts" begin
+    # a hopping orbit {δ} and its reversed orbit {-δ} can derive from different sets of
+    # hops (a, b, R): here, without inversion, δ had 1 hop, -δ 2; merging them previously
+    # did not add the missing hermitian-partner hops in `add_reversed_orbits!`, producing
+    # an error in `construct_M_matrix`
+    brs = bandreps(208) # P4₂32
+    cbr = @composite brs[1] # (6f|A)
+    tbm = tb_hamiltonian(cbr, [[1,0,0]])
+    # check that we get the expected number of hopping terms (regression test)
+    @test length(tbm) == 22
+    # check that all orbits are equal length (i.e., "good")
+    @test all(tbm) do tbt
+        allequal(length.(tbt.block.h_orbit.hoppings))
+    end
+    # check that `tbm` is indeed Hermitian
+    ptbm = tbm(cospi.(0.37 .* (1:length(tbm))))
+    k = ReciprocalPoint([0.13, 0.27, 0.19])
+    Hk = copy(ptbm(k))
+    @test Hk ≈ Hk'
+    # check that the Hamiltonian is symmetric for all symmetry operations
+    @test all(primitivize(spacegroup(208))) do g
+        D = sgrep_induced_by_siteir(ptbm, g)(k)
+        gk = g * k
+        isapprox(ptbm(gk), D * Hk * D'; atol = 1e-12)
+    end
+end
+
 @testset "Spinful band representations are rejected" begin
     brs = bandreps(2, Val(3); spinful = Val(true))
     cbr = @composite brs[1]
