@@ -1023,23 +1023,30 @@ not type-stable.
 For `NONHERMITIAN` models, `Rs` is interpreted to also include `-Rs`: this ensures that the
 returned hopping terms always feature "both sides" of Hermiticity-related pairs of terms.
 
-Spinful (double-valued) band representations are supported only without time-reversal
-symmetry (i.e., from `bandreps(sgnum; spinful = Val(true), timereversal = false)`).
+Both spinless (single-valued) and spinful (double-valued) models are supported; the choice
+follows directly from the spin properties of `cbr` (a spinful model can be built from
+`bandreps(sgnum; spinful = Val(true))`).
 
 The returned [`TightBindingModel`](@ref) will generally feature several terms (iterating to
 [`TightBindingTerm`](@ref)s), each representing a tight-binding term that is closed under
 the symmetry operations of the underlying space group.
+
+## Kramers partners in time-reversal symmetric spinful settings
+
+For spinful models with time-reversal symmetry, the model follows Crystalline.jl convention
+for the unitary part of time reversal (iσʸK, see Crystalline's `timereversal_unitary`):
+orbitals `i` and `i+n` of a site (i.e., a block of the resulting Hamiltonian) with a
+`2n`-dimensional site irrep are Kramers partners (i.e., time-reversal conjugate states).
+Thus, time reversal acts on each pair (`i`, `i+n`) exactly as on the spin-up and -down
+states of a spin-½ (i.e., as iσʸK). The pair can therefore be thought of as |↑⟩ and |↓⟩
+pseudospin states; if the site orbitals carry no intrinsic spin-orbit coupling, this is
+just the electron's spin.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D, IR, SIR},
     Rs::AbstractVector{<:AbstractVector{Int}} = [zeros(Int, D)], # "global" hopping translation-representatives
     Sᵛ::Val{S} = Val(HERMITIAN),
 ) where {D, S, IR, SIR}
-    if isspinful(cbr) && any(br -> br.timereversal, cbr.brs)
-        error("spinful (double-valued) band representations with time-reversal symmetry \
-               are not yet supported: time reversal squares to -1 for them, which the \
-               construction of the hopping terms does not yet account for")
-    end
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("the input composite band representation does not have a symmetric \
                tight-binding model: its expansion in EBRs contain negative or \

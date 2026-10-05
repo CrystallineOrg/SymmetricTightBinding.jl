@@ -69,18 +69,28 @@ function sgrep_induced_by_siteir_excl_phase(
 
     return ρ
 end
+
 function sgrep_induced_by_siteir_excl_phase(
     cbr::CompositeBandRep{D},
     op::AbstractOperation{D},
 ) where {D}
+    f = Base.Fix2(sgrep_induced_by_siteir_excl_phase, op) # = br -> sgrep_…(br, op)
+    return _apply_across_matrix_blocks_of_composite_bandrep(f, cbr, ComplexF64)
+end
+
+function _apply_across_matrix_blocks_of_composite_bandrep(
+    f::F,
+    cbr::CompositeBandRep,
+    ::Type{T} # eltype
+) where {F, T}
     N = occupation(cbr)
-    ρ = zeros(ComplexF64, N, N)
+    ρ = zeros(T, N, N) # TODO: `spzeros` would be nice here (but then requires SparseArrays)
     j = 0
     for (cᵢ, brᵢ) in zip(cbr.coefs, cbr.brs)
         iszero(cᵢ) && continue
         Nᵢ = occupation(brᵢ)
-        ρᵢ = sgrep_induced_by_siteir_excl_phase(brᵢ, op)
-        for _ in 1:Int(cᵢ)
+        ρᵢ = f(brᵢ)
+        for _ in 1:Int(cᵢ) # slot in the block `ρᵢ` into `ρ` for each copy of the BR
             ρ[j+1:j+Nᵢ, j+1:j+Nᵢ] .= ρᵢ
             j += Nᵢ
         end

@@ -106,7 +106,7 @@ test/
   composite.jl              # composite HERMITIAN ⊕ ANTIHERMITIAN model tests
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
-  spinful.jl                # spinful (double group) models, without time-reversal
+  spinful.jl                # spinful (double group) models, with and without time-reversal
   misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough
