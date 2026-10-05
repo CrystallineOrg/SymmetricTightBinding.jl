@@ -6,6 +6,7 @@ using LinearAlgebra
 using Crystalline
 using Crystalline: AbstractSymmetryVector, irdim, CompositeBandRep_from_indices, translation
 using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, orbit
+using Crystalline: AbstractOperation
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
 using StaticArrays: SVector

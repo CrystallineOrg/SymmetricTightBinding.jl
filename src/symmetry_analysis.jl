@@ -67,14 +67,14 @@ end
 """
     symmetry_eigenvalues(
         ptbm::ParameterizedTightBindingModel{D},
-        ops::AbstractVector{SymOperation{D}},
+        ops::AbstractVector{<:AbstractOperation{D}},
         k::ReciprocalPointLike{D},
-        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]
+        [sgreps::AbstractVector{<:SiteInducedSGRepElement{D}}]
     )
     symmetry_eigenvalues(
         ptbm::ParameterizedTightBindingModel{D},
-        lg::LittleGroup{D},
-        [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]
+        lg::AbstractLittleGroup{D},
+        [sgreps::AbstractVector{<:SiteInducedSGRepElement{D}}]
     )
         --> Matrix{ComplexF64}
     
@@ -103,9 +103,9 @@ The symmetry eigenvalues are returned as a matrix, with rows running over the el
 """
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
-    ops::AbstractVector{SymOperation{D}},
+    ops::AbstractVector{<:AbstractOperation{D}},
     k::ReciprocalPointLike{D},
-    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = begin
+    sgreps::AbstractVector{<:SiteInducedSGRepElement{D}} = begin
         sgrep_induced_by_siteir.(Ref(ptbm.tbm.cbr), ops)
     end,
 ) where D
@@ -143,8 +143,8 @@ end
 
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
-    lg::LittleGroup{D},
-    sgreps::AbstractVector{SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
+    lg::AbstractLittleGroup{D},
+    sgreps::AbstractVector{<:SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
         Ref(ptbm.tbm.cbr),
         lg,
     ),

@@ -127,10 +127,3 @@ end
         isapprox(ptbm(gk), D * Hk * D'; atol = 1e-12)
     end
 end
-
-@testset "Spinful band representations are rejected" begin
-    brs = bandreps(2, Val(3); spinful = Val(true))
-    cbr = @composite brs[1]
-    @test isspinful(cbr)
-    @test_throws ErrorException tb_hamiltonian(cbr)
-end

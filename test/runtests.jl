@@ -23,6 +23,7 @@ const TESTFILES = [
     "composite.jl",                # composite Hermitian ⊕ anti-Hermitian models
     "gradients.jl",                # hopping and momentum gradients
     "fitting.jl",                  # fitting (Optim extension) + TightBindingCache
+    "spinful.jl",                  # spinful (double group) models
     "symmetry_analysis.jl",        # ⚠️ every EBR of every SG in 1D-3D; minutes to hours
     "symmetry_analysis_manual.jl", # paired-down, manual version of above, individual cases
     "misc.jl",                     # AbstractArray interface & assorted issue regressions

@@ -93,6 +93,7 @@ function subduced_complement(
     sgnumᴴ::Int;
     kws...
 ) where D
+    isspinful(tbm.cbr) && error("not yet supported for spinful models")
     sgnumᴳ = num(tbm.cbr)
     gr = maximal_subgroups(sgnumᴳ, SpaceGroup{D})
     ts = conjugacy_relations(gr, sgnumᴳ, sgnumᴴ)

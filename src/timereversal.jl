@@ -55,6 +55,11 @@ function obtain_basis_free_parameters_TRS(
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
     Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
+    # the constraint below assumes `Γ(𝒯) = I`, which does not hold for spinful band
+    # representations (where `𝒯² = -1`)
+    (isspinful(brₐ) || isspinful(brᵦ)) &&
+        error("time-reversal symmetry is not yet supported for spinful band representations")
+
     # NB: we want to keep `_aggregate_constraints` due to its efficiency in building the
     # constraint matrix. So, although seemingly unnecessary, we stick with its Q & Z tensor
     # structure, to implement the [0 Mᵢⱼ] tensor as Q = [0 Mᵢⱼ] and Z = 0, with the final

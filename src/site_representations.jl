@@ -1,12 +1,17 @@
 
 """
-    sgrep_induced_by_siteir_excl_phase(br::BandRep, op::SymOperation)
-    sgrep_induced_by_siteir_excl_phase(cbr::CompositeBandRep, op::SymOperation)
+    sgrep_induced_by_siteir_excl_phase(br::BandRep, op::AbstractOperation)
+    sgrep_induced_by_siteir_excl_phase(cbr::CompositeBandRep, op::AbstractOperation)
         --> Matrix{ComplexF64}
 
 Return the representation matrix of a symmetry operation `op` induced by the site
 symmetry group of a band representation `br` or composite band representation `cbr`,
 excluding the global momentum-dependent phase factor.
+
+For a spinful (double-valued) band representation, i.e., when `isspinful(br)` is true, `op`
+must be a `DSymOperation`, since the representation depends on the SU(2) element in addition
+to the spatial operation. For spinless (single-valued) band representations, `op` must be a
+`SymOperation`.
 
 # Note
 This function assumes Convention 1 for the Fourier transform, so the momentum dependence is
@@ -15,8 +20,9 @@ introduced as a global phase factor. This is not true if Convention 2 is used. S
 """
 function sgrep_induced_by_siteir_excl_phase(
     br::BandRep{D},
-    op::SymOperation{D},
+    op::AbstractOperation{D},
 ) where {D}
+    _check_operation_spin(br, op)
     # NB: `bandreps` in Crystalline already applies `physical_realify` if
     #     `timereversal` is true, so we don't need to manually redo it for `siteir` below
     siteir = br.siteir
@@ -34,7 +40,7 @@ function sgrep_induced_by_siteir_excl_phase(
             tᵦₐ = constant(g * parent(qₐ) - parent(qᵦ)) # ignore free parts of the WP
             # compute h = gᵦ⁻¹ tᵦₐ⁻¹ g gₐ
             h = compose(
-                compose(compose(inv(gᵦ), SymOperation(-tᵦₐ), false), g, false),
+                compose(compose(inv(gᵦ), typeof(g)(-tᵦₐ), false), g, false),
                 gₐ,
                 false,
             )
@@ -65,10 +71,10 @@ function sgrep_induced_by_siteir_excl_phase(
 end
 function sgrep_induced_by_siteir_excl_phase(
     cbr::CompositeBandRep{D},
-    op::SymOperation{D},
+    op::AbstractOperation{D},
 ) where {D}
     N = occupation(cbr)
-    ρ = zeros(Complex, N, N)
+    ρ = zeros(ComplexF64, N, N)
     j = 0
     for (cᵢ, brᵢ) in zip(cbr.coefs, cbr.brs)
         iszero(cᵢ) && continue
@@ -82,6 +88,15 @@ function sgrep_induced_by_siteir_excl_phase(
     return ρ
 end
 
+@inline function _check_operation_spin(br, op)
+    isspinful(br) == isspinful(op) && return nothing
+    if isspinful(br)
+        error(lazy"a spinful band representation requires a double group operation (`DSymOperation`): got a `$(typeof(op))`")
+    else
+        error(lazy"a spinless band representation requires a spinless operation (`SymOperation`): got a `$(typeof(op))`")
+    end
+end
+
 # ---------------------------------------------------------------------------------------- #
 # Site-induced symmetry representation matrix _with_ phase factors
 
@@ -89,7 +104,7 @@ end
     SiteInducedSGRepElement{D}(
         ρ::AbstractMatrix,
         positions::Vector{DirectPoint{D}},
-        op::SymOperation{D}
+        op::AbstractOperation{D}
     )
 
 Represents a matrix-valued element of a site-induced representation of a space group,
@@ -103,18 +118,18 @@ returns the matrix representation at `k`.
 - `positions :: Vector{DirectPoint{D}}`: Real-space positions corresponding to the orbitals
   in the orbit of the associated site-symmetry group.
 """
-struct SiteInducedSGRepElement{D}
+struct SiteInducedSGRepElement{D, O<:AbstractOperation{D}}
     ρ::Matrix{ComplexF64}
     positions::Vector{DirectPoint{D}}
-    op::SymOperation{D}
+    op::O
     function SiteInducedSGRepElement{D}(
         ρ::AbstractMatrix,
         positions::Vector{DirectPoint{D}},
-        op::SymOperation{D},
-    ) where D
+        op::O,
+    ) where {D, O<:AbstractOperation{D}}
         @boundscheck N = LinearAlgebra.checksquare(ρ)
         length(positions) == N || error("length of positions must match the size of ρ")
-        new{D}(Matrix{ComplexF64}(ρ), positions, op)
+        new{D, O}(Matrix{ComplexF64}(ρ), positions, op)
     end
 end
 
@@ -131,10 +146,10 @@ end
 """
     sgrep_induced_by_siteir(
         br::Union{BandRep, CompositeBandRep},
-        op::SymOperation, [positions::Vector{<:DirectPoint}]
+        op::AbstractOperation, [positions::Vector{<:DirectPoint}]
     )
     sgrep_induced_by_siteir(
-        tbm::Union{TightBindingModel,ParameterizedTightBindingModel}, op::SymOperation
+        tbm::Union{TightBindingModel,ParameterizedTightBindingModel}, op::AbstractOperation
     )
         --> SiteInducedSGRepElement
 
@@ -145,10 +160,13 @@ over momentum inputs.
 
 A (possibly parameterized) tight-binding model `tbm` can be specified instead of a band representation,
 in which case the latter is inferred from the former.
+
+For spinful band representations, `op` must be a `DSymOperation`, i.e., carry its SU(2)
+element.
 """
 function sgrep_induced_by_siteir(
     br::Union{BandRep{D}, CompositeBandRep{D}},
-    op::SymOperation{D},
+    op::AbstractOperation{D},
     positions::Vector{DirectPoint{D}} = orbital_positions(br),
 ) where D
     ρ = sgrep_induced_by_siteir_excl_phase(br, op)
@@ -158,7 +176,7 @@ function sgrep_induced_by_siteir(
 end
 function sgrep_induced_by_siteir(
     tbm::Union{TightBindingModel{D}, ParameterizedTightBindingModel{D}},
-    op::SymOperation{D},
+    op::AbstractOperation{D},
 ) where D
     return sgrep_induced_by_siteir(CompositeBandRep(tbm), op, orbital_positions(tbm))
 end
