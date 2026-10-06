@@ -652,3 +652,18 @@ function _eigen!(H::Hermitian{<:Number}; kws...)
         return eigen!(H; alg = LinearAlgebra.DivideAndConquer(), kws...)
     end
 end
+
+# ---------------------------------------------------------------------------------------- #
+# `isspinful` for tight-binding blocks, terms, and models (types & instances)
+
+for T in (:TightBindingBlock, :TightBindingTerm, :TightBindingModel)
+    @eval Crystalline.isspinful(::Type{<:$T{D, S, IR}}) where {D, S, IR} = isspinful(IR)
+end
+function Crystalline.isspinful(::Type{<:ParameterizedTightBindingModel{D, TB}}) where {D, TB}
+    return isspinful(TB)
+end
+function Crystalline.isspinful(
+    x::Union{TightBindingBlock, TightBindingTerm, AbstractTightBindingModel, AbstractParameterizedTightBindingModel}
+)
+    return isspinful(typeof(x))
+end

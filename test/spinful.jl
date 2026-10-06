@@ -117,6 +117,24 @@ end
     @test length(tb_hamiltonian(_spinful_cbr(2, [1]; timereversal = true), Rs1)) == 4
 end
 
+@testset "`isspinful` for tight-binding models" begin
+    Rs = [[0, 0, 0]]
+    for spinful in (Val(false), Val(true))
+        brs = bandreps(16; spinful, timereversal = false)
+        cbr = @composite brs[1] + brs[2]
+        tbm = tb_hamiltonian(cbr, Rs)
+        ptbm = tbm(_spinful_coefficients(length(tbm)))
+        ctbm = tbm + tb_hamiltonian(cbr, Rs, Val(ANTIHERMITIAN))
+        pctbm = ctbm(_spinful_coefficients(length(ctbm.tbm_h)),
+                     _spinful_coefficients(length(ctbm.tbm_a)))
+        spinful_value = spinful === Val(true) ? true : false
+        for x in (tbm[1].block, tbm[1], tbm, ptbm, ctbm, pctbm)
+            @test isspinful(x) == spinful_value
+            @test isspinful(typeof(x)) == spinful_value
+        end
+    end
+end
+
 @testset "Spinful models: unsupported input" begin
     cbr = _spinful_cbr(16, [1, 2])
     tbm = tb_hamiltonian(cbr, [[0, 0, 0]])

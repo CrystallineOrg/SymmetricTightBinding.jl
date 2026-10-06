@@ -243,3 +243,13 @@ function (pctbm::ParameterizedCompositeTightBindingModel{D})(
     
     return H
 end
+
+# ---------------------------------------------------------------------------------------- #
+# extend `isspinful` for composite tight-binding model types (for instances: see `types.jl`)
+
+function Crystalline.isspinful(::Type{<:CompositeTightBindingModel{D, IR}}) where {D, IR}
+    return isspinful(IR)
+end
+function Crystalline.isspinful(::Type{<:ParameterizedCompositeTightBindingModel{D, CTB}}) where {D, CTB}
+    return isspinful(CTB)
+end
