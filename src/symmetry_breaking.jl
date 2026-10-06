@@ -55,7 +55,7 @@ the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) whil
 time-reversal symmetry.
 ```julia-repl
 julia> Δtbm = subduced_complement(tbm, Rs, 16; timereversal = false)
-2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
+2-term 2×2 TightBindingModel{2} (hermitian, spinless) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
 1. ⎡ -iz₁+iz̄₁-iz₂+iz̄₂+iz₃-iz̄₃  0                       ⎤
 │  ⎣ 0                         iz₁-iz̄₁+iz₂-iz̄₂-iz₃+iz̄₃ ⎦

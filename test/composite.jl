@@ -148,7 +148,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
     @testset "Show methods" begin
         test_show(repr(MIME"text/plain"(), ctbm),
         """
-        (5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′), where zᵢ=exp(-2πik·δᵢ):
+        (5+1)-term 2×2 CompositeTightBindingModel{1} (spinless) over (1b|A′)⊕(1a|A′), where zᵢ=exp(-2πik·δᵢ):
         ┌─ Hermitian
         1. ⎡ 1  │  0 ⎤
         │  ⎢ ───┼─── ⎥
@@ -181,12 +181,12 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         └─ (1b|A′)↔(1a|A′).  δ₁=[1/2]""")
 
         @test sprint(summary, ctbm) ==
-            "(5+1)-term 2×2 CompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′)"
+            "(5+1)-term 2×2 CompositeTightBindingModel{1} (spinless) over (1b|A′)⊕(1a|A′)"
 
         pctbm = ctbm([0.3*cospi(0.73*k) for k in 1:6])
         test_show(repr(MIME"text/plain"(), pctbm),
         """
-        (5+1)-term 2×2 ParameterizedCompositeTightBindingModel{1} over (1b|A′)⊕(1a|A′) \
+        (5+1)-term 2×2 ParameterizedCompositeTightBindingModel{1} (spinless) over (1b|A′)⊕(1a|A′) \
         with amplitudes:
          [-0.19839, -0.0376, 0.24812, -0.29057, 0.1362, 0.11044]""")
     end

@@ -68,10 +68,16 @@ end
 
 # ---------------------------------------------------------------------------------------- #
 
+# e.g., "hermitian, spinful" (cf. the spin tag of Crystalline's `AbstractSymmetryVector`s)
+function _hermiticity_spin_tag(S::Hermiticity, x)
+    return string(lowercase(string(S)), ", ", _spin_tag(x))
+end
+_spin_tag(x) = isspinful(x) ? "spinful" : "spinless"
+
 function Base.summary(io::IO, tbt::TightBindingTerm{D, S}) where {D, S}
     N = last(tbt.axis)
     print(io, N, "×", N, " TightBindingTerm{", D, "}")
-    print(io, " (", lowercase(string(S)), ")")
+    print(io, " (", _hermiticity_spin_tag(S, tbt), ")")
     N == 0 && return
     _print_tightbindingterm_bandreps(io, tbt)
 end
@@ -118,7 +124,7 @@ end
 function _summary_like(io::IO, tbm::TightBindingModel{D, S}, typename::String) where {D, S}
     N = tbm.N
     print(io, length(tbm), "-term ", N, "×", N, " ", typename, "{", D, "}")
-    print(io, " (", lowercase(string(S)), ")")
+    print(io, " (", _hermiticity_spin_tag(S, tbm), ")")
     (N == 0 || length(tbm) == 0) && return
     brs = first(tbm).brs
     print(io, " over ")
@@ -134,6 +140,7 @@ function _summary_like(io::IO, ctbm::CompositeTightBindingModel{D}, typename::St
     print(io, "+")
     printstyled(io, length(tbm_a); color=ANTIHERMITIAN_COLOR)
     print(io, ")-term ", N, "×", N, " ", typename, "{", D, "}")
+    print(io, " (", _spin_tag(ctbm), ")")
     (N == 0 || (length(tbm_h) == 0 && length(tbm_a) == 0)) && return
     brs = first(tbm_h).brs
     print(io, " over ")
@@ -264,7 +271,7 @@ function Base.show(io::IO, cache::TightBindingCache{D}) where D
     S = hermiticity(cache)
     print(io,
         length(cache.tbm), "-term ", N, "×", N,
-        " TightBindingCache{", D, ", …} (", lowercase(string(S)), ") ",
+        " TightBindingCache{", D, ", …} (", _hermiticity_spin_tag(S, cache.tbm), ") ",
         "over ", Nᵏ, " k-point", Nᵏ == 1 ? "" : "s",
     )
 end

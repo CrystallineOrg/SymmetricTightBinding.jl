@@ -53,13 +53,13 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
     @testset "TightBindingTerm" begin
         str = """
-        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+        2×2 TightBindingTerm{2} (hermitian, spinless) over [(2b|A₁)]:
          1  0
          0  1"""
         test_tp_show(tbm[1], str)
 
         str = """
-        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+        2×2 TightBindingTerm{2} (hermitian, spinless) over [(2b|A₁)]:
          0         z̄₁+z̄₂+z₃
          z₁+z₂+z̄₃  0       
         zᵢ=exp(-2πik·δᵢ): δ₁=[1/3,-1/3], δ₂=[1/3,2/3], δ₃=[2/3,1/3]"""
@@ -68,7 +68,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
     @testset "TightBindingModel" begin
         str = """
-        2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
+        2-term 2×2 TightBindingModel{2} (hermitian, spinless) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
         ┌─
         1. ⎡ 1  0 ⎤
         │  ⎣ 0  1 ⎦
@@ -82,7 +82,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         # the `zᵢ` key is omitted entirely if every term is a zero-δ on-site term
         cbr⁰ = @composite brs[end] # (1a|E₁)
         str = """
-        1-term 2×2 TightBindingModel{2} (hermitian) over (1a|E₁):
+        1-term 2×2 TightBindingModel{2} (hermitian, spinless) over (1a|E₁):
         ┌─
         1. ⎡ 1  0 ⎤
         │  ⎣ 0  1 ⎦
@@ -100,7 +100,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         # now listed by its sign-preferred element; unsorted, this read as the sign-mixed
         # `δ₁=[-1,0], δ₂=[0,-1], δ₃=[1,1]`
         str = """
-        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+        2×2 TightBindingTerm{2} (hermitian, spinless) over [(2b|A₁)]:
          z₁+z̄₁+z₂+z̄₂+z₃+z̄₃  0                
          0                  z₁+z̄₁+z₂+z̄₂+z₃+z̄₃
         zᵢ=exp(-2πik·δᵢ): δ₁=[1,0], δ₂=[0,1], δ₃=[1,1]"""
@@ -110,7 +110,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
         # sorting makes the printed indices contiguous, where they previously skipped from
         # `δ₁, δ₂, δ₃` to `δ₇, δ₈, δ₉`
         str = """
-        2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]:
+        2×2 TightBindingTerm{2} (hermitian, spinless) over [(2b|A₁)]:
          0                  z̄₁+z̄₂+z₃+z̄₄+z₅+z̄₆
          z₁+z₂+z̄₃+z₄+z̄₅+z₆  0                
         zᵢ=exp(-2πik·δᵢ): δ₁=[4/3,-1/3], δ₂=[1/3,5/3], δ₃=[5/3,4/3], δ₄=[1/3,-4/3], δ₅=[5/3,1/3], δ₆=[4/3,5/3]"""
@@ -137,7 +137,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
     @testset "ParameterizedTightBindingModel" begin
         str = """
-        2-term 2×2 ParameterizedTightBindingModel{2} (hermitian) over (2b|A₁) with amplitudes:
+        2-term 2×2 ParameterizedTightBindingModel{2} (hermitian, spinless) over (2b|A₁) with amplitudes:
          [0, 1.0]"""
         test_tp_show(ptbm, str)
     end
@@ -145,7 +145,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
     @testset "TightBindingCache" begin
         cache = TightBindingCache(tbm, [[0.0, 0.0], [1/2, 0.0]])
         test_show(sprint(show, cache),
-                  "2-term 2×2 TightBindingCache{2, …} (hermitian) over 2 k-points")
+                  "2-term 2×2 TightBindingCache{2, …} (hermitian, spinless) over 2 k-points")
 
         # `show` is defined for the 2-argument form, so the "text/plain" MIME rendering used
         # by the REPL falls back to it rather than needing a method of its own
@@ -153,7 +153,7 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
         cache¹ = TightBindingCache(tbm, [[0.0, 0.0]])
         test_show(sprint(show, cache¹),
-                  "2-term 2×2 TightBindingCache{2, …} (hermitian) over 1 k-point") # singular
+                  "2-term 2×2 TightBindingCache{2, …} (hermitian, spinless) over 1 k-point") # singular
     end
 
     @testset "TightBindingElementString" begin
@@ -166,10 +166,19 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
     @testset "summary" begin
         test_show(sprint(summary, tbm),
-                  "2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁)")
+                  "2-term 2×2 TightBindingModel{2} (hermitian, spinless) over (2b|A₁)")
         test_show(sprint(summary, ptbm),
-                  "2-term 2×2 ParameterizedTightBindingModel{2} (hermitian) over (2b|A₁)")
+                  "2-term 2×2 ParameterizedTightBindingModel{2} (hermitian, spinless) over (2b|A₁)")
         test_show(sprint(summary, tbm[1]),
-                  "2×2 TightBindingTerm{2} (hermitian) over [(2b|A₁)]")
+                  "2×2 TightBindingTerm{2} (hermitian, spinless) over [(2b|A₁)]")
+
+        # spinful models are tagged as such
+        brsˢ = bandreps(2; spinful = Val(true))
+        cbrˢ = @composite brsˢ[1]
+        tbmˢ = tb_hamiltonian(cbrˢ, [[0,0,0]])
+        test_show(sprint(summary, tbmˢ),
+                  "1-term 2×2 TightBindingModel{3} (hermitian, spinful) over (1h|AᵤˢAᵤˢ)")
+        test_show(sprint(summary, tbmˢ + tb_hamiltonian(cbrˢ, [[0,0,0]], Val(ANTIHERMITIAN))),
+                  "(1+3)-term 2×2 CompositeTightBindingModel{3} (spinful) over (1h|AᵤˢAᵤˢ)")
     end
 end
