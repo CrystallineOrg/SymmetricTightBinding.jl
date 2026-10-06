@@ -98,14 +98,17 @@ function _apply_across_matrix_blocks_of_composite_bandrep(
     return ρ
 end
 
-@inline function _check_operation_spin(br, op)
-    isspinful(br) == isspinful(op) && return nothing
-    if isspinful(br)
-        error(lazy"a spinful band representation requires a double group operation (`DSymOperation`): got a `$(typeof(op))`")
+# check that `x` (e.g., a `BandRep`, `TightBindingModel`, `AbstractIrrep`, or `AbstractGroup`)
+# and the operation(s) `op` agree on `isspinful`; error otherwise
+@inline function _check_operation_spin(x, op::AbstractOperation)
+    isspinful(x) == isspinful(op) && return nothing
+    if isspinful(x)
+        error(lazy"a spinful setting requires a double group operation (`DSymOperation`): got a `$(typeof(op))`")
     else
-        error(lazy"a spinless band representation requires a spinless operation (`SymOperation`): got a `$(typeof(op))`")
+        error(lazy"a spinless setting requires a spinless operation (`SymOperation`): got a `$(typeof(op))`")
     end
 end
+_check_operation_spin(x, ops::AbstractVector{<:AbstractOperation}) = _check_operation_spin(x, first(ops))
 
 # ---------------------------------------------------------------------------------------- #
 # Site-induced symmetry representation matrix _with_ phase factors
