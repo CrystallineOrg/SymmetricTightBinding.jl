@@ -510,7 +510,7 @@ function construct_M_matrix(
     br1::BandRep{D},
     br2::BandRep{D},
     ordering1::OrbitalOrdering{D} = OrbitalOrdering(br1), # canonical orbital orderings for
-    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2),  # `br1` & `br2`, respectively
+    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2), # `br1` & `br2`, respectively
 ) where {D}
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (assumed constant for all i)

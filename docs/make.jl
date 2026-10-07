@@ -34,6 +34,7 @@ makedocs(;
         "Density of states" => "dos.md",
         "Symmetry breaking" => "symmetry-breaking.md",
         "Non-Hermitian models" => "nonhermitian.md",
+        "Spinful models" => "spinful.md",
         "Fitting to band structures" => "fitting.md",
         "API" => "api.md",
         "Internal API" => "internal-api.md",
