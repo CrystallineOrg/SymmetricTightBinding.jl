@@ -268,7 +268,7 @@ julia> tbm = tb_hamiltonian(cbr);
 julia> Random.seed!(123);
 
 julia> ptbm_r = tbm(randn(length(tbm)))
-4-term 6×6 ParameterizedTightBindingModel{3} (hermitian) over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
+4-term 6×6 ParameterizedTightBindingModel{3} (hermitian, spinless) over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
  [-0.64573, -1.4633, -1.6236, -0.21767]
 
 julia> kp = irrfbz_path(sgnum, directbasis(sgnum, Val(3)));
@@ -278,7 +278,7 @@ julia> ks = interpolate(kp, 10);
 julia> Em_r = spectrum(ptbm_r, ks);
 
 julia> ptbm_fit = fit(tbm, Em_r, ks)
-4-term 6×6 ParameterizedTightBindingModel{3} (hermitian) over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
+4-term 6×6 ParameterizedTightBindingModel{3} (hermitian, spinless) over (3d|A₁g)⊕(3d|B₂g) with amplitudes:
  [-0.64573, -1.4633, -1.6236, -0.21767]
 
 julia> ptbm_fit.cs ≈ ptbm_r.cs

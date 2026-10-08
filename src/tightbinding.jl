@@ -43,10 +43,8 @@ function obtain_symmetry_related_hoppings(
                                # related by Hermitcity (but don't merge them)
 ) where {V <: Union{AbstractVector{<:Integer}, RVec{D}}} where {D}
     sgnum = num(brₐ)
-    num(brᵦ) == sgnum ||
-        error("both band representations must belong to the same space group")
-    brₐ.timereversal == brᵦ.timereversal ||
-        error("input band representations must have identical time-reversal symmetry")
+    num(brᵦ) == sgnum || error("input `BandRep`s must belong to the same space group")
+    brₐ.timereversal == brᵦ.timereversal || error("input `BandRep`s must have the same time-reversal symmetry")
 
     # we only want to include the Wyckoff positions in the primitive cell - but the default
     # listings from `spacegroup` include operations that are "centering translations";
@@ -512,7 +510,7 @@ function construct_M_matrix(
     br1::BandRep{D},
     br2::BandRep{D},
     ordering1::OrbitalOrdering{D} = OrbitalOrdering(br1), # canonical orbital orderings for
-    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2),  # `br1` & `br2`, respectively
+    ordering2::OrbitalOrdering{D} = OrbitalOrdering(br2), # `br1` & `br2`, respectively
 ) where {D}
     V = length(orbit(h_orbit))
     E = length(first(h_orbit.hoppings)) # number of hopping terms per δᵢ (assumed constant for all i)
@@ -572,7 +570,7 @@ function representation_constraint_matrices(
     Mm::AbstractArray{Int, 4},
     brₐ::BandRep{D},
     brᵦ::BandRep{D},
-    gens::AbstractVector{SymOperation{D}},
+    gens::AbstractVector{<:AbstractOperation{D}},
 ) where {D}
     ρsₐₐ = sgrep_induced_by_siteir_excl_phase.(Ref(brₐ), gens)
     ρsᵦᵦ = sgrep_induced_by_siteir_excl_phase.(Ref(brᵦ), gens)
@@ -622,17 +620,13 @@ function obtain_basis_free_parameters(
     diagonal_block::Bool = true,
     hermiticity::Hermiticity = HERMITIAN,
 ) where {D}
-    # obtain the needed representations over the generators of each bandrep
-    gensₐ = generators(num(brₐ), SpaceGroup{D})
-    gensᵦ = generators(num(brᵦ), SpaceGroup{D})
-    @assert gensₐ == gensᵦ # must be from same space group and in same sorting
-    brₐ.timereversal == brᵦ.timereversal ||
-        error("input band representations must have identical time-reversal symmetry")
+    num(brₐ) == num(brᵦ) || error("input `BandRep`s must come from the same space group")
+    brₐ.timereversal == brᵦ.timereversal || error("input `BandRep`s must have identical time-reversal symmetry")
     timereversal = brₐ.timereversal
 
-    # cast generators to primitive basis
-    cntr = centering(num(brₐ), D)
-    gens = cntr ∈ ('P', 'p') ? gensₐ : primitivize.(gensₐ, cntr)
+    # generators in a primitive basis (double group generators, for spinful band
+    # representations)
+    gens = primitivized_generators(brₐ)
 
     # encode Hamiltonian as a coefficient matrix sandwiched by exponentials & hopping ampl.
     Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
@@ -661,7 +655,7 @@ function _obtain_basis_free_parameters(
     orderingₐ::OrbitalOrdering{D},
     orderingᵦ::OrbitalOrdering{D},
     Mm::Array{Int, 4},
-    gens::AbstractVector{SymOperation{D}},
+    gens::AbstractVector{<:AbstractOperation{D}},
     timereversal::Bool,
     diagonal_block::Bool,
     hermiticity::Hermiticity,
@@ -876,7 +870,7 @@ end
 """
     reciprocal_constraints_matrices(
         Mm::AbstractArray{Int,4}, 
-        gens::AbstractVector{SymOperation{D}}, 
+        gens::AbstractVector{<:AbstractOperation{D}},
         h_orbit::HoppingOrbit{D}
     ) --> Vector{Array{Int,4}}
 
@@ -887,7 +881,7 @@ See more details in
 """
 function reciprocal_constraints_matrices(
     Mm::AbstractArray{Int, 4},
-    gens::AbstractVector{SymOperation{D}},
+    gens::AbstractVector{<:AbstractOperation{D}},
     h_orbit::HoppingOrbit{D},
 ) where {D}
     Zs = Vector{Array{Int, 4}}(undef, length(gens))
@@ -927,7 +921,7 @@ we need to use the inverse of the rotation part of the symmetry operation.
 """
 function _permute_symmetry_related_hoppings_under_symmetry_operation(
     h_orbit::HoppingOrbit{D},
-    op::SymOperation{D},
+    op::AbstractOperation{D}, # only the rotation part is used
 ) where {D}
     # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
     # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
@@ -1026,20 +1020,30 @@ not type-stable.
 For `NONHERMITIAN` models, `Rs` is interpreted to also include `-Rs`: this ensures that the
 returned hopping terms always feature "both sides" of Hermiticity-related pairs of terms.
 
+Both spinless (single-valued) and spinful (double-valued) models are supported; the choice
+follows directly from the spin properties of `cbr` (a spinful model can be built from
+`bandreps(sgnum; spinful = Val(true))`).
+
 The returned [`TightBindingModel`](@ref) will generally feature several terms (iterating to
 [`TightBindingTerm`](@ref)s), each representing a tight-binding term that is closed under
 the symmetry operations of the underlying space group.
+
+## Kramers partners in time-reversal symmetric spinful settings
+
+For spinful models with time-reversal symmetry, the model follows Crystalline.jl convention
+for the unitary part of time reversal (iσʸK, see Crystalline's `timereversal_unitary`):
+orbitals `i` and `i+n` of a site (i.e., a block of the resulting Hamiltonian) with a
+`2n`-dimensional site irrep are Kramers partners (i.e., time-reversal conjugate states).
+Thus, time reversal acts on each pair (`i`, `i+n`) exactly as on the spin-up and -down
+states of a spin-½ (i.e., as iσʸK). The pair can therefore be thought of as |↑⟩ and |↓⟩
+pseudospin states; if the site orbitals carry no intrinsic spin-orbit coupling, this is
+just the electron's spin.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D, IR, SIR},
     Rs::AbstractVector{<:AbstractVector{Int}} = [zeros(Int, D)], # "global" hopping translation-representatives
     Sᵛ::Val{S} = Val(HERMITIAN),
 ) where {D, S, IR, SIR}
-    if isspinful(cbr)
-        error("spinful (double-valued) band representations are not yet supported: time \
-               reversal squares to -1 for them, which the construction of the hopping \
-               terms does not yet account for")
-    end
     if any(c -> !isinteger(c) || c < 0, cbr.coefs)
         error("the input composite band representation does not have a symmetric \
                tight-binding model: its expansion in EBRs contain negative or \

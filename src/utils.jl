@@ -163,6 +163,47 @@ function primitivized_orbit(br::BandRep{D}) where D
     return wps′_pts
 end
 
+"""
+    primitivized_generators(br::BandRep{D}) --> Vector{<:AbstractOperation{D}}
+    primitivized_generators(gens::AbstractVector{<:AbstractOperation{D}}, sgnum::Integer)
+
+Return the generators of the space group of `br` in a *primitive* basis; or, alternatively,
+the generators `gens`, given in the *conventional* basis of the space group `sgnum`.
+
+Ē (the barred identity, i.e., a 2π rotation) is omitted from double group generators: it
+imposes no constraint on a tight-binding model, since its representation is `-𝟙` (which
+cancels in `ρ M ρ†`) and it leaves **k** invariant.
+
+See also Crystalline.jl's `generators` function, which returns the generators in a
+*conventional* basis.
+"""
+function primitivized_generators(br::BandRep{D}) where D
+    sgnum = num(br)
+    gens = generators(sgnum, isspinful(br) ? DSpaceGroup{D} : SpaceGroup{D})
+    return primitivized_generators!(gens, sgnum)
+end
+function primitivized_generators(
+    gens::AbstractVector{<:AbstractOperation{D}}, sgnum::Integer
+) where D
+    primitivized_generators!(copy(gens), sgnum)
+end
+
+"""
+    primitivized_generators!(gens::AbstractVector{<:AbstractOperation{D}}, sgnum::Integer)
+
+In-place version of [`primitivized_generators(gens, sgnum)`](@ref), mutating and returning
+`gens`.
+"""
+function primitivized_generators!(
+    gens::AbstractVector{O}, sgnum::Integer
+) where {D, O<:AbstractOperation{D}}
+    if isspinful(O)
+        gens = filter!(g -> !(isbarred(g) && isone(SymOperation(g))), gens) # omit Ē
+    end
+    cntr = centering(sgnum, D)
+    return cntr ∈ ('P', 'p') ? gens : map!(Base.Fix2(primitivize, cntr), gens)
+end
+
 # ---------------------------------------------------------------------------------------- #
 
 """
@@ -230,7 +271,7 @@ function pin_free(br::BandRep{D}, αβγ::AbstractVector{<:Real}) where D
 
     siteir = br.siteir
     siteg = group(siteir)
-    siteg_pin = SiteGroup{D}(siteg.num, wp_pin, siteg.operations, siteg.cosets)
+    siteg_pin = typeof(siteg)(siteg.num, wp_pin, siteg.operations, siteg.cosets)
 
     # if the Wyckoff position that was picked is not in the primitive unit cell - or even if
     # a position in its orbit is not - we need to adjust the Wyckoff positions to lie inside
@@ -247,7 +288,7 @@ function pin_free(br::BandRep{D}, αβγ::AbstractVector{<:Real}) where D
         siteg_pin, _ = Crystalline.reduce_orbits_and_cosets(siteg_pin)
     end
 
-    siteir_pin = SiteIrrep{D}(
+    siteir_pin = typeof(siteir)(
         siteir.cdml,
         siteg_pin,
         siteir.matrices,

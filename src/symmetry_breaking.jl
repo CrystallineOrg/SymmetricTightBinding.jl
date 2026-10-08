@@ -55,7 +55,7 @@ the symmetry from plane group ⋕17 to ⋕16 (which has no mirror symmetry) whil
 time-reversal symmetry.
 ```julia-repl
 julia> Δtbm = subduced_complement(tbm, Rs, 16; timereversal = false)
-2-term 2×2 TightBindingModel{2} (hermitian) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
+2-term 2×2 TightBindingModel{2} (hermitian, spinless) over (2b|A₁), where zᵢ=exp(-2πik·δᵢ):
 ┌─
 1. ⎡ -iz₁+iz̄₁-iz₂+iz̄₂+iz₃-iz̄₃  0                       ⎤
 │  ⎣ 0                         iz₁-iz̄₁+iz₂-iz̄₂-iz₃+iz̄₃ ⎦
@@ -113,6 +113,12 @@ function subduced_complement(
 
     _gensᴴ = generators(sgnumᴴ, SpaceGroup{D}) # in H setting
     gensᴴ = transform.(_gensᴴ, Ref(Pᴴ²ᴳ), Ref(pᴴ²ᴳ))
+    if isspinful(tbm)
+        # attach the SU(2) elements of G's setting; transforming H's double group generators
+        # instead would keep the SU(2) elements of H's setting (cf. Crystalline's `SU2`)
+        # (Ē, the only extra generator of H's double group, imposes no constraint)
+        gensᴴ = [DSymOperation{D}(g, SU2(g, sgnumᴳ)) for g in gensᴴ]
+    end
 
     return _subduced_complement(tbm, Rs, gensᴴ; kws...)
 end
@@ -121,7 +127,7 @@ end
     _subduced_complement(
         tbm::TightBindingModel{D},
         Rs,
-        gensᴴ::AbstractVector{SymOperation{D}};
+        gensᴴ::AbstractVector{<:AbstractOperation{D}};
         timereversal::Bool
     ) where D --> TightBindingModel{D}
 
@@ -133,6 +139,9 @@ the setting of `tbm`); they are converted to the primitive setting internally. T
 the method is not part of the public API: obtaining `gensᴴ` in G's setting requires the
 transformation dance of the `sgnumᴴ` method, which is not reasonable to ask of a caller.
 
+For spinful models, ``G`` and ``H`` refer to the double group, and `gensᴴ` must accordingly
+be double group operations (`DSymOperation`).
+
 !!! warning
     This function is an internal helper function for `subduced_complement` and is not part
     of the public API.
@@ -140,9 +149,10 @@ transformation dance of the `sgnumᴴ` method, which is not reasonable to ask of
 function _subduced_complement(
     tbm::TightBindingModel{D, S, IR, SIR},
     Rs::AbstractVector{<:AbstractVector{<:Integer}},
-    gensᴴ::AbstractVector{SymOperation{D}};
+    gensᴴ::AbstractVector{<:AbstractOperation{D}};
     timereversal::Bool = first(tbm.cbr.brs).timereversal, # ← whether H has time-reversal
 ) where {D, S, IR, SIR}
+    _check_operation_spin(tbm, gensᴴ) # check `tbm` & `gensᴴ` have equal `isspinful`
     timereversalᴳ = first(tbm.cbr.brs).timereversal
     if timereversalᴳ == false && timereversal == true
         error(
@@ -160,8 +170,7 @@ function _subduced_complement(
     # setting of G: convert, lest we compare conventional-setting operations against the
     # primitivized site symmetry groups of `sgrep_induced_by_siteir` (which finds no
     # matching coset and errors out)
-    cntr = centering(sgnumᴳ, D)
-    gensᴴ′ = cntr ∈ ('P', 'p') ? gensᴴ : primitivize.(gensᴴ, cntr)
+    gensᴴ′ = primitivized_generators(gensᴴ, sgnumᴳ)
 
     # each `tbm[i]` term lives in one block of the Hamiltonian and on one hopping orbit; 
     # each such (block, orbit) pair has its own coefficient basis, so we compute the
@@ -302,20 +311,24 @@ function _subduced_complement(
 end
 
 """
-    _issubgroup(gensᴴ::AbstractVector{SymOperation{D}}, sgnumᴳ::Int)  --> Bool
+    _issubgroup(gensᴴ::AbstractVector{<:AbstractOperation{D}}, sgnumᴳ::Int)  --> Bool
 
 Return whether every operation of `gensᴴ` is an operation of the space group `sgnumᴳ` (up to
 lattice translations), i.e., whether `gensᴴ` generates a subgroup ``H ≤ G``.
 
-`gensᴴ` is assumed given in the conventional setting of ``G``.
+`gensᴴ` is assumed given in the conventional setting of ``G``. For double group operations
+(`DSymOperation`s), the comparison is with the double group of ``G``, including its SU(2)
+elements.
 
 !!! warning
     This function is an internal helper function for `subduced_complement` and is not part
     of the public API.
 """
-function _issubgroup(gensᴴ::AbstractVector{SymOperation{D}}, sgnumᴳ::Int) where {D}
+function _issubgroup(
+    gensᴴ::AbstractVector{O}, sgnumᴳ::Int
+) where {D, O<:AbstractOperation{D}}
     cntr = centering(sgnumᴳ, D)
-    opsᴳ = spacegroup(sgnumᴳ, Val(D))
+    opsᴳ = spacegroup(sgnumᴳ, Val(D); spinful = Val(isspinful(O)))
     return all(opᴴ -> any(opᴳ -> isapprox(opᴳ, opᴴ, cntr), opsᴳ), gensᴴ)
 end
 

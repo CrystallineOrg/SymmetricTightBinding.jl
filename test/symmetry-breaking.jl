@@ -269,5 +269,62 @@ using Crystalline
         @test !_issubgroup([S"-y,x+y"], 11) # 6⁺ ∉ p4mm
         @test length(_subduced_complement(tbm, Rs, [S"y,x"])) isa Int
         @test_throws AssertionError _subduced_complement(tbm, Rs, [S"-y,x+y"])
+
+        # for double group operations, the SU(2) elements are checked as well
+        g = S"x,-y,-z" # 2₁₀₀ ∈ Pmmm (⋕47)
+        @test _issubgroup([DSymOperation{3}(g, SU2(g, 47))], 47)
+        @test !_issubgroup([DSymOperation{3}(g, one(SU2))], 47)
+    end
+
+    @testset "spinful models" begin
+        # completeness: breaking time-reversal in P-1 gives as many terms as building the
+        # model without time-reversal from the start; the Kramers pair (1h|AᵤˢAᵤˢ) splits
+        # into two copies of (1h|Aᵤˢ) without time-reversal
+        Rs1 = [[0,0,0], [1,0,0], [0,1,0], [0,0,1]]
+        brs = bandreps(2; spinful = Val(true), timereversal = true)
+        tbm = tb_hamiltonian((@composite brs[1]), Rs1) # (1h|AᵤˢAᵤˢ)
+        Δtbm = subduced_complement(tbm, Rs1, 2; timereversal = false)
+        brs′ = bandreps(2; spinful = Val(true), timereversal = false)
+        @test string(brs[1]) == "(1h|AᵤˢAᵤˢ)" && string(brs′[1]) == "(1h|Aᵤˢ)"
+        @test length(tb_hamiltonian((@composite 2brs′[1]), Rs1)) ==
+              length(tbm) + length(Δtbm)
+
+        # spinful models require double group operations (and vice versa)
+        @test_throws "requires a double group operation" _subduced_complement(tbm, Rs1, [S"-x,-y,-z"])
+
+        # the full model `vcat(tbm, Δtbm)` is symmetric under exactly the operations of H's
+        # double group (among those of G's), and remains time-reversal symmetric
+        ks = [ReciprocalPoint(0.13, 0.27, 0.19), ReciprocalPoint(0.31, -0.07, 0.44)]
+        Rs0 = [[0,0,0], [1,0,0]]
+        for (sgnumᴳ, sgnumᴴ, idxs, Rs) in (
+                (191, 183, [1],    Rs0),        # P6/mmm → P6mm: hexagonal
+                (225, 216, [1],    [[0,0,0]]),  # Fm-3m → F-43m: F centring (24d: on-site
+                                                #   only, since longer range is slow)
+                (47,  25,  [1, 2], Rs0))        # Pmmm → Pmm2: composite
+            brs = bandreps(sgnumᴳ; spinful = Val(true), timereversal = true)
+            cbr = CompositeBandRep([count(==(n), idxs) for n in eachindex(brs)], brs)
+            tbm = tb_hamiltonian(cbr, Rs)
+            Δtbm = subduced_complement(tbm, Rs, sgnumᴴ)
+            @test length(Δtbm) > 0
+            tbm′ = vcat(tbm, Δtbm)
+            ptbm′ = tbm′([0.3*cospi(0.73*n) for n in 1:length(tbm′)])
+            opsᴳ = primitivize(spacegroup(sgnumᴳ, Val(3); spinful = Val(true)))
+            nopsᴴ = length(primitivize(spacegroup(sgnumᴴ, Val(3); spinful = Val(true))))
+            Γ = SymmetricTightBinding.site_induced_timereversal_unitary(tbm′.cbr)
+            preserved = map(opsᴳ) do g
+                all(ks) do k
+                    Hk = copy(ptbm′(k))
+                    D = sgrep_induced_by_siteir(ptbm′, g)(k)
+                    isapprox(ptbm′(g * k), D * Hk * D'; atol = 1e-10)
+                end
+            end
+            @test count(preserved) == nopsᴴ
+            @test all(ks) do k
+                Hk = copy(ptbm′(k))
+                isapprox(ptbm′(-k), Γ * conj(Hk) * Γ'; atol = 1e-10)
+            end
+            # having added the complement, there is nothing further to find in H
+            @test length(subduced_complement(tbm′, Rs, sgnumᴴ)) == 0
+        end
     end
 end

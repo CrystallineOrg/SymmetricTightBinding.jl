@@ -106,6 +106,7 @@ test/
   composite.jl              # composite HERMITIAN ⊕ ANTIHERMITIAN model tests
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
+  spinful.jl                # spinful (double group) models, with and without time-reversal
   misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough
@@ -113,6 +114,7 @@ docs/src/
   band-symmetry.md          # symmetry analysis example
   symmetry-breaking.md      # symmetry reduction example
   berry.md                  # Haldane model, Chern numbers
+  spinful.md                # spinful models: Kramers partners, time-reversal convention, Kane–Mele graphene
   devdocs/
     README.md               # index of developer docs
     trs_notes.md            # co-representation theory, TRS quantization, realification
@@ -201,6 +203,10 @@ analysis fix). Remaining: Phase 5 (refactoring).
 
 - **`ptbm(k)` returns mutable scratch:** `ParameterizedTightBindingModel` reuses an internal
   buffer. When comparing evaluations at different k-points, `copy()` the result.
+- **Spinful orbital order:** site-major, as for spinless models; within a site with a
+  `2n`-dimensional site irrep, orbitals `i` and `i+n` are Kramers partners (time reversal acts
+  as `𝟙_sites ⊗ iσʸ ⊗ 𝟙ₙ` times `K`). The pseudospin frames of different sites are related by
+  the SU(2) elements of the coset representatives, so they need not share a spin axis.
 - **`@composite` macro hygiene:** The `@composite` macro evaluates in Crystalline's module
   scope, so loop variables are not visible. Use `CompositeBandRep(coefs, brs)` constructor
   in programmatic contexts (loops, comprehensions).
