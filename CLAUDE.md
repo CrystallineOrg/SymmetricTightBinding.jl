@@ -47,7 +47,7 @@ hopping ranges, the package:
   Gilat–Raubenheimer (`src/dos.jl`); per-unit-cell normalized (∫g dE = #bands); `D ∈ {1,2,3}`
 - `gradient_wrt_hopping` / `gradient_wrt_momentum` / `energy_gradient_wrt_hopping` /
   `energy_gradient_wrt_momentum` (group velocity ∇ₖEₙ via Feynman–Hellmann, degenerate-aware) (`src/gradients.jl`)
-- `subduced_complement(tbm, sgnum_H)` — new terms from symmetry breaking (`src/symmetry_breaking.jl`)
+- `subduced_complement(tbm, Rs, sgnum_H)` — new terms from symmetry breaking (`src/symmetry_breaking.jl`)
 
 ### Utilities
 - `pin_free!(brs, idx2abc)` — fix free Wyckoff parameters (`src/utils.jl`)
