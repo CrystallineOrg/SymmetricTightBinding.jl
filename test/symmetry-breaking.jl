@@ -1,7 +1,6 @@
 using Test
 using SymmetricTightBinding
-using SymmetricTightBinding: _group_terms_by_block_and_orbit, _subduced_complement,
-                             _issubgroup
+using SymmetricTightBinding: _subduced_complement, _issubgroup, _subduction_groups
 using Crystalline
 
 @testset "Symmetry breaking" begin
@@ -9,38 +8,27 @@ using Crystalline
         D = 2
         brs = bandreps(11, Val(D); timereversal = true)
         cbr = @composite brs[1] # (2c|A₁)
-        tbm = tb_hamiltonian(cbr, [[0,0], [1,0]])
+        Rs = [[0,0], [1,0]]
+        tbm = tb_hamiltonian(cbr, Rs)
         
-        Δtbm_m   = subduced_complement(tbm, 10)                       # break mirror
-        Δtbm_tr  = subduced_complement(tbm, 11; timereversal = false) # break TR
-        Δtbm_mtr = subduced_complement(tbm, 10; timereversal = false) # break both
+        Δtbm_C4  = subduced_complement(tbm, Rs, 6)                        # break C₄
+        Δtbm_m   = subduced_complement(tbm, Rs, 10)                       # break mirror
+        Δtbm_tr  = subduced_complement(tbm, Rs, 11; timereversal = false) # break TR
+        Δtbm_mtr = subduced_complement(tbm, Rs, 10; timereversal = false) # break both
+        @test length(Δtbm_C4) == 4
         @test length(Δtbm_m) == 1
         @test length(Δtbm_tr) == 1
         @test length(Δtbm_mtr) == 4
         
-        # restrict to simpler terms (tbm[5] = complicated diagonally-directed hopping term)
-        tbm′ = tbm[1:4] 
-        Δtbm′_m   = subduced_complement(tbm′, 10)                       # break mirror
-        Δtbm′_tr  = subduced_complement(tbm′, 11; timereversal = false) # break TR
-        Δtbm′_mtr = subduced_complement(tbm′, 10; timereversal = false) # break both
-        @test length(Δtbm′_m) == 0
-        @test length(Δtbm′_tr) == 0
-        @test length(Δtbm′_mtr) == 1
-
-        Δtbm′_C4 = subduced_complement(tbm′, 6)               # break C₄
-        @test length(Δtbm′_C4) == 3
-        Δtbm_diagonal_term = subduced_complement(tbm[5:5], 6) # break C₄ (diagonal term only)
-        @test length(Δtbm_diagonal_term) == 1
-        
-        # adding more orbits, we find a simple mirror-breaking term, but not a TR-breaking
-        tbm_big_full = tb_hamiltonian(cbr, [[0,0], [1,0], [1,1]])
-        tbm_big = tbm_big_full[[1:4...,6]] # drop complicated diagonally-directed term again
-        Δtbm_big_m   = subduced_complement(tbm_big, 10)                       # break mirror
-        Δtbm_big_tr  = subduced_complement(tbm_big, 11; timereversal = false) # break TR
-        Δtbm_big_mtr = subduced_complement(tbm_big, 10; timereversal = false) # break both
-        @test length(Δtbm_big_m) == 1
-        @test length(Δtbm_big_tr) == 0
-        @test length(Δtbm_big_mtr) == 2
+        # adding more orbits, we find another mirror-breaking term, but no TR-breaking one
+        Rs_big = [[0,0], [1,0], [1,1]]
+        tbm_big = tb_hamiltonian(cbr, Rs_big)
+        Δtbm_big_m   = subduced_complement(tbm_big, Rs_big, 10)                       # break mirror
+        Δtbm_big_tr  = subduced_complement(tbm_big, Rs_big, 11; timereversal = false) # break TR
+        Δtbm_big_mtr = subduced_complement(tbm_big, Rs_big, 10; timereversal = false) # break both
+        @test length(Δtbm_big_m) == 2
+        @test length(Δtbm_big_tr) == 1
+        @test length(Δtbm_big_mtr) == 5
         @test issubset(Δtbm_big_m, Δtbm_big_mtr) # must subset eachother
 
         # breaking mirror and TR symmetry together should give the same basis as starting
@@ -53,9 +41,8 @@ using Crystalline
         # (⋆): must add [0,1] also, cf. diagonally-directed hopping term involving both 
         # [1,0] and [0,1] in C₄ setting
 
-        tbm10_big = tb_hamiltonian(cbr10, [[0,0], [1,0], [1,1]])
-        Δtbm_big_full_mtr = subduced_complement(tbm_big_full, 10; timereversal = false)
-        @test length(tbm10_big) == length(tbm_big_full) + length(Δtbm_big_full_mtr)
+        tbm10_big = tb_hamiltonian(cbr10, Rs_big)
+        @test length(tbm10_big) == length(tbm_big) + length(Δtbm_big_mtr)
     end
 
     @testset "3D example" begin
@@ -63,17 +50,19 @@ using Crystalline
         # without erroring
         brs = bandreps(16, Val(3); timereversal = true)
         cbr = @composite brs[1] + brs[end] #  (1h|A) + (1a|B₂) (2 bands)
-        tbm = tb_hamiltonian(cbr, [[0,0,0],])
+        Rs = [[0,0,0],]
+        tbm = tb_hamiltonian(cbr, Rs)
 
-        @test length(subduced_complement(tbm, 3)) == 1
+        @test length(subduced_complement(tbm, Rs, 3)) == 1
     end
 
     @testset "3D example, body-centered (I) lattice" begin
         brs = bandreps(121, Val(3); timereversal = true)
         cbr = @composite brs[1] + brs[end-1] # (4d|A) + (2a|A₂) (3 bands)
-        tbm = tb_hamiltonian(cbr, [[0,0,0],])
+        Rs = [[0,0,0],]
+        tbm = tb_hamiltonian(cbr, Rs)
 
-        Δtbm = subduced_complement(tbm, 82)
+        Δtbm = subduced_complement(tbm, Rs, 82)
         @test length(Δtbm) == 2
 
         # completeness: `(4d|A)` of ⋕121 splits into `2c ⊕ 2d` in ⋕82, and `(2a|A₂)` maps
@@ -81,11 +70,11 @@ using Crystalline
         brs82 = bandreps(82, Val(3); timereversal = true)
         for (i, j, k) in Iterators.product((4, 5), (1, 2), (10, 11)) # 2c, 2d, 2a
             cbr82 = CompositeBandRep([n ∈ (i,j,k) ? 1 : 0 for n in eachindex(brs82)], brs82)
-            @test length(tb_hamiltonian(cbr82, [[0,0,0],])) == length(tbm) + length(Δtbm)
+            @test length(tb_hamiltonian(cbr82, Rs)) == length(tbm) + length(Δtbm)
         end
 
         # having added the complement, there is nothing further to find in ⋕82
-        @test length(subduced_complement(vcat(tbm, Δtbm), 82)) == 0
+        @test length(subduced_complement(vcat(tbm, Δtbm), Rs, 82)) == 0
     end
 
     @testset "composite band representations at a shared Wyckoff position" begin
@@ -95,17 +84,18 @@ using Crystalline
         brs = bandreps(47, Val(3); timereversal = true) # P4/mmm
         cbr = @composite brs[57] + brs[60] # (1a|Ag) + (1a|B₁ᵤ)
 
-        tbm = tb_hamiltonian(cbr, [[0,0,0]]) # on-site only: blocks (1,1) & (2,2), both δ=0
+        Rs₀ = [[0,0,0]]
+        tbm = tb_hamiltonian(cbr, Rs₀) # on-site only: blocks (1,1) & (2,2), both δ=0
         @test length(tbm) == 2
         # subducing to G itself, with unchanged time-reversal, must give nothing new
-        @test length(subduced_complement(tbm, 47)) == 0
-        @test length(subduced_complement(tbm, 47; timereversal = false)) == 0
+        @test length(subduced_complement(tbm, Rs₀, 47)) == 0
+        @test length(subduced_complement(tbm, Rs₀, 47; timereversal = false)) == 0
 
         Rs = [[0,0,0], [1,0,0], [0,1,0], [0,0,1]]
         tbm_nn = tb_hamiltonian(cbr, Rs)
         @test length(tbm_nn) == 9
-        @test length(subduced_complement(tbm_nn, 47)) == 0
-        Δtbm_nn = subduced_complement(tbm_nn, 47; timereversal = false)
+        @test length(subduced_complement(tbm_nn, Rs, 47)) == 0
+        Δtbm_nn = subduced_complement(tbm_nn, Rs, 47; timereversal = false)
         @test length(Δtbm_nn) == 1
 
         # the complement must be *complete*: breaking time-reversal in G should give the
@@ -127,36 +117,40 @@ using Crystalline
 
         # repeated band representations: blocks (1,1), (2,2), and (1,2) all share orbits
         cbr2 = @composite brs[57] + brs[57] # 2 × (1a|Ag)
-        tbm2 = tb_hamiltonian(cbr2, [[0,0,0], [1,0,0]])
+        Rs₁ = [[0,0,0], [1,0,0]]
+        tbm2 = tb_hamiltonian(cbr2, Rs₁)
         @test length(tbm2) == 6
-        @test length(subduced_complement(tbm2, 47)) == 0
-        @test length(subduced_complement(tbm2, 47; timereversal = false)) == 2
+        @test length(subduced_complement(tbm2, Rs₁, 47)) == 0
+        @test length(subduced_complement(tbm2, Rs₁, 47; timereversal = false)) == 2
     end
 
     @testset "term grouping" begin
         # terms sharing a coefficient basis must be grouped together regardless of whether
         # they appear contiguously in the model (models may be built by `vcat` or indexing)
         brs2d = bandreps(11, Val(2); timereversal = true)
-        tbm = tb_hamiltonian((@composite brs2d[1]), [[0,0], [1,0]])
-        @test _group_terms_by_block_and_orbit(tbm) == [[1], [2], [3, 4], [5]]
+        Rs = [[0,0], [1,0]]
+        tbm = tb_hamiltonian((@composite brs2d[1]), Rs)
+        groupidxs(tbm, Rs) = [g.idxs for g in _subduction_groups(tbm, Rs)]
+        @test groupidxs(tbm, Rs) == [[1], [2], [3, 4], [5]]
 
         p = [3, 1, 2, 4, 5] # splits the {3,4} group apart
-        @test _group_terms_by_block_and_orbit(tbm[p]) == [[1, 4], [2], [3], [5]]
+        @test groupidxs(tbm[p], Rs) == [[2], [3], [1, 4], [5]]
         for (sgnumᴴ, timereversal) in ((10, true), (6, true), (11, false), (10, false))
-            @test length(subduced_complement(tbm[p], sgnumᴴ; timereversal)) ==
-                  length(subduced_complement(tbm, sgnumᴴ; timereversal))
+            @test length(subduced_complement(tbm[p], Rs, sgnumᴴ; timereversal)) ==
+                  length(subduced_complement(tbm, Rs, sgnumᴴ; timereversal))
         end
 
         # equal-orbit terms from distinct blocks must stay in distinct groups, also when
         # they are adjacent
         brs = bandreps(47, Val(3); timereversal = true)
-        tbm2 = tb_hamiltonian((@composite brs[57] + brs[57]), [[0,0,0], [1,0,0]])
+        Rs₁ = [[0,0,0], [1,0,0]]
+        tbm2 = tb_hamiltonian((@composite brs[57] + brs[57]), Rs₁)
         q = [1, 3, 5, 2, 4, 6] # interleave, so that equal orbits become adjacent
         @test [t.block_ij for t in tbm2.terms] ==
               [(1,1), (1,1), (2,2), (2,2), (1,2), (1,2)]
-        @test _group_terms_by_block_and_orbit(tbm2[q]) == [[i] for i in 1:6]
-        @test length(subduced_complement(tbm2[q], 47; timereversal = false)) ==
-              length(subduced_complement(tbm2,    47; timereversal = false))
+        @test groupidxs(tbm2[q], Rs₁) == [[1], [4], [2], [5], [3], [6]]
+        @test length(subduced_complement(tbm2[q], Rs₁, 47; timereversal = false)) ==
+              length(subduced_complement(tbm2,    Rs₁, 47; timereversal = false))
     end
 
     @testset "centered lattices" begin
@@ -165,26 +159,115 @@ using Crystalline
         # `sgrep_induced_by_siteir` (which compares against primitivized site groups)
         brs = bandreps(12, Val(3); timereversal = true) # C2/m (C-centered)
         cbr = @composite brs[1] # (4f|Ag)
-        tbm = tb_hamiltonian(cbr, [[0,0,0], [1,0,0]])
+        Rs = [[0,0,0], [1,0,0]]
+        tbm = tb_hamiltonian(cbr, Rs)
         @test length(tbm) == 6
 
         # subducing to G itself, with unchanged time-reversal, must give nothing new
-        @test length(subduced_complement(tbm, 12)) == 0
+        @test length(subduced_complement(tbm, Rs, 12)) == 0
 
-        @test length(subduced_complement(tbm, 12; timereversal = false)) == 1 # break TR
-        @test length(subduced_complement(tbm, 5)) == 2                       # break mirror
-        @test length(subduced_complement(tbm, 8)) == 2                       # break C₂ & -1
+        @test length(subduced_complement(tbm, Rs, 12; timereversal = false)) == 1 # break TR
+        @test length(subduced_complement(tbm, Rs, 5)) == 2                       # break mirror
+        @test length(subduced_complement(tbm, Rs, 8)) == 2                       # break C₂ & -1
+    end
+
+    @testset "orbits that are empty in the parent group (issue #117)" begin
+        # a (block, orbit) pair on which *every* coefficient is forbidden in G carries no
+        # term, and so cannot be found without `Rs` - even though the symmetry reduction
+        # may be exactly what allows it
+        Rs = [[0,0,0], [1,0,0], [0,1,0], [0,0,1]]
+        brs = bandreps(47, Val(3); timereversal = true) # P4/mmm
+        cbr = @composite brs[57] + brs[60] # (1a|Ag) + (1a|B₁ᵤ): s & p_z on a shared site
+        tbm = tb_hamiltonian(cbr, Rs)
+        @test length(tbm) == 9
+
+        # the (1,2) block is forbidden on the x and y bonds in P4/mmm; dropping m_z (while
+        # keeping inversion and TR) frees the bond along the retained 2-fold axis
+        gensᴴ = [S"x,-y,-z", S"-x,-y,-z"] # 2ₓ & -1, i.e. 2/m with unique axis a
+        Δtbm = _subduced_complement(tbm, Rs, gensᴴ)
+        @test length(Δtbm) == 1
+        @test only(Δtbm).block_ij == (1, 2)
+        @test length(subduced_complement(tbm, Rs, 10)) == 1      # ⋕10 = P2/m
+
+        # completeness: the direct P2/m model over the same range has exactly one more term
+        brs10 = bandreps(10, Val(3); timereversal = true)
+        @test string.((brs10[29], brs10[32])) == ("(1a|Ag)", "(1a|Bᵤ)")
+        tbm10 = tb_hamiltonian((@composite brs10[29] + brs10[32]), Rs)
+        @test length(tbm10) == length(tbm) + length(Δtbm)
+
+        # the extended model must still be Hermitian, and have nothing further to give
+        tbm′ = vcat(tbm, Δtbm)
+        ptbm′ = tbm′(rand(length(tbm′)))
+        for k in (ReciprocalPoint(0.1, 0.2, 0.3), ReciprocalPoint(0.5, 0.0, 0.25))
+            @test ptbm′(k) ≈ ptbm′(k)' # NB: `ptbm(k)` returns a reused buffer
+        end
+        @test length(subduced_complement(tbm′, Rs, 10)) == 0
+
+        # the pairs over `Rs` include some that carry no term of `tbm`, and every term of
+        # `tbm` belongs to exactly one pair
+        groups = _subduction_groups(tbm, Rs)
+        @test count(g -> isempty(g.idxs), groups) > 0
+        @test sort(reduce(vcat, g.idxs for g in groups)) == 1:length(tbm)
+    end
+
+    @testset "hopping range `Rs`" begin
+        brs = bandreps(11, Val(2); timereversal = true) # p4mm
+        cbr = @composite brs[1] # (2c|A₁)
+        Rs = [[0,0], [1,0]]
+        tbm = tb_hamiltonian(cbr, Rs)
+
+        @test length(subduced_complement(tbm, Rs, 11)) == 0 # subducing to G itself
+
+        # `Rs` alone sets the (block, orbit) pairs that are searched: a narrower `Rs` gives
+        # exactly the complement of the correspondingly narrower model, and an empty one
+        # gives nothing
+        Rs′ = [[0,0]]
+        tbm_narrow = tb_hamiltonian(cbr, Rs′)
+        for (sgnumᴴ, timereversal) in ((11, true), (10, true), (10, false), (6, true))
+            @test subduced_complement(tbm, Rs′, sgnumᴴ; timereversal).terms ==
+                  subduced_complement(tbm_narrow, Rs′, sgnumᴴ; timereversal).terms
+        end
+        @test isempty(subduced_complement(tbm, Vector{Int}[], 10))
+
+        # the tests below pin what happens for unsupported usage - a sub-selected `tbm`, or
+        # a wider `Rs` than the model's own - so that the behavior is at least deterministic
+
+        # a sub-selected `tbm` gives the complement relative to the sub-selection, so terms
+        # dropped by it return as "new" even when subducing to G itself
+        @test length(subduced_complement(tbm[[1,2,3,5]], Rs, 11)) == 1 # dropped term 4
+        @test length(subduced_complement(tbm[1:4], Rs, 11)) == 1       # dropped term 5
+
+        # a wider `Rs` returns the longer-range terms too, whether or not G allows them
+        Rs_big = [[0,0], [1,0], [1,1]]
+        @test length(subduced_complement(tbm, Rs_big, 11)) ==
+              length(tb_hamiltonian(cbr, Rs_big)) - length(tbm)
+
+        # completeness against a directly-built subgroup model: the 2c orbit of p4mm splits
+        # into 1c ⊕ 1b of p2mm. The orbits are those of p4mm, and reach further than `Rs`,
+        # so the ⋕6 model must be built over a range covering the same hopping vectors
+        brs6 = bandreps(6, Val(2); timereversal = true)
+        cbr6 = CompositeBandRep([n ∈ (5, 9) ? 1 : 0 for n in eachindex(brs6)], brs6)
+        @test string(cbr6) == "(1c|A₁) + (1b|A₁)"
+        @test length(tb_hamiltonian(cbr6, [[0,0], [1,0], [0,1], [-1,0]])) ==
+              length(tbm) + length(subduced_complement(tbm, Rs, 6))
+
+        # non-Hermitian models iterate over all blocks, not just the upper-triangular ones
+        tbm_nh = tb_hamiltonian(cbr, Rs, Val(NONHERMITIAN))
+        @test length(subduced_complement(tbm_nh, Rs, 11)) == 0
+        @test length(subduced_complement(tbm_nh, Rs, 10)) == 3
+        @test length(subduced_complement(tbm_nh, Rs, 6)) == 6
     end
 
     @testset "subgroup precondition" begin
         # `_subduced_complement` asserts that `gensᴴ` generate a subgroup of G, given in G's
         # conventional setting; unreachable via `subduced_complement`, but check it can fire
         brs2d = bandreps(11, Val(2); timereversal = true) # p4mm
-        tbm = tb_hamiltonian((@composite brs2d[1]), [[0,0], [1,0]])
+        Rs = [[0,0], [1,0]]
+        tbm = tb_hamiltonian((@composite brs2d[1]), Rs)
 
         @test _issubgroup([S"y,x"], 11)     # mₓᵧ ∈ p4mm
         @test !_issubgroup([S"-y,x+y"], 11) # 6⁺ ∉ p4mm
-        @test length(_subduced_complement(tbm, [S"y,x"])) isa Int
-        @test_throws AssertionError _subduced_complement(tbm, [S"-y,x+y"])
+        @test length(_subduced_complement(tbm, Rs, [S"y,x"])) isa Int
+        @test_throws AssertionError _subduced_complement(tbm, Rs, [S"-y,x+y"])
     end
 end
