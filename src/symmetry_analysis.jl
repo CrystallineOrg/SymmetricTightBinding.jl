@@ -49,7 +49,7 @@ function Crystalline.collect_compatible(
     ops = unique(Iterators.flatten(lgs))
 
     # determine the induced space group rep associated with `cbr` across all `ops`
-    sgrep_d = Dict(op => sgrep_induced_by_siteir(ptbm, op) for op in ops)
+    sgrep_d = Dict(op => site_induced_sgrep(ptbm, op) for op in ops)
 
     symeigsv = Vector{Vector{Vector{ComplexF64}}}(undef, length(lgs))
 
@@ -83,7 +83,7 @@ at the **k**-point `k` for the symmetry operations `ops`. A `LittleGroup` can al
 provided instead of `ops` and `k`.
 
 Representations of the symmetry operations `ops` as acting on the orbitals of the
-tight-binding setting can optionally be provided in `sgreps` (see `sgrep_induced_by_siteir`)
+tight-binding setting can optionally be provided in `sgreps` (see `site_induced_sgrep`)
 and are otherwise initialized by the function.
 
 The symmetry eigenvalues are returned as a matrix, with rows running over the elements of
@@ -106,7 +106,7 @@ function symmetry_eigenvalues(
     ops::AbstractVector{<:AbstractOperation{D}},
     k::ReciprocalPointLike{D},
     sgreps::AbstractVector{<:SiteInducedSGRepElement{D}} = begin
-        sgrep_induced_by_siteir.(Ref(ptbm.tbm.cbr), ops)
+        site_induced_sgrep.(Ref(ptbm.tbm.cbr), ops)
     end,
 ) where D
     length(k) == D || error("dimension mismatch")
@@ -144,7 +144,7 @@ end
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
     lg::AbstractLittleGroup{D},
-    sgreps::AbstractVector{<:SiteInducedSGRepElement{D}} = sgrep_induced_by_siteir.(
+    sgreps::AbstractVector{<:SiteInducedSGRepElement{D}} = site_induced_sgrep.(
         Ref(ptbm.tbm.cbr),
         lg,
     ),

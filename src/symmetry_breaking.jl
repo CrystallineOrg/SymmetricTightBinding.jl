@@ -168,7 +168,7 @@ function _subduced_complement(
     # the constraint machinery in `_obtain_basis_free_parameters` works in the primitive
     # setting (cf. `obtain_basis_free_parameters`), but `gensᴴ` is given in the conventional
     # setting of G: convert, lest we compare conventional-setting operations against the
-    # primitivized site symmetry groups of `sgrep_induced_by_siteir` (which finds no
+    # primitivized site symmetry groups of `site_induced_sgrep` (which finds no
     # matching coset and errors out)
     gensᴴ′ = primitivized_generators(gensᴴ, sgnumᴳ)
 

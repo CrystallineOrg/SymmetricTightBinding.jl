@@ -1,6 +1,6 @@
 using Test
 using SymmetricTightBinding
-using SymmetricTightBinding: sgrep_induced_by_siteir_excl_phase
+using SymmetricTightBinding: site_induced_sgrep_excl_phase
 using Crystalline
 
 @testset "Site representations" begin
@@ -10,7 +10,7 @@ using Crystalline
         cbr = @composite brs[6]
 
         gens = generators(num(cbr), SpaceGroup{3})
-        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
+        sgrep = site_induced_sgrep_excl_phase.(Ref(cbr), gens)
 
         @test length(sgrep) == length(gens) == 5
         @test gens == generators(sgnum, SpaceGroup{3})
@@ -50,7 +50,7 @@ using Crystalline
         cbr = @composite brs[13] + brs[19]
 
         gens = generators(num(cbr), SpaceGroup{3})
-        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
+        sgrep = site_induced_sgrep_excl_phase.(Ref(cbr), gens)
 
         @test length(sgrep) == length(gens) == 5
         @test gens == generators(sgnum, SpaceGroup{3})
@@ -115,7 +115,7 @@ using Crystalline
         cbr = @composite brs[2] + brs[3]
 
         gens = generators(num(cbr), SpaceGroup{1})
-        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
+        sgrep = site_induced_sgrep_excl_phase.(Ref(cbr), gens)
 
         @test length(gens) == length(sgrep) == 1
         @test gens == generators(sgnum, SpaceGroup{1})
@@ -131,7 +131,7 @@ using Crystalline
         cbr = @composite brs[5]
 
         gens = generators(num(cbr), SpaceGroup{2})
-        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
+        sgrep = site_induced_sgrep_excl_phase.(Ref(cbr), gens)
 
         @test length(gens) == length(sgrep) == 3
         @test gens == generators(sgnum, SpaceGroup{2})
@@ -149,7 +149,7 @@ using Crystalline
         cbr = @composite brs[1] + brs[end]
 
         gens = generators(num(cbr), SpaceGroup{2})
-        sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(cbr), gens)
+        sgrep = site_induced_sgrep_excl_phase.(Ref(cbr), gens)
 
         @test length(gens) == length(sgrep) == 2
         @test gens == generators(sgnum, SpaceGroup{2})

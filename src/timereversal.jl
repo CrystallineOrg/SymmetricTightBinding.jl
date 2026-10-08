@@ -117,7 +117,7 @@ end
 
 Return the unitary part `Γ` of time reversal `𝒯 = ΓK` across all orbitals of `br`, i.e.,
 across sites in the orbit of the Wyckoff position and site-symmetry orbitals at each site.
-This is the time-reversal counterpart of [`sgrep_induced_by_siteir`](@ref): i.e., the
+This is the time-reversal counterpart of [`site_induced_sgrep`](@ref): i.e., the
 (unitary part of the) action of time-reversal symmetry on the orbitals of a band
 representation.
 
