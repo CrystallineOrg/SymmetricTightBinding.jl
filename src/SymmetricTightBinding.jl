@@ -35,7 +35,6 @@ export ParameterizedCompositeTightBindingModel
 include("site_representations.jl")
 export site_induced_sgrep
 include("tightbinding.jl")
-export obtain_symmetry_related_hoppings
 export tb_hamiltonian
 include("zassenhaus.jl")
 include("timereversal.jl")

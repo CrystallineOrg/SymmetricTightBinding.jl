@@ -434,7 +434,7 @@ As we have discussed previously, in reciprocal space the Hamiltonian term involv
 
 In order to encode such Hamiltonian term, we will need to do some previous steps.
 
-The first step we need to do is to list all the possible hopping distances that can be found between these two EBRs. Obviously, that set will be infinite so we need to impose a particular cutoff. As explained above, we will impose it by constraining the hopping terms to a particular set of lattice translations — and obviously their symmetry partners. This complex structure is computed in the function `obtain_symmetry_related_hoppings`, where we provide a set of representatives of hopping distances which is associated with a set of hopping terms that are symmetry related.
+The first step we need to do is to list all the possible hopping distances that can be found between these two EBRs. Obviously, that set will be infinite so we need to impose a particular cutoff. As explained above, we will impose it by constraining the hopping terms to a particular set of lattice translations — and obviously their symmetry partners. This complex structure is computed in the function `SymmetricTightBinding.obtain_symmetry_related_hoppings`, where we provide a set of representatives of hopping distances which is associated with a set of hopping terms that are symmetry related.
 
 Within each representative we find different hopping distances $δs = [δ_1, δ_2, …, δ_n]$, which will be associated with different hopping terms:
 
@@ -455,7 +455,7 @@ First, we use them to create an abstract vector $𝐯$ which will store the phas
 𝐯^T = [e^{-i𝐤·δ_1}, e^{-i𝐤·δ_2}, …, e^{-i𝐤·δ_n}]
 ```
 
-Note that the order used here matches that provided by the function `obtain_symmetry_related_hoppings`.
+Note that the order used here matches that provided by the function `SymmetricTightBinding.obtain_symmetry_related_hoppings`.
 
 Additionally, we assign a free parameter to each orbital hopping term in the Hamiltonian matrix — these are the parameters that are later tuned to replicate the band structure. This vector has length $\text{len}(δs) × \# 𝐪 × \# 𝐰 × \text{dim}(A) × \text{dim}(B)$. In particular this vector will look like this:
 

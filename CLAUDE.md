@@ -23,7 +23,7 @@ hopping ranges, the package:
 
 ### Core pipeline
 - `tb_hamiltonian(cbr, Rs, ::Val{<:Hermiticity})` — top-level entry point; returns `TightBindingModel`
-- `obtain_symmetry_related_hoppings(Rs, br_a, br_b)` — enumerates hopping orbits
+- `obtain_symmetry_related_hoppings(Rs, br_a, br_b)` — enumerates hopping orbits (internal, unexported)
 - `site_induced_sgrep(br, op)` — site-symmetry induced space group representation
 
 ### Types (defined in `src/types.jl`)
