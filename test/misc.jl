@@ -122,7 +122,7 @@ end
     @test Hk ≈ Hk'
     # check that the Hamiltonian is symmetric for all symmetry operations
     @test all(primitivize(spacegroup(208))) do g
-        D = sgrep_induced_by_siteir(ptbm, g)(k)
+        D = site_induced_sgrep(ptbm, g)(k)
         gk = g * k
         isapprox(ptbm(gk), D * Hk * D'; atol = 1e-12)
     end

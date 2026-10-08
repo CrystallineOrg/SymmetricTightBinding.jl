@@ -572,8 +572,8 @@ function representation_constraint_matrices(
     brᵦ::BandRep{D},
     gens::AbstractVector{<:AbstractOperation{D}},
 ) where {D}
-    ρsₐₐ = sgrep_induced_by_siteir_excl_phase.(Ref(brₐ), gens)
-    ρsᵦᵦ = sgrep_induced_by_siteir_excl_phase.(Ref(brᵦ), gens)
+    ρsₐₐ = site_induced_sgrep_excl_phase.(Ref(brₐ), gens)
+    ρsᵦᵦ = site_induced_sgrep_excl_phase.(Ref(brᵦ), gens)
 
     Qs = [similar(Mm, ComplexF64) for _ in eachindex(gens)]
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))

@@ -1,7 +1,7 @@
 
 """
-    sgrep_induced_by_siteir_excl_phase(br::BandRep, op::AbstractOperation)
-    sgrep_induced_by_siteir_excl_phase(cbr::CompositeBandRep, op::AbstractOperation)
+    site_induced_sgrep_excl_phase(br::BandRep, op::AbstractOperation)
+    site_induced_sgrep_excl_phase(cbr::CompositeBandRep, op::AbstractOperation)
         --> Matrix{ComplexF64}
 
 Return the representation matrix of a symmetry operation `op` induced by the site
@@ -18,7 +18,7 @@ This function assumes Convention 1 for the Fourier transform, so the momentum de
 introduced as a global phase factor. This is not true if Convention 2 is used. See 
 `/docs/src/theory.md` for more details.
 """
-function sgrep_induced_by_siteir_excl_phase(
+function site_induced_sgrep_excl_phase(
     br::BandRep{D},
     op::AbstractOperation{D},
 ) where {D}
@@ -59,7 +59,7 @@ function sgrep_induced_by_siteir_excl_phase(
                 #     phases. Note that these phases are NOT REDUNDANT if we mean to use
                 #     use the sgrep as the group action on eigenstates, e.g., for
                 #     determining the irreps of a tight-binding Hamiltonian; for this, use
-                #     `sgrep_induced_by_siteir` instead.
+                #     `site_induced_sgrep` instead.
                 check = true
                 break
             end
@@ -70,11 +70,11 @@ function sgrep_induced_by_siteir_excl_phase(
     return ρ
 end
 
-function sgrep_induced_by_siteir_excl_phase(
+function site_induced_sgrep_excl_phase(
     cbr::CompositeBandRep{D},
     op::AbstractOperation{D},
 ) where {D}
-    f = Base.Fix2(sgrep_induced_by_siteir_excl_phase, op) # = br -> sgrep_…(br, op)
+    f = Base.Fix2(site_induced_sgrep_excl_phase, op) # = br -> sgrep_…(br, op)
     return _apply_across_matrix_blocks_of_composite_bandrep(f, cbr, ComplexF64)
 end
 
@@ -157,11 +157,11 @@ function (sgrep::SiteInducedSGRepElement{D})(k::AbstractVector{<:Real}) where {D
 end
 
 """
-    sgrep_induced_by_siteir(
+    site_induced_sgrep(
         br::Union{BandRep, CompositeBandRep},
         op::AbstractOperation, [positions::Vector{<:DirectPoint}]
     )
-    sgrep_induced_by_siteir(
+    site_induced_sgrep(
         tbm::Union{TightBindingModel,ParameterizedTightBindingModel}, op::AbstractOperation
     )
         --> SiteInducedSGRepElement
@@ -177,19 +177,19 @@ in which case the latter is inferred from the former.
 For spinful band representations, `op` must be a `DSymOperation`, i.e., carry its SU(2)
 element.
 """
-function sgrep_induced_by_siteir(
+function site_induced_sgrep(
     br::Union{BandRep{D}, CompositeBandRep{D}},
     op::AbstractOperation{D},
     positions::Vector{DirectPoint{D}} = orbital_positions(br),
 ) where D
-    ρ = sgrep_induced_by_siteir_excl_phase(br, op)
+    ρ = site_induced_sgrep_excl_phase(br, op)
     size(ρ, 1) == length(positions) || error("incompatible dimensions of `ρ` & `positions`")
 
     return SiteInducedSGRepElement{D}(ρ, positions, op)
 end
-function sgrep_induced_by_siteir(
+function site_induced_sgrep(
     tbm::Union{TightBindingModel{D}, ParameterizedTightBindingModel{D}},
     op::AbstractOperation{D},
 ) where D
-    return sgrep_induced_by_siteir(CompositeBandRep(tbm), op, orbital_positions(tbm))
+    return site_induced_sgrep(CompositeBandRep(tbm), op, orbital_positions(tbm))
 end

@@ -24,7 +24,7 @@ hopping ranges, the package:
 ### Core pipeline
 - `tb_hamiltonian(cbr, Rs, ::Val{<:Hermiticity})` — top-level entry point; returns `TightBindingModel`
 - `obtain_symmetry_related_hoppings(Rs, br_a, br_b)` — enumerates hopping orbits
-- `sgrep_induced_by_siteir(br, op)` — site-symmetry induced space group representation
+- `site_induced_sgrep(br, op)` — site-symmetry induced space group representation
 
 ### Types (defined in `src/types.jl`)
 - `HoppingOrbit{D}` — orbit of symmetry-related hopping vectors {delta_i}

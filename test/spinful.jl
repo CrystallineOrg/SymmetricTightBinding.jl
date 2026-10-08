@@ -1,6 +1,6 @@
 using Test
 using SymmetricTightBinding
-using SymmetricTightBinding: sgrep_induced_by_siteir_excl_phase, site_induced_timereversal_unitary
+using SymmetricTightBinding: site_induced_sgrep_excl_phase, site_induced_timereversal_unitary
 using Crystalline
 using Crystalline: free
 using LinearAlgebra
@@ -39,7 +39,7 @@ end
             ops = primitivize(spacegroup(sgnum, Val(3); spinful = Val(true)))
 
             # the induced representation is a representation of G/T
-            ρs = Dict(g => Matrix(sgrep_induced_by_siteir_excl_phase(cbr, g)) for g in ops)
+            ρs = Dict(g => Matrix(site_induced_sgrep_excl_phase(cbr, g)) for g in ops)
             @test all(Iterators.product(ops, ops)) do (g₁, g₂)
                 g₁₂ = ops[findfirst(g -> isapprox(g, g₁ * g₂, nothing, true), ops)]
                 ρs[g₁] * ρs[g₂] ≈ ρs[g₁₂]
@@ -54,7 +54,7 @@ end
                 # H(gk) = D_k(g) H(k) D_k(g)† for every operation, not just the generators
                 # that the model was built from
                 for g in ops
-                    D = sgrep_induced_by_siteir(ptbm, g)(k)
+                    D = site_induced_sgrep(ptbm, g)(k)
                     gk = g * k
                     @test ptbm(gk) ≈ D * Hk * D' atol = 1e-12
                 end
@@ -100,7 +100,7 @@ end
                 # H(-k) = Γ H*(k) Γ†, with `Γ = 𝟙 ⊗ J` (`J = iσʸ ⊗ 𝟙ₙ`) on each site
                 @test ptbm(-k) ≈ Γ * conj(Hk) * Γ' atol = 1e-12
                 for g in ops
-                    D = sgrep_induced_by_siteir(ptbm, g)(k)
+                    D = site_induced_sgrep(ptbm, g)(k)
                     @test ptbm(g * k) ≈ D * Hk * D' atol = 1e-12
                 end
                 # Kramers degeneracy at generic k iff inversion is present (since 𝒯² = -1)
@@ -138,6 +138,6 @@ end
 @testset "Spinful models: unsupported input" begin
     cbr = _spinful_cbr(16, [1, 2])
     tbm = tb_hamiltonian(cbr, [[0, 0, 0]])
-    @test_throws "requires a double group operation" sgrep_induced_by_siteir(tbm, S"-x,-y,z")
+    @test_throws "requires a double group operation" site_induced_sgrep(tbm, S"-x,-y,z")
 end
 

@@ -156,7 +156,7 @@ using Crystalline
     @testset "centered lattices" begin
         # the subgroup generators must be converted to the primitive setting before the
         # constraints are imposed; if not, centered lattices error out in
-        # `sgrep_induced_by_siteir` (which compares against primitivized site groups)
+        # `site_induced_sgrep` (which compares against primitivized site groups)
         brs = bandreps(12, Val(3); timereversal = true) # C2/m (C-centered)
         cbr = @composite brs[1] # (4f|Ag)
         Rs = [[0,0,0], [1,0,0]]
@@ -314,7 +314,7 @@ using Crystalline
             preserved = map(opsᴳ) do g
                 all(ks) do k
                     Hk = copy(ptbm′(k))
-                    D = sgrep_induced_by_siteir(ptbm′, g)(k)
+                    D = site_induced_sgrep(ptbm′, g)(k)
                     isapprox(ptbm′(g * k), D * Hk * D'; atol = 1e-10)
                 end
             end

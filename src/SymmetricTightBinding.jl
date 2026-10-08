@@ -33,7 +33,7 @@ include("types_composite.jl")
 export CompositeTightBindingModel
 export ParameterizedCompositeTightBindingModel
 include("site_representations.jl")
-export sgrep_induced_by_siteir
+export site_induced_sgrep
 include("tightbinding.jl")
 export obtain_symmetry_related_hoppings
 export tb_hamiltonian

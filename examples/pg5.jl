@@ -6,6 +6,7 @@ Pkg.activate(@__DIR__)
 # don't coincide
 
 using Crystalline, SymmetricTightBinding
+using SymmetricTightBinding: site_induced_sgrep_excl_phase
 
 ##- Compute the necessary things for obtaining the hoppings
 
@@ -18,7 +19,7 @@ br = brs[1]
 ops = spacegroup(num(br), dim(br))
 
 gens = generators(num(br), SpaceGroup{dim(br)})
-sgrep = sgrep_induced_by_siteir_excl_phase.(Ref(br), gens)
+sgrep = site_induced_sgrep_excl_phase.(Ref(br), gens)
 
 ##- Compute the orbits of Δ's taking into considerations the symmetries ------------------##
 
