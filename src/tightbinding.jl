@@ -1071,55 +1071,38 @@ function tb_hamiltonian(
 
     # find all families of hoppings between involved band representations: the TB model will
     # be divided into each of these representatives since they will be symmetry independent
-    B = length(brs)
     axis = BlockArrays.BlockedOneTo((cumsum(occupation(br) for br in brs)))
     tbs = Vector{TightBindingTerm{D, S, IR, SIR}}()
-    # We iterate across diagonal blocks, going from the main diagonal and up toward the
-    # upper block-diagonals: we do this to get a more natural sorting of the terms in the
-    # model, with self-hoppings first, etc. For Hermitian/anti-Hermitian models, we only
-    # go over the upper triangular part, with the latter following directly; for
-    # non-Hermitian, we just go over all blocks, going along diagonals 0,1,-1,…,B-1,-(B-1)
-    for d in _diagonal_indices(B, Sᵛ) # offset from main diagonal (at 0)
-        for block_i in _row_indices(B, d, Sᵛ)
-            block_j = block_i + d
-            br1 = brs[block_i]
-            br2 = brs[block_j]
-            ordering1 = OrbitalOrdering(br1)
-            ordering2 = OrbitalOrdering(br2)
-            diagonal_block = d == 0
-            reverse_hop = S === NONHERMITIAN ? d<0 : false
-            h_orbits = obtain_symmetry_related_hoppings(
-                Rs, br1, br2; diagonal_block, reverse_hop, nonhermitian = S===NONHERMITIAN
+    for block_info in _block_iterates(brs, Rs, Sᵛ)
+        (; block_ij, br1, br2, ordering1, ordering2, diagonal_block, h_orbits) = block_info
+        for h_orbit in h_orbits
+            Mm, t_αβ_basis = obtain_basis_free_parameters(
+                h_orbit,
+                br1,
+                br2,
+                ordering1,
+                ordering2,
+                diagonal_block,
+                S,               #=hermiticity=#
             )
-            for h_orbit in h_orbits
-                Mm, t_αβ_basis = obtain_basis_free_parameters(
-                    h_orbit,
+            for t in t_αβ_basis
+                block = TightBindingBlock{D, S}(
                     br1,
                     br2,
                     ordering1,
                     ordering2,
-                    diagonal_block,
-                    S,               #=hermiticity=#
+                    h_orbit,
+                    Mm,
+                    t,
+                    diagonal_block
                 )
-                for t in t_αβ_basis
-                    block = TightBindingBlock{D, S}(
-                        br1,
-                        br2,
-                        ordering1,
-                        ordering2,
-                        h_orbit,
-                        Mm,
-                        t,
-                        diagonal_block
-                    )
-                    h = TightBindingTerm(
-                        axis,
-                        (block_i, block_j),
-                        block,
-                        brs,
-                    )
-                    push!(tbs, h)
-                end
+                h = TightBindingTerm(
+                    axis,
+                    block_ij,
+                    block,
+                    brs,
+                )
+                push!(tbs, h)
             end
         end
     end
@@ -1135,6 +1118,42 @@ _row_indices(B::Int, d::Int, ::Val{S}) where {S} = 1:B-d
 # it in the order 0, 1, -1, 2, -2, …, B-1, -(B-1)
 _diagonal_indices(B::Int, ::Val{NONHERMITIAN}) = (iseven(i) ? -(i÷2) : (i+1)÷2 for i in 0:2(B-1))
 _row_indices(B::Int, d::Int, ::Val{NONHERMITIAN}) = d ≥ 0 ? (1:B-d) : (-d+1:B)
+
+"""
+    _block_iterates(brs, Rs, ::Val{S})
+
+Iterate over the blocks of a tight-binding model over the band representations `brs`, each
+given as a `(; block_ij, br1, br2, ordering1, ordering2, diagonal_block, h_orbits)`, with
+`h_orbits` the block's hopping orbits over the translation representatives `Rs`.
+
+Blocks are listed diagonal by diagonal, from the main diagonal and up: this gives a natural
+sorting of the terms of a model, with self-hoppings first, etc.
+For Hermitian and anti-Hermitian models (`S`), only the upper triangular blocks are
+included, the lower following from (anti-)Hermiticity; for non-Hermitian models, all blocks
+are included, going along diagonals 0, 1, -1, …, B-1, -(B-1).
+
+!!! warning
+    This function is an internal helper function for `tb_hamiltonian` and
+    `subduced_complement`, and is not part of the public API.
+"""
+function _block_iterates(brs::AbstractVector{<:BandRep}, Rs, Sᵛ::Val{S}) where {S}
+    B = length(brs)
+    # equivalent to `for d in …; for block_i in …`: `d` is the outer (slow) index
+    block_ijs = ((block_i, block_i + d)
+                 for d in _diagonal_indices(B, Sᵛ)       # outer: diagonals
+                 for block_i in _row_indices(B, d, Sᵛ))  # inner: rows along diagonal `d`
+    return Iterators.map(block_ijs) do (block_i, block_j)
+        br1, br2 = brs[block_i], brs[block_j]
+        diagonal_block = block_i == block_j
+        reverse_hop = S === NONHERMITIAN && block_i > block_j # lower-triangular block
+        h_orbits = obtain_symmetry_related_hoppings(
+            Rs, br1, br2; diagonal_block, reverse_hop, nonhermitian = S === NONHERMITIAN
+        )
+        (; block_ij = (block_i, block_j), br1, br2,
+           ordering1 = OrbitalOrdering(br1), ordering2 = OrbitalOrdering(br2),
+           diagonal_block, h_orbits)
+    end
+end
 
 function tb_hamiltonian(
     cbr::CompositeBandRep, Rs::AbstractVector{<:AbstractVector{Int}}, S::Hermiticity

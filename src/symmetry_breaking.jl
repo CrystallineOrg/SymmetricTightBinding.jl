@@ -359,19 +359,11 @@ function _subduction_groups(
     isempty(tbm) && return groups
 
     # the block structure of the model, exactly as `tb_hamiltonian` built it
-    brs = first(tbm).brs
-    B = length(brs)
-    for d in _diagonal_indices(B, Val(S)), block_i in _row_indices(B, d, Val(S))
-        block_j = block_i + d
-        br1, br2 = brs[block_i], brs[block_j]
-        ordering1, ordering2 = OrbitalOrdering(br1), OrbitalOrdering(br2)
-        diagonal_block = d == 0
-        reverse_hop = S === NONHERMITIAN ? d < 0 : false
-        h_orbits = obtain_symmetry_related_hoppings(
-            Rs, br1, br2; diagonal_block, reverse_hop, nonhermitian = S === NONHERMITIAN)
+    for block_info in _block_iterates(first(tbm).brs, Rs, Val(S))
+        (; block_ij, br1, br2, ordering1, ordering2, diagonal_block, h_orbits) = block_info
         for h_orbit in h_orbits
             idxs = findall(tbm) do tbt
-                tbt.block_ij == (block_i, block_j) &&
+                tbt.block_ij == block_ij &&
                     isapproxin(representative(h_orbit), orbit(tbt.block.h_orbit),
                                nothing, false; atol = VEC_CMP_ATOL)
             end
@@ -385,7 +377,7 @@ function _subduction_groups(
                 TightBindingBlock{D, S}(br1, br2, ordering1, ordering2, h_orbit, Mm,
                                         #=t=# zeros(2size(Mm, 2)), diagonal_block)
             end
-            push!(groups, (; block_ij = (block_i, block_j), block, idxs))
+            push!(groups, (; block_ij, block, idxs))
         end
     end
     return groups
