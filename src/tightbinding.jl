@@ -620,15 +620,12 @@ function obtain_basis_free_parameters(
     diagonal_block::Bool = true,
     hermiticity::Hermiticity = HERMITIAN,
 ) where {D}
-    num(brₐ) == num(brᵦ) ||
-        error("both band representations must belong to the same space group")
-    brₐ.timereversal == brᵦ.timereversal ||
-        error("input band representations must have identical time-reversal symmetry")
+    num(brₐ) == num(brᵦ) || error("input `BandRep`s must come from the same space group")
+    brₐ.timereversal == brᵦ.timereversal || error("input `BandRep`s must have identical time-reversal symmetry")
     timereversal = brₐ.timereversal
 
-    # generators in a primitive basis; for spinful band representations, these carry their
-    # SU(2) element, which must be the same in every block, since `ρ(g)` changes sign with
-    # it (ensured by taking them all from `generators`)
+    # generators in a primitive basis (double group generators, for spinful band
+    # representations)
     gens = primitivized_generators(brₐ)
 
     # encode Hamiltonian as a coefficient matrix sandwiched by exponentials & hopping ampl.

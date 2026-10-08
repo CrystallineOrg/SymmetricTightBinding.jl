@@ -72,12 +72,7 @@ function obtain_basis_free_parameters_TRS(
     Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
     S = isspinful(brₐ)
-    S == isspinful(brᵦ) || error("both band representations must have the same spin")
-
-    # unitary parts `Γ` of time reversal across the orbitals of `brₐ` and `brᵦ`, in the
-    # orbital ordering of `OrbitalOrdering` (site-major, partner function-minor)
-    Γₐ = site_induced_timereversal_unitary(brₐ)
-    Γᵦ = site_induced_timereversal_unitary(brᵦ)
+    S == isspinful(brᵦ) || error("input `BandRep`s must have the same spin")
 
     # NB: we want to keep `_aggregate_constraints` due to its efficiency in building the
     # constraint matrix. So, although seemingly unnecessary, we stick with its Q & Z tensor
@@ -96,6 +91,10 @@ function obtain_basis_free_parameters_TRS(
     else
         # spinful: the constraint tensor is `[M-M̃ M+M̃]`, with `M̃ = Γₐ M Γᵦᵀ` acting on
         # the orbital axes; since `Γₐ` and `Γᵦ` are signed permutations, `M̃` is integer
+        # (`Γₐ` & `Γᵦ`: unitary parts of time reversal across the orbitals of `brₐ` & `brᵦ`,
+        # in the orbital ordering of `OrbitalOrdering`)
+        Γₐ = site_induced_timereversal_unitary(brₐ) # defined here only, since they are
+        Γᵦ = site_induced_timereversal_unitary(brᵦ) # not needed (≡1) in the spinless case
         for j in axes(Mm, 2), i in axes(Mm, 1)
             Mᵢⱼ = @view Mm[i, j, :, :]
             M̃ᵢⱼ = Γₐ * Mᵢⱼ * Γᵦ'
