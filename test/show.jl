@@ -2,7 +2,8 @@ using Test
 using SymmetricTightBinding
 using Crystalline
 using DeepDiffs: deepdiff
-using SymmetricTightBinding: TightBindingElementString, canonical_orbit_element
+using SymmetricTightBinding: TightBindingElementString, canonical_orbit_element,
+                             obtain_symmetry_related_hoppings
 
 # `test_show` & `test_tp_show`; guarded so this file also runs standalone
 isdefined(@__MODULE__, :test_show) || include("test_utils.jl")

@@ -2,7 +2,7 @@ using Test
 using SymmetricTightBinding
 using Crystalline
 using Crystalline: constant
-using SymmetricTightBinding: is_sign_preferred
+using SymmetricTightBinding: is_sign_preferred, obtain_symmetry_related_hoppings
 using LinearAlgebra
 
 @testset "TB examples in plane groups" begin

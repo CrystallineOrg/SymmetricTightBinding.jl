@@ -3,6 +3,7 @@
 
 using Test
 using SymmetricTightBinding
+using SymmetricTightBinding: obtain_symmetry_related_hoppings
 using Crystalline
 
 @testset "AbstractArray interface" begin
