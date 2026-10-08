@@ -1,6 +1,7 @@
-# Note [⚠️ phase]: `symmetry_eigenvalues` returns the complex conjugate of the Convention 1
-#   character to match Crystalline.jl's `bandreps` convention.
-#   See `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
+# Note [⚠️ phase]: Crystalline.jl's irreps assume Bloch states `e^{-ik·r}u_k`, opposite to
+#   our convention; `flip_bloch_phase` converts them before comparing with the symmetry
+#   eigenvalues from `symmetry_eigenvalues`. See issue #137 and
+#   `docs/src/devdocs/symmetry_eigenvalue_conventions.md`.
 
 """
     collect_compatible(ptbm::ParameterizedTightBindingModel{D}; multiplicities_kws...)
@@ -44,6 +45,9 @@ function Crystalline.collect_compatible(
     cbr = CompositeBandRep(tbm)
 
     clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting operations)
+    # NB: `timereversal = false`, so that we evaluate at -k where the unconverted tables of
+    #     `cbr.brs` (used below) apply; this works with and without TR
+    clgirsv = flip_bloch_phase(clgirsv; timereversal = false)
     lgirsv = primitivize.(clgirsv) # must be `modw=false` (default for Collection dispatch)
     lgs = group.(lgirsv)  # little groups associated to the EBRs (primitive setting)
     ops = unique(Iterators.flatten(lgs))
@@ -77,7 +81,7 @@ end
         [sgreps::AbstractVector{SiteInducedSGRepElement{D}}]
     )
         --> Matrix{ComplexF64}
-    
+
 Compute the symmetry eigenvalues of a coefficient-parameterized tight-binding model `ptbm`
 at the **k**-point `k` for the symmetry operations `ops`. A `LittleGroup` can also be
 provided instead of `ops` and `k`.
@@ -93,13 +97,11 @@ The symmetry eigenvalues are returned as a matrix, with rows running over the el
     The inputs `ops`, `k`, and `lg` must be provided in a primitive setting. See
     Crystalline.jl's `primitivize`.
 
-!!! warning "⚠️ character phase convention"
-    The symmetry eigenvalues returned by this function are the complex conjugate of the
-    Convention 1 result (see `docs/src/devdocs/symmetry_eigenvalue_conventions.md`)
-    in order to match the convention used by Crystalline.jl's `bandreps` and `lgirreps`
-    functions. See the above documentation for more details and 
-    https://github.com/thchr/Crystalline.jl/issues/12 for the relevant issue in
-    Crystalline.jl.
+!!! warning "⚠️ Bloch phase convention"
+    The symmetry eigenvalues are computed in this package's Bloch convention,
+    ``e^{+i𝐤·𝐫}u_𝐤(𝐫)``. Crystalline.jl's irreps, as returned by e.g. `lgirreps`, assume
+    the opposite convention, and must be converted before they are compared (see
+    `docs/src/devdocs/symmetry_eigenvalue_conventions.md`).
 """
 function symmetry_eigenvalues(
     ptbm::ParameterizedTightBindingModel{D},
@@ -116,12 +118,6 @@ function symmetry_eigenvalues(
     #     Convention 1 coefficient basis (without Bloch position phases). In Convention 1,
     #     the symmetry eigenvalues are then `χ[n] = (Θ_G vs[n])† D_k vs[n]` where Θ_G & D_k
     #     defined in `docs/src/theory.md` and `docs/src/devdocs/` (and methods below).
-    #
-    # [⚠️ phase]: Crystalline.jl's `bandreps` and `lgirreps` computes characters in a
-    #     convention that is the complex conjugate of the Convention 1 result (see
-    #     thchr/Crystalline.jl/#12).
-    #     To be able to interface with Crystalline.jl, and until thchr/Crystalline.jl/#12 is
-    #     resolved, we thus actually return `χ_Crystalline = conj(χ_Convention1)`.
     _, vs = solve(ptbm, k; bloch_phase = Val(false))
     symeigs = Matrix{ComplexF64}(undef, length(ops), ptbm.tbm.N)
     v_kpG = similar(vs, size(vs, 1)) # preallocate for Θᴳ * v
@@ -133,9 +129,7 @@ function symmetry_eigenvalues(
         D_k = sgrep(k) # = D_k(g) = e^{-2πi(gk)·t} ρ(h) (Convention 1)
         for (n, v) in enumerate(eachcol(vs))
             v_kpG = mul!(v_kpG, Θᴳ, v) # = Θᴳ * v (without re-allocating `v_kpG`)
-            χ = dot(v_kpG, D_k, v)  # Convention 1: (Θ_G w)† D_k w
-            χ_Crystalline = conj(χ) # [⚠️ phase]: convert to Crystalline.jl's convention
-            symeigs[j, n] = χ_Crystalline
+            symeigs[j, n] = dot(v_kpG, D_k, v)  # Convention 1: (Θ_G w)† D_k w
         end
     end
     return symeigs
@@ -163,10 +157,95 @@ composite band representation of `ptbm`, across the bands of the model.
 
 Useful for annotating irrep labels in band structure plots (via the Makie extension call
 `plot(ks, energies; annotations=collect_irrep_annotations(ptbm))`)
+
+!!! warning
+    Without time-reversal symmetry, the irrep labels at a **k**-point that is not
+    time-reversal invariant may be named after a different **k**-point (e.g., irreps
+    `KA₁, KA₂, …` at the **k**-point `K` in plane group *p*3, or `H₁, H₂, …` at `K` in space
+    group 143). The labels still correctly describe the bands at the annotated **k**-point.
+    See https://github.com/CrystallineOrg/SymmetricTightBinding.jl/issues/137.
 """
 function Crystalline.collect_irrep_annotations(ptbm::ParameterizedTightBindingModel; kws...)
-    clgirsv = irreps(ptbm.tbm.cbr) # irreps associated to the EBRs (conventional setting)
+    cbr = ptbm.tbm.cbr
+    clgirsv = irreps(cbr) # irreps associated to the EBRs (conventional setting)
+    clgirsv = flip_bloch_phase(clgirsv; timereversal = first(cbr.brs).timereversal)
     lgirsv = primitivize.(clgirsv) # convert associated groups & irreps to primitive setting
-    symeigsv = [eachcol(symmetry_eigenvalues(ptbm, group(lgirs))) for lgirs in lgirsv]
-    return collect_irrep_annotations(symeigsv, lgirsv; kws...)
+    # NB: use the k-label of the group, not of the irreps: after `flip_bloch_phase`, irreps
+    #     named e.g. K₁ may sit at the point KA, and the labels must go where the bands are
+    return Dict(map(lgirsv) do lgirs
+        symeigs = eachcol(symmetry_eigenvalues(ptbm, group(lgirs)))
+        klabel(group(lgirs)) => collect_irrep_annotations(symeigs, lgirs; kws...)
+    end)
+end
+
+"""
+    flip_bloch_phase(
+        lgirsv::AbstractVector{<:Collection{<:AbstractLGIrrep{D}}};
+        timereversal::Bool
+    ) --> Vector{<:Collection{<:AbstractLGIrrep{D}}}
+
+Convert the little group irreps `lgirsv`, over one or more special **k**-points, as
+tabulated by Crystalline.jl, from its Bloch phase convention, ``e^{-i𝐤·𝐫}u_𝐤(𝐫)``, to
+that of this package, ``e^{+i𝐤·𝐫}u_𝐤(𝐫)``, keeping their labels. `timereversal` indicates
+whether time-reversal symmetry is present.
+
+The irreps `lgirs` that Crystalline.jl tabulates at `k` describe our Bloch states at `-k`.
+The converted irreps `lgirs′` are placed at `q = position(group(lgirs′))`:
+1. If `g∘k ≡ -k` for some operation `g` of the space group (including `g = 1`, if `k ≡ -k`):
+   `q = k`, and the irreps are `D′(g⁻¹hg) = D(h)`.
+2. Otherwise, with time-reversal: `q = k`, and the irreps are `D′(h) = D(h)*`.
+3. Otherwise, without time-reversal: `q = -k`, and the irreps are unchanged. The **k**-label
+   is then that of the tabulated **k**-point whose star contains `-k` (e.g., `KA` for `K` in
+   plane group *p*3), taken from among those of `lgirsv` if possible.
+
+In all cases, the `i`th operation of the converted group corresponds to the `i`th operation
+of `group(lgirs)`.
+
+!!! warning
+    The converted irreps must not be passed to Crystalline.jl functions that involve the
+    translation phase (e.g., `israyrep`, `realify`, `remap_to_kstar`, or the functor
+    `lgir(αβγ)` at non-special **k**-points); character-based functions like
+    `find_multiplicities` are safe.
+"""
+function flip_bloch_phase(
+    lgirsv::AbstractVector{<:Collection{IR}};
+    timereversal::Bool
+) where {D, IR<:AbstractLGIrrep{D}}
+    sgnum = num(group(first(lgirsv)))
+    all(lgirs -> num(group(lgirs)) == sgnum, lgirsv) ||
+        error("all irreps must belong to the same space group")
+    cntr = centering(sgnum, D)
+    sgops = reduce_ops(spacegroup(sgnum, Val(D); spinful = Val(isspinful(IR))), cntr)
+    instar(kv, kv′) = any(g -> isapprox(g * kv, kv′, cntr, #=modw=# true), sgops)
+    lgs = nothing # all of Crystalline.jl's little groups of `sgnum`; loaded only if needed
+
+    return map(lgirsv) do lgirs
+        lg = group(lgirs)
+        kv = position(lg)
+        isspecial(kv) || error("only special k-points are supported")
+        idx = findfirst(g -> isapprox(g * kv, -kv, cntr, #=modw=# true), sgops)
+        isconj = false
+        if !isnothing(idx) # case 1: our states at `k`
+            g = sgops[idx]
+            q, klab = kv, klabel(lg)
+            ops′ = [compose(inv(g), compose(h, g, false), false) for h in lg] # h′ = g⁻¹hg
+        elseif timereversal # case 2: our states at `k` are the TR partners of those at `-k`
+            q, klab, ops′ = kv, klabel(lg), operations(lg)
+            isconj = true
+        else                # case 3: our states at `-k`
+            q, ops′ = -kv, operations(lg)
+            i = findfirst(lgirs′ -> instar(position(group(lgirs′)), q), lgirsv)
+            klab = if !isnothing(i)
+                klabel(group(lgirsv[i]))
+            else
+                isnothing(lgs) && (lgs = littlegroups(sgnum, Val(D)))
+                @something(findfirst(lg′ -> isspecial(position(lg′)) &&
+                                            instar(position(lg′), q), lgs),
+                           error(lazy"no tabulated k-point has $q in its star"))
+            end
+        end
+        lg′ = typeof(lg)(sgnum, q, klab, ops′)
+        Collection([IR(lgir.cdml, lg′, isconj ? conj.(lgir()) : lgir(), nothing,
+                       lgir.reality, lgir.iscorep) for lgir in lgirs])
+    end
 end
