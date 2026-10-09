@@ -88,15 +88,15 @@ pin_free!(brs, [3 => [0, 0, 0]]) # set the free `z` coordinate of `position(brs[
 cbr = @composite brs[3]
 ```
 
-The model has 4 orbitals, ordered by site and then by pseudospin:
+The model has 4 orbitals, ordered by pseudospin and then by site:
 
 ```
 orbital index:  1  2  3  4
-         site:  1  1  2  2
-   pseudospin:  ↑  ↓  ↑  ↓
+   pseudospin:  ↑  ↑  ↓  ↓
+         site:  1  2  1  2
 ```
 
-Here, the pseudospin states are spin ↑ and ↓ along *z*. A nonzero matrix element ``H_{ij}(\mathbf{k})`` thus conserves pseudospin if ``i`` and ``j`` are both odd or both even, and flips it otherwise. We include on-site terms and hoppings up to next-nearest neighbors (the first 6 terms):
+Here, the pseudospin states are spin ↑ and ↓ along *z*. The Hamiltonian thus has a 2×2 block form in pseudospin: matrix elements ``H_{ij}(\mathbf{k})`` in diagonal blocks (``i, j ≤ 2`` or ``i, j > 2``) conserve pseudospin, while those in off-diagonal blocks flip it. We include on-site terms and hoppings up to next-nearest neighbors (the first 6 terms):
 
 ```@example spinful
 tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0]])[1:6]
@@ -116,13 +116,13 @@ Since there are no hoppings along *z*, the model describes decoupled graphene la
     ```@example spinful
     g = cosets(group(brs[3]))[2] # maps site 1, [1/3, 2/3, 0], to site 2, [2/3, 1/3, 0]
     ```
-    The rightmost matrix is its SU(2) part, i.e., its action on spin: ``-\mathrm{i}\sigma_z``. The operation leaves the *p*<sub>*z*</sub> orbital itself unchanged, so the ↑ and ↓ orbitals of site 2 simply acquire phases −i and +i relative to those of site 1. Collecting these phases in a diagonal matrix ``\mathbf{U} = \mathrm{diag}(1, 1, -\mathrm{i}, +\mathrm{i}) = \boldsymbol{1}_2 \oplus (-\mathrm{i}\sigma_z)``, with one entry per orbital (in the order above), term 3 equals ``\mathbf{U}^\dagger [\mathbf{H}^{\text{spinless}}(\mathbf{k}) \otimes \boldsymbol{1}_2] \mathbf{U}``, where ``\mathbf{H}^{\text{spinless}}(\mathbf{k}) \otimes \boldsymbol{1}_2`` is the spinless graphene hopping of the [tutorial](@ref), repeated for ↑ and ↓, and where ``\mathbf{U}`` rotates to our orbital frame. Only matrix elements between site 1 and site 2 pick up phases; since the phases amount to a choice of basis, they do not change the spectrum.
+    The rightmost matrix is its SU(2) part, i.e., its action on spin: ``-\mathrm{i}\sigma_z``. The operation leaves the *p*<sub>*z*</sub> orbital itself unchanged, so the ↑ and ↓ orbitals of site 2 simply acquire phases −i and +i relative to those of site 1. Collecting these phases in a diagonal matrix ``\mathbf{U} = \mathrm{diag}(1, -\mathrm{i}, 1, +\mathrm{i})``, with one entry per orbital (recalling the orbital order above, (1↑, 2↑, 1↓, 2↓)), term 3 equals ``\mathbf{U}^\dagger [\boldsymbol{1}_2 \otimes \mathbf{H}^{\text{spinless}}(\mathbf{k})] \mathbf{U}``, where ``\boldsymbol{1}_2 \otimes \mathbf{H}^{\text{spinless}}(\mathbf{k})`` is the spinless graphene hopping of the [tutorial](@ref), "stacked" for ↑ and ↓ pseudospins, and where ``\mathbf{U}`` rotates to our orbital frame. Only matrix elements between site 1 and site 2 pick up ``\pm\mathrm{i}`` phases; since the phases amount to a choice of basis, they do not change the spectrum.
 
-Time reversal acts on the full model by ``\mathbf{H}(-\mathbf{k}) = \boldsymbol{\Gamma}\mathbf{H}^*(\mathbf{k})\boldsymbol{\Gamma}^\dagger``, with ``\boldsymbol{\Gamma}`` a Kronecker product of the identity over the sites and ``\mathrm{i}\sigma_y`` over the pseudospin of each site: here, ``\boldsymbol{\Gamma} = \boldsymbol{1}_2 \otimes \mathrm{i}\sigma_y``. (For a model with several band representations, ``\boldsymbol{\Gamma}`` is block-diagonal, with one such block for each.) We can verify this for a random set of amplitudes:
+Time reversal acts on the full model by ``\mathbf{H}(-\mathbf{k}) = \boldsymbol{\Gamma}\mathbf{H}^*(\mathbf{k})\boldsymbol{\Gamma}^\dagger``, with ``\boldsymbol{\Gamma}`` a Kronecker product of ``\mathrm{i}\sigma_y`` over the pseudospin and the identity over the sites: here, for two sites, ``\boldsymbol{\Gamma} = \mathrm{i}\sigma_y \otimes \boldsymbol{1}_2``. (For a model with several band representations, ``\boldsymbol{\Gamma}`` is additionally block-diagonal over the featured band representations.) We can verify this for a random set of amplitudes:
 
 ```@example spinful
 using LinearAlgebra
-Γ = kron(I(2), timereversal_unitary(brs[3].siteir))
+Γ = kron(timereversal_unitary(brs[3].siteir), I(2))
 ptbm = tbm(randn(6))
 k = [0.1, 0.2, 0.0]
 H₊, H₋ = copy(ptbm(k)), copy(ptbm(-k)) # `copy`, since `ptbm` reuses its output buffer

@@ -1,12 +1,18 @@
 
 """
-    site_induced_sgrep_excl_phase(br::BandRep, op::AbstractOperation)
+    site_induced_sgrep_excl_phase(
+        br::BandRep, op::AbstractOperation, [ordering::OrbitalOrdering]
+    )
     site_induced_sgrep_excl_phase(cbr::CompositeBandRep, op::AbstractOperation)
-        --> Matrix{ComplexF64}
+                                                                 --> Matrix{ComplexF64}
 
 Return the representation matrix of a symmetry operation `op` induced by the site
 symmetry group of a band representation `br` or composite band representation `cbr`,
 excluding the global momentum-dependent phase factor.
+
+The rows and columns of the matrix are ordered according to `ordering` (by default,
+`OrbitalOrdering(br)`); for `cbr`, according to [`OrbitalOrdering`](@ref) of each band
+representation.
 
 For a spinful (double-valued) band representation, i.e., when `isspinful(br)` is true, `op`
 must be a `DSymOperation`, since the representation depends on the SU(2) element in addition
@@ -21,19 +27,25 @@ introduced as a global phase factor. This is not true if Convention 2 is used. S
 function site_induced_sgrep_excl_phase(
     br::BandRep{D},
     op::AbstractOperation{D},
+    ordering::OrbitalOrdering{D} = OrbitalOrdering(br),
 ) where {D}
     _check_operation_spin(br, op)
     # NB: `bandreps` in Crystalline already applies `physical_realify` if
     #     `timereversal` is true, so we don't need to manually redo it for `siteir` below
     siteir = br.siteir
-    siteir_dim = irdim(siteir)
     siteg = primitivize(group(siteir))
     wps = orbit(siteg)
-    mult = length(wps)
     g = op
 
-    block_axis = BlockedOneTo(collect(siteir_dim:siteir_dim:mult*siteir_dim))
-    ρ = zeros(ComplexF64, block_axis, block_axis) # `BlockedMatrix` backed by a `Matrix`
+    # orbital (row/column) index of the `j`th partner function at the `α`th site of the
+    # orbit is `idxs[α, j]`, as given by `ordering` (whose `site_idx`s index the same orbit
+    # as `wps`)
+    idxs = Matrix{Int}(undef, length(wps), irdim(siteir))
+    for (n, o) in enumerate(ordering)
+        idxs[o.site_idx, o.partner_idx] = n
+    end
+
+    ρ = zeros(ComplexF64, length(ordering), length(ordering))
     for (α, (gₐ, qₐ)) in enumerate(zip(cosets(siteg), wps))
         check = false
         for (β, (gᵦ, qᵦ)) in enumerate(zip(cosets(siteg), wps))
@@ -46,17 +58,19 @@ function site_induced_sgrep_excl_phase(
             )
             idx_h = findfirst(h′ -> isapprox(h, h′, nothing, false), siteg)
             if !isnothing(idx_h) # h ∈ siteg and qₐ and qᵦ are connected by `g`
-                ρ[Block(β, α)] .= siteir.matrices[idx_h]
-                # we build the representation acting as the transpose, i.e., 
-                # gΦ(k) = ρᵀ(g)Φ(Rk), where Φ(k) is the site-symmetry function of
-                # the bandrep. This yields ρⱼᵦᵢₐ(g) = e(-i(gk)·v) Γⱼᵢ(g) δ(gqₐ, qᵦ),
-                # where Γ is the representation of the site-symmetry group, and 
-                # δ(gqₐ, qᵦ) is the Kronecker delta mod τ ∈ T.
-                # we are building it as the transpose because we want to keep good
-                # composition order: ρ(g₁g₂) = ρ(g₁)ρ(g₂). Check `trs_notes.md`.
+                # assign the "block" (β, α) (rows/columns of orbitals at qᵦ/qₐ); we go
+                # "through" `idxs` because the partner-function-major ordering doesn't
+                # actually produce (β, α)-site blocks (but (i, j)-partner-function blocks)
+                @views ρ[idxs[β, :], idxs[α, :]] .= siteir.matrices[idx_h]
 
-                # NB: We do not include the (usually redundant) exponential (k-dependent) 
-                #     phases. Note that these phases are NOT REDUNDANT if we mean to use
+                # We build the representation acting as the transpose, i.e.,
+                # gΦ(k) = ρᵀ(g)Φ(Rk), where Φ(k) is the site-symmetry function of the
+                # bandrep. This yields ρⱼᵦᵢₐ(g) = e(-i(gk)·v) Γⱼᵢ(g) δ(gqₐ, qᵦ), where Γ is
+                # the representation of the site-symmetry group, and δ(gqₐ, qᵦ) is the
+                # Kronecker delta mod τ ∈ T. We are building it as the transpose because we
+                # want to ensure the proper composition order: ρ(g₁g₂) = ρ(g₁)ρ(g₂).
+                # NB: We do not include the (usually redundant) exponential (k-dependent)
+                #     phases. Note that these phases are NOT REDUNDANT if we mean to
                 #     use the sgrep as the group action on eigenstates, e.g., for
                 #     determining the irreps of a tight-binding Hamiltonian; for this, use
                 #     `site_induced_sgrep` instead.

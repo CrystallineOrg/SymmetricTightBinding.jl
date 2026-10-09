@@ -97,7 +97,7 @@ end
             for k in ks
                 Hk = copy(ptbm(k))
                 @test Hk ≈ Hk'
-                # H(-k) = Γ H*(k) Γ†, with `Γ = 𝟙 ⊗ J` (`J = iσʸ ⊗ 𝟙ₙ`) on each site
+                # H(-k) = Γ H*(k) Γ†, with `Γ = J ⊗ 𝟙` (`J = iσʸ ⊗ 𝟙ₙ`, `𝟙` over sites) per BR
                 @test ptbm(-k) ≈ Γ * conj(Hk) * Γ' atol = 1e-12
                 for g in ops
                     D = site_induced_sgrep(ptbm, g)(k)

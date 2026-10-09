@@ -203,10 +203,15 @@ analysis fix). Remaining: Phase 5 (refactoring).
 
 - **`ptbm(k)` returns mutable scratch:** `ParameterizedTightBindingModel` reuses an internal
   buffer. When comparing evaluations at different k-points, `copy()` the result.
-- **Spinful orbital order:** site-major, as for spinless models; within a site with a
-  `2n`-dimensional site irrep, orbitals `i` and `i+n` are Kramers partners (time reversal acts
-  as `𝟙_sites ⊗ iσʸ ⊗ 𝟙ₙ` times `K`). The pseudospin frames of different sites are related by
-  the SU(2) elements of the coset representatives, so they need not share a spin axis.
+- **Orbital order:** within each band representation, partner-function-major (sites run
+  fastest, then partner functions, then band representations), as set by `OrbitalOrdering`.
+  Internal block-level functions take a block's ordering; public `br`/`cbr`-level ones
+  (`orbital_positions`, `site_induced_sgrep`) always use the canonical ordering. For a spinful
+  `2n`-dimensional site irrep, *partner functions* `i` and `i+n` are Kramers partners; with
+  `V` sites, this makes *orbitals* `m` and `m + nV` Kramers partners, so time reversal acts as
+  `iσʸ ⊗ 𝟙ₙ ⊗ 𝟙_V` times `K`, and H has a 2×2 pseudospin-block form. The pseudospin frames of
+  different sites are related by the SU(2) elements of the coset representatives, so they
+  need not share a spin axis.
 - **`@composite` macro hygiene:** The `@composite` macro evaluates in Crystalline's module
   scope, so loop variables are not visible. Use `CompositeBandRep(coefs, brs)` constructor
   in programmatic contexts (loops, comprehensions).
