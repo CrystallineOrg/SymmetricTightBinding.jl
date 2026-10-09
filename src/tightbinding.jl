@@ -46,16 +46,11 @@ function obtain_symmetry_related_hoppings(
     num(brᵦ) == sgnum || error("input `BandRep`s must belong to the same space group")
     brₐ.timereversal == brᵦ.timereversal || error("input `BandRep`s must have the same time-reversal symmetry")
 
-    # we only want to include the Wyckoff positions in the primitive cell - but the default
-    # listings from `spacegroup` include operations that are "centering translations";
-    # fortunately, the orbit returned for a `BandRep` do not include these redundant
-    # operations - but is still specified in a conventional basis. So, below, we remove
-    # redundant operations from the space group, and also change both the operations and the
-    # positions from a conventional to a primitive basis
-    cntr = centering(sgnum, D)
+    # work in a primitive basis, for both operations and the Wyckoff positions' orbits; the
+    # latter then contain no positions related by centering translations
     ops = primitivize(spacegroup(sgnum, Val{D}()))
-    wpsₐ = primitivize.(orbit(group(brₐ)), cntr)
-    wpsᵦ = primitivize.(orbit(group(brᵦ)), cntr)
+    wpsₐ = primitivized_orbit(brₐ; allow_free = true)
+    wpsᵦ = primitivized_orbit(brᵦ; allow_free = true)
 
     # we have defined a structure `HoppingOrbit` to gather the information. It is 
     # structured as:
@@ -445,43 +440,54 @@ end
 # ---------------------------------------------------------------------------- #
 
 """
-    OrbitalOrdering(br::BandRep{D}) --> OrbitalOrdering{D}
+    OrbitalOrdering(br::BandRep{D}; allow_free::Bool = true) --> OrbitalOrdering{D}
 
 Establishes a canonical, local ordering for the orbitals associated with a band representation
 `br`. This is the default ordering used when associating row/column indices in a
 tight-binding Hamiltonian block to specific orbitals in the associated band representations.
 
 The canonical orbital ordering is stored in `.ordering`. The `i`th element of `ordering`,
-`ordering[i]`, is a `NamedTuple` with two fields:
-`wp` and `idx`:
+`ordering[i]`, is a `NamedTuple` with three fields `wp`, `partner_idx`, and `site_idx`:
 - `wp`: stores a Wyckoff position in the orbit of the Wyckoff position associated to
-  `br.wp`.
-- `idx`: stores the index of the partner function of the site-symmetry irrep associated to
-  `br` at `wp`.
+  `br`.
+- `partner_idx`: stores the index of the partner function of the site-symmetry irrep
+  associated to `br` at `wp`.
+- `site_idx`: stores the index of `wp` in the orbit of `br`'s Wyckoff position (i.e., in
+  `orbit(group(br))`, or, for a `o::OrbitalOrdering`, the unique, order-preserving
+  subset of `[info.wp for info in o]`)
 
-I.e., the `i`th orbital associated with `br` is located at `wp` and transforms as the `idx`th
-partner function of the site-symmetry irrep of `br.siteir`.
+I.e., the `i`th orbital associated with `br` is located at `wp` and transforms as the
+`partner_idx`th partner function of the site-symmetry irrep of `br.siteir`.
 The total number of orbitals associated to a band representation, and hence the length of
 `ordering`, is the product of the site-symmetry irrep dimensionality and the number of sites
 in the Wyckoff position orbit.
-"""
-function OrbitalOrdering(br::BandRep{D}) where {D}
-    # we only want to include the wyckoff positions in the primitive cell - but the default
-    # listings from `spacegroup` include operations that are "centering translations";
-    # fortunately, the orbit returned for a `BandRep` do not include these redundant
-    # operations - but is still specified in a conventional basis. So, below, we remove
-    # redundant operations from the space group, and also change both the operations and the
-    # positions from a conventional to a primitive basis
-    sgnum = num(br)
-    cntr = centering(sgnum, D)
-    wps = primitivize.(orbit(group(br)), cntr)
 
-    V = length(wps)       # number of Wyckoff positions in orbit
-    Q = irdim(br.siteir) # number of orbitals partner functions at each Wyckoff position
-    ordering = Vector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}(undef, V * Q)
-    for i in 1:V
-        for k in 1:Q
-            ordering[(i-1)*Q+k] = (; wp = wps[i], idx = k)
+The orbitals are ordered partner-function-major: i.e., the site index runs fastest, such
+that the orbitals are `(site 1, partner 1), (site 2, partner 1), …, (site 1, partner 2), …`.
+For spinful band representations, the Kramers partners of the first half of the partner
+functions are the second half (cf. `timereversal_unitary`): so, in this ordering, time
+reversal acts as `iσʸ ⊗ 𝟙` and the Hamiltonian has a pseudospin-block form.
+
+All other orbital-ordering-dependent quantities derive from this ordering: the internal
+block-level functions (e.g., `construct_M_matrix`, `site_induced_sgrep_excl_phase`, and
+`site_induced_timereversal_unitary`) take the ordering of their block as an (optional)
+argument, while the public, band representation-level functions (e.g., `orbital_positions`
+and `site_induced_sgrep`) always use this canonical ordering.
+
+## Keyword argument
+- `allow_free::Bool` (default, `true`): passed to `primitivized_orbit`, determining whether
+  to allow or disallow free parameters in orbit positions.
+"""
+function OrbitalOrdering(br::BandRep{D}; allow_free::Bool = true) where {D}
+    wps = primitivized_orbit(br; allow_free) # free parameters are fine, unless disallowed
+
+    V = length(wps)      # number of Wyckoff positions in orbit
+    Q = irdim(br.siteir) # number of partner functions at each Wyckoff position
+    ordering = Vector{OrbitalInfo{D}}(undef, V * Q)
+    for partner_idx in 1:Q  # partner functions: outer (slow) index
+        for site_idx in 1:V # sites: inner (fast) index
+            wp = wps[site_idx]
+            ordering[(partner_idx-1)*V+site_idx] = (; wp, partner_idx, site_idx)
         end
     end
     return OrbitalOrdering(ordering)
@@ -554,10 +560,14 @@ function construct_M_matrix(
 end
 
 """
-    representation_constraints_matrices(
+    representation_constraint_matrices(
         Mm::AbstractArray{Int,4}, 
         brₐ::BandRep{D},
-        brᵦ::BandRep{D}) --> Vector{Array{ComplexF64,4}}
+        brᵦ::BandRep{D},
+        gens::AbstractVector{<:AbstractOperation{D}},
+       [orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
+        orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ)]
+    ) --> Vector{Array{ComplexF64,4}}
 
 Build the Q matrix for a particular symmetry operation (or, equivalently, a particular matrix
 from the site-symmetry representation), acting on the M matrix.
@@ -571,15 +581,18 @@ function representation_constraint_matrices(
     brₐ::BandRep{D},
     brᵦ::BandRep{D},
     gens::AbstractVector{<:AbstractOperation{D}},
+    orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
+    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
 ) where {D}
-    ρsₐₐ = site_induced_sgrep_excl_phase.(Ref(brₐ), gens)
-    ρsᵦᵦ = site_induced_sgrep_excl_phase.(Ref(brᵦ), gens)
+    ρsₐₐ = site_induced_sgrep_excl_phase.(Ref(brₐ), gens, Ref(orderingₐ))
+    ρsᵦᵦ = if brₐ == brᵦ # might as well reuse, if same BR
+        ρsₐₐ
+    else
+        site_induced_sgrep_excl_phase.(Ref(brᵦ), gens, Ref(orderingᵦ))
+    end
 
     Qs = [similar(Mm, ComplexF64) for _ in eachindex(gens)]
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
-        ρₐₐ = Matrix(ρₐₐ) # since `/` doesn't extend to BlockArrays currently
-        ρᵦᵦ = Matrix(ρᵦᵦ) # for type consistency
-
         # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk);
         # then, the Hamiltonian will be transformed due to symmetries as
         # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
@@ -661,7 +674,7 @@ function _obtain_basis_free_parameters(
     hermiticity::Hermiticity,
 ) where {D}
     # encode representation constraints on Hₐᵦ
-    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens)
+    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens, orderingₐ, orderingᵦ)
 
     # encode reciprocal-rotation constraints on Hₐᵦ
     Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
