@@ -11,7 +11,7 @@ hopping ranges, the package:
 1. Enumerates symmetry-related hopping orbits
 2. Constructs the M-matrix encoding all allowed Hamiltonian terms
 3. Enforces spatial symmetry, time-reversal, and hermiticity constraints via nullspace +
-   Zassenhaus intersection
+   subspace intersection
 4. Returns a `TightBindingModel` whose free parameters can be tuned to produce concrete
    Hamiltonians
 
@@ -82,7 +82,7 @@ src/
   gradients.jl              # dH/dc_i and dH/dk_i
   hermiticity.jl            # hermiticity/anti-hermiticity constraint intersection
   timereversal.jl           # TRS constraint: H(k) = H*(-k)
-  zassenhaus.jl             # Zassenhaus algorithm for subspace intersection
+  subspace_intersection.jl  # Projector + SVD-based algorithm for subspace intersection
   symmetry_breaking.jl      # subduced complement for translationengleiche subgroups
   utils.jl                  # orbital positions, pin_free!, split_complex, etc.
   show.jl                   # pretty-printing for all types
@@ -107,6 +107,7 @@ test/
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
   spinful.jl                # spinful (double group) models, with and without time-reversal
+  subspace_intersection.jl  # `subspace_intersection` unit tests
   misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough

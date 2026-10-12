@@ -17,7 +17,6 @@ const VEC_CMP_ATOL = 1e-11 # for `isapprox` comparison of RVecs / KVecs
 const NULLSPACE_ATOL_DEFAULT = 1e-5
 const SPARSIFICATION_ATOL_DEFAULT = 1e-10
 const PRUNE_ATOL_DEFAULT = SPARSIFICATION_ATOL_DEFAULT
-const ZASSENHAUS_ATOL_DEFAULT = NULLSPACE_ATOL_DEFAULT
 
 # --- Code loading ----------------------------------------------------------------------- #
 
@@ -36,7 +35,7 @@ include("site_representations.jl")
 export site_induced_sgrep
 include("tightbinding.jl")
 export tb_hamiltonian
-include("zassenhaus.jl")
+include("subspace_intersection.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
 include("utils.jl")

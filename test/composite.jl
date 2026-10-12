@@ -1,7 +1,6 @@
 using Test
 using SymmetricTightBinding
 using Crystalline
-using LinearAlgebra: ishermitian
 using SymmetricTightBinding: solve, TightBindingTerm # (`orbital_count` &c are exported)
 
 # `test_show` & `test_tp_show`; guarded so this file also runs standalone
@@ -126,9 +125,9 @@ isdefined(@__MODULE__, :test_show) || include("test_utils.jl")
 
         # without anti-Hermitian terms, the model is Hermitian at every k
         pctbm_h = ctbm(cs_h, zeros(Nᵃ))
-        @test all(k -> ishermitian(pctbm_h([k])), (0.0, 0.2, 0.37, 0.5))
+        @test all(k -> ishermitian_approx(pctbm_h([k])), (0.0, 0.2, 0.37, 0.5))
         # ... and genuinely non-Hermitian once they are switched on
-        @test !ishermitian(pctbm([0.2]))
+        @test !ishermitian_approx(pctbm([0.2]))
 
         # spectra of a composite model are complex, and `solve` agrees with `spectrum`
         Es = spectrum(pctbm, [[0.0], [0.2], [0.5]])
