@@ -1,7 +1,8 @@
 using Test
 using Crystalline
 using SymmetricTightBinding
-using LinearAlgebra: ⋅
+using LinearAlgebra: ⋅, norm
+using Random
 
 @testset "Berry curvature" begin
     @testset "Berry phase of π around a perturbatively gapped Dirac point" begin
@@ -63,10 +64,11 @@ using LinearAlgebra: ⋅
         cbr = @composite brs[1] + brs[end] # (1d|A) + (1a|B)
         tbm = tb_hamiltonian(cbr, [[1,0,0], [0,1,0], [0,0,1]])
 
+        Random.seed!(1)
         ptbm = tbm(randn(length(tbm)))
         k = [0.2, -0.7, 0.3]
         Ω = berrycurvature(ptbm, k, 1)
-        @test all(≈(0.0), Ω)
+        @test all(x -> norm(x) ≤ 1e-10, Ω) # Ω must vanish within numerical precision
 
         # example where the berry curvature should not vanish: only P
         brs = bandreps(2, Val(3); timereversal = false) # P-1 without TR

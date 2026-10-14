@@ -69,7 +69,7 @@ function constraint_hermiticity(
     Pᵀ = transpose(P)
     for s in axes(Mm, 3)
         for t in axes(Mm, 4)
-            Q[:, :, s, t] .= Pᵀ * Mm[:, :, t, s] # Pᵀ M⁽ᵗˢ⁾
+            Q[:, :, s, t] .= Pᵀ * @view Mm[:, :, t, s] # Pᵀ M⁽ᵗˢ⁾
         end
     end
     antihermitian && (Q .= -Q) # anti-hermiticity flips signs

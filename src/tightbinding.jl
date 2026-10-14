@@ -592,15 +592,25 @@ function representation_constraint_matrices(
     end
 
     Qs = [similar(Mm, ComplexF64) for _ in eachindex(gens)]
+    tmp1 = Matrix{ComplexF64}(undef, size(Mm, 3), size(Mm, 4))
+    tmp2 = similar(tmp1)
+    tmp_Mm_ij = similar(tmp1)
     for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
         # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk);
         # then, the Hamiltonian will be transformed due to symmetries as
         # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
         Q = Qs[n]
-        for i in axes(Mm, 1), j in axes(Mm, 2)
-            Q[i, j, :, :] .= ρₐₐ * (@view Mm[i, j, :, :]) * ρᵦᵦ'
+        for i in axes(Mm, 1), j in axes(Mm, 2)   # using `tmp*` matrices to reduce allocs
+            tmp_Mm_ij .= (@view Mm[i, j, :, :])  # copy & convert to ComplexF64 eltype⁽*⁾
+            mul!(tmp1, tmp_Mm_ij, ρᵦᵦ')          # tmp1 = Mm[i, j, :, :] * ρᵦᵦ'
+            mul!(tmp2, ρₐₐ, tmp1)                # tmp2 = ρₐₐ * Mm[i, j, :, :] * ρᵦᵦ'
+            Q[i, j, :, :] .= tmp2
         end
+        # ⁽*⁾: We do the `tmp_Mm_ij .= …` intermediary to ensure the subsequent `mul!` calls
+        #      dispatch to BLAS rather than to a generic fallback (which would happen for
+        #      two reasons: (1) `@view Mm[i, j, :, :]` is not strided and (2) the eltype of
+        #      `Mm` is `Int` while that of `ρᵦᵦ` is `ComplexF64`).
     end
 
     return Qs
@@ -722,19 +732,18 @@ function _obtain_basis_free_parameters(
     # See `split_complex` for more details on the real/imaginary splitting.
     N = 2size(Mm, 2) # number of elements per `t`-vector, when doubled
     tₐᵦ_basis_reim = split_complex.(eachcol(tₐᵦ_basis_matrix))
-    tₐᵦ_basis_reim_matrix =
-        reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
+    tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
 
     ## ----------------------------------------------------------------------------------- #
     if timereversal # "add" and "intersect" the associated TRS constraints
         # now we construct the TRS constraints, and then intersect the allowable basis terms
         # of these constraints with those corresponding to the previously computed basis
-        tₐᵦ_basis_tr_reim_matrix =
-            obtain_basis_free_parameters_TRS(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm)
-        tₐᵦ_basis_reim =
-            zassenhaus_intersection(tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix)
-        tₐᵦ_basis_reim_matrix =
-            reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
+        tₐᵦ_basis_tr_reim_matrix = obtain_basis_free_parameters_TRS(
+            h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm
+        )
+        tₐᵦ_basis_reim_matrix = subspace_intersection(
+            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix; atol=NULLSPACE_ATOL_DEFAULT
+        )
     end
     isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
@@ -751,11 +760,9 @@ function _obtain_basis_free_parameters(
             orderingᵦ,
             Mm,
         )
-
-        tₐᵦ_basis_reim = zassenhaus_intersection(
-            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix)
-        tₐᵦ_basis_reim_matrix =
-            reduce(hcat, tₐᵦ_basis_reim; init = Matrix{Float64}(undef, N, 0))
+        tₐᵦ_basis_reim_matrix = subspace_intersection(
+            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix; atol=NULLSPACE_ATOL_DEFAULT
+        )
     end
     isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
@@ -904,8 +911,9 @@ function reciprocal_constraints_matrices(
             _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op),
         )
         for s in axes(Mm, 3)
-            for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t => vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
-                Z[:, :, s, t] .= Pᵀ * @view Mm[:, :, s, t] # Pᵀ M⁽ˢᵗ⁾
+            for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t ⇒ vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
+                # evaluate `Z[:, :, s, t] = Pᵀ * Mm[:, :, s, t]` via `mul!`
+                mul!((@view Z[:, :, s, t]), Pᵀ, (@view Mm[:, :, s, t]))
             end
         end
         Zs[i] = Z

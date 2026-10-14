@@ -34,3 +34,14 @@ end
 Compare the `MIME"text/plain"` representation of `v` against `expected`, via [`test_show`](@ref).
 """
 test_tp_show(v, expected::AbstractString) = test_show(repr(MIME"text/plain"(), v), expected)
+
+"""
+    ishermitian_approx(H; kws...)
+
+Analogue of `ishermitian`, but allowing just approximate equality. Equivalent to
+`isapprox(H, H'; kws...)`.
+
+Needed because `Base.ishermitian` is a strict comparison (see also
+https://github.com/JuliaLang/LinearAlgebra.jl/issues/558).
+"""
+ishermitian_approx(H; kws...) = isapprox(H, H'; kws...)

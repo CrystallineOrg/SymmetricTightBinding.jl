@@ -1,10 +1,9 @@
 using Test
 using SymmetricTightBinding
 using Crystalline
-using LinearAlgebra: ishermitian, eigvals
+using LinearAlgebra: eigvals
 
 @testset "NONHERMITIAN models" begin
-
     @testset "NH-SSH model (1D SG 2)" begin
         # (1b|A′) ⊕ (1a|A′) in 1D SG 2 (inversion symmetry); intra- and inter-cell hoppings
         brs = bandreps(2, Val(1))
@@ -23,11 +22,11 @@ using LinearAlgebra: ishermitian, eigvals
 
         # equal off-diagonal coefficients (c₅ = c₆) → H(k) is Hermitian for all k
         ptbm = tbm_NH([0.0, 0.0, 0.0, 0.0, 1.0, 1.0])
-        @test all(k -> ishermitian(ptbm([k])), [0.0, 0.25, 0.5])
+        @test all(k -> ishermitian_approx(ptbm([k]); atol=1e-12), [0.0, 0.25, 0.5])
 
         # unequal off-diagonal coefficients → genuinely non-Hermitian
         ptbm = tbm_NH([0.0, 0.0, 0.0, 0.0, 1.0, 0.5])
-        @test !ishermitian(ptbm([0.3]))
+        @test !ishermitian_approx(ptbm([0.3]); atol=1e-12)
 
         # spectrum is complex-valued for a NONHERMITIAN model
         @test eltype(spectrum(ptbm, [[0.0], [0.3], [0.5]])) == ComplexF64
