@@ -1,5 +1,9 @@
 # Theory notes
 
+```@meta
+CurrentModule = SymmetricTightBinding
+```
+
 This package heavily relies on [representation theory of groups](https://en.wikipedia.org/wiki/Representation_theory_of_finite_groups) and on [band theory](https://en.wikipedia.org/wiki/Electronic_band_structure) of crystals. Most of this theory was introduced in [Bradley & Cracknell](https://academic.oup.com/book/54787) and later developed by [Bradlyn *et al.*](https://www.nature.com/articles/nature23268). Here, we aim to provide a practical introduction to the main concepts and derive the essential functions and relations that we need for the implementation of this package. Additionally, we generalize some of the previously derived results and make them more accessible to the general public.
 
 ## Table of contents
@@ -125,6 +129,8 @@ For the sake of simplicity, we define a matrix $𝐃_𝐤(g)$ whose entries are 
 ```math
 \boxed{g φ_{I,𝐤}(𝐫) = \sum_J [𝐃_𝐤(g)]_{JI} φ_{J,g 𝐤}(𝐫).}
 ```
+
+In the implementation, the orbital index $I = (α,i)$ is flattened with the site index $α$ running fast and the partner-function index running slow, i.e., in the order $(1,1), (2,1), …, (1,2), (2,2), …$ (see [`OrbitalOrdering`](@ref)): we refer to this as a partner-function-major ordering (as opposed to a site-major ordering $(1,1), (1,2), …, (2,1), (2,2), …$).
 
 It is important to notice that the dependence on 𝐤 of the representation $𝐃_𝐤$ is a global phase factor. This is convenient for computational purposes when imposing the symmetry constraints in the Hamiltonian.
 

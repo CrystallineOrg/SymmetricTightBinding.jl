@@ -76,29 +76,20 @@ inversion(::Val) = error("unsupported dimension")
 
 ## --------------------------------------------------------------------------------------- #
 """
-    orbital_positions(br::BandRep{D})                         -> Vector{DirectPoint{D}}
-    orbital_positions(cbr::CompositeBandRep{D})                  -> Vector{DirectPoint{D}}
-    orbital_positions(atbm::AbstractTightBindingModel)           -> Vector{DirectPoint}
-    orbital_positions(aptbm::AbstractParameterizedTightBindingModel) -> Vector{DirectPoint}
+    orbital_positions(br::BandRep{D})                            --> Vector{DirectPoint{D}}
+    orbital_positions(cbr::CompositeBandRep{D})
+    orbital_positions(atbm::AbstractTightBindingModel{D})
+    orbital_positions(aptbm::AbstractParameterizedTightBindingModel{D})
 
-Return a list of positions associated with our convention for orbital ordering of a
-`BandRep` or a `CompositeBandRep`. For a `BandRep`, the orbitals are arranged such
-that the first `irdim(br.siteir)` orbitals associate to the first element of the orbit
-of its Wyckoff positions; the next `irdim(br.siteir)` orbitals associate to the second
-element of the orbit, and so on. For a `CompositeBandRep`, the orbitals of each
-`BandRep` are concatenated, in the order of their coefficients. For coefficients
-greater than 1, the positions are repeated `cᵢ-1` times.
+Return a list of positions associated with the orbitals of a `BandRep` or a
+`CompositeBandRep`, following the canonical orbital ordering of [`OrbitalOrdering`](@ref).
+For a `CompositeBandRep`, the orbitals of each featured `BandRep` are concatenated, in the
+ordering of their coefficients. For coefficients greater than 1, the positions are repeated
+`cᵢ-1` times.
 """
 function orbital_positions(br::BandRep{D}) where D
-    dim = irdim(br.siteir)
-    wps = primitivized_orbit(br)
-    positions = Vector{DirectPoint{D}}(undef, length(wps) * dim)
-    for (m, wp) in enumerate(wps)
-        for j in ((m-1)*dim+1):(m*dim)
-            positions[j] = wp
-        end
-    end
-    return positions
+    # positions must be concrete, so we disallow free parameters (cf. `primitivized_orbit`)
+    return [DirectPoint{D}(constant(o.wp)) for o in OrbitalOrdering(br; allow_free = false)]
 end
 
 function orbital_positions(cbr::CompositeBandRep{D}) where D
@@ -107,21 +98,10 @@ function orbital_positions(cbr::CompositeBandRep{D}) where D
     j = 0
     for (i, cᵢ) in enumerate(cbr.coefs)
         iszero(cᵢ) && continue
-        br = cbr.brs[i]
-
-        dim = irdim(br.siteir)
-        wps = primitivized_orbit(br)
-        Nᵢ = length(wps) * dim
-        for (m, wp) in enumerate(wps)
-            for j′ in ((m-1)*dim+1):(m*dim)
-                positions[j+j′] = wp
-            end
-        end
-        j += Nᵢ
-
-        # if cᵢ > 1, we add the just-added positions `cᵢ-1` times more
-        for _ in 1:(Int(cᵢ)-1)
-            @views positions[j+1:j+Nᵢ] .= positions[j-Nᵢ+1:j]
+        positionsᵢ = orbital_positions(cbr.brs[i])
+        Nᵢ = length(positionsᵢ)
+        for _ in 1:Int(cᵢ) # add the positions once for each copy of the BR
+            positions[j+1:j+Nᵢ] .= positionsᵢ
             j += Nᵢ
         end
     end
@@ -131,36 +111,38 @@ function orbital_positions(cbr::CompositeBandRep{D}) where D
 end
 
 """
-    primitivized_orbit(br::BandRep{D}) where D
+    primitivized_orbit(br::BandRep{D}; allow_free::Bool = false)
+                                                         --> Vector{WyckoffPosition{D}}
 
-Return the orbit of the Wyckoff position associated with the band representation `br`.
-The coordinates of positions in the orbit are given relative to the primitive unit cell.
+Return the orbit of the Wyckoff position associated with the band representation `br`, with
+coordinates referred to the primitive basis. The order of the orbit is that of
+`orbit(group(br))`.
 
-Positions are returned as a `Vector{DirectPoint{D}}`.
-
-The following checks are made, producing an error if violated:
-1. There are no free parameters associated with the Wyckoff position.
+The following checks are made, producing an error if violated, as the implementation
+assumes:
+1. There are no free parameters associated with the Wyckoff position; skipped if
+   `allow_free = true` (free parameters are carried along symbolically by e.g., the
+   enumeration of hopping orbits, but must be pinned to obtain concrete positions).
 2. For every position, its coordinates, referred to the primitive basis, is in the range
-   [0,1); i.e., every position lies in the parallepiped primitive unit cell [0,1)ᴰ.
+   [0,1); i.e., every position lies in the parallelepiped primitive unit cell [0,1)ᴰ.
 """
-function primitivized_orbit(br::BandRep{D}) where D
-    wps = orbit(group(br))
+function primitivized_orbit(br::BandRep{D}; allow_free::Bool = false) where D
+    # we only want to include the Wyckoff positions in the primitive cell - but the default
+    # listings from `spacegroup` include operations that are "centering translations";
+    # fortunately, the orbit returned for a `BandRep` do not include these redundant
+    # operations - but is still specified in a conventional basis. So, below, we change the
+    # positions from a conventional to a primitive basis
     cntr = centering(num(br), D)
-    wps′_pts = Vector{DirectPoint{D}}(undef, length(wps))
-    for (m, wp) in enumerate(wps)
-        wp′ = primitivize(wp, cntr)
-        if !iszero(free(wp′))
+    wps = primitivize.(orbit(group(br)), cntr)
+    for wp in wps
+        if !allow_free && !iszero(free(wp))
             error(lazy"encountered Wyckoff position $wp with free parameters: not allowed")
         end
-        wp′_cnst = constant(wp′)
-        if any(rᵢ -> rᵢ < 0 || rᵢ ≥ 1, wp′_cnst)
-            error(
-                lazy"encountered Wyckoff position $wp (conventional coordinates) with primitive coordinates $wp′_cnst outside [0,1): this inconsistent with implementation expectations, please file a bug report",
-            )
+        if any(rᵢ -> rᵢ < 0 || rᵢ ≥ 1, constant(wp))
+            error(lazy"encountered Wyckoff position $wp with primitive coordinates outside [0,1): this is inconsistent with implementation expectations, please file a bug report")
         end
-        wps′_pts[m] = DirectPoint{D}(wp′_cnst)
     end
-    return wps′_pts
+    return wps
 end
 
 """

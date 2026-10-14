@@ -1,5 +1,9 @@
 # Time-reversal symmetry in tight-binding models
 
+```@meta
+CurrentModule = SymmetricTightBinding
+```
+
 This document follows — mainly — Chapter 12 of
 [Wooten's book](https://www.cambridge.org/core/books/symmetry-and-condensed-matter-physics/218B3D7B149076E63A618D4584E3379B).
 First, we present a general way to introduce a non-unitary
@@ -329,8 +333,9 @@ Following the deductions made by Bradlyn *et al.* in Ref. [1].
 
 Let us start with a basis set in real space $\{ψ_{iα}
 (\mathbf{r})\}$, where $i$ indicates the internal degrees of freedom of 
-the orbital, $α$ indicates the site $\mathbf{q}_α$ inside the Wyckoff
-position. Notice that by construction we assume each function $ψ_{iα}
+the orbital, $α = 1, …, n$ indicates the site $\mathbf{q}_α$ inside the Wyckoff
+position, and $n$ is the number of sites in the Wyckoff position's orbit (within the
+primitive unit cell). Notice that by construction we assume each function $ψ_{iα}
 (\mathbf{r})$ is localized on $\mathbf{q}_α$. Intuitively, these can be thought of as Wannier functions.
 
 We focus on a particular orbital $ψ_{i1}(\mathbf{r})$
@@ -479,11 +484,12 @@ We can vectorize the previous equation as:
 ```
 
 where $Φ_\mathbf{k}(\mathbf{r})$ is a column vector formed by 
-$\{φ_{iα,\mathbf{k}}(\mathbf{r})\}$, and, $Ρ(g)$ is an $n \times n$ matrix of 
-$\dim(ρ) \times \dim(ρ)$ blocks, each of them can be labelled by $α,β$. Most of 
-the blocks are zero: given $g \in G$, there is only one non-zero block in each 
-row and column, corresponding to $g\mathbf{q}_α - \mathbf{q}_β = 0 \mod T$, 
-and is equal to:
+$\{φ_{iα,\mathbf{k}}(\mathbf{r})\}$, ordered partner-function-major (i.e., with the
+site index $α$ running fastest; cf. [`OrbitalOrdering`](@ref)). Then, $Ρ(g)$ is a
+$\dim(ρ) \times \dim(ρ)$ matrix of $n \times n$ blocks, each of them labelled by the
+partner-function indices $j,i$. Within each block, most elements are zero: given $g \in G$,
+there is only one non-zero element in each row and column, at the sites $β,α$ with
+$g\mathbf{q}_α - \mathbf{q}_β = 0 \mod T$, and it is equal to:
 
 ```math
 Ρ_{jβ,iα}(g)

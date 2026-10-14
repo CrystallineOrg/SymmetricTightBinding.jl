@@ -7,9 +7,11 @@ where D is the whole operator and Γ is only its unitary part, so D(𝒯) = Γ(�
 For *spinless* band representations, 𝒯² = +1, the basis of the representation is real and
 Γ(𝒯) can be chosen as Γ(𝒯) = I so that H*(k) = H(-k).
 For *spinful* band representations, 𝒯² = -1 and we can (and do, cf. Crystalline's
-`timereversal_unitary`) choose Γ(𝒯) = 𝟙 ⊗ J with J = iσʸ ⊗ 𝟙ₙ per site (𝟙 over the
-sites of the Wyckoff position's orbit, J over the orbitals at each site: σʸ over the
-Kramers index, 𝟙ₙ over the remaining n). In both cases, Γ is real (a signed permutation).
+`timereversal_unitary`) choose Γ(𝒯) = J ⊗ 𝟙 with J = iσʸ ⊗ 𝟙ₙ (J over the partner
+functions at each site: σʸ over the Kramers index, 𝟙ₙ over the remaining n of a 2n-dim.
+site-symmetry irrep; and 𝟙 over the sites of the Wyckoff position's orbit - overall,
+following the partner-function-major order of `OrbitalOrdering`). In both cases, Γ is
+real (a signed permutation).
 
 NB: The "realification" of the representation, i.e., the basis choice that brings Γ to
 the above forms, is performed in Crystalline via `physical_realify`, applied when
@@ -93,8 +95,8 @@ function obtain_basis_free_parameters_TRS(
         # the orbital axes; since `Γₐ` and `Γᵦ` are signed permutations, `M̃` is integer
         # (`Γₐ` & `Γᵦ`: unitary parts of time reversal across the orbitals of `brₐ` & `brᵦ`,
         # in the orbital ordering of `OrbitalOrdering`)
-        Γₐ = site_induced_timereversal_unitary(brₐ) # defined here only, since they are
-        Γᵦ = site_induced_timereversal_unitary(brᵦ) # not needed (≡1) in the spinless case
+        Γₐ = site_induced_timereversal_unitary(brₐ, orderingₐ) # defined here only, since they
+        Γᵦ = site_induced_timereversal_unitary(brᵦ, orderingᵦ) # aren't needed (≡1) if spinless
         for j in axes(Mm, 2), i in axes(Mm, 1)
             Mᵢⱼ = @view Mm[i, j, :, :]
             M̃ᵢⱼ = Γₐ * Mᵢⱼ * Γᵦ'
@@ -112,8 +114,8 @@ function obtain_basis_free_parameters_TRS(
 end
 
 """
-    site_induced_timereversal_unitary(br::BandRep)           --> AbstractMatrix{<:Real}
-    site_induced_timereversal_unitary(cbr::CompositeBandRep) --> Matrix{<:Real}
+    site_induced_timereversal_unitary(br::BandRep, [ordering::OrbitalOrdering])
+    site_induced_timereversal_unitary(cbr::CompositeBandRep)             --> Matrix{<:Real}
 
 Return the unitary part `Γ` of time reversal `𝒯 = ΓK` across all orbitals of `br`, i.e.,
 across sites in the orbit of the Wyckoff position and site-symmetry orbitals at each site.
@@ -121,17 +123,26 @@ This is the time-reversal counterpart of [`site_induced_sgrep`](@ref): i.e., the
 (unitary part of the) action of time-reversal symmetry on the orbitals of a band
 representation.
 
-The orbitals are ordered according to `OrbitalOrdering(br)`: i.e., the returned matrix is
-`𝟙 ⊗ Γₛ`, with `Γₛ = Crystalline.timereversal_unitary(br.siteir)` the unitary part for a
-single site (`𝟙` for spinless, `J = iσʸ ⊗ 𝟙ₙ` for spinful site irreps).
+The orbitals are ordered according to `ordering` (by default, `OrbitalOrdering(br)`):
+`Γ` acts as `Γₛ = Crystalline.timereversal_unitary(br.siteir)` on the partner functions of
+each site, and trivially across sites (`Γₛ = 𝟙` for spinless and `J = iσʸ ⊗ 𝟙ₙ` for spinful
+site irreps). In the default, partner-function-major, ordering, `Γ = Γₛ ⊗ 𝟙`.
 
 If a `CompositeBandRep` is supplied as input, the matrix is the block-diagonal
 generalization, stacking over the contained band representation content.
 """
-function site_induced_timereversal_unitary(br::BandRep)
+function site_induced_timereversal_unitary(
+    br::BandRep{D},
+    ordering::OrbitalOrdering{D} = OrbitalOrdering(br)
+) where D
     Γₛ = timereversal_unitary(br.siteir)
-    n = length(cosets(group(br))) # number of sites in the orbit of `br`'s Wyckoff position
-    return kron(I(n), Γₛ)
+    # Γ is diagonal in the site index & acts as `Γₛ` on the partner functions of each site
+    Γ = zeros(eltype(Γₛ), length(ordering), length(ordering))
+    for (n, oₙ) in enumerate(ordering), (m, oₘ) in enumerate(ordering)
+        oₘ.site_idx == oₙ.site_idx || continue
+        Γ[m, n] = Γₛ[oₘ.partner_idx, oₙ.partner_idx]
+    end
+    return Γ
 end
 
 function site_induced_timereversal_unitary(cbr::CompositeBandRep)

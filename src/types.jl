@@ -56,12 +56,17 @@ end
 # ---------------------------------------------------------------------------------------- #
 # constructor defined in /src/tightbinding.jl
 
-struct OrbitalOrdering{D} <: AbstractVector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}
-    ordering::Vector{@NamedTuple{wp::WyckoffPosition{D}, idx::Int}}
+const OrbitalInfo{D} = @NamedTuple{
+    wp::WyckoffPosition{D}, # Wyckoff position (primitivized)
+    partner_idx::Int,       # Partner function *index* in site-symmetry irrep
+    site_idx::Int           # Wyckoff position *index* in the orbit (`wp`'s index overall)
+}
+struct OrbitalOrdering{D} <: AbstractVector{OrbitalInfo{D}}
+    ordering::Vector{OrbitalInfo{D}}
 end
 Base.getindex(o::OrbitalOrdering, i::Int) = o.ordering[i]
 Base.size(o::OrbitalOrdering) = size(o.ordering)
-Base.setindex!(::OrbitalOrdering, v, i::Int) = error("setindex! is not supported")
+Base.setindex!(::OrbitalOrdering, #=v=#::Any, #=i=#::Int) = error("setindex! not supported")
 Base.IndexStyle(::Type{<:OrbitalOrdering}) = IndexLinear()
 Base.iterate(o::OrbitalOrdering) = iterate(o.ordering)
 Base.iterate(o::OrbitalOrdering, i) = iterate(o.ordering, i)
