@@ -41,6 +41,7 @@ function site_induced_sgrep_excl_phase(
     # orbit is `idxs[α, j]`, as given by `ordering` (whose `site_idx`s index the same orbit
     # as `wps`)
     idxs = Matrix{Int}(undef, length(wps), irdim(siteir))
+    @assert length(ordering) == length(idxs) "`ordering` incompatible with `br`"
     for (n, o) in enumerate(ordering)
         idxs[o.site_idx, o.partner_idx] = n
     end

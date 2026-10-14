@@ -1045,12 +1045,16 @@ the symmetry operations of the underlying space group.
 
 For spinful models with time-reversal symmetry, the model follows Crystalline.jl convention
 for the unitary part of time reversal (iσʸK, see Crystalline's `timereversal_unitary`):
-orbitals `i` and `i+n` of a site (i.e., a block of the resulting Hamiltonian) with a
-`2n`-dimensional site irrep are Kramers partners (i.e., time-reversal conjugate states).
-Thus, time reversal acts on each pair (`i`, `i+n`) exactly as on the spin-up and -down
-states of a spin-½ (i.e., as iσʸK). The pair can therefore be thought of as |↑⟩ and |↓⟩
-pseudospin states; if the site orbitals carry no intrinsic spin-orbit coupling, this is
-just the electron's spin.
+for a `2n`-dimensional site irrep, partner functions `i` and `i+n` are Kramers partners
+(i.e., time-reversal conjugate states). Since the orbitals of each band representation are
+ordered partner-function-major (see [`OrbitalOrdering`](@ref)), this makes orbitals `m` and
+`m+nV` Kramers partners, for a band representation with `V` sites (counting `m` from the
+start of the band representation's block in the Hamiltonian). Thus, time reversal acts on
+each pair (`m`, `m+nV`) exactly as on the spin-up and -down states of a spin-½ (i.e., as
+iσʸK), and each block of the Hamiltonian (between a pair of band representations) has a
+2×2 pseudospin-block form. The pair can therefore be thought of as |↑⟩ and |↓⟩ pseudospin
+states; if the site orbitals carry no intrinsic spin-orbit coupling, this is just the
+electron's spin.
 """
 function tb_hamiltonian(
     cbr::CompositeBandRep{D, IR, SIR},

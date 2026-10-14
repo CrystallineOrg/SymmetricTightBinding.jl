@@ -3,6 +3,7 @@ using SymmetricTightBinding
 using SymmetricTightBinding: site_induced_sgrep_excl_phase, site_induced_timereversal_unitary,
                              OrbitalOrdering, obtain_basis_free_parameters
 using Crystalline
+using Crystalline: constant
 using LinearAlgebra: I
 
 @testset "Site representations" begin
