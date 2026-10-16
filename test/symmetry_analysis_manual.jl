@@ -106,6 +106,47 @@ end
         end
     end
 
+    @testset "2D: SG 13 (p3), without TR (#137)" begin
+        brs = bandreps(13, Val(2); timereversal = false)
+        for i in eachindex(brs) # complex site irreps were previously conjugated
+            @test _test_symmetry_analysis(brs, i)
+        end
+
+        # labels at K describe our bands at K, which carry the tables' KA irreps
+        cbr = CompositeBandRep([0, 1, 0, 0, 0, 1, 1, 0, 0], brs) # (1c|²E)+(1b|¹E)+(1a|A)
+        ptbm = tb_hamiltonian(cbr)([1, 0, -1, 0, 0, 0, 0, 0, 0])
+        annotations = collect_irrep_annotations(ptbm)
+        @test last.(annotations["K"]) == ["KA₁", "KA₂", "KA₃"]
+        @test last.(annotations["KA"]) == ["K₁", "K₁", "K₁"]
+
+        # complex site irreps away from the origin: previously gave (1c|¹E)+(1b|²E)
+        cbr2 = CompositeBandRep([0, 1, 0, 0, 0, 1, 0, 0, 0], brs) # (1c|²E)+(1b|¹E)
+        tbm2 = tb_hamiltonian(cbr2, [[0, 0], [1, 0]])
+        ptbm2 = tbm2(_test_coefficients(length(tbm2)))
+        @test sum(collect_compatible(ptbm2)) == SymmetryVector(cbr2)
+
+        # `symmetry_eigenvalues` uses our convention: 3⁺ eigenvalues at K are those of KA
+        lgK = group(lgirreps(13, Val(2))["K"])
+        K = position(lgK)()
+        for (i, χ) in ((2, cispi(-2/3)), (6, cispi(2/3)), (7, 1)) # (1c|²E), (1b|¹E), (1a|A)
+            ptbm1 = tb_hamiltonian(CompositeBandRep(Int.(eachindex(brs) .== i), brs))([1.0])
+            @test only(symmetry_eigenvalues(ptbm1, operations(lgK), K)[2, :]) ≈ χ
+        end
+
+        # `flip_bloch_phase` moves K's irreps to -K (labelled KA) and vice versa
+        lgirsv′ = SymmetricTightBinding.flip_bloch_phase(irreps(brs); timereversal = false)
+        @test [klabel(group(lgirs)) for lgirs in lgirsv′] == ["Γ", "KA", "K"]
+        @test [label(first(lgirs)) for lgirs in lgirsv′] == ["Γ₁", "K₁", "KA₁"]
+        @test position(group(lgirsv′[2]))() ≈ -K
+
+        # with TR, the K-labels are kept at K
+        brsᵀ = bandreps(13, Val(2))
+        ptbmᵀ = tb_hamiltonian(CompositeBandRep([1, 0, 0, 0, 0, 0], brsᵀ))([1.0]) # (1c|A)
+        annotationsᵀ = collect_irrep_annotations(ptbmᵀ)
+        @test last.(annotationsᵀ["K"]) == ["K₃"]
+        @test last.(annotationsᵀ["KA"]) == ["KA₂"]
+    end
+
     @testset "2D: SG 14 (p3m1)" begin
         brs = bandreps(14, Val(2))
         for i in eachindex(brs) # all 9 EBRs pass (K-point phase issue fixed)
