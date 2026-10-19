@@ -23,7 +23,7 @@ pkg> add SymmetricTightBinding, Crystalline
 SymmetricTightBinding.jl is designed to work as a companion package to [Crystalline.jl](https://github.com/thchr/Crystalline.jl); so we add Crystalline.jl in the above as well.
 The packages can subsequently be loaded at the Julia REPL:
 ```@repl
-julia> using SymmetricTightBinding, Crystalline
+using SymmetricTightBinding, Crystalline
 ```
 
 ## Table of contents
