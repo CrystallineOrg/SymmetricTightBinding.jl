@@ -117,7 +117,6 @@ from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 - `MmtC :: Array{ComplexF64, 3}`: pre-contracted matrix `Mm` with "complexified" `t`.
 - `diagonal_block :: Bool`: whether this is a diagonal block in the overall Hamiltonian.
 """
-
 struct TightBindingBlock{
     D, S, IR<:AbstractLGIrrep{D}, SIR<:AbstractSiteIrrep{D}
 } <: AbstractMatrix{TightBindingElementString}
@@ -148,7 +147,7 @@ function TightBindingBlock{D, S}(
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
     MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
-    for i in axes(Mm, 3), j in axes(Mm, 4)
+    for j in axes(Mm, 4), i in axes(Mm, 3)
         MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
     end
     tbb = TightBindingBlock{D, S, IR, SIR}(

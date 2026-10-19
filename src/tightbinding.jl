@@ -601,7 +601,7 @@ function representation_constraint_matrices(
         # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
         # matrices as
         Q = Qs[n]
-        for i in axes(Mm, 1), j in axes(Mm, 2)   # using `tmp*` matrices to reduce allocs
+        for j in axes(Mm, 2), i in axes(Mm, 1)   # using `tmp*` matrices to reduce allocs
             tmp_Mm_ij .= (@view Mm[i, j, :, :])  # copy & convert to ComplexF64 eltype⁽*⁾
             mul!(tmp1, tmp_Mm_ij, ρᵦᵦ')          # tmp1 = Mm[i, j, :, :] * ρᵦᵦ'
             mul!(tmp2, ρₐₐ, tmp1)                # tmp2 = ρₐₐ * Mm[i, j, :, :] * ρᵦᵦ'
@@ -854,7 +854,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
     end
 
     # aggregate constraints into `constraint_vs`
-    for i in axes(Q, 1), s in axes(Q, 3), t in axes(Q, 4)
+    for t in axes(Q, 4), s in axes(Q, 3), i in axes(Q, 1)
         q = @view Q[i, :, s, t]
         z = Z isa Number ? Z : @view Z[i, :, s, t]
         c .= q .- z
@@ -864,7 +864,7 @@ function _aggregate_constraints!( # modifies `constraint_vs` in place
         norm_c < row_atol && continue
 
         # check whether `c` is collinear w/ any existing constraint; if so, don't add again
-        c_dot_c′s = reshape(constraint_vs, J, length(constraint_vs) ÷ J)' * c # elements are `dot(c, c′)`, with `c′` and existing constraint
+        c_dot_c′s = reshape(constraint_vs, J, length(constraint_vs) ÷ J)' * c # elements are `dot(c′, c)`, with `c′` an existing constraint
         collinear = any(zip(c_dot_c′s, norms)) do (c_dot_c′, norm_c′)
             # NB: works also if zip(…) is empty, cf. `any("empty iterator") = false`
             abs(c_dot_c′) ≈ norm_c * norm_c′ # collinear if true
@@ -910,8 +910,8 @@ function reciprocal_constraints_matrices(
         Pᵀ = transpose(
             _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op),
         )
-        for s in axes(Mm, 3)
-            for t in axes(Mm, 4) # vᵀ Ρᵀ Mₛₜ t ⇒ vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
+        for t in axes(Mm, 4)
+            for s in axes(Mm, 3) # vᵀ Ρᵀ Mₛₜ t ⇒ vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
                 # evaluate `Z[:, :, s, t] = Pᵀ * Mm[:, :, s, t]` via `mul!`
                 mul!((@view Z[:, :, s, t]), Pᵀ, (@view Mm[:, :, s, t]))
             end

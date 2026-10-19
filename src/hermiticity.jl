@@ -67,8 +67,8 @@ function constraint_hermiticity(
     opI = inversion(Val(D)) # inversion operation
     P = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, opI)
     Pᵀ = transpose(P)
-    for s in axes(Mm, 3)
-        for t in axes(Mm, 4)
+    for t in axes(Mm, 4)
+        for s in axes(Mm, 3)
             Q[:, :, s, t] .= Pᵀ * @view Mm[:, :, t, s] # Pᵀ M⁽ᵗˢ⁾
         end
     end
