@@ -43,6 +43,7 @@ hopping ranges, the package:
 - `symmetry_eigenvalues(ptbm, ops, k, sgreps)` — irrep content at high-symmetry k (`src/symmetry_analysis.jl`)
 - `collect_compatible(ptbm)` / `collect_irrep_annotations(ptbm)` — band symmetry labels
 - `berrycurvature(ptbm, k, n)` / `chern(ptbm, n, Nk)` / `chern_fukui(ptbm, n, Nk)` (`src/berry.jl`)
+- `wilsonloop(ptbm, ks, bands)` — Abelian or non-Abelian Wilson loop phases over a closed k-loop (`src/wilson.jl`)
 - `densityofstates(ptbm, frequencies; Nk, offset, transform)` — DOS via generalized
   Gilat–Raubenheimer (`src/dos.jl`); per-unit-cell normalized (∫g dE = #bands); `D ∈ {1,2,3}`
 - `gradient_wrt_hopping` / `gradient_wrt_momentum` / `energy_gradient_wrt_hopping` /
@@ -78,6 +79,7 @@ src/
   symmetry_analysis.jl      # irrep content at high-symmetry k-points
   spectrum.jl               # band eigenvalue computation
   berry.jl                  # Berry curvature, Chern numbers (Kubo + Fukui)
+  wilson.jl                 # Wilson loops (Abelian + non-Abelian)
   dos.jl                    # density of states (generalized Gilat–Raubenheimer)
   gradients.jl              # dH/dc_i and dH/dk_i
   hermiticity.jl            # hermiticity/anti-hermiticity constraint intersection
@@ -99,6 +101,7 @@ test/
   symmetry_analysis.jl      # ⚠️ full sweep over every EBR of every SG in 1D-3D; very slow
   symmetry_analysis_manual.jl # paired-down, manual version of above (see PR #89)
   berry.jl                  # Berry curvature + Chern number tests
+  wilson.jl                 # Wilson loop tests
   dos.jl                    # density of states (per-cell formula + sum-rule tests)
   spectrum.jl               # band eigenvalue tests
   show.jl                   # regression tests for show/summary methods
@@ -157,9 +160,9 @@ first-call compilation):
 | `pg_tb_hamiltonian.jl`        | 51 s    | | `gradients.jl`            | 7 s  |
 | `berry.jl`                    | 49 s    | | `nonhermitian.jl`         | 7 s  |
 | `sg_tb_hamiltonian.jl`        | 49 s    | | `show.jl`                 | 5 s  |
-| `symmetry_analysis_manual.jl` | 41 s    | | `spectrum.jl`             | 2 s  |
-| `dos.jl`                      | 34 s    | | `misc.jl`                 | 2 s  |
-| `symmetry-breaking.jl`        | 19 s    | |                           |      |
+| `symmetry_analysis_manual.jl` | 41 s    | | `wilson.jl`               | 5 s  |
+| `dos.jl`                      | 34 s    | | `spectrum.jl`             | 2 s  |
+| `symmetry-breaking.jl`        | 19 s    | | `misc.jl`                 | 2 s  |
 
 † timed on its own rather than in sequence, so it carries all of the first-call compilation;
 its marginal cost within a larger run is smaller.
