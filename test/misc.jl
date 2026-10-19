@@ -135,3 +135,24 @@ end
     ptbm = tbm([0, 1])
     @test collect_compatible(ptbm; atol = 1e-6) == collect_compatible(ptbm)
 end
+
+@testset "Sparse `Mm` layout & `_outer_sandwich`" begin
+    # `Mm[s,t][i,j]` is a matrix of sparse matrices; `_outer_sandwich(A, Mm, B)` must agree
+    # with the product `A * Mm[i,j,:,:] * B` in the equivalent dense layout `Mm[i,j,s,t]`
+    brs = bandreps(220) # I-43d: many orbitals & partner functions per EBR
+    br1, br2 = brs[1], brs[8]
+    h_orbit = first(obtain_symmetry_related_hoppings([[0,0,0]], br1, br2))
+    Mm = SymmetricTightBinding.construct_M_matrix(h_orbit, br1, br2)
+    @test size(Mm) == (occupation(br1), occupation(br2))
+    @test all(M -> all(isone, M.nzval), Mm) # unit-elements only
+    Mm_dense = [Mm[s,t][i,j] for i in axes(Mm[1], 1), j in axes(Mm[1], 2),
+                                 s in axes(Mm, 1),    t in axes(Mm, 2)]
+    A = cispi.(0.37 .* (1:size(Mm, 1)) .* (1:size(Mm, 1))')   # dense: every term contributes
+    B = zeros(ComplexF64, size(Mm, 2), size(Mm, 2))           # sparse: few terms contribute
+    B[CartesianIndex.(eachindex(axes(B, 1)), circshift(axes(B, 2), 1))] .= 1im
+    Q = SymmetricTightBinding._outer_sandwich(A, Mm, B)
+    @test all(Iterators.product(axes(Mm_dense, 1), axes(Mm_dense, 2))) do (i, j)
+        Qᵢⱼ = [Q[s,t][i,j] for s in axes(Q, 1), t in axes(Q, 2)]
+        Qᵢⱼ ≈ A * Mm_dense[i,j,:,:] * B
+    end
+end

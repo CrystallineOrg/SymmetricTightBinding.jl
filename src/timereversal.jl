@@ -18,7 +18,7 @@ the above forms, is performed in Crystalline via `physical_realify`, applied whe
 `timereversal = true`. This is done in `bandreps` itself, i.e., can be assumed here.
 
 We have that Hₛₜ(k) = vᵀ(k) Mₛₜ t, with s and t indexing the orbitals of `brₐ` and `brᵦ`,
-and Mₛₜ = `Mm[:,:,s,t]` (cf. `construct_M_matrix`). Remember that we split t into real and
+and Mₛₜ = `Mm[s,t]` (cf. `construct_M_matrix`). Remember that we split t into real and
 imaginary parts: t = [real(t); i imag(t)], and Mm acts as [Mm Mm]. Thus, we can rewrite the
 Hamiltonian as:
    Hₛₜ(k) = vᵀ(k) [Mₛₜ Mₛₜ] [real(t); i imag(t)]
@@ -33,8 +33,8 @@ Thus, the action of TRS on the Hamiltonian, H(-k) = ΓH*(k)Γ†, can be decompo
                 = (v*)ᵀ(k) [M̃ₛₜ -M̃ₛₜ] [real(t); i*imag(t)]
                 = vᵀ(-k) [M̃ₛₜ -M̃ₛₜ] [real(t); i*imag(t)]
    with M̃ₛₜ = Σₘₙ Γₐ,ₛₘ Mₘₙ Γᵦ,ₜₙ, using that Γ is real and that v*(k) = v(-k).
-   In practice, we compute M̃ slice by slice over the hopping-vector (i) and free-parameter
-   (j) axes of Mm, i.e., as the matrix product M̃[i,j,:,:] = Γₐ Mm[i,j,:,:] Γᵦᵀ.
+   In practice, we compute M̃ as the product M̃ = Γₐ Mm Γᵦᵀ over the orbital (s,t) axes of
+   Mm, i.e., as M̃ₛₜ = Σₘₙ Γₐ,ₛₘ Γᵦ,ₜₙ Mm[m,n] (cf. `_outer_sandwich`).
 
 Imposing the condition H(-k) = ΓH*(k)Γ† we get:
   vᵀ(-k) [Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ] [real(t); i*imag(t)] = 0   (for all s, t)
@@ -57,8 +57,8 @@ of [Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ] for all s, t.
         brᵦ::BandRep{D}, 
         orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-        Mm::AbstractArray{4, Int} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
-    )                             --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}
+        Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
+    )                             --> Matrix{Float64}
 
 Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` associated
 with the hopping orbit `h_orbit` under time-reversal symmetry.
@@ -71,7 +71,7 @@ function obtain_basis_free_parameters_TRS(
     brᵦ::BandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    Mm::AbstractArray{Int, 4} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
+    Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
     S = isspinful(brₐ)
     S == isspinful(brᵦ) || error("input `BandRep`s must have the same spin")
@@ -82,14 +82,11 @@ function obtain_basis_free_parameters_TRS(
     # constraints being a row-wise aggregation of Q-Z
 
     # Step 1: the Z tensor (zero-valued tensor)
-    Z = 0 # stand-in for a zero-tensor (but no need to allocate it explicitly)
+    Z = nothing # stand-in for a zero-tensor (but no need to allocate it explicitly)
 
-    # Step 2: the Q tensor (the block tensor "[Mᵢⱼ-M̃ᵢⱼ Mᵢⱼ+M̃ᵢⱼ]")
-    sMm = size(Mm)
-    Q = zeros(Int, (sMm[1], 2sMm[2], sMm[3], sMm[4]))
-    if !S # spinless: `M̃ = M`, so the constraint tensor is `[0 M]`
-        dst_indices = CartesianIndices((1:sMm[1], (sMm[2]+1):2sMm[2], 1:sMm[3], 1:sMm[4]))
-        copyto!(Q, dst_indices, Mm, CartesianIndices(axes(Mm))) # efficient [0 Mm]
+    # Step 2: the Q tensor (the block tensor "[Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ]")
+    Q = if !S # spinless: `M̃ = M`, so the constraint tensor is `[0 M]`
+        [hcat(spzeros(Int, size(M)...), M) for M in Mm]
     else
         # spinful: the constraint tensor is `[M-M̃ M+M̃]`, with `M̃ = Γₐ M Γᵦᵀ` acting on
         # the orbital axes; since `Γₐ` and `Γᵦ` are signed permutations, `M̃` is integer
@@ -97,16 +94,14 @@ function obtain_basis_free_parameters_TRS(
         # in the orbital ordering of `OrbitalOrdering`)
         Γₐ = site_induced_timereversal_unitary(brₐ, orderingₐ) # defined here only, since they
         Γᵦ = site_induced_timereversal_unitary(brᵦ, orderingᵦ) # aren't needed (≡1) if spinless
-        for j in axes(Mm, 2), i in axes(Mm, 1)
-            Mᵢⱼ = @view Mm[i, j, :, :]
-            M̃ᵢⱼ = Γₐ * Mᵢⱼ * Γᵦ'
-            Q[i, j, :, :]        .= Mᵢⱼ .- M̃ᵢⱼ # first block "M-M̃"
-            Q[i, sMm[2]+j, :, :] .= Mᵢⱼ .+ M̃ᵢⱼ # second block "M+M̃"
+        M̃m = _outer_sandwich(Γₐ, Mm, Γᵦ')
+        map(Mm, M̃m) do M, M̃
+            hcat(M - M̃, M + M̃) # blocks "M-M̃" and "M+M̃"
         end
     end
 
     # Step 3: use `_aggregate_constraints` to build the constraint matrix 
-    #         ~(Q-Z)[i, :, s, t] (aggregated over i,s,t)
+    #         ~(Q-Z)[s, t][i, :] (aggregated over i,s,t)
     constraints = _aggregate_constraints(Q, Z)
     tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
 
