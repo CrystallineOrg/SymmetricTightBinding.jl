@@ -2,10 +2,10 @@
 
 So far, we have built models from *spinless* (i.e., integer spin) band representations. Spin–orbit coupled electrons instead require *spinful* (i.e., half-integer spin) band representations that involve the double space group and its representations. In Crystalline.jl, these are obtained by passing `spinful = Val(true)` to `bandreps`; from there, building a model works as usual, via [`tb_hamiltonian`](@ref).
 
-Relative to the spinless setting, the main new ingredient is that time-reversal symmetry, ``\mathcal{T}``, squares to ``\mathcal{T}^2 = −1`` for spinful particles (as opposed to ``\mathcal{T}^2 = +1`` for spinless particles), which pairs states into Kramers partners. Below, we first explain how Kramers partners appear in a model, using the simplest possible example, and then build a spin–orbit coupled model of graphene.
+Compared to the spinless setting, the fundamental new ingredient is that a rotation by 2π is no longer the identity: for spinful particles, it acts as −1. The double group accounts for this by including the 2π rotation as a distinct element ``\bar{E}``; spinful band representations are then induced from its *double-valued* site-symmetry irreps, which represent ``\bar{E}`` by ``-\boldsymbol{1}``. This changes how point-group operations can act on orbitals (e.g., a mirror squares to ``\bar{E}``, so its eigenvalues are ``±\mathrm{i}`` rather than ``±1``), and hence which Hamiltonian terms are allowed.
+When time-reversal symmetry ``\mathcal{T}`` is incorporated, there is a further difference: for spinful particles, ``\mathcal{T}^2 = \bar{E} = −1`` (as opposed to ``+1`` for spinless particles), which pairs states into Kramers partners.
 
-!!! note "Spinful models are currently 3D only"
-    Crystalline.jl does not yet provide spinful band representations in 1D and 2D. For now, a 2D model can instead be built from a 3D space group with the same in-plane symmetry, as we do for graphene below.
+Below, we first explain how Kramers partners appear in a model, using the simplest possible example, and then build a spin–orbit coupled model of graphene.
 
 ## Kramers partners as pseudospin
 
@@ -74,17 +74,16 @@ This holds for any spinful model with both inversion and time-reversal symmetry,
 ENV["COLUMNS"] = 400 # print the wide terms below without truncation
 ```
 
-As a more involved example, we next build a spinful version of graphene: the Kane--Mele model[^3]. The spinless graphene model of the [tutorial](@ref) is built from *p*<sub>*z*</sub> orbitals at the 2b Wyckoff position of plane group *p*6*mm* (⋕17), transforming as the site-symmetry irrep A<sub>1</sub>. Here, we use instead the 3D space group *P*6*mm* (⋕183), which has the same in-plane symmetry.[^4] Adding spin, the *p*<sub>*z*</sub>↑ and *p*<sub>*z*</sub>↓ orbitals transform jointly as the 2D site-symmetry irrep E₁ˢ:
+As a more involved example, we next build a spinful version of graphene: the Kane--Mele model[^3]. The spinless graphene model of the [tutorial](@ref) is built from *p*<sub>*z*</sub> orbitals at the 2b Wyckoff position of plane group *p*6*mm* (⋕17),[^4] transforming as the site-symmetry irrep A<sub>1</sub>. Adding spin, the *p*<sub>*z*</sub>↑ and *p*<sub>*z*</sub>↓ orbitals transform jointly as the 2D site-symmetry irrep E₁ˢ:
 
 ```@example spinful
-sgnum = 183
-brs = bandreps(sgnum; spinful = Val(true))
+sgnum = 17
+brs = bandreps(sgnum, Val(2); spinful = Val(true))
 ```
 
-The 2b position of *P*6*mm* is [1/3, 2/3, *z*], with a free *z*-coordinate, which we set to zero:
+We select the *p*<sub>*z*</sub>-like spinful site irrep (label E₁ˢ) at the 2b position of *p*6*mm*:
 
 ```@example spinful
-pin_free!(brs, [3 => [0, 0, 0]]) # set the free `z` coordinate of `position(brs[3])` to zero
 cbr = @composite brs[3]
 ```
 
@@ -99,10 +98,10 @@ orbital index:  1  2  3  4
 Here, the pseudospin states are spin ↑ and ↓ along *z*. The Hamiltonian thus has a 2×2 block form in pseudospin: matrix elements ``H_{ij}(\mathbf{k})`` in diagonal blocks (``i, j ≤ 2`` or ``i, j > 2``) conserve pseudospin, while those in off-diagonal blocks flip it. We include on-site terms and hoppings up to next-nearest neighbors (the first 6 terms):
 
 ```@example spinful
-tbm = tb_hamiltonian(cbr, [[0, 0, 0], [1, 0, 0]])[1:6]
+tbm = tb_hamiltonian(cbr, [[0, 0], [1, 0]])[1:6]
 ```
 
-Since there are no hoppings along *z*, the model describes decoupled graphene layers. The terms are:
+The terms are:
 
 1. On-site energy.
 2. Nearest-neighbor hopping that flips pseudospin: the Rashba spin–orbit coupling. Its complex coefficients (e.g., 1.155 = 2/√3) encode the bond-direction dependence of the Rashba coupling.
@@ -123,21 +122,20 @@ Time reversal acts on the full model by ``\mathbf{H}(-\mathbf{k}) = \boldsymbol{
 ```@example spinful
 using LinearAlgebra
 Γ = kron(timereversal_unitary(brs[3].siteir), I(2))
-ptbm = tbm(randn(6))
-k = [0.1, 0.2, 0.0]
+ptbm = tbm(rand(6))
+k = [0.1, 0.2]
 H₊, H₋ = copy(ptbm(k)), copy(ptbm(-k)) # `copy`, since `ptbm` reuses its output buffer
 H₋ ≈ Γ * conj(H₊) * Γ'
 ```
 
 ### Band structures
 
-Since the model is independent of ``k_3``, we restrict the **k**-path to the ``k_3 = 0`` plane, via [Brillouin.jl](https://github.com/thchr/Brillouin.jl):
+Band structures can be generated as previously described in the [tutorial](@ref), by first building a **k**-path via [Brillouin.jl](https://github.com/thchr/Brillouin.jl):
 
 ```@example spinful
 using Brillouin
-Rs = directbasis(sgnum)
+Rs = directbasis(sgnum, Val(2))
 kp = irrfbz_path(sgnum, Rs)
-kp = KPath(kp.points, [[:Γ, :M, :K, :Γ]], kp.basis, kp.setting) # in-plane part of path
 kpi = interpolate(kp, 200)
 nothing # hide
 ```
@@ -145,12 +143,31 @@ nothing # hide
 With only the usual graphene hopping (term 3), we recover graphene's Dirac cones at K, now with every band doubly degenerate (gray). Adding the Kane--Mele term (term 6) opens a gap at K (red), turning the model into a quantum spin Hall insulator[^3]:
 
 ```@example spinful
-Es_graphene = spectrum(tbm([0, 0, 1, 0, 0, 0]), kpi)    # nearest-neighbor coupling only
-Es_KM       = spectrum(tbm([0, 0, 1, 0, 0, 0.05]), kpi) # + Kane-Mele SOC
-plot(kpi, Es_graphene, Es_KM; color = [:gray, :crimson])
+ptbm_graphene = tbm([0, 0, 1, 0, 0, 0])    # nearest-neighbor coupling only
+ptbm_KM       = tbm([0, 0, 1, 0, 0, 0.05]) # + Kane-Mele SOC
+Es_graphene = spectrum(ptbm_graphene, kpi)
+Es_KM       = spectrum(ptbm_KM, kpi) 
+plot(kpi, Es_graphene, Es_KM; color = [:gray, :royalblue])
 ```
 
 Both band structures remain doubly degenerate everywhere: terms 3 and 6 are also allowed in inversion-symmetric, free-standing graphene, so the argument from *P*``\overline{1}`` applies.
+
+!!! note "Characterization of ℤ₂ topology by Wilson loops"
+    The Kane--Mele model is famously a ℤ₂ topological insulator. We could in principle diagnose this in two ways: by symmetry indicators (see [Band symmetry and topology](@ref)) or by holonomy, i.e., Wilson loops.
+    Symmetry indicators, however, have little to say in *p*6*mm*, as the indicator group is trivial.
+    We can instead do a Wilson loop calculation, using [`wilsonloop`](@ref), demonstrating the nontrivial ℤ₂ topology by the gapless relative winding of the valence doublet's non-Abelian Berry phases:
+
+    ```@example spinful
+    k12s = range(-1/2, 1/2, 100) # base points (k₁) and samples along each loop (k₂)
+    ksv = ((ReciprocalPoint(k₁, k₂) for k₂ in k12s) for k₁ in k12s) # a family of k₂-loops, over k₁-base points
+    bands = 1:2 # pick doubly-degenerate valence multiplet
+    phases = [wilsonloop(ptbm_KM, ks, bands) for ks in ksv]
+    series(
+        k12s, stack(phases); color=[:royalblue, :royalblue], 
+        axis=(; limits=(-1/2, 1/2, -π,π), xlabel="k₁", ylabel="Non-Abelian Berry phase")
+    )
+    ```
+
 The Rashba term (term 2), in contrast, breaks the *z*-mirror (and hence inversion) and splits the bands -- except at the TRIMs Γ and M, where Kramers' theorem keeps them degenerate. At K, which is not a TRIM, the 4 bands split into two singlets (K₄ˢ and K₅ˢ) and a doublet (K₆ˢ):
 
 ```@example spinful
@@ -160,8 +177,11 @@ plot(kpi, spectrum(ptbm, kpi); annotations = collect_irrep_annotations(ptbm))
 
 [^3]: C.L. Kane & E.J. Mele, *Quantum Spin Hall Effect in Graphene*, [Phys. Rev. Lett. **95**, 226801 (2005)](https://doi.org/10.1103/PhysRevLett.95.226801).
 
-[^4]: Free-standing graphene is also symmetric under the mirror *z* → −*z*, giving the space group *P*6/*mmm* (⋕191). *P*6*mm* lacks this mirror, as e.g., for graphene on a substrate or in a perpendicular electric field. This is what allows the Rashba term below.
+[^4]: Free-standing graphene is also symmetric under the out-of-plane mirror *z* → −*z*, and so belong to the *layer* group *𝑝*6/*mmm* (⋕80). The plane group *p*6*mm* lacks this mirror (being constrained to operations in the plane), and so more precisely describes graphene on a substrate or in a perpendicular electric field. This is what allows the Rashba term below.
 
 ```@setup spinful
+# TODO: once `lift2spinful` is in a Crystalline.jl release, add a footnote after "E₁ˢ:" above:
+#   "The mapping from a single-valued to a double-valued BR can be determined via
+#    Crystalline.jl's `lift2spinful` function."
 delete!(ENV, "COLUMNS")
 ```
