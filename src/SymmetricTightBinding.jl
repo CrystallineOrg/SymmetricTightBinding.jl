@@ -36,7 +36,6 @@ include("site_representations.jl")
 export site_induced_sgrep
 include("tightbinding.jl")
 export tb_hamiltonian
-include("subspace_intersection.jl")
 include("timereversal.jl")
 include("hermiticity.jl")
 include("utils.jl")

@@ -1261,25 +1261,3 @@ function tb_hamiltonian(
 ) 
     return tb_hamiltonian(cbr, Rs, Val(S))
 end
-#=
-"""
-    occupation(br::BandRep{D}) --> Int
-
-Counts the number of orbitals in a band representation `br`. This is done by taking 
-the multiplicity of the Wyckoff position associated to `br`, dividing it by the 
-centering volume fraction (excluding copies due to conventional setting) and 
-multiplying it by the dimension of the site irrep.
-
-NB: This is equivalent to `occupation(br)`..!
-"""
-function occupation(br::BandRep{D}) where {D}
-    mult = multiplicity(position(br)) # multiplicity in conventional setting
-    # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
-    # divide by the number of centering-translations
-    cntr = centering(num(br), D)
-    denom = centering_volume_fraction(cntr, Val(D), Val(D))
-    mult = div(mult, denom)
-
-    return mult * irdim(br.siteir)
-end
-=#

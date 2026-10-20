@@ -7,10 +7,20 @@ using SymmetricTightBinding: obtain_symmetry_related_hoppings
 using SymmetricTightBinding: construct_M_matrix, primitivized_generators,
     site_induced_sgrep_excl_phase, _permute_symmetry_related_hoppings_under_symmetry_operation,
     ConstraintRows, add_symmetry_constraints!, add_constraints!, constraint_nullspace!,
-    psd_nullspace!, RowPermutation, RealConstraintTerm, split_complex
+    psd_nullspace!, RowPermutation, RealConstraintTerm
 using Crystalline
 using LinearAlgebra: svd, rank, norm, nullspace, Symmetric, I
 using SparseArrays: sparse, sparse!
+
+# Split a complex vector `t` into a real matrix `T = [tᴿ -tᴵ; tᴵ tᴿ]`, whose real span is
+# the complex span of `t` (in the re/im-doubled form `[tᴿ; tᴵ]` of coefficient vectors):
+# with `α = αᴿ + iαᴵ`, the upper half of `T * [αᴿ, αᴵ]` is `real(αt)` and its lower half
+# `imag(αt)`, since `αt = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)`. E.g., `split_complex([im, 0])`
+# is `[0 -1; 0 0; 1 0; 0 0]`.
+function split_complex(t::AbstractVector{<:Number})
+    re_t, im_t = reim(t)
+    return [re_t -im_t; im_t re_t]
+end
 
 @testset "AbstractArray interface" begin
     brs = bandreps(16, Val(2))
