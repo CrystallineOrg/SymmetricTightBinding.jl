@@ -65,6 +65,50 @@ function split_complex(t::AbstractVector{<:Number})
 end
 
 """
+    psd_nullspace!(G::Symmetric{<:Real}; tol::Real) --> Matrix{Float64}
+
+Return an orthonormal basis (as columns) for the null space of the **positive
+semi-definite** matrix `G`, via a pivoted Cholesky factorization; `G` is overwritten by the
+factorization.
+
+The factorization, `G[p, p] = UᵀU`, stops at rank `r` once all remaining pivots are below
+`tol`; writing the leading `r` rows of `U` as `[U₁₁ U₁₂]` (with `U₁₁` upper triangular),
+the null space of `G` is then spanned by the columns of `P [-U₁₁⁻¹U₁₂; 𝟙]` (`P` the
+permutation matrix of `p`), which we orthonormalize.
+
+!!! warning
+    `G` must be positive semi-definite; this is not checked. For such matrices, pivoted
+    Cholesky is rank-revealing in practice (though, unlike an SVD or eigendecomposition,
+    without a worst-case guarantee) - provided the null space is well separated from the
+    smallest nonzero eigenvalues of `G`, relative to `tol`.
+"""
+function psd_nullspace!(G::Symmetric{<:Real}; tol::Real)
+    # NB: `check = false` since `check = true` throws if `G` is rank deficient (our use case)
+    F = cholesky!(G, RowMaximum(); tol, check = false)
+    r, n = F.rank, size(G, 2)
+    # without the allocation-avoiding steps below, this is just:
+    #     U₁₁, U₁₂ = UpperTriangular(F.U[1:r, 1:r]), F.U[1:r, r+1:n]
+    #     X = zeros(n, n - r)
+    #     X[F.p[1:r], :] = -(U₁₁ \ U₁₂)
+    #     X[F.p[r+1:n], :] = I(n - r)
+    #     return Matrix(qr(X).Q)
+    # instead, we take views of the storage `parent(F.U)` of `F.U` (`G`'s own storage, if
+    # `G.uplo == 'U'`), which is strided, so that `ldiv!` can use BLAS; only its upper
+    # triangle holds `U`, but `U₁₁` is wrapped as `UpperTriangular` and `U₁₂` (rows `1:r`,
+    # columns `r+1:n`) lies strictly above the diagonal, so no other elements are read
+    U = parent(F.U)
+    U₁₁, U₁₂ = UpperTriangular(view(U, 1:r, 1:r)), view(U, 1:r, r+1:n)
+    ldiv!(U₁₁, U₁₂) # `U₁₂ ← U₁₁ \ U₁₂`, in place
+    X = zeros(n, n - r)
+    X[view(F.p, 1:r), :] .= .-U₁₂
+    for k in 1:n-r # set `X[F.p[r+1:n], :] = I(n - r)` w/o allocations (cf. `zeros` above)
+        j = F.p[r+k]
+        X[j, k] = 1
+    end
+    return Matrix(qr!(X).Q) # orthonormalize
+end
+
+"""
     inversion(::Val{D}) --> SymOperation{D}
 
 Return the inversion operation in dimension `D`.

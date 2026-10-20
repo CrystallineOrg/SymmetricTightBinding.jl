@@ -600,7 +600,7 @@ coefficient_count(Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}}) = size(first(Mm
 # All constraints on `t` (spatial symmetry, time-reversal, and hermiticity) are collected as
 # rows of a single sparse, real constraint matrix `A` acting on the re/im-doubled coefficient
 # vector `[tᴿ; tᴵ]` (with `t = tᴿ + i tᴵ`). The allowed coefficient vectors span the null
-# space of `A` (see `constraint_nullspace`).
+# space of `A`, which we obtain from its Gram matrix `AᵀA` (see `constraint_nullspace!`).
 # In this formulation, constraints need not be deduplicated (repeated or collinear rows
 # leave the null space unchanged), and the null space of several kinds of constraints is
 # simply that of their combined rows.
@@ -612,7 +612,8 @@ coefficient_count(Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}}) = size(first(Mm
 re/im-doubled coefficient vector `[tᴿ; tᴵ]` (`2J` elements, with `t = tᴿ + i tᴵ`), intended
 to accumulate constraints, block by block, via `add_constraints!` and
 `add_complex_constraints!`; entries added repeatedly to the same element are summed.
-The accumulated constraint matrix is obtained via `sparse(::ConstraintRows)`.
+The accumulated constraint matrix is obtained via `sparse(::ConstraintRows)` (or, consuming
+the `ConstraintRows`, via `sparse!(::ConstraintRows)`).
 """
 mutable struct ConstraintRows
     const J::Int              # no. of (complex) elements of `t` (half the no. of columns of realified constraint matrix)
@@ -626,6 +627,23 @@ ConstraintRows(J::Int) = ConstraintRows(J, 0, Int[], Int[], Float64[])
 function SparseArrays.sparse(constraints::ConstraintRows)
     (; is, js, vs, nrows, J) = constraints
     return sparse(is, js, vs, nrows, 2J) # sums duplicate entries
+end
+
+"""
+    sparse!(constraints::ConstraintRows) --> SparseMatrixCSC{Float64, Int}
+
+Return the accumulated constraint matrix, as `sparse(constraints)`, but reusing the buffers
+of `constraints` as the row-index and value storage of the returned matrix, rather than
+allocating new ones.
+
+!!! warning
+    `constraints` is consumed: its buffers `is`, `js`, and `vs` are resized and overwritten
+    to hold the returned matrix's data, so `constraints` no longer represents the
+    constraints and must not be used afterwards.
+"""
+function SparseArrays.sparse!(constraints::ConstraintRows)
+    (; is, js, vs, nrows, J) = constraints
+    return sparse!(is, js, vs, nrows, 2J) # sums duplicate entries
 end
 
 """
@@ -775,33 +793,28 @@ function _push_complex_terms!(constraints::ConstraintRows, V::Int, terms)
 end
 
 """
-    constraint_nullspace(constraints::ConstraintRows; atol::Real) --> Matrix{Float64}
+    constraint_nullspace!(constraints::ConstraintRows; atol::Real) --> Matrix{Float64}
 
 Return an orthonormal basis (as columns) for the null space of the constraint matrix
 `A = sparse(constraints)`, i.e., for the coefficient vectors `[tᴿ; tᴵ]` that satisfy every
-constraint; singular values of `A` below `atol` are treated as zero, as in
-`nullspace(A; atol)`.
+constraint. `constraints` is consumed in the process (see `sparse!(::ConstraintRows)`).
 
-The null space is obtained from the right-singular vectors of `A`, restricted to its
-nonempty rows. Unlike `nullspace`, we compute only the thin SVD when `A` has more rows than
-columns (as is typical): the square `U` of the full SVD would be prohibitively large.
+The null space is obtained from that of the Gram matrix `AᵀA`, via a pivoted Cholesky
+factorization (see `psd_nullspace!`), treating pivots below `atol²` as zero: since the
+eigenvalues of `AᵀA` are the squared singular values of `A`, this roughly corresponds to
+treating singular values of `A` below `atol` as zero, as in `nullspace(A; atol)`. `AᵀA`
+is only 2J×2J, whereas `A` typically has many more rows than columns.
 """
-function constraint_nullspace(constraints::ConstraintRows; atol::Real)
-    A = sparse(constraints)
-    A = Matrix(A[sort!(unique(rowvals(A))), :]) # dense, without empty rows
-    isempty(A) && return Matrix{Float64}(I, size(A, 2), size(A, 2)) # no constraints
-    full = size(A, 1) < size(A, 2) # `V` is square for a thin SVD only if `A` is tall
-    F = try
-        svd(A; full)
-    catch e
-        # fall back to the slower, but unconditionally convergent, QR-iteration SVD if the
-        # default divide-and-conquer SVD (`gesdd!`) fails, as it can for large constraint
-        # matrices (e.g., SG 230) on some platforms/LAPACK implementations
-        e isa LinearAlgebra.LAPACKException || rethrow(e)
-        svd(A; full, alg = LinearAlgebra.QRIteration())
-    end
-    r = count(>(atol), F.S) # rank of `A`
-    return F.V[:, r+1:end]
+function constraint_nullspace!(constraints::ConstraintRows; atol::Real)
+    A = sparse!(constraints)
+    G = Symmetric(Matrix(A' * A))
+    # `A` & `G = AᵀA` share their null space (`Gx = 0` ⇒ `‖Ax‖² = xᵀGx = 0`); `G` is only
+    # 2J×2J and positive semi-definite, so its null space is cheaply found by a pivoted
+    # Cholesky factorization (cheaper, and more robust for the degenerate null eigenvalues,
+    # than partial eigensolvers; and much cheaper than an SVD of the tall `A`). Working with
+    # `G` squares `A`'s condition number, which is harmless here: `A`'s nonzero singular
+    # values lie in ~[1, 5] (empirically, across all space groups), far from `atol`.
+    return psd_nullspace!(G; tol = atol^2)
 end
 
 """
@@ -960,7 +973,7 @@ function _obtain_basis_free_parameters(
     end
 
     # the allowed coefficient vectors span the null space of the combined constraints
-    tₐᵦ_basis_reim_matrix = constraint_nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
+    tₐᵦ_basis_reim_matrix = constraint_nullspace!(constraints; atol = NULLSPACE_ATOL_DEFAULT)
     isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
     # ------------------------------------------------------------------------------------ #

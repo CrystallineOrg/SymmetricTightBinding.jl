@@ -11,7 +11,7 @@ hopping ranges, the package:
 1. Enumerates symmetry-related hopping orbits
 2. Constructs the M-matrix encoding all allowed Hamiltonian terms
 3. Enforces spatial symmetry, time-reversal, and hermiticity constraints as rows of one
-   sparse real constraint matrix, and finds its null space
+   sparse real constraint matrix, whose null space is found from its Gram matrix
 4. Returns a `TightBindingModel` whose free parameters can be tuned to produce concrete
    Hamiltonians
 

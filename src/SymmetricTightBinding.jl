@@ -10,7 +10,7 @@ using Crystalline: AbstractOperation
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
 using StaticArrays: SVector
-using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, nzrange, rowvals, nonzeros
+using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, sparse!, nzrange, rowvals, nonzeros
 
 # --- Constants -------------------------------------------------------------------------- #
 

@@ -6,11 +6,11 @@ using SymmetricTightBinding
 using SymmetricTightBinding: obtain_symmetry_related_hoppings
 using SymmetricTightBinding: construct_M_matrix, primitivized_generators,
     site_induced_sgrep_excl_phase, _permute_symmetry_related_hoppings_under_symmetry_operation,
-    ConstraintRows, add_symmetry_constraints!, add_constraints!, constraint_nullspace,
-    RowPermutation, RealConstraintTerm, split_complex
+    ConstraintRows, add_symmetry_constraints!, add_constraints!, constraint_nullspace!,
+    psd_nullspace!, RowPermutation, RealConstraintTerm, split_complex
 using Crystalline
-using LinearAlgebra: svd, rank
-using SparseArrays: sparse
+using LinearAlgebra: svd, rank, norm, nullspace, Symmetric, I
+using SparseArrays: sparse, sparse!
 
 @testset "AbstractArray interface" begin
     brs = bandreps(16, Val(2))
@@ -185,13 +185,14 @@ end
 
         constraints = ConstraintRows(size(Mm[1], 2))
         add_symmetry_constraints!(constraints, Mm, h_orbit, br1, br2, gens)
-        N = constraint_nullspace(constraints; atol=1e-5)
+        N = constraint_nullspace!(deepcopy(constraints); atol=1e-5) # (consumes its input)
         @test size(N, 2) > 0
         @test samespan(N, N_ref)
-        # `constraint_nullspace` agrees with the null space of the dense constraint matrix
+        # `constraint_nullspace!` agrees with the null space of the dense constraint matrix
         A = zeros(constraints.nrows, 2constraints.J)
         foreach((i, j, v) -> A[i, j] += v, constraints.is, constraints.js, constraints.vs)
         @test A == Matrix(sparse(constraints))
+        @test sparse!(deepcopy(constraints)) == sparse(constraints)
         @test samespan(N, nullspace_tall(A; atol=1e-5))
     end
 end
@@ -208,4 +209,17 @@ end
     add_constraints!(c′, (RealConstraintTerm(2, -1, sparse(Matrix(Π) * M)),))
     @test sparse(c) == sparse(c′)
     @test_throws DimensionMismatch Π * sparse([1 0; 0 1])
+end
+
+@testset "`psd_nullspace!`" begin
+    samespan(U, W) = rank(U; atol=1e-8) == rank(W; atol=1e-8) == rank([U W]; atol=1e-8)
+    for (n, r) in ((12, 7), (20, 1), (9, 9), (6, 0)), uplo in (:U, :L) # incl. full-rank & zero `G`
+        X = cospi.(0.37 .* (1:n) .* (1:r)' .+ 0.11 .* (1:n)) # rank-`r` column space
+        G = Symmetric(X * X', uplo)                          # positive semi-definite
+        N = psd_nullspace!(copy(G); tol = 1e-10)
+        @test size(N) == (n, n - r)
+        @test N' * N ≈ I
+        @test norm(G * N) < 1e-10
+        r < n && @test samespan(N, nullspace(X'))
+    end
 end
