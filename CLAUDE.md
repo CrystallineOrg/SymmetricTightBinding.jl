@@ -10,8 +10,8 @@ Given a set of elementary band representations (EBRs) from Crystalline.jl and a 
 hopping ranges, the package:
 1. Enumerates symmetry-related hopping orbits
 2. Constructs the M-matrix encoding all allowed Hamiltonian terms
-3. Enforces spatial symmetry, time-reversal, and hermiticity constraints via nullspace +
-   subspace intersection
+3. Enforces spatial symmetry, time-reversal, and hermiticity constraints as rows of one
+   sparse real constraint matrix, and finds its null space
 4. Returns a `TightBindingModel` whose free parameters can be tuned to produce concrete
    Hamiltonians
 
@@ -73,14 +73,14 @@ src/
   SymmetricTightBinding.jl  # module definition, exports, constants
   types.jl                  # core data structures + evaluation functors
   types_composite.jl        # composite HERMITIAN ⊕ ANTIHERMITIAN models
-  tightbinding.jl           # constraint pipeline: M-matrix, nullspace, sparsification
+  tightbinding.jl           # constraint pipeline: M-matrix, constraint rows, nullspace, sparsification
   site_representations.jl   # coset-decomposition-based induced representations
   symmetry_analysis.jl      # irrep content at high-symmetry k-points
   spectrum.jl               # band eigenvalue computation
   berry.jl                  # Berry curvature, Chern numbers (Kubo + Fukui)
   dos.jl                    # density of states (generalized Gilat–Raubenheimer)
   gradients.jl              # dH/dc_i and dH/dk_i
-  hermiticity.jl            # hermiticity/anti-hermiticity constraint intersection
+  hermiticity.jl            # hermiticity/anti-hermiticity constraint rows
   timereversal.jl           # TRS constraint: H(k) = H*(-k)
   subspace_intersection.jl  # Projector + SVD-based algorithm for subspace intersection
   symmetry_breaking.jl      # subduced complement for translationengleiche subgroups

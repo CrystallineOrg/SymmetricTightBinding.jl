@@ -580,7 +580,7 @@ This implies that, in our implementation, time-reversal symmetry simply reduces 
 !!! note
     The above derivation assumes $𝐯_𝐤^* = 𝐯_{-𝐤}$, which requires the set of hopping vectors $\{δ_i\}$ to be closed under sign inversion. Spatial symmetry alone guarantees closure under the point group, but not necessarily under $δ \to -δ$. When this closure is absent, the missing hopping vectors must be added before applying the TRS constraint; this is performed by `add_reversed_orbits!`.
 
-Finally, to obtain the full set of symmetry-allowed free parameters, we must intersect the null space from the spatial symmetry constraints (derived in the [previous section](#symmetry-constraints-in-the-numerical-matrix-mathbfm_ijalphabeta)) with the TRS constraint derived above. This intersection is computed in `subspace_intersection` by projecting the basis of one subspace onto the orthogonal complement of the other and taking the nullspace of the result via an SVD.
+Finally, to obtain the full set of symmetry-allowed free parameters, we must intersect the null space from the spatial symmetry constraints (derived in the [previous section](#symmetry-constraints-in-the-numerical-matrix-mathbfm_ijalphabeta)) with that of the TRS constraint derived above (and, for diagonal blocks, with that of the hermiticity constraint). In practice, we express all constraints as rows of a single real constraint matrix $𝐀$ acting on the doubled vector $[𝘁_\text{real}; 𝘁_\text{imag}]$, with each complex spatial-symmetry constraint contributing its real and imaginary parts as two real rows: the intersection of the null spaces is then simply the null space of $𝐀$.
 
 ## Appendix A
 

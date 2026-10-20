@@ -34,7 +34,7 @@ Thus, the action of TRS on the Hamiltonian, H(-k) = ΓH*(k)Γ†, can be decompo
                 = vᵀ(-k) [M̃ₛₜ -M̃ₛₜ] [real(t); i*imag(t)]
    with M̃ₛₜ = Σₘₙ Γₐ,ₛₘ Mₘₙ Γᵦ,ₜₙ, using that Γ is real and that v*(k) = v(-k).
    In practice, we compute M̃ as the product M̃ = Γₐ Mm Γᵦᵀ over the orbital (s,t) axes of
-   Mm, i.e., as M̃ₛₜ = Σₘₙ Γₐ,ₛₘ Γᵦ,ₜₙ Mm[m,n] (cf. `_outer_sandwich`).
+   Mm, i.e., as M̃ₛₜ = Σₘₙ Γₐ,ₛₘ Γᵦ,ₜₙ Mm[m,n].
 
 Imposing the condition H(-k) = ΓH*(k)Γ† we get:
   vᵀ(-k) [Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ] [real(t); i*imag(t)] = 0   (for all s, t)
@@ -46,66 +46,60 @@ irrelevant.
 
 This way of casting the problem is very convenient (and doesn't require any modification of 
 the v vectors to include "reversed" hoppings, which is not in general a necessary feature).
-We just need to ensure that we intersect the [real(t); i*imag(t)] basis with the null space
-of [Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ] for all s, t.
+We just need to add the rows of [Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ] for all s, t to the constraints on the
+re/im-doubled coefficient vector (cf. `add_constraints!`). NB: each such row, taken on its
+own, mixes the conditions on real(t) and imag(t); but the rows for (s,t) and its Kramers
+partner (s̄,t̄) (with M̃ₛ̄ₜ̄ = ±Mₛₜ) combine to separate conditions on real(t) and imag(t).
 =#
 
 """
-    obtain_basis_free_parameters_TRS(
-        h_orbit::HoppingOrbit{D}, 
-        brₐ::BandRep{D}, 
-        brᵦ::BandRep{D}, 
-        orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
-        orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-        Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
-    )                             --> Matrix{Float64}
+    add_timereversal_constraints!(
+        constraints::ConstraintRows,
+        Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
+        brₐ::BandRep{D},
+        brᵦ::BandRep{D},
+       [orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
+        orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ)]
+    ) --> ConstraintRows
 
-Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` associated
-with the hopping orbit `h_orbit` under time-reversal symmetry.
-
-Real and imaginary parts of the basis vectors are differentiated explicitly.
+Add the constraints imposed on `t` by time-reversal symmetry to `constraints`: i.e., the
+rows of [Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ] for all s, t, acting on `[tᴿ; tᴵ]` (see notes above).
 """
-function obtain_basis_free_parameters_TRS(
-    h_orbit::HoppingOrbit{D},
+function add_timereversal_constraints!(
+    constraints::ConstraintRows,
+    Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
     brₐ::BandRep{D},
     brᵦ::BandRep{D},
     orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
     orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}} = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ),
 ) where {D}
     S = isspinful(brₐ)
     S == isspinful(brᵦ) || error("input `BandRep`s must have the same spin")
 
-    # NB: we want to keep `_aggregate_constraints` due to its efficiency in building the
-    # constraint matrix. So, although seemingly unnecessary, we stick with its Q & Z tensor
-    # structure, implementing the constraint tensor as Q, with Z = 0, with the final
-    # constraints being a row-wise aggregation of Q-Z
-
-    # Step 1: the Z tensor (zero-valued tensor)
-    Z = nothing # stand-in for a zero-tensor (but no need to allocate it explicitly)
-
-    # Step 2: the Q tensor (the block tensor "[Mₛₜ-M̃ₛₜ Mₛₜ+M̃ₛₜ]")
-    Q = if !S # spinless: `M̃ = M`, so the constraint tensor is `[0 M]`
-        [hcat(spzeros(Int, size(M)...), M) for M in Mm]
+    if !S # spinless: `M̃ = M`, so the constraint rows are `[0 M]`
+        for M in Mm
+            add_constraints!(constraints, (RealConstraintTerm(0, 1, M),))
+        end
     else
-        # spinful: the constraint tensor is `[M-M̃ M+M̃]`, with `M̃ = Γₐ M Γᵦᵀ` acting on
-        # the orbital axes; since `Γₐ` and `Γᵦ` are signed permutations, `M̃` is integer
-        # (`Γₐ` & `Γᵦ`: unitary parts of time reversal across the orbitals of `brₐ` & `brᵦ`,
-        # in the orbital ordering of `OrbitalOrdering`)
+        # spinful: the constraint rows are `[M-M̃ M+M̃]`, with `M̃ = Γₐ M Γᵦᵀ` acting on
+        # the orbital axes (`Γₐ` & `Γᵦ`: unitary parts of time reversal across the orbitals
+        # of `brₐ` & `brᵦ`, in the orbital ordering of `OrbitalOrdering`)
         Γₐ = site_induced_timereversal_unitary(brₐ, orderingₐ) # defined here only, since they
         Γᵦ = site_induced_timereversal_unitary(brᵦ, orderingᵦ) # aren't needed (≡1) if spinless
-        M̃m = _outer_sandwich(Γₐ, Mm, Γᵦ')
-        map(Mm, M̃m) do M, M̃
-            hcat(M - M̃, M + M̃) # blocks "M-M̃" and "M+M̃"
+        terms = RealConstraintTerm{SparseMatrixCSC{Int, Int}}[] # reused for each block
+        for t in axes(Mm, 2), s in axes(Mm, 1)
+            # [M⁽ˢᵗ⁾-M̃⁽ˢᵗ⁾  M⁽ˢᵗ⁾+M̃⁽ˢᵗ⁾], with M̃⁽ˢᵗ⁾ = Σₘₙ (Γₐ)ₛₘ (Γᵦ)ₜₙ M⁽ᵐⁿ⁾; since `Γₐ` &
+            # `Γᵦ` are signed permutations, M̃⁽ˢᵗ⁾ involves only a few M⁽ᵐⁿ⁾
+            empty!(terms)
+            push!(terms, RealConstraintTerm(1, 1, Mm[s, t]))
+            for m in axes(Γₐ, 2), n in axes(Γᵦ, 2)
+                γ = Γₐ[s, m] * Γᵦ[t, n]
+                iszero(γ) || push!(terms, RealConstraintTerm(-γ, γ, Mm[m, n]))
+            end
+            add_constraints!(constraints, terms)
         end
     end
-
-    # Step 3: use `_aggregate_constraints` to build the constraint matrix 
-    #         ~(Q-Z)[s, t][i, :] (aggregated over i,s,t)
-    constraints = _aggregate_constraints(Q, Z)
-    tₐᵦ_basis_matrix = nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
-
-    return tₐᵦ_basis_matrix
+    return constraints
 end
 
 """

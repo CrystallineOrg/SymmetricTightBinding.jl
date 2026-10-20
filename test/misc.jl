@@ -4,7 +4,13 @@
 using Test
 using SymmetricTightBinding
 using SymmetricTightBinding: obtain_symmetry_related_hoppings
+using SymmetricTightBinding: construct_M_matrix, primitivized_generators,
+    site_induced_sgrep_excl_phase, _permute_symmetry_related_hoppings_under_symmetry_operation,
+    ConstraintRows, add_symmetry_constraints!, add_constraints!, constraint_nullspace,
+    RowPermutation, RealConstraintTerm, split_complex
 using Crystalline
+using LinearAlgebra: svd, rank
+using SparseArrays: sparse
 
 @testset "AbstractArray interface" begin
     brs = bandreps(16, Val(2))
@@ -136,23 +142,70 @@ end
     @test collect_compatible(ptbm; atol = 1e-6) == collect_compatible(ptbm)
 end
 
-@testset "Sparse `Mm` layout & `_outer_sandwich`" begin
-    # `Mm[s,t][i,j]` is a matrix of sparse matrices; `_outer_sandwich(A, Mm, B)` must agree
-    # with the product `A * Mm[i,j,:,:] * B` in the equivalent dense layout `Mm[i,j,s,t]`
-    brs = bandreps(220) # I-43d: many orbitals & partner functions per EBR
-    br1, br2 = brs[1], brs[8]
-    h_orbit = first(obtain_symmetry_related_hoppings([[0,0,0]], br1, br2))
-    Mm = SymmetricTightBinding.construct_M_matrix(h_orbit, br1, br2)
-    @test size(Mm) == (occupation(br1), occupation(br2))
-    @test all(M -> all(isone, M.nzval), Mm) # unit-elements only
-    Mm_dense = [Mm[s,t][i,j] for i in axes(Mm[1], 1), j in axes(Mm[1], 2),
-                                 s in axes(Mm, 1),    t in axes(Mm, 2)]
-    A = cispi.(0.37 .* (1:size(Mm, 1)) .* (1:size(Mm, 1))')   # dense: every term contributes
-    B = zeros(ComplexF64, size(Mm, 2), size(Mm, 2))           # sparse: few terms contribute
-    B[CartesianIndex.(eachindex(axes(B, 1)), circshift(axes(B, 2), 1))] .= 1im
-    Q = SymmetricTightBinding._outer_sandwich(A, Mm, B)
-    @test all(Iterators.product(axes(Mm_dense, 1), axes(Mm_dense, 2))) do (i, j)
-        Qᵢⱼ = [Q[s,t][i,j] for s in axes(Q, 1), t in axes(Q, 2)]
-        Qᵢⱼ ≈ A * Mm_dense[i,j,:,:] * B
+@testset "Sparse `Mm` layout & constraint null spaces" begin
+    samespan(U, W) = rank(U; atol=1e-8) == rank(W; atol=1e-8) == rank([U W]; atol=1e-8)
+    # null space of a tall matrix `A` via its thin SVD (NB: `nullspace(A)` computes the
+    # full SVD, whose m×m `U` is prohibitively large for the tall matrices here)
+    function nullspace_tall(A; atol)
+        size(A, 1) ≥ size(A, 2) || error("expected a tall matrix")
+        F = svd(A)
+        return F.V[:, F.S .≤ atol]
     end
+
+    # I-43d (many orbitals & partner functions per EBR) & p3 without TR (complex irreps)
+    for (brs, idxs, R) in ((bandreps(220), (5, 8), [0,0,0]), # (12b|E) & (12a|E)
+                           (bandreps(13, 2; timereversal=false), (1, 1), [1,0]))
+        br1, br2 = brs[idxs[1]], brs[idxs[2]]
+        h_orbit = first(obtain_symmetry_related_hoppings([R], br1, br2))
+        gens = primitivized_generators(br1)
+
+        # `Mm[s,t][i,j]` is a matrix of sparse matrices of unit-elements
+        Mm = construct_M_matrix(h_orbit, br1, br2)
+        @test size(Mm) == (occupation(br1), occupation(br2))
+        @test all(M -> all(isone, M.nzval), Mm)
+
+        # reference: the symmetry constraints `(ρₐₐ Mᵢⱼ ρᵦᵦ' - Pᵀ M⁽ˢᵗ⁾)`, built in the
+        # dense layout `Mm_dense[i,j,s,t]` & aggregated as rows over all `i,s,t` & `gens`
+        Mm_dense = [Mm[s,t][i,j] for i in axes(Mm[1], 1), j in axes(Mm[1], 2),
+                                     s in axes(Mm, 1),    t in axes(Mm, 2)]
+        C = mapreduce(vcat, gens) do g
+            ρₐₐ = site_induced_sgrep_excl_phase(br1, g)
+            ρᵦᵦ = site_induced_sgrep_excl_phase(br2, g)
+            Pᵀ = Matrix(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, g))
+            Q = similar(Mm_dense, ComplexF64)
+            for i in axes(Mm_dense, 1), j in axes(Mm_dense, 2)
+                Q[i,j,:,:] = ρₐₐ * Mm_dense[i,j,:,:] * ρᵦᵦ'
+            end
+            for s in axes(Mm_dense, 3), t in axes(Mm_dense, 4)
+                Q[:,:,s,t] -= Pᵀ * Mm_dense[:,:,s,t]
+            end
+            reduce(vcat, [Q[:,:,s,t] for s in axes(Q, 3), t in axes(Q, 4)])
+        end
+        N_ref = reduce(hcat, split_complex.(eachcol(nullspace_tall(C; atol=1e-5)))) # realified
+
+        constraints = ConstraintRows(size(Mm[1], 2))
+        add_symmetry_constraints!(constraints, Mm, h_orbit, br1, br2, gens)
+        N = constraint_nullspace(constraints; atol=1e-5)
+        @test size(N, 2) > 0
+        @test samespan(N, N_ref)
+        # `constraint_nullspace` agrees with the null space of the dense constraint matrix
+        A = zeros(constraints.nrows, 2constraints.J)
+        foreach((i, j, v) -> A[i, j] += v, constraints.is, constraints.js, constraints.vs)
+        @test A == Matrix(sparse(constraints))
+        @test samespan(N, nullspace_tall(A; atol=1e-5))
+    end
+end
+
+@testset "`RowPermutation`" begin
+    Π = RowPermutation([3, 1, 4, 2])
+    @test Matrix(Π) == sparse(Π) == [0 1 0 0; 0 0 0 1; 1 0 0 0; 0 0 1 0] # Π[σ[i], i] = 1
+    @test Matrix(transpose(Π)) == transpose(Matrix(Π))
+    @test_throws ArgumentError RowPermutation([1, 1, 2])
+    # the lazy product `Π * M`, as a constraint term, agrees with the materialized product
+    M = sparse([1 0 2; 0 3 0; 4 0 0; 0 0 5])
+    c, c′ = ConstraintRows(3), ConstraintRows(3)
+    add_constraints!(c, (RealConstraintTerm(2, -1, Π * M),))
+    add_constraints!(c′, (RealConstraintTerm(2, -1, sparse(Matrix(Π) * M)),))
+    @test sparse(c) == sparse(c′)
+    @test_throws DimensionMismatch Π * sparse([1 0; 0 1])
 end

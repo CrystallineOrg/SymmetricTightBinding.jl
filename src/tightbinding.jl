@@ -594,66 +594,249 @@ vectors in the orbit), so `J` can be read off from any of them.
 """
 coefficient_count(Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}}) = size(first(Mm), 2)
 
-"""
-    _outer_sandwich(A, Mm, B) --> Matrix{SparseMatrixCSC{T, Int}}
+# ---------------------------------------------------------------------------------------- #
+# Constraints on the coefficient vector `t`
+#
+# All constraints on `t` (spatial symmetry, time-reversal, and hermiticity) are collected as
+# rows of a single sparse, real constraint matrix `A` acting on the re/im-doubled coefficient
+# vector `[tᴿ; tᴵ]` (with `t = tᴿ + i tᴵ`). The allowed coefficient vectors span the null
+# space of `A` (see `constraint_nullspace`).
+# In this formulation, constraints need not be deduplicated (repeated or collinear rows
+# leave the null space unchanged), and the null space of several kinds of constraints is
+# simply that of their combined rows.
 
-Compute the product `A * Mm[i,j,:,:] * B` (in the "dense" `[i,j,s,t]` index-layout) for all
-`(i,j)`, in the matrix-of-sparse-matrices layout `Mm[s,t][i,j]`; i.e., return `Q` with
-`Q[s,t] = Σₛ′ₜ′ A[s,s′] B[t′,t] Mm[s′,t′]`.
-
-The sum runs only over the nonzero elements of `A` and `B`: as these are typically
-(block-)permutation-like matrices (e.g., site-induced representation matrices), `Q[s,t]` is
-then a linear combination of only a few `Mm[s′,t′]`.
 """
-function _outer_sandwich(
-    A::AbstractMatrix{<:Number},
-    Mm::AbstractMatrix{<:SparseMatrixCSC{<:Number}},
-    B::AbstractMatrix{<:Number},
-)
-    T = promote_type(eltype(A), eltype(eltype(Mm)), eltype(B))
-    Aᵀ = sparse(transpose(A)) # column `s` of `Aᵀ` is row `s` of `A`
-    Bs = sparse(B)
-    V, J = size(first(Mm))
-    Q = Matrix{SparseMatrixCSC{T, Int}}(undef, size(A, 1), size(B, 2))
-    is, js, vs = Int[], Int[], T[] # COO-format accumulation buffers for `Q[s,t]`
-    for t in axes(B, 2), s in axes(A, 1)
-        empty!(is); empty!(js); empty!(vs)
-        for p in nzrange(Aᵀ, s)
-            s′, a = rowvals(Aᵀ)[p], nonzeros(Aᵀ)[p]
-            for q in nzrange(Bs, t)
-                t′, b = rowvals(Bs)[q], nonzeros(Bs)[q]
-                M = Mm[s′, t′]
-                ab = a * b
-                for j in axes(M, 2), r in nzrange(M, j)
-                    push!(is, rowvals(M)[r]); push!(js, j); push!(vs, ab * nonzeros(M)[r])
-                end
-            end
-        end
-        Q[s, t] = dropzeros!(sparse(is, js, vs, V, J)) # NB: `sparse` sums duplicates
-    end
-    return Q
+    ConstraintRows(J::Int)
+
+`(i,j,v)` "triplet"-format of the rows of a sparse, real constraint matrix acting on the
+re/im-doubled coefficient vector `[tᴿ; tᴵ]` (`2J` elements, with `t = tᴿ + i tᴵ`), intended
+to accumulate constraints, block by block, via `add_constraints!` and
+`add_complex_constraints!`; entries added repeatedly to the same element are summed.
+The accumulated constraint matrix is obtained via `sparse(::ConstraintRows)`.
+"""
+mutable struct ConstraintRows
+    const J::Int              # no. of (complex) elements of `t` (half the no. of columns of realified constraint matrix)
+    nrows::Int                # total no. of rows/constraints
+    const is::Vector{Int}     # rows i
+    const js::Vector{Int}     # columns j
+    const vs::Vector{Float64} # nonzero values at [i,j]
+end
+ConstraintRows(J::Int) = ConstraintRows(J, 0, Int[], Int[], Float64[])
+
+function SparseArrays.sparse(constraints::ConstraintRows)
+    (; is, js, vs, nrows, J) = constraints
+    return sparse(is, js, vs, nrows, 2J) # sums duplicate entries
 end
 
 """
-    representation_constraint_matrices(
+    RowPermutation(σ::Vector{Int})
+
+A permutation matrix `Π` with `Π[σ[i], i] = 1`, stored (lazily) via the permutation `σ`.
+
+Its product `Π * M` with a sparse matrix `M` is a `RowPermuted`, rather than a new sparse
+matrix: the permutation of the rows, `(Π * M)[σ[i], :] = M[i, :]`, is only applied when the
+product is added to a `ConstraintRows` (in a `RealConstraintTerm` or
+`ComplexConstraintTerm`). `transpose(Π)` is the
+inverse permutation, and `sparse(Π)` and `Matrix(Π)` materialize `Π`.
+"""
+struct RowPermutation
+    σ::Vector{Int} # `Π[σ[i], i] = 1`
+    function RowPermutation(σ::Vector{Int})
+        isperm(σ) || throw(ArgumentError("input is not a permutation"))
+        return new(σ)
+    end
+end
+Base.size(Π::RowPermutation) = (length(Π.σ), length(Π.σ))
+Base.size(Π::RowPermutation, d::Integer) = d ≤ 2 ? length(Π.σ) : 1
+Base.transpose(Π::RowPermutation) = RowPermutation(invperm(Π.σ))
+SparseArrays.sparse(Π::RowPermutation) = sparse(Π.σ, eachindex(Π.σ), one(Int), size(Π)...)
+Base.Matrix(Π::RowPermutation) = Matrix(sparse(Π))
+
+struct RowPermuted # `Π * M`, for `Π::RowPermutation`
+    Π::RowPermutation
+    M::SparseMatrixCSC{Int, Int}
+end
+function Base.:*(Π::RowPermutation, M::SparseMatrixCSC{Int, Int})
+    size(Π, 2) == size(M, 1) || throw(DimensionMismatch("incompatible sizes of `Π` & `M`"))
+    return RowPermuted(Π, M)
+end
+Base.size(A::RowPermuted, d...) = size(A.M, d...)
+
+"""
+    RealConstraintTerm(a::Real, b::Real, M)
+
+A term `[a M  b M]` of a block of real constraint rows acting on `[tᴿ; tᴵ]` (see
+`add_constraints!`), with `M` a V×J matrix: an element of `Mm` (a `SparseMatrixCSC`), or a
+row permutation of one (`Π * M`, a `RowPermuted`).
+"""
+struct RealConstraintTerm{A <: Union{SparseMatrixCSC{Int, Int}, RowPermuted}}
+    a::Float64 # coefficient of `M` acting on `tᴿ`
+    b::Float64 # coefficient of `M` acting on `tᴵ`
+    M::A
+end
+RealConstraintTerm(a::Real, b::Real, M::A) where {A} = RealConstraintTerm{A}(a, b, M)
+
+"""
+    ComplexConstraintTerm(c::Number, M)
+
+A term `c M` of a block of complex constraint rows acting on the complex coefficient vector
+`t` (see `add_complex_constraints!`), with `M` a V×J matrix: an element of `Mm` (a
+`SparseMatrixCSC`), or a row permutation of one (`Π * M`, a `RowPermuted`).
+"""
+struct ComplexConstraintTerm{A <: Union{SparseMatrixCSC{Int, Int}, RowPermuted}}
+    c::ComplexF64
+    M::A
+end
+ComplexConstraintTerm(c::Number, M::A) where {A} = ComplexConstraintTerm{A}(c, M)
+
+# push the nonzero entries of `x * M` to `constraints`, with their row & column indices
+# offset by `row_offset` & `col_offset` (and the rows permuted by `σ`, if not `nothing`);
+# `x = 0` would only add explicit zeros, so is skipped
+function _push_scaled!(
+    constraints::ConstraintRows,
+    row_offset::Int,
+    col_offset::Int,
+    x::Real,
+    M::SparseMatrixCSC{Int, Int},
+    σ::Union{Nothing, Vector{Int}} = nothing,
+)
+    iszero(x) && return constraints
+    rv, nzv = rowvals(M), nonzeros(M)
+    for j in axes(M, 2), p in nzrange(M, j)
+        i = isnothing(σ) ? rv[p] : σ[rv[p]]
+        push!(constraints.is, row_offset + i)
+        push!(constraints.js, col_offset + j)
+        push!(constraints.vs, x * nzv[p])
+    end
+    return constraints
+end
+_push_scaled!(constraints, row_offset, col_offset, x, A::RowPermuted) =
+    _push_scaled!(constraints, row_offset, col_offset, x, A.M, A.Π.σ)
+
+"""
+    add_constraints!(constraints::ConstraintRows, terms, [more_terms]) --> ConstraintRows
+
+Append a block of `V` real constraint rows `Σₖ [aₖ Mₖ  bₖ Mₖ]`, acting on `[tᴿ; tᴵ]`, to
+`constraints`. `terms` (nonempty) and `more_terms` are vectors or tuples of
+`RealConstraintTerm`s, with coefficients `aₖ` & `bₖ` and `V×J` matrices `Mₖ`, all summed
+into the same block. Two collections allow terms of different types (e.g., with and
+without a row permutation) to be added together while each collection remains concretely
+typed.
+"""
+function add_constraints!(constraints::ConstraintRows, terms, more_terms = ())
+    V = size(first(terms).M, 1)
+    _push_terms!(constraints, V, terms)
+    _push_terms!(constraints, V, more_terms)
+    constraints.nrows += V
+    return constraints
+end
+function _push_terms!(constraints::ConstraintRows, V::Int, terms)
+    (; J, nrows) = constraints
+    for (; a, b, M) in terms::Union{AbstractVector{<:RealConstraintTerm},
+                                     Tuple{Vararg{RealConstraintTerm}}}
+        size(M) == (V, J) || throw(DimensionMismatch("terms must be V×J matrices"))
+        _push_scaled!(constraints, nrows, 0, a, M) # `aₖ Mₖ`, acting on `tᴿ`
+        _push_scaled!(constraints, nrows, J, b, M) # `bₖ Mₖ`, acting on `tᴵ`
+    end
+    return constraints
+end
+
+"""
+    add_complex_constraints!(constraints::ConstraintRows, terms, [more_terms]) --> ConstraintRows
+
+Append a block of `V` complex constraint rows `C = Σₖ cₖ Mₖ`, acting on the complex
+coefficient vector `t`, to `constraints`. `terms` (nonempty) and `more_terms` are vectors or
+tuples of `ComplexConstraintTerm`s, with complex coefficients `cₖ` and `V×J` matrices `Mₖ`,
+all summed into the same block (cf. `add_constraints!`).
+
+The rows are added in realified form, i.e., as the `2V` real rows of `[Re(C) -Im(C);
+Im(C) Re(C)]`, acting on `[tᴿ; tᴵ]`: `C t = 0` is equivalent to `Re(C) tᴿ - Im(C) tᴵ = 0`
+and `Im(C) tᴿ + Re(C) tᴵ = 0`.
+"""
+function add_complex_constraints!(constraints::ConstraintRows, terms, more_terms = ())
+    V = size(first(terms).M, 1)
+    _push_complex_terms!(constraints, V, terms)
+    _push_complex_terms!(constraints, V, more_terms)
+    constraints.nrows += 2V
+    return constraints
+end
+function _push_complex_terms!(constraints::ConstraintRows, V::Int, terms)
+    (; J, nrows) = constraints
+    for (; c, M) in terms::Union{AbstractVector{<:ComplexConstraintTerm},
+                                  Tuple{Vararg{ComplexConstraintTerm}}}
+        size(M) == (V, J) || throw(DimensionMismatch("terms must be V×J matrices"))
+        # NB: `cₖ` is often purely real or imaginary, so some of these are skipped
+        _push_scaled!(constraints, nrows,     0,  real(c), M) # Re(C) tᴿ
+        _push_scaled!(constraints, nrows,     J, -imag(c), M) # -Im(C) tᴵ
+        _push_scaled!(constraints, nrows + V, 0,  imag(c), M) # Im(C) tᴿ
+        _push_scaled!(constraints, nrows + V, J,  real(c), M) # Re(C) tᴵ
+    end
+    return constraints
+end
+
+"""
+    constraint_nullspace(constraints::ConstraintRows; atol::Real) --> Matrix{Float64}
+
+Return an orthonormal basis (as columns) for the null space of the constraint matrix
+`A = sparse(constraints)`, i.e., for the coefficient vectors `[tᴿ; tᴵ]` that satisfy every
+constraint; singular values of `A` below `atol` are treated as zero, as in
+`nullspace(A; atol)`.
+
+The null space is obtained from the right-singular vectors of `A`, restricted to its
+nonempty rows. Unlike `nullspace`, we compute only the thin SVD when `A` has more rows than
+columns (as is typical): the square `U` of the full SVD would be prohibitively large.
+"""
+function constraint_nullspace(constraints::ConstraintRows; atol::Real)
+    A = sparse(constraints)
+    A = Matrix(A[sort!(unique(rowvals(A))), :]) # dense, without empty rows
+    isempty(A) && return Matrix{Float64}(I, size(A, 2), size(A, 2)) # no constraints
+    full = size(A, 1) < size(A, 2) # `V` is square for a thin SVD only if `A` is tall
+    F = try
+        svd(A; full)
+    catch e
+        # fall back to the slower, but unconditionally convergent, QR-iteration SVD if the
+        # default divide-and-conquer SVD (`gesdd!`) fails, as it can for large constraint
+        # matrices (e.g., SG 230) on some platforms/LAPACK implementations
+        e isa LinearAlgebra.LAPACKException || rethrow(e)
+        svd(A; full, alg = LinearAlgebra.QRIteration())
+    end
+    r = count(>(atol), F.S) # rank of `A`
+    return F.V[:, r+1:end]
+end
+
+"""
+    add_symmetry_constraints!(
+        constraints::ConstraintRows,
         Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
+        h_orbit::HoppingOrbit{D},
         brₐ::BandRep{D},
         brᵦ::BandRep{D},
         gens::AbstractVector{<:AbstractOperation{D}},
        [orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
         orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ)]
-    ) --> Vector{Matrix{SparseMatrixCSC{ComplexF64, Int}}}
+    ) --> ConstraintRows
 
-Build the Q matrix for a particular symmetry operation (or, equivalently, a particular matrix
-from the site-symmetry representation), acting on the M matrix.
+Add the constraints imposed on `t` by the spatial symmetries `gens` to `constraints`.
+
+We have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk); then, the
+Hamiltonian transforms under symmetries as H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g). The left-hand
+side, H(g𝐤), is equivalent to permuting the elements of `v` (and hence the rows of each
+`Mm[s,t]`; see `_permute_symmetry_related_hoppings_under_symmetry_operation`) as
+Hₛₜ(g𝐤) = vᵀ(𝐤) Pᵀ M⁽ˢᵗ⁾ t. The right-hand side is
 
 (ρₐₐ)ᵣₛ Hₛₜ (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ tⱼ,
 
-then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ, stored as `Q[r,l][i,j]` (cf.
-`construct_M_matrix`).
+i.e., vᵀ(𝐤) Q⁽ʳˡ⁾ t with Q⁽ʳˡ⁾ = Σₛₜ (ρₐₐ)ᵣₛ (ρᵦᵦ⁻¹)ₜₗ M⁽ˢᵗ⁾. Hence, `t` must satisfy
+(Q⁽ʳˡ⁾ - Pᵀ M⁽ʳˡ⁾) t = 0 for every generator and every `(r,l)`; each row of
+`Q⁽ʳˡ⁾ - Pᵀ M⁽ʳˡ⁾` is a complex constraint on `t`, added to `constraints` in realified form.
+
+The sum over `s,t` runs only over the nonzero elements of `ρₐₐ` and `ρᵦᵦ`: as these are
+block-permutation-like matrices, each Q⁽ʳˡ⁾ is a combination of only a few M⁽ˢᵗ⁾.
 """
-function representation_constraint_matrices(
+function add_symmetry_constraints!(
+    constraints::ConstraintRows,
     Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
+    h_orbit::HoppingOrbit{D},
     brₐ::BandRep{D},
     brᵦ::BandRep{D},
     gens::AbstractVector{<:AbstractOperation{D}},
@@ -667,13 +850,20 @@ function representation_constraint_matrices(
         site_induced_sgrep_excl_phase.(Ref(brᵦ), gens, Ref(orderingᵦ))
     end
 
-    # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk);
-    # then, the Hamiltonian will be transformed due to symmetries as
-    # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical
-    # matrices as `Q[:,:][i,j] = ρₐₐ * Mm[:,:][i,j] * ρᵦᵦ'`, for every `(i,j)`
-    Qs = [_outer_sandwich(ρₐₐ, Mm, ρᵦᵦ') for (ρₐₐ, ρᵦᵦ) in zip(ρsₐₐ, ρsᵦᵦ)]
-
-    return Qs
+    Q_terms = ComplexConstraintTerm{SparseMatrixCSC{Int, Int}}[] # reused for each block
+    for (op, ρₐₐ, ρᵦᵦ) in zip(gens, ρsₐₐ, ρsᵦᵦ)
+        Pᵀ = _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op)
+        for l in axes(Mm, 2), r in axes(Mm, 1)
+            # Q⁽ʳˡ⁾ - Pᵀ M⁽ʳˡ⁾, with Q⁽ʳˡ⁾ = Σₛₜ (ρₐₐ)ᵣₛ (ρᵦᵦ)*ₗₜ M⁽ˢᵗ⁾ (nonzero terms only)
+            empty!(Q_terms)
+            append!(Q_terms, (ComplexConstraintTerm(ρₐₐ[r, s] * conj(ρᵦᵦ[l, t]), Mm[s, t])
+                              for s in axes(ρₐₐ, 2) if !iszero(ρₐₐ[r, s])
+                              for t in axes(ρᵦᵦ, 2) if !iszero(ρᵦᵦ[l, t])))
+            add_complex_constraints!(constraints, Q_terms,
+                                     (ComplexConstraintTerm(-1, Pᵀ * Mm[r, l]),))
+        end
+    end
+    return constraints
 end
 
 """
@@ -743,87 +933,34 @@ function _obtain_basis_free_parameters(
     diagonal_block::Bool,
     hermiticity::Hermiticity,
 ) where {D}
-    # encode representation constraints on Hₐᵦ
-    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens, orderingₐ, orderingᵦ)
+    # collect all constraints on the coefficient vector `t` associated with `h_orbit`, as
+    # rows of a real constraint matrix acting on the re/im-doubled vector `[tᴿ; tᴵ]`: we
+    # want to work with strictly real coefficients for the basis vectors, so we split the
+    # possible products of complex coefficients with a complex basis vector into two
+    # vectors, where the lower half of each represents the imaginary part of the product.
+    # A benefit of this is that it becomes possible to take the complex conjugate of each
+    # element "symbolically" by simply multiplying with [1 0; 0 -1] (block matrix), which
+    # is needed for the time-reversal and hermiticity constraints. Crucially, this must be
+    # kept in mind everywhere that we use a coefficient vector. In particular, we must
+    # always interpret `Mm` as acting like `[Mm iMm]` on a "doubled" basis vector.
+    constraints = ConstraintRows(coefficient_count(Mm))
 
-    # encode reciprocal-rotation constraints on Hₐᵦ
-    Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
+    # spatial symmetry constraints on Hₐᵦ
+    add_symmetry_constraints!(constraints, Mm, h_orbit, brₐ, brᵦ, gens, orderingₐ, orderingᵦ)
 
-    # build an aggregate constraint matrix, over all generators, acting on the hopping
-    # coefficient vector tₐᵦ associated with h_orbit
-    constraints = _aggregate_constraints(Qs, Zs)
-    tₐᵦ_basis_matrix = _retrying_nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
-
-    # at this point, the coefficient-space spanning `tₐᵦ_basis` is implicitly complex; this
-    # is conceptually not too nice for a Hamiltonian, and we'd like to work with strictly
-    # real coefficients. To that end, we "split" the possible products of such complex
-    # coefficients with a complex basis vector into two vectors, where the lower half of
-    # each represents the imaginary part of the product. The benefit of this is that it
-    # becomes possible to take the complex conjugate of each element "symbolically" by
-    # simply multiplying with [1 0; 0 -1] (block matrix). We need to do this anyway if we
-    # we have `timereversal = true`, but it's nice to just have a shared representation
-    # of the basis vectors, so we do it here as well.
-
-    # If the set of basis vectors obtained from symmetry constraints was empty, there's no
-    # point in continuing: we then return early
-    isempty(tₐᵦ_basis_matrix) && return Vector{Vector{Float64}}()
-
-    # Details: we split each potentially complex "basis" vector `t = tₐᵦ_basis[i]` into
-    # two real vectors `x` and `y`, such that the _real_ span of `x` and `y` is equivalent
-    # to the complex span of `t`; the key is that we must interpret the lower halfs of `x`
-    # and `y` as representing imaginary numbers. Crucially, this must be kept in mind
-    # everywhere that we use a coefficient vector. In particular, we now must always
-    # interpret `Mm` as acting like `[Mm Mm]` when meeting a "doubled" basis vector of this
-    # kind.
-    # Example: we have `t₁ = [im,0]`, `t₂ = [1,im]`, and `tₐᵦ_basis = [t₁,t₂]`, then:
-    #    ```
-    #    julia> tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-    #    2-element Vector{Matrix{Int64}}:
-    #     [0 -1; 0 0; 1 0; 0 0]
-    #     [1 0; 0 -1; 0 1; 1 0]
-    #
-    #    julia> tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
-    #    4×4 Matrix{Int64}:
-    #     0  -1  1   0
-    #     0   0  0  -1
-    #     1   0  0   1
-    #     0   0  1   0
-    #    ```
-    # See `split_complex` for more details on the real/imaginary splitting.
-    N = 2coefficient_count(Mm) # number of elements per `t`-vector, when doubled
-    tₐᵦ_basis_reim = split_complex.(eachcol(tₐᵦ_basis_matrix))
-    tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
-
-    ## ----------------------------------------------------------------------------------- #
-    if timereversal # "add" and "intersect" the associated TRS constraints
-        # now we construct the TRS constraints, and then intersect the allowable basis terms
-        # of these constraints with those corresponding to the previously computed basis
-        tₐᵦ_basis_tr_reim_matrix = obtain_basis_free_parameters_TRS(
-            h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm
-        )
-        tₐᵦ_basis_reim_matrix = subspace_intersection(
-            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix; atol=NULLSPACE_ATOL_DEFAULT
-        )
+    # time-reversal constraints
+    if timereversal
+        add_timereversal_constraints!(constraints, Mm, brₐ, brᵦ, orderingₐ, orderingᵦ)
     end
-    isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
-    # ------------------------------------------------------------------------------------ #
-    # "add" and "intersect" the associated hermiticity constraints if this is a diagonal block
+    # hermiticity constraints, if this is a diagonal block
     if diagonal_block && hermiticity ≠ NONHERMITIAN
         antihermitian = hermiticity === ANTIHERMITIAN
-        tₐᵦ_basis_herm_reim_matrix = obtain_basis_free_parameters_hermiticity(
-            h_orbit,
-            brₐ,
-            brᵦ,
-            antihermitian,
-            orderingₐ,
-            orderingᵦ,
-            Mm,
-        )
-        tₐᵦ_basis_reim_matrix = subspace_intersection(
-            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix; atol=NULLSPACE_ATOL_DEFAULT
-        )
+        add_hermiticity_constraints!(constraints, Mm, h_orbit, antihermitian)
     end
+
+    # the allowed coefficient vectors span the null space of the combined constraints
+    tₐᵦ_basis_reim_matrix = constraint_nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
     isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
 
     # ------------------------------------------------------------------------------------ #
@@ -840,169 +977,9 @@ function _obtain_basis_free_parameters(
     return tₐᵦ_basis_reim
 end
 
-# Wrapper around `nullspace` that falls back to QR-iteration SVD if the default
-# divide-and-conquer SVD (`gesdd!`) fails with a `LAPACKException`. The fallback is slower
-# but unconditionally convergent, and is needed for large constraint matrices arising in
-# high-symmetry space groups (e.g., SG 230) on some platforms/LAPACK implementations.
-function _retrying_nullspace(
-    A;
-    atol::Real = 0.0,
-    rtol::Real = (min(size(A)...) * eps(real(float(oneunit(eltype(A)))))) * iszero(atol)
-)
-    try
-        return nullspace(A; atol, rtol)
-    catch e
-        e isa LinearAlgebra.LAPACKException || rethrow(e)
-        # the below simply copies the LinearAlgebra implementation of nullspace, with the
-        # only adjustment being to pass `alg = LinearAlgebra.QRIteration()` to `svd` to
-        # ensure convergence; 
-        # TODO: change to `nullspace(A; atol, rtol, alg = LinearAlgebra.QRIteration())`
-        #       if https://github.com/JuliaLang/LinearAlgebra.jl/issues/1571 is resolved
-        SVD = svd(A; full = true, alg = LinearAlgebra.QRIteration())
-        tol = max(atol, SVD.S[1]*rtol)
-        indstart = sum(s -> s .> tol, SVD.S) + 1
-        return copy((@view SVD.Vt[indstart:end,:])')
-    end
-end
-
-# Constraint tensors `Q` & `Z` are stored like `Mm` (cf. `construct_M_matrix`), i.e., as
-# `Q[s,t][i,j]`; each row `Q[s,t][i,:] - Z[s,t][i,:]` is a constraint on `t`. `Z = nothing`
-# stands in for a zero-valued tensor.
-const ConstraintTensor = AbstractMatrix{<:SparseMatrixCSC{<:Number}}
-
-function _aggregate_constraints(
-    Q::ConstraintTensor,
-    Z::Union{ConstraintTensor, Nothing},
-    row_atol::Real = 1e-10,
-)
-    # store constraints in one big vector initially; then we reshape to a matrix after
-    constraint_vs = Vector{_constraint_eltype(Q, Z)}()
-    _aggregate_constraints!(constraint_vs, Q, Z, row_atol)
-
-    # return a C×J matrix where each row is a constraint, across C constraints
-    J = size(first(Q), 2) # number of elements per constraint
-    return _reshape_aggregate_constraints(constraint_vs, J)
-end
-
-function _aggregate_constraints(
-    # same as `_aggregate_constraints(Q, V)` but for a vector of Qs and Zs
-    Qs::AbstractVector{<:ConstraintTensor},
-    Zs::AbstractVector{<:ConstraintTensor},
-    row_atol::Real = 1e-10,
-)
-    constraint_vs = Vector{_constraint_eltype(first(Qs), first(Zs))}()
-    for (Q, Z) in zip(Qs, Zs)
-        _aggregate_constraints!(constraint_vs, Q, Z, row_atol)
-    end
-    J = size(first(first(Qs)), 2)
-    return _reshape_aggregate_constraints(constraint_vs, J)
-end
-
-_constraint_eltype(Q, Z) = promote_type(eltype(eltype(Q)), eltype(eltype(Z)))
-_constraint_eltype(Q, ::Nothing) = eltype(eltype(Q))
-
-function _aggregate_constraints!( # modifies `constraint_vs` in place
-    constraint_vs::Vector{<:Number},
-    Q::ConstraintTensor,
-    Z::Union{ConstraintTensor, Nothing},
-    row_atol::Real = 1e-10,
-)
-    # store constraints in one big vector initially; then we reshape to a matrix after
-    J = size(first(Q), 2)
-
-    # avoid repeated recomputation of `norm(c′)` in collinearity check below
-    norms = if isempty(constraint_vs)
-        Vector{real(float(eltype(constraint_vs)))}()
-    else # `constraint_vs` is not empty
-        map(1:J:length(constraint_vs)) do n
-            c′ = @view constraint_vs[n:n+J-1]
-            norm(c′)
-        end
-    end
-
-    # aggregate constraints into `constraint_vs`
-    for t in axes(Q, 2), s in axes(Q, 1)
-        # transpose, so the rows `i` of `Q[s,t] - Z[s,t]`, i.e., the constraints, become
-        # columns of a CSC matrix; this lets us iterate over each constraint's nonzeros
-        Dᵀ = copy(transpose(isnothing(Z) ? Q[s, t] : Q[s, t] - Z[s, t]))
-        rv, nzv = rowvals(Dᵀ), nonzeros(Dᵀ)
-        for i in axes(Dᵀ, 2)
-            # the constraint is `c = Dᵀ[:, i]`, with nonzero elements `nzv[ps]` at `rv[ps]`
-            ps = nzrange(Dᵀ, i)
-
-            # don't add empty or near-empty constraints
-            isempty(ps) && continue
-            norm_c = norm(@view nzv[ps])
-            norm_c < row_atol && continue
-
-            # check whether `c` is collinear w/ any existing constraint `c′`; if so, don't
-            # add again: we compute `dot(c′, c)` over the nonzero elements of `c` only
-            collinear = false
-            for (n, norm_c′) in enumerate(norms)
-                offset = (n - 1) * J
-                c_dot_c′ = zero(eltype(constraint_vs))
-                for p in ps
-                    c_dot_c′ += conj(constraint_vs[offset + rv[p]]) * nzv[p]
-                end
-                if abs(c_dot_c′) ≈ norm_c * norm_c′ # collinear if true
-                    collinear = true
-                    break
-                end
-            end
-            collinear && continue
-
-            # add the constraint to the list
-            offset = length(constraint_vs)
-            append!(constraint_vs, Iterators.repeated(zero(eltype(constraint_vs)), J))
-            for p in ps
-                constraint_vs[offset + rv[p]] = nzv[p]
-            end
-            push!(norms, norm_c)
-        end
-    end
-
-    return constraint_vs
-end
-
-function _reshape_aggregate_constraints(
-    constraint_vs::Vector{<:Number}, # vector of inline-concatenated constraints
-    J::Int, # number of elements per constraint: ≡ size(Mm[s,t],2) = size(Q[s,t],2) = …
-)
-    C = length(constraint_vs) ÷ J # number of constraints
-    return permutedims(reshape(constraint_vs, J, C))
-end
-
 """
-    reciprocal_constraints_matrices(
-        Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
-        gens::AbstractVector{<:AbstractOperation{D}},
-        h_orbit::HoppingOrbit{D}
-    ) --> Vector{Matrix{SparseMatrixCSC{Int, Int}}}
-
-Compute the reciprocal constraints matrices for the generators of the SG. This is done by
-permuting the rows of the M matrix according to the symmetry operation acting on k-space.
-See more details in
-`permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
-"""
-function reciprocal_constraints_matrices(
-    Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
-    gens::AbstractVector{<:AbstractOperation{D}},
-    h_orbit::HoppingOrbit{D},
-) where {D}
-    Zs = Vector{Matrix{SparseMatrixCSC{Int, Int}}}(undef, length(gens))
-    for (n, op) in enumerate(gens)
-        Pᵀ = sparse(transpose(
-            _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op),
-        ))
-        # vᵀ Ρᵀ Mₛₜ t ⇒ vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ, i.e., `Z[s,t] = Pᵀ * Mm[s,t]`
-        Zs[n] = [Pᵀ * M for M in Mm]
-    end
-    return Zs
-end
-
-"""
-Build the P matrix for a particular symmetry operation acting on k-space, which permutes the
-rows of the M matrix.
+Build the P matrix for a particular symmetry operation acting on k-space, whose transpose
+`Pᵀ` permutes the rows of the M matrix; `Pᵀ` (not `P`) is returned, as a `RowPermutation`.
 
 To obtain the P matrix, we exploit that the action is on exponentials of the type
 ``exp(-2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
@@ -1016,8 +993,8 @@ we need to use the inverse of the rotation part of the symmetry operation.
     It is assumed that the operation `op` is provided in a primitive setting.
 
 !!! warning
-    This function is an internal helper function for `reciprocal_constraints_matrices` and
-    is not part of the public API.
+    This function is an internal helper function for `add_symmetry_constraints!` and
+    `add_hermiticity_constraints!` and is not part of the public API.
 """
 function _permute_symmetry_related_hoppings_under_symmetry_operation(
     h_orbit::HoppingOrbit{D},
@@ -1026,7 +1003,9 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
     # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
     # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
     # for expressions of the kind (Pv)ᵀ M … = vᵀ Pᵀ M …
-    P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
+    
+    N = length(orbit(h_orbit))
+    cols = Vector{Int}(undef, N) # `P[i, cols[i]] = 1`, i.e., the nonzero column of each row
     for (i, δᵢ) in enumerate(orbit(h_orbit))
         # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
         # being a symbolic variable, we will translate its action into δ. For this,
@@ -1038,10 +1017,13 @@ function _permute_symmetry_related_hoppings_under_symmetry_operation(
         end
         isnothing(j) &&
             error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
-        P[i, j] = 1
+        cols[i] = j
         # since P acts as g v = P v, we have (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
     end
-    return P
+    # since `Π[σ[j], j] = 1` for a `Π::RowPermutation`, `cols` directly gives `Pᵀ`, which
+    # is what callers need (`Pᵀ[cols[i], i] = P[i, cols[i]] = 1`)
+    Pᵀ = RowPermutation(cols)
+    return Pᵀ
 end
 
 """
