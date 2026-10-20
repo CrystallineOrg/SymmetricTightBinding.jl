@@ -128,3 +128,10 @@ end
         isapprox(ptbm(gk), D * Hk * D'; atol = 1e-12)
     end
 end
+
+@testset "`collect_compatible(ptbm; kws...)` forwards keyword arguments" begin
+    brs = bandreps(17, Val(2))
+    tbm = tb_hamiltonian(@composite brs[5]) # graphene, (2b|A₁)
+    ptbm = tbm([0, 1])
+    @test collect_compatible(ptbm; atol = 1e-6) == collect_compatible(ptbm)
+end
