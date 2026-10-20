@@ -36,7 +36,7 @@ In the above example, the bands separate into two symmetry vectors, one for each
 original EBRs in `cbr`.
 """
 function Crystalline.collect_compatible(
-    ptbm::ParameterizedTightBindingModel{D},
+    ptbm::ParameterizedTightBindingModel{D};
     multiplicities_kws...,
 ) where D
     tbm = ptbm.tbm
