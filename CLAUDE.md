@@ -73,15 +73,18 @@ src/
   SymmetricTightBinding.jl  # module definition, exports, constants
   types.jl                  # core data structures + evaluation functors
   types_composite.jl        # composite HERMITIAN ⊕ ANTIHERMITIAN models
-  tightbinding.jl           # constraint pipeline: M-matrix, constraint rows, nullspace, sparsification
-  site_representations.jl   # coset-decomposition-based induced representations
+  tightbinding.jl           # hopping orbits, orbital ordering, M-matrix, model assembly (`tb_hamiltonian`)
+  constraints/              # constraints on the coefficients `t` of a Hamiltonian block
+    core.jl                 # `ConstraintRows` + terms, null space (`AᵀA`), basis solve & sparsification
+    spatial.jl              # spatial-symmetry constraints: H(gk) = ρ(g) H(k) ρ(g)†
+    timereversal.jl         # TRS constraint: H(k) = H*(-k)
+    hermiticity.jl          # hermiticity/anti-hermiticity constraint rows
+  site_representations.jl   # coset-decomposition-based induced representations (incl. of TRS)
   symmetry_analysis.jl      # irrep content at high-symmetry k-points
   spectrum.jl               # band eigenvalue computation
   berry.jl                  # Berry curvature, Chern numbers (Kubo + Fukui)
   dos.jl                    # density of states (generalized Gilat–Raubenheimer)
   gradients.jl              # dH/dc_i and dH/dk_i
-  hermiticity.jl            # hermiticity/anti-hermiticity constraint rows
-  timereversal.jl           # TRS constraint: H(k) = H*(-k)
   symmetry_breaking.jl      # subduced complement for translationengleiche subgroups
   utils.jl                  # orbital positions, pin_free!, psd_nullspace!, etc.
   show.jl                   # pretty-printing for all types
