@@ -177,7 +177,8 @@ function primitivized_orbit(br::BandRep{D}; allow_free::Bool = false) where D
     # operations - but is still specified in a conventional basis. So, below, we change the
     # positions from a conventional to a primitive basis
     cntr = centering(num(br), D)
-    wps = primitivize.(orbit(group(br)), cntr)
+    wps = orbit(group(br))
+    wps = cntr in ('P', 'p') ? wps : primitivize.(wps, cntr)
     for wp in wps
         if !allow_free && !iszero(free(wp))
             error(lazy"encountered Wyckoff position $wp with free parameters: not allowed")

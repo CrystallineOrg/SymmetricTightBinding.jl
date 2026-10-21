@@ -100,7 +100,7 @@ function obtain_symmetry_related_hoppings(
     # finally, sort the elements of each orbit into a canonical order (see
     # `sort_orbit_by_sign_pairs!`): this is purely cosmetic, but makes for nicer default
     # printing of the associated Hamiltonian terms
-    sort_orbit_by_sign_pairs!.(h_orbits)
+    foreach(sort_orbit_by_sign_pairs!, h_orbits)
 
     return h_orbits
 end
@@ -356,15 +356,17 @@ end
 # that every δ has a -δ counterpart in `h_orbit` (violating this is UB).
 function _add_reversed_hops!(h_orbit::HoppingOrbit)
     δs = orbit(h_orbit)
-    hoppings_original = [copy(hops) for hops in h_orbit.hoppings]
+    # no. of original hops at each δ: the loop below only appends to `h_orbit.hoppings[…]`,
+    # so the original hops remain the first `nhops[idx]` elements of each
+    nhops = map(length, h_orbit.hoppings)
     for (idx, δ) in enumerate(δs)
         idx′ = something(findfirst(δs) do δ′
             isapprox(-δ, δ′, nothing, false; atol = VEC_CMP_ATOL)
         end)
-        hops = hoppings_original[idx]
+        hops = h_orbit.hoppings[idx]
         hops′ = h_orbit.hoppings[idx′]
-        for hop in hops
-            (qₐ, qᵦ, R) = hop
+        for k in 1:nhops[idx]
+            (qₐ, qᵦ, R) = hops[k]
             rev_hop = (qᵦ, qₐ, -R) # reverse hop
             rev_qₐ, rev_qᵦ, rev_R = rev_hop
             has_counterpart = any(hops′) do hop′
