@@ -1,68 +1,75 @@
 """
-    split_complex(t::Vector{<:Number}) -> Matrix{Real}
+    psd_nullspace!(G::Symmetric{<:Real}; tol::Real) --> Matrix{Float64}
 
-Consider `αt` where `α ∈ ℂ` and `t ∈ ℂⁿ` and build from `t` a matrix representation
-`T` that allows access to the real and imaginary parts of the product `αt` without using
-complex numbers by splitting α into a real 2-vector of its real and imaginary parts.
+Return an orthonormal basis (as columns) for the null space of the **positive
+semi-definite** matrix `G`, via a pivoted Cholesky factorization; `G` is overwritten by the
+factorization.
 
-In particular, let ``α = αᴿ + iαᴵ`` and ``t = tᴿ + itᴵ`` with `αᴿ, αᴵ ∈ ℝ` and
-``tᴿ, tᴵ ∈ ℝⁿ``, then ``αt`` can be rewritten as
+The factorization, `G[p, p] = UᵀU`, stops at rank `r` once all remaining pivots are below
+`tol`; writing the leading `r` rows of `U` as `[U₁₁ U₁₂]` (with `U₁₁` upper triangular),
+the null space of `G` is then spanned by the columns of `P [-U₁₁⁻¹U₁₂; 𝟙]` (`P` the
+permutation matrix of `p`), which we orthonormalize.
 
-```math
-αt = (αᴿ + iαᴵ)(tᴿ + itᴵ)
-   = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)
-   = [tᴿ, tᴵ]ᵀ [αᴿ, αᴵ] + i [tᴵ, tᴿ]ᵀ [αᴿ, αᴵ]
-```
-
-Then, defining `T = [tᴿ -tᴵ; tᴵ tᴿ]`, the above product can then be reexpressed as:
-``Re(αt) = αᴿtᴿ - αᴵtᴵ =`` `(T * [αᴿ; αᴵ])[1:n]` and ``Im(αt) = αᴿtᴵ + αᴵtᴿ =``
-`(T * [αᴿ; αᴵ])[n+1:2n]`.
-I.e., the "upper half" of the product `T * [real(α), imag(α)]` is `real(α * t)` and the 
-"lower half" is `imag(αt)`.
-
-This functionality is used to avoid complex numbers in amplitude basis coefficients, which
-simplifies the application of time-reversal symmetry and hermiticity.
-
-## Examples
-
-```julia
-julia> using SymmetricTightBinding: split_complex
-
-julia> t = [im,0]
-2-element Vector{Complex{Int64}}:
- 0 + 1im
- 0 + 0im
-
-julia> T = split_complex(t)
-4×2 Matrix{Int64}:
- 0  -1
- 0   0
- 1   0
- 0   0
-
-julia> α = 0.5+0.2im; αv = [real(α), imag(α)];
-
-julia> (T * αv)[1:2] == real(α*t) && (T * αv)[3:4] == imag(α*t)
-```
-
-```julia
-julia> t = [1,im]
-2-element Vector{Complex{Int64}}:
- 1 + 0im
- 0 + 1im
-
-julia> split_complex(t)
-4×2 Matrix{Int64}:
- 1   0
- 0  -1
- 0   1
- 1   0
-```
+!!! warning
+    `G` must be positive semi-definite; this is not checked. For such matrices, pivoted
+    Cholesky is rank-revealing in practice (though, unlike an SVD or eigendecomposition,
+    without a worst-case guarantee) - provided the null space is well separated from the
+    smallest nonzero eigenvalues of `G`, relative to `tol`.
 """
-function split_complex(t::AbstractVector{<:Number})
-    re_t, im_t = reim(t)
-    return [re_t -im_t; im_t re_t] # == [real(t) real(im * t); imag(t) imag(im * t)]
+function psd_nullspace!(G::Symmetric{<:Real}; tol::Real)
+    # NB: `check = false` since `check = true` throws if `G` is rank deficient (our use case)
+    F = cholesky!(G, RowMaximum(); tol, check = false)
+    r, n = F.rank, size(G, 2)
+    # without the allocation-avoiding steps below, this is just:
+    #     U₁₁, U₁₂ = UpperTriangular(F.U[1:r, 1:r]), F.U[1:r, r+1:n]
+    #     X = zeros(n, n - r)
+    #     X[F.p[1:r], :] = -(U₁₁ \ U₁₂)
+    #     X[F.p[r+1:n], :] = I(n - r)
+    #     return Matrix(qr(X).Q)
+    # instead, we take views of the storage `parent(F.U)` of `F.U` (`G`'s own storage, if
+    # `G.uplo == 'U'`), which is strided, so that `ldiv!` can use BLAS; only its upper
+    # triangle holds `U`, but `U₁₁` is wrapped as `UpperTriangular` and `U₁₂` (rows `1:r`,
+    # columns `r+1:n`) lies strictly above the diagonal, so no other elements are read
+    U = parent(F.U)
+    U₁₁, U₁₂ = UpperTriangular(view(U, 1:r, 1:r)), view(U, 1:r, r+1:n)
+    ldiv!(U₁₁, U₁₂) # `U₁₂ ← U₁₁ \ U₁₂`, in place
+    X = zeros(n, n - r)
+    X[view(F.p, 1:r), :] .= .-U₁₂
+    for k in 1:n-r # set `X[F.p[r+1:n], :] = I(n - r)` w/o allocations (cf. `zeros` above)
+        j = F.p[r+k]
+        X[j, k] = 1
+    end
+    return Matrix(qr!(X).Q) # orthonormalize
 end
+
+"""
+    gram_from_transpose(Aᵀ::SparseMatrixCSC) --> Symmetric{<:AbstractFloat, <:Matrix}
+
+Return the Gram matrix `AᵀA` of a sparse matrix `A`, as a dense `Symmetric` matrix, given
+its transpose `Aᵀ`.
+
+`AᵀA` is accumulated as a sum of outer products of the rows of `A`, i.e., of the columns of
+`Aᵀ`, which, for a `SparseMatrixCSC`, are stored contiguously (unlike the rows of `A`).
+"""
+function gram_from_transpose(Aᵀ::SparseMatrixCSC)
+    # `AᵀA = Σᵢ aᵢaᵢᵀ`, with `aᵢ = A[i, :]` the rows of `A`, i.e., `(AᵀA)[k, l] =
+    # Σᵢ A[i, k] A[i, l]`: so each row `aᵢ` contributes a product for each pair `(k, l)` of
+    # its nonzeros, & rows of `A` with few nonzeros (as for constraint rows) are cheap
+    m = size(Aᵀ, 1)
+    G = zeros(float(eltype(Aᵀ)), m, m)
+    ks, vals = rowvals(Aᵀ), nonzeros(Aᵀ) # column indices `k` & values of `A`'s nonzeros
+    for i in axes(Aᵀ, 2)                 # row `i` of `A` (column `i` of `Aᵀ`)
+        row = nzrange(Aᵀ, i)             # storage positions of row `i`'s nonzeros
+        for pₗ in row, pₖ in first(row):pₗ # positions of `A[i, k]` & `A[i, l]`, for `k ≤ l`
+            k, l = ks[pₖ], ks[pₗ]
+            Aᵢₖ, Aᵢₗ = vals[pₖ], vals[pₗ]
+            G[k, l] += Aᵢₖ * Aᵢₗ          # upper triangle only (`k ≤ l`, as `ks` is sorted)
+        end
+    end
+    return Symmetric(G, :U)
+end
+
+## --------------------------------------------------------------------------------------- #
 
 """
     inversion(::Val{D}) --> SymOperation{D}
@@ -75,6 +82,7 @@ inversion(::Val{1}) = S"-x"
 inversion(::Val) = error("unsupported dimension")
 
 ## --------------------------------------------------------------------------------------- #
+
 """
     orbital_positions(br::BandRep{D})                            --> Vector{DirectPoint{D}}
     orbital_positions(cbr::CompositeBandRep{D})
@@ -133,7 +141,8 @@ function primitivized_orbit(br::BandRep{D}; allow_free::Bool = false) where D
     # operations - but is still specified in a conventional basis. So, below, we change the
     # positions from a conventional to a primitive basis
     cntr = centering(num(br), D)
-    wps = primitivize.(orbit(group(br)), cntr)
+    wps = orbit(group(br))
+    wps = cntr in ('P', 'p') ? wps : primitivize.(wps, cntr)
     for wp in wps
         if !allow_free && !iszero(free(wp))
             error(lazy"encountered Wyckoff position $wp with free parameters: not allowed")

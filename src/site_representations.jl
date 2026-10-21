@@ -208,3 +208,42 @@ function site_induced_sgrep(
 ) where D
     return site_induced_sgrep(CompositeBandRep(tbm), op, orbital_positions(tbm))
 end
+
+"""
+    site_induced_timereversal_unitary(br::BandRep, [ordering::OrbitalOrdering])
+    site_induced_timereversal_unitary(cbr::CompositeBandRep)             --> Matrix{<:Real}
+
+Return the unitary part `Γ` of time reversal `𝒯 = ΓK` across all orbitals of `br`, i.e.,
+across sites in the orbit of the Wyckoff position and site-symmetry orbitals at each site.
+This is the time-reversal counterpart of [`site_induced_sgrep`](@ref): i.e., the
+(unitary part of the) action of time-reversal symmetry on the orbitals of a band
+representation.
+
+The orbitals are ordered according to `ordering` (by default, `OrbitalOrdering(br)`):
+`Γ` acts as `Γₛ = Crystalline.timereversal_unitary(br.siteir)` on the partner functions of
+each site, and trivially across sites (`Γₛ = 𝟙` for spinless and `J = iσʸ ⊗ 𝟙ₙ` for spinful
+site irreps). In the default, partner-function-major, ordering, `Γ = Γₛ ⊗ 𝟙`.
+
+If a `CompositeBandRep` is supplied as input, the matrix is the block-diagonal
+generalization, stacking over the contained band representation content.
+"""
+function site_induced_timereversal_unitary(
+    br::BandRep{D},
+    ordering::OrbitalOrdering{D} = OrbitalOrdering(br)
+) where D
+    Γₛ = timereversal_unitary(br.siteir)
+    # Γ is diagonal in the site index & acts as `Γₛ` on the partner functions of each site
+    Γ = zeros(eltype(Γₛ), length(ordering), length(ordering))
+    for (n, oₙ) in enumerate(ordering), (m, oₘ) in enumerate(ordering)
+        oₘ.site_idx == oₙ.site_idx || continue
+        Γ[m, n] = Γₛ[oₘ.partner_idx, oₙ.partner_idx]
+    end
+    return Γ
+end
+
+function site_induced_timereversal_unitary(cbr::CompositeBandRep)
+    T = isspinful(cbr) ? Int : Bool # return Matrix{Int} (spinful) / Matrix{Bool} (spinless)
+    return _apply_across_matrix_blocks_of_composite_bandrep(
+        site_induced_timereversal_unitary, cbr, T
+    )
+end

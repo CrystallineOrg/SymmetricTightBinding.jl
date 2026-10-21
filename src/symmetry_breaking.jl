@@ -375,7 +375,7 @@ function _subduction_groups(
                 # a pair with no G-allowed term: stand it in with a `t = zeros(…)` block
                 Mm = construct_M_matrix(h_orbit, br1, br2, ordering1, ordering2)
                 TightBindingBlock{D, S}(br1, br2, ordering1, ordering2, h_orbit, Mm,
-                                        #=t=# zeros(2size(Mm, 2)), diagonal_block)
+                                        #=t=# zeros(2coefficient_count(Mm)), diagonal_block)
             end
             push!(groups, (; block_ij, block, idxs))
         end
