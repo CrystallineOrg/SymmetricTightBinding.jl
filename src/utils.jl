@@ -43,6 +43,35 @@ function psd_nullspace!(G::Symmetric{<:Real}; tol::Real)
 end
 
 """
+    gram_from_transpose(Aᵀ::SparseMatrixCSC) --> Symmetric{<:AbstractFloat, <:Matrix}
+
+Return the Gram matrix `AᵀA` of a sparse matrix `A`, as a dense `Symmetric` matrix, given
+its transpose `Aᵀ`.
+
+`AᵀA` is accumulated as a sum of outer products of the rows of `A`, i.e., of the columns of
+`Aᵀ`, which, for a `SparseMatrixCSC`, are stored contiguously (unlike the rows of `A`).
+"""
+function gram_from_transpose(Aᵀ::SparseMatrixCSC)
+    # `AᵀA = Σᵢ aᵢaᵢᵀ`, with `aᵢ = A[i, :]` the rows of `A`, i.e., `(AᵀA)[k, l] =
+    # Σᵢ A[i, k] A[i, l]`: so each row `aᵢ` contributes a product for each pair `(k, l)` of
+    # its nonzeros, & rows of `A` with few nonzeros (as for constraint rows) are cheap
+    m = size(Aᵀ, 1)
+    G = zeros(float(eltype(Aᵀ)), m, m)
+    ks, vals = rowvals(Aᵀ), nonzeros(Aᵀ) # column indices `k` & values of `A`'s nonzeros
+    for i in axes(Aᵀ, 2)                 # row `i` of `A` (column `i` of `Aᵀ`)
+        row = nzrange(Aᵀ, i)             # storage positions of row `i`'s nonzeros
+        for pₗ in row, pₖ in first(row):pₗ # positions of `A[i, k]` & `A[i, l]`, for `k ≤ l`
+            k, l = ks[pₖ], ks[pₗ]
+            Aᵢₖ, Aᵢₗ = vals[pₖ], vals[pₗ]
+            G[k, l] += Aᵢₖ * Aᵢₗ          # upper triangle only (`k ≤ l`, as `ks` is sorted)
+        end
+    end
+    return Symmetric(G, :U)
+end
+
+## --------------------------------------------------------------------------------------- #
+
+"""
     inversion(::Val{D}) --> SymOperation{D}
 
 Return the inversion operation in dimension `D`.
@@ -53,6 +82,7 @@ inversion(::Val{1}) = S"-x"
 inversion(::Val) = error("unsupported dimension")
 
 ## --------------------------------------------------------------------------------------- #
+
 """
     orbital_positions(br::BandRep{D})                            --> Vector{DirectPoint{D}}
     orbital_positions(cbr::CompositeBandRep{D})

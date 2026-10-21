@@ -17,7 +17,8 @@ re/im-doubled coefficient vector `[tᴿ; tᴵ]` (`2J` elements, with `t = tᴿ +
 to accumulate constraints, block by block, via `add_constraints!` and
 `add_complex_constraints!`; entries added repeatedly to the same element are summed.
 The accumulated constraint matrix is obtained via `sparse(::ConstraintRows)` (or, consuming
-the `ConstraintRows`, via `sparse!(::ConstraintRows)`).
+the `ConstraintRows`, via `sparse!(::ConstraintRows)`), and its Gram matrix via
+`gram!(::ConstraintRows)`.
 """
 mutable struct ConstraintRows
     const J::Int              # no. of (complex) elements of `t` (half the no. of columns of realified constraint matrix)
@@ -34,20 +35,38 @@ function SparseArrays.sparse(constraints::ConstraintRows)
 end
 
 """
-    sparse!(constraints::ConstraintRows) --> SparseMatrixCSC{Float64, Int}
+    sparse!(constraints::ConstraintRows; transpose::Bool = false)
+        --> SparseMatrixCSC{Float64, Int}
 
-Return the accumulated constraint matrix, as `sparse(constraints)`, but reusing the buffers
-of `constraints` as the row-index and value storage of the returned matrix, rather than
-allocating new ones.
+Return the accumulated constraint matrix `A`, as `sparse(constraints)` (or, if `transpose`
+is `true`, its transpose `Aᵀ`), but reusing the buffers of `constraints` as the row-index
+and value storage of the returned matrix, rather than allocating new ones.
 
 !!! warning
     `constraints` is consumed: its buffers `is`, `js`, and `vs` are resized and overwritten
     to hold the returned matrix's data, so `constraints` no longer represents the
     constraints and must not be used afterwards.
 """
-function SparseArrays.sparse!(constraints::ConstraintRows)
+function SparseArrays.sparse!(constraints::ConstraintRows; transpose::Bool = false)
     (; is, js, vs, nrows, J) = constraints
-    return sparse!(is, js, vs, nrows, 2J) # sums duplicate entries
+    # NB: `sparse!` sums duplicate entries; for `Aᵀ`, the row & column indices are swapped
+    return transpose ? sparse!(js, is, vs, 2J, nrows) : sparse!(is, js, vs, nrows, 2J)
+end
+
+"""
+    gram!(constraints::ConstraintRows) --> Symmetric{Float64, Matrix{Float64}}
+
+Return the Gram matrix `AᵀA` of the accumulated constraint matrix `A = sparse(constraints)`,
+as a dense `Symmetric` matrix (see `gram_from_transpose`).
+
+!!! warning
+    `constraints` is consumed, as in `sparse!(::ConstraintRows)`, and must not be used
+    afterwards.
+"""
+function gram!(constraints::ConstraintRows)
+    # build Gram matrix from Aᵀ rather than A, since Aᵀ has A's rows contiguously as columns
+    Aᵀ = sparse!(constraints; transpose = true)
+    return gram_from_transpose(Aᵀ)
 end
 
 """
@@ -201,7 +220,7 @@ end
 
 Return an orthonormal basis (as columns) for the null space of the constraint matrix
 `A = sparse(constraints)`, i.e., for the coefficient vectors `[tᴿ; tᴵ]` that satisfy every
-constraint. `constraints` is consumed in the process (see `sparse!(::ConstraintRows)`).
+constraint. `constraints` is consumed in the process (see `gram!(::ConstraintRows)`).
 
 The null space is obtained from that of the Gram matrix `AᵀA`, via a pivoted Cholesky
 factorization (see `psd_nullspace!`), treating pivots below `atol²` as zero: since the
@@ -210,8 +229,7 @@ treating singular values of `A` below `atol` as zero, as in `nullspace(A; atol)`
 is only 2J×2J, whereas `A` typically has many more rows than columns.
 """
 function constraint_nullspace!(constraints::ConstraintRows; atol::Real)
-    A = sparse!(constraints)
-    G = Symmetric(Matrix(A' * A))
+    G = gram!(constraints) # dense `AᵀA`, without materializing a sparse `A' * A`
     # `A` & `G = AᵀA` share their null space (`Gx = 0` ⇒ `‖Ax‖² = xᵀGx = 0`); `G` is only
     # 2J×2J and positive semi-definite, so its null space is cheaply found by a pivoted
     # Cholesky factorization (cheaper, and more robust for the degenerate null eigenvalues,

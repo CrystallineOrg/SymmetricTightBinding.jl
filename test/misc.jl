@@ -7,7 +7,7 @@ using SymmetricTightBinding: obtain_symmetry_related_hoppings
 using SymmetricTightBinding: construct_M_matrix, primitivized_generators,
     site_induced_sgrep_excl_phase, _permute_symmetry_related_hoppings_under_symmetry_operation,
     ConstraintRows, add_symmetry_constraints!, add_constraints!, constraint_nullspace!,
-    psd_nullspace!, RowPermutation, RealConstraintTerm
+    psd_nullspace!, gram_from_transpose, gram!, RowPermutation, RealConstraintTerm
 using Crystalline
 using LinearAlgebra: svd, rank, norm, nullspace, Symmetric, I
 using SparseArrays: sparse, sparse!
@@ -203,6 +203,8 @@ end
         foreach((i, j, v) -> A[i, j] += v, constraints.is, constraints.js, constraints.vs)
         @test A == Matrix(sparse(constraints))
         @test sparse!(deepcopy(constraints)) == sparse(constraints)
+        @test sparse!(deepcopy(constraints); transpose = true) == sparse(constraints)'
+        @test gram!(deepcopy(constraints)) ≈ A' * A
         @test samespan(N, nullspace_tall(A; atol=1e-5))
     end
 end
@@ -219,6 +221,14 @@ end
     add_constraints!(c′, (RealConstraintTerm(2, -1, sparse(Matrix(Π) * M)),))
     @test sparse(c) == sparse(c′)
     @test_throws DimensionMismatch Π * sparse([1 0; 0 1])
+end
+
+@testset "`gram_from_transpose`" begin
+    # incl. an empty row & column, and a row with a single nonzero
+    A = sparse([1, 1, 1, 2, 3, 3, 5], [1, 3, 4, 2, 1, 4, 3], [1.0, -2, 3, 4, 5, -6, 7], 5, 5)
+    G = gram_from_transpose(sparse(transpose(A)))
+    @test G isa Symmetric && G.uplo == 'U'
+    @test G ≈ Matrix(A)' * Matrix(A)
 end
 
 @testset "`psd_nullspace!`" begin
