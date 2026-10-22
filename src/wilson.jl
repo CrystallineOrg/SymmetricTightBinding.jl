@@ -21,33 +21,9 @@ lattice vector (for contractible loops, zero), and `ks` must be an iterable of
 - If `bands` is a vector of integers, the Wilson loop is non-Abelian and a sorted vector of
   phases is returned.
 
-## Implementation
-
-The Wilson loop is computed as the product of link matrices along the discretized
-**k**-space loop ``\\mathbf{k}_1, …, \\mathbf{k}_N`` (see e.g., Refs. [^1] [^2]),
-``\\mathbf{W} = \\mathbf{U}(N→N-1) \\mathbf{U}(N-1→N-2) ⋯ \\mathbf{U}(2→1)``, with each
-link matrix computed as the overlap of the Bloch eigenvectors between adjacent **k**-points:
-``U_{bb'}(i→i-1) = ⟨u_b(\\mathbf{k}_i)|u_{b'}(\\mathbf{k}_{i-1})⟩``, with
-``|u_b(\\mathbf{k})⟩`` denoting the Bloch eigenvector at ``\\mathbf{k}`` in band ``b``.
-The loop is closed by fixing the gauge at ``\\mathbf{k}_N = \\mathbf{k}_1 + \\mathbf{G}`` to
-``|u_b(\\mathbf{k}_N)⟩ = \\mathrm{e}^{-\\mathrm{i}\\mathbf{G}⋅\\mathbf{r}}
-|u_b(\\mathbf{k}_1)⟩``, with ``\\mathbf{r}`` the orbital positions.
-The associated Wilson loop spectrum (Berry phases) is computed as the polar angles of the
-eigenvalues of ``\\mathbf{W}``, after projecting ``\\mathbf{W}`` onto the nearest unitary
-matrix (via its singular value decomposition).
-
-[^1]: Alexandradinata, Dai, & Bernevig, *Wilson-loop characterization of
-    inversion-symmetric topological insulators*,
-    [Phys. Rev. B **89**, 155114 (2014)](https://doi.org/10.1103/PhysRevB.89.155114).
-
-[^2]: Gresch *et al.*, *Z2Pack: Numerical implementation of hybrid Wannier centers for
-    identifying topological materials*,
-    [Phys. Rev. B **95**, 075146 (2017)](https://doi.org/10.1103/PhysRevB.95.075146).
-
 ## Examples
 
-### Abelian Berry phases
-
+**Abelian Berry phases:**
 A Haldane-like model with a Chern number of -1:
 
 ```julia
@@ -66,8 +42,7 @@ phases = [wilsonloop(ptbm, ks, 1) for ks in ksv]
 If plotted with e.g., `GLMakie.plot(k12s, phases)` this shows a down-directed 2π-winding
 of the associated (Abelian) Berry phase, corresponding to a Chern number of -1.
 
-### Non-Abelian Berry phases
-
+**Non-Abelian Berry phases:**
 The Kane-Mele model is a classical example of a ℤ₂ topological insulator whose topology can
 be diagnosed by the non-Abelian Berry phases of its degenerate valence band doublet.
 
@@ -86,6 +61,41 @@ phases = [wilsonloop(ptbm, ks, 1:2) for ks in ksv] # Wilson loop spectra for val
 If plotted (e.g., `GLMakie.series(k12s, stack(phases))`) this shows the signature relative
 winding of the non-Abelian Berry phases of the Kane-Mele model, indicating a non-trivial ℤ₂
 topological invariant.
+
+# Extended help
+
+### Implementation details
+
+The Wilson loop operator ``\\mathbf{W}`` is computed as the product of link matrices along
+the discretized **k**-space loop ``\\mathbf{k}_1, …, \\mathbf{k}_N``[^1][^2],
+
+```math
+\\mathbf{W} = \\mathbf{U}(N→N-1) \\mathbf{U}(N-1→N-2) ⋯ \\mathbf{U}(2→1),
+```
+
+with each link matrix ``\\mathbf{U}(i→i-1)`` evaluated as the overlap of the Bloch
+eigenvectors between adjacent **k**-points:
+
+```math
+U_{bb'}(i→i-1) = ⟨u_b(\\mathbf{k}_i)|u_{b'}(\\mathbf{k}_{i-1})⟩,
+```
+
+with ``|u_b(\\mathbf{k})⟩`` denoting the Bloch eigenvector at ``\\mathbf{k}`` in band ``b``.
+The loop is closed by fixing the gauge at ``\\mathbf{k}_N = \\mathbf{k}_1 + \\mathbf{G}`` to
+``|u_b(\\mathbf{k}_N)⟩ = \\mathrm{e}^{-\\mathrm{i}\\mathbf{G}⋅\\mathbf{r}}
+|u_b(\\mathbf{k}_1)⟩``, with ``\\mathbf{r}`` the orbital positions.
+
+The associated Wilson loop spectrum (Berry phases) is computed as the polar angles of the
+eigenvalues of ``\\mathbf{W}``, after projecting ``\\mathbf{W}`` onto the nearest unitary
+matrix (via its singular value decomposition).
+
+[^1]: Alexandradinata, Dai, & Bernevig, *Wilson-loop characterization of
+    inversion-symmetric topological insulators*,
+    [Phys. Rev. B **89**, 155114 (2014)](https://doi.org/10.1103/PhysRevB.89.155114).
+
+[^2]: Gresch *et al.*, *Z2Pack: Numerical implementation of hybrid Wannier centers for
+    identifying topological materials*,
+    [Phys. Rev. B **95**, 075146 (2017)](https://doi.org/10.1103/PhysRevB.95.075146).
 """
 function wilsonloop(
     ptbm :: ParameterizedTightBindingModel{D},

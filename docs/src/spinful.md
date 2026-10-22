@@ -158,14 +158,19 @@ Both band structures remain doubly degenerate everywhere: terms 3 and 6 are also
     We can instead do a Wilson loop calculation, using [`wilsonloop`](@ref), demonstrating the nontrivial ℤ₂ topology by the gapless relative winding of the valence doublet's non-Abelian Berry phases:
 
     ```@example spinful
-    k12s = range(-1/2, 1/2, 100) # base points (k₁) and samples along each loop (k₂)
-    ksv = ((ReciprocalPoint(k₁, k₂) for k₂ in k12s) for k₁ in k12s) # a family of k₂-loops, over k₁-base points
+    ksv = ((ReciprocalPoint(k₁, k₂) for k₂ in ks) for k₁ in ks) # a family of k₂-loops, over k₁-base points
     bands = 1:2 # pick doubly-degenerate valence multiplet
     phases = [wilsonloop(ptbm_KM, ks, bands) for ks in ksv]
-    series(
-        k12s, stack(phases); color=[:royalblue, :royalblue], 
-        axis=(; limits=(-1/2, 1/2, -π,π), xlabel="k₁", ylabel="Non-Abelian Berry phase")
+
+    axis = (;
+        limits=(-1/2, 1/2, -π,π),
+        xlabel = rich("k"; font=:italic) * subscript("1"),
+        ylabel="Non-Abelian Berry phases ϕ" * subscript("1,2") * "(" * rich("k"; font=:italic) * subscript("1") * ")",
+        yticks = ([-π, 0, π], ["-π", "0", "π"])
     )
+    lines(ks, getindex.(phases, 1); color = :royalblue, axis)
+    lines!(ks, getindex.(phases, 2); color = :royalblue)
+    current_figure() # hide
     ```
 
 The Rashba term (term 2), in contrast, breaks the *z*-mirror (and hence inversion) and splits the bands -- except at the TRIMs Γ and M, where Kramers' theorem keeps them degenerate. At K, which is not a TRIM, the 4 bands split into two singlets (K₄ˢ and K₅ˢ) and a doublet (K₆ˢ):
@@ -180,8 +185,11 @@ plot(kpi, spectrum(ptbm, kpi); annotations = collect_irrep_annotations(ptbm))
 [^4]: Free-standing graphene is also symmetric under the out-of-plane mirror *z* → −*z*, and so belong to the *layer* group *𝑝*6/*mmm* (⋕80). The plane group *p*6*mm* lacks this mirror (being constrained to operations in the plane), and so more precisely describes graphene on a substrate or in a perpendicular electric field. This is what allows the Rashba term below.
 
 ```@setup spinful
+delete!(ENV, "COLUMNS")
+```
+
+```@setup empty
 # TODO: once `lift2spinful` is in a Crystalline.jl release, add a footnote after "E₁ˢ:" above:
 #   "The mapping from a single-valued to a double-valued BR can be determined via
 #    Crystalline.jl's `lift2spinful` function."
-delete!(ENV, "COLUMNS")
 ```
