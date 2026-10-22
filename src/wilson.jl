@@ -9,7 +9,7 @@ using LinearAlgebra: I, dot, eigvals!, svd!, mul!
 
 Return the Wilson loop spectrum, or Berry phases, in (−π, π] of `ptbm` along a discretized
 **k**-space loop `ks` over the specified `bands` (a single band index or an abstract vector
-of indices).
+of indices). The `bands` must be gapped from all other bands everywhere along `ks`.
 
 The loop `ks` must be closed, i.e., `last(ks) - first(ks)` must be a (primitive) reciprocal
 lattice vector (for contractible loops, zero), and `ks` must be an iterable of
@@ -24,12 +24,25 @@ lattice vector (for contractible loops, zero), and `ks` must be an iterable of
 ## Implementation
 
 The Wilson loop is computed as the product of link matrices along the discretized
-**k**-space loop, ``\\mathbf{W} = \\mathbf{U}(N→N-1) \\mathbf{U}(N-1→N-2) ⋯ \\mathbf{U}(1→N)``
-with each link matrix computed as the overlap of the Bloch eigenvectors between adjacent
-**k**-points: ``U_{bb'}(i→i-1) = ⟨u_b(\\mathbf{k}_i)|u_{b'}(\\mathbf{k}_{i-1})⟩``, with
+**k**-space loop ``\\mathbf{k}_1, …, \\mathbf{k}_N`` (see e.g., Refs. [^1] [^2]),
+``\\mathbf{W} = \\mathbf{U}(N→N-1) \\mathbf{U}(N-1→N-2) ⋯ \\mathbf{U}(2→1)``, with each
+link matrix computed as the overlap of the Bloch eigenvectors between adjacent **k**-points:
+``U_{bb'}(i→i-1) = ⟨u_b(\\mathbf{k}_i)|u_{b'}(\\mathbf{k}_{i-1})⟩``, with
 ``|u_b(\\mathbf{k})⟩`` denoting the Bloch eigenvector at ``\\mathbf{k}`` in band ``b``.
+The loop is closed by fixing the gauge at ``\\mathbf{k}_N = \\mathbf{k}_1 + \\mathbf{G}`` to
+``|u_b(\\mathbf{k}_N)⟩ = \\mathrm{e}^{-\\mathrm{i}\\mathbf{G}⋅\\mathbf{r}}
+|u_b(\\mathbf{k}_1)⟩``, with ``\\mathbf{r}`` the orbital positions.
 The associated Wilson loop spectrum (Berry phases) is computed as the polar angles of the
-eigenvalues of ``\\mathbf{W}``.
+eigenvalues of ``\\mathbf{W}``, after projecting ``\\mathbf{W}`` onto the nearest unitary
+matrix (via its singular value decomposition).
+
+[^1]: Alexandradinata, Dai, & Bernevig, *Wilson-loop characterization of
+    inversion-symmetric topological insulators*,
+    [Phys. Rev. B **89**, 155114 (2014)](https://doi.org/10.1103/PhysRevB.89.155114).
+
+[^2]: Gresch *et al.*, *Z2Pack: Numerical implementation of hybrid Wannier centers for
+    identifying topological materials*,
+    [Phys. Rev. B **95**, 075146 (2017)](https://doi.org/10.1103/PhysRevB.95.075146).
 
 ## Examples
 
