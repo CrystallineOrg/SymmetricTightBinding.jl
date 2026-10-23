@@ -614,10 +614,11 @@ function solve(
     ptbm::AbstractParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D};
     bloch_phase::Union{Val{true}, Val{false}} = Val(false),
+    scratch::Matrix{ComplexF64}=ptbm.scratch,
     eigen_kws...,
 ) where {D}
     length(k) == D || error("dimension mismatch")
-    H = ptbm(k)
+    H = ptbm(k, scratch)
     es, vs = _eigen!(H; eigen_kws...) # NB: use our `_eigen!` to avoid non-orthog. eigvecs
     if bloch_phase === Val(true)
         Θₖ = reciprocal_translation_phase(orbital_positions(ptbm), k)

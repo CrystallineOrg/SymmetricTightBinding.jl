@@ -16,6 +16,7 @@ const TESTFILES = [
     "site_representations.jl",     # site representations
     "symmetry-breaking.jl",        # symmetry breaking
     "berry.jl",                    # berry curvature and chern numbers
+    "wilson.jl",                   # Wilson loops
     "dos.jl",                      # density of states (Gilat–Raubenheimer)
     "spectrum.jl",                 # spectrum evaluation
     "show.jl",                     # show/display methods

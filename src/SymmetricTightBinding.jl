@@ -57,6 +57,8 @@ include("berry.jl")
 export berrycurvature
 export chern
 export chern_fukui
+include("wilson.jl")
+export wilsonloop
 include("dos.jl")
 export densityofstates
 include("symmetry_breaking.jl")
