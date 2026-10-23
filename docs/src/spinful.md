@@ -74,7 +74,7 @@ This holds for any spinful model with both inversion and time-reversal symmetry,
 ENV["COLUMNS"] = 400 # print the wide terms below without truncation
 ```
 
-As a more involved example, we next build a spinful version of graphene: the Kane--Mele model[^3]. The spinless graphene model of the [tutorial](@ref) is built from *p*<sub>*z*</sub> orbitals at the 2b Wyckoff position of plane group *p*6*mm* (⋕17),[^4] transforming as the site-symmetry irrep A<sub>1</sub>. Adding spin, the *p*<sub>*z*</sub>↑ and *p*<sub>*z*</sub>↓ orbitals transform jointly as the 2D site-symmetry irrep E₁ˢ:
+As a more involved example, we next build a spinful version of graphene: the Kane--Mele model[^3]. The spinless graphene model of the [tutorial](@ref) is built from *p*<sub>*z*</sub> orbitals at the 2b Wyckoff position of plane group *p*6*mm* (⋕17),[^4] transforming as the site-symmetry irrep A<sub>1</sub>. Adding spin, the *p*<sub>*z*</sub>↑ and *p*<sub>*z*</sub>↓ orbitals transform jointly as the 2D site-symmetry irrep E₁ˢ [^5]:
 
 ```@example spinful
 sgnum = 17
@@ -184,12 +184,8 @@ plot(kpi, spectrum(ptbm, kpi); annotations = collect_irrep_annotations(ptbm))
 
 [^4]: Free-standing graphene is also symmetric under the out-of-plane mirror *z* → −*z*, and so belong to the *layer* group *𝑝*6/*mmm* (⋕80). The plane group *p*6*mm* lacks this mirror (being constrained to operations in the plane), and so more precisely describes graphene on a substrate or in a perpendicular electric field. This is what allows the Rashba term below.
 
+[^5]: The mapping from a single-valued to a double-valued BR can be determined via Crystalline.jl's [`spinify`](https://thchr.github.io/Crystalline.jl/stable/doublegroups/#Adding-spin-to-a-spinless-setting) function.
+
 ```@setup spinful
 delete!(ENV, "COLUMNS")
-```
-
-```@setup empty
-# TODO: once `lift2spinful` is in a Crystalline.jl release, add a footnote after "E₁ˢ:" above:
-#   "The mapping from a single-valued to a double-valued BR can be determined via
-#    Crystalline.jl's `lift2spinful` function."
 ```
