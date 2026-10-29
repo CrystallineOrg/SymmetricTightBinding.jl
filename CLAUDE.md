@@ -10,8 +10,8 @@ Given a set of elementary band representations (EBRs) from Crystalline.jl and a 
 hopping ranges, the package:
 1. Enumerates symmetry-related hopping orbits
 2. Constructs the M-matrix encoding all allowed Hamiltonian terms
-3. Enforces spatial symmetry, time-reversal, and hermiticity constraints via nullspace +
-   subspace intersection
+3. Enforces spatial symmetry, time-reversal, and hermiticity constraints as rows of one
+   sparse real constraint matrix, whose null space is found from its Gram matrix
 4. Returns a `TightBindingModel` whose free parameters can be tuned to produce concrete
    Hamiltonians
 
@@ -73,18 +73,20 @@ src/
   SymmetricTightBinding.jl  # module definition, exports, constants
   types.jl                  # core data structures + evaluation functors
   types_composite.jl        # composite HERMITIAN ⊕ ANTIHERMITIAN models
-  tightbinding.jl           # constraint pipeline: M-matrix, nullspace, sparsification
-  site_representations.jl   # coset-decomposition-based induced representations
+  tightbinding.jl           # hopping orbits, orbital ordering, M-matrix, model assembly (`tb_hamiltonian`)
+  constraints/              # constraints on the coefficients `t` of a Hamiltonian block
+    core.jl                 # `ConstraintRows` + terms, null space (`AᵀA`), basis solve & sparsification
+    spatial.jl              # spatial-symmetry constraints: H(gk) = ρ(g) H(k) ρ(g)†
+    timereversal.jl         # TRS constraint: H(k) = H*(-k)
+    hermiticity.jl          # hermiticity/anti-hermiticity constraint rows
+  site_representations.jl   # coset-decomposition-based induced representations (incl. of TRS)
   symmetry_analysis.jl      # irrep content at high-symmetry k-points
   spectrum.jl               # band eigenvalue computation
   berry.jl                  # Berry curvature, Chern numbers (Kubo + Fukui)
   dos.jl                    # density of states (generalized Gilat–Raubenheimer)
   gradients.jl              # dH/dc_i and dH/dk_i
-  hermiticity.jl            # hermiticity/anti-hermiticity constraint intersection
-  timereversal.jl           # TRS constraint: H(k) = H*(-k)
-  subspace_intersection.jl  # Projector + SVD-based algorithm for subspace intersection
   symmetry_breaking.jl      # subduced complement for translationengleiche subgroups
-  utils.jl                  # orbital positions, pin_free!, split_complex, etc.
+  utils.jl                  # orbital positions, pin_free!, psd_nullspace!, etc.
   show.jl                   # pretty-printing for all types
 ext/
   SymmetricTightBindingMakieExt.jl   # Makie visualization recipes
@@ -107,7 +109,6 @@ test/
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
   spinful.jl                # spinful (double group) models, with and without time-reversal
-  subspace_intersection.jl  # `subspace_intersection` unit tests
   misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough
@@ -171,10 +172,12 @@ appear once the process exits, so a silent log is not evidence of a hang.
 
 1. **ANTIHERMITIAN `solve` not implemented** (`src/types.jl:455`).
 
-2. **Performance** (issue #44): `tb_hamiltonian` is slow for high space group numbers
-   (SG ~200+ can take minutes per EBR).
+2. **Performance** (issue #44): largely resolved; e.g., `tb_hamiltonian` for an SG 230 EBR
+   with `[1,0,0]` hoppings takes ~1 s (previously ~40 s). The remaining cost is dominated
+   by constraint assembly and the pivoted-Cholesky null-space solves.
 
-3. **Test coverage gaps:** No tests for extensions (Optim, Makie).
+3. **Test coverage gaps:** No tests for the Makie extension (the Optim extension is tested
+   in `test/fitting.jl`).
 
 4. **Symmetry eigenvalue convention mismatch (workaround in place):**
    `symmetry_eigenvalues` monkey-patches two phase corrections to match Crystalline.jl's

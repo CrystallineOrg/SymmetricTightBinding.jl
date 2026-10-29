@@ -26,7 +26,6 @@ const TESTFILES = [
     "spinful.jl",                  # spinful (double group) models
     "symmetry_analysis.jl",        # ⚠️ every EBR of every SG in 1D-3D; minutes to hours
     "symmetry_analysis_manual.jl", # paired-down, manual version of above, individual cases
-    "subspace_intersection.jl",    # subspace intersection
     "misc.jl",                     # AbstractArray interface & assorted issue regressions
 ]
 
