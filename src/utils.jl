@@ -30,6 +30,8 @@ function psd_nullspace!(G::Symmetric{<:Real}; tol::Real)
     # `G.uplo == 'U'`), which is strided, so that `ldiv!` can use BLAS; only its upper
     # triangle holds `U`, but `U₁₁` is wrapped as `UpperTriangular` and `U₁₂` (rows `1:r`,
     # columns `r+1:n`) lies strictly above the diagonal, so no other elements are read
+    # (`gram_from_transpose` gives `uplo = 'U'`; for `'L'`, `parent(F.U)` would be a lazy
+    # transpose of `G`'s storage, giving the same result, but via a slower, non-BLAS `ldiv!`)
     U = parent(F.U)
     U₁₁, U₁₂ = UpperTriangular(view(U, 1:r, 1:r)), view(U, 1:r, r+1:n)
     ldiv!(U₁₁, U₁₂) # `U₁₂ ← U₁₁ \ U₁₂`, in place
