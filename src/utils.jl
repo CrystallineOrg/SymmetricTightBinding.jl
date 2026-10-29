@@ -59,7 +59,7 @@ function gram_from_transpose(Aᵀ::SparseMatrixCSC)
     G = zeros(float(eltype(Aᵀ)), m, m)
     ks, vals = rowvals(Aᵀ), nonzeros(Aᵀ) # column indices `k` & values of `A`'s nonzeros
     for i in axes(Aᵀ, 2)                 # row `i` of `A` (column `i` of `Aᵀ`)
-        row = nzrange(Aᵀ, i)             # storage positions of row `i`'s nonzeros
+        row = @inbounds nzrange(Aᵀ, i)   # storage positions of row `i`'s nonzeros
         for pₗ in row, pₖ in first(row):pₗ # positions of `A[i, k]` & `A[i, l]`, for `k ≤ l`
             k, l = ks[pₖ], ks[pₗ]
             Aᵢₖ, Aᵢₗ = vals[pₖ], vals[pₗ]

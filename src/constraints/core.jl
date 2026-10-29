@@ -142,8 +142,12 @@ function _push_scaled!(
     σ::Union{Nothing, Vector{Int}} = nothing,
 )
     iszero(x) && return constraints
-    rv, nzv = rowvals(M), nonzeros(M)
-    for j in axes(M, 2), p in nzrange(M, j)
+    rv, nzv, colptr = rowvals(M), nonzeros(M), M.colptr
+    # loop over the nonzeros only, finding the column `j` of each by bisection in `colptr`
+    # (`colptr[j] ≤ p < colptr[j+1]`), rather than over all columns: the elements of `Mm`
+    # have few nonzeros, but many (mostly empty) columns
+    for p in eachindex(nzv)
+        j = searchsortedlast(colptr, p)
         i = isnothing(σ) ? rv[p] : σ[rv[p]]
         push!(constraints.is, row_offset + i)
         push!(constraints.js, col_offset + j)
