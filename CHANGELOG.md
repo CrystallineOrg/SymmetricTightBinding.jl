@@ -20,3 +20,8 @@
   `Array{Int, 4}` indexed as `Mm[i,j,s,t]`. This substantially speeds up constraint
   assembly and hence also `tb_hamiltonian` while also reducing assembly allocations for
   large models.
+
+### New features
+
+- `write_wannier90` exports a parameterized model to Wannier90's `_hr.dat` format (and,
+  given a lattice, to its `_centres.xyz` and `.win` formats).

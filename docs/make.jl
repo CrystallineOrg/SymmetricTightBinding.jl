@@ -36,6 +36,7 @@ makedocs(;
         "Non-Hermitian models" => "nonhermitian.md",
         "Spinful models" => "spinful.md",
         "Fitting to band structures" => "fitting.md",
+        "Exporting to Wannier90" => "export.md",
         "API" => "api.md",
         "Internal API" => "internal-api.md",
         "Theory" => "theory.md",
