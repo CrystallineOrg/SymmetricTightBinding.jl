@@ -35,3 +35,5 @@
   `berrycurvature` now also accepts band multiplets (contiguous ranges of band indices)
   and received minor improvements to error messages (errors for non-Hermitian models and
   detects band degeneracies near `E = 0` robustly).
+- `write_wannier90` exports a parameterized model to Wannier90's `_hr.dat` format (and,
+  given a lattice, to its `_centres.xyz` and `.win` formats).

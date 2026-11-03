@@ -9,7 +9,9 @@ using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, 
 using Crystalline: AbstractOperation
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
-using StaticArrays: SVector, SMatrix, MMatrix
+using StaticArrays: SVector, SMatrix, MMatrix, StaticVector
+using Printf: Printf # for src/wannier90.jl
+using Dates: Dates   # for src/wannier90.jl
 using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, sparse!, nzrange, rowvals, nonzeros
 
 # --- Constants -------------------------------------------------------------------------- #
@@ -68,6 +70,8 @@ include("dos.jl")
 export densityofstates
 include("symmetry_breaking.jl")
 export subduced_complement
+include("wannier90.jl")
+export write_wannier90
 include("show.jl")
 
 # --- Re-exports ------------------------------------------------------------------------- #
