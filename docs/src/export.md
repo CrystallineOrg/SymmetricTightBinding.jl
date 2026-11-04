@@ -28,8 +28,8 @@ basename.(values(paths))
 The `_hr.dat` file holds the hopping matrices ``H(\mathbf{R})``; the `_centres.xyz` and `.win` files hold the orbital positions (as Wannier centres) and the lattice vectors. As Wannier90's formats are three-dimensional, a two-dimensional model is placed in the ``xy``-plane:
 
 ```@example export
-for (key, path) in pairs(paths)
-    println("─── ", key, " ───")
+for path in paths
+    println("─── ", basename(path), " ───")
     println(read(path, String))
 end
 ```

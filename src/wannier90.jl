@@ -265,16 +265,16 @@ function _write_wannier90_hr(
     # 1st line: header
     println(io, header)
     # 2nd line: Hamiltonian dimension (orbital count)
-    println(io, lpad(N, 12))
+    println(io, N)
     # 3rd line: number of translations (hopping matrices H(R))
-    println(io, lpad(Nᴿ, 12))
+    println(io, Nᴿ)
     # 4th line and below: degeneracy weights (1 per translation, 15 per line): all unity
     for chunk in Iterators.partition(1:Nᴿ, 15)
-        println(io, join(lpad.(ones(Int, length(chunk)), 5)))
+        println(io, join(fill("1", length(chunk)), " "))
     end
     # subsequent lines: hopping matrices H(R) given as R₁ R₂ R₃ i j Re(Hᵢⱼ(R)) Im(Hᵢⱼ(R))
     # one line per matrix element Hᵢⱼ(R), with i iterating fastest
-    fmt = Printf.Format("%5d%5d%5d%5d%5d %$(digits+8).$(digits)f %$(digits+8).$(digits)f\n")
+    fmt = Printf.Format("%3d %3d %3d %3d %3d % .$(digits)f % .$(digits)f\n")
     for (R, H) in zip(w90tbm.translations, w90tbm.hopping_matrices)
         R³ = _pad_to_3d_vec(R)
         for j in 1:N, i in 1:N # row index fastest, as Wannier90
@@ -286,9 +286,9 @@ end
 function _write_wannier90_centres(
     io::IO, w90tbm::Wannier90TightBindingModel, header::String, Rm::AbstractMatrix
 )
-    println(io, lpad(orbital_count(w90tbm), 6))
-    println(io, " Wannier centres, ", header)
-    fmt = Printf.Format("X %17.10f %17.10f %17.10f\n")
+    println(io, orbital_count(w90tbm))
+    println(io, "Wannier centres. ", header)
+    fmt = Printf.Format("X % .10f % .10f % .10f\n") # `X`: standard Wannier centre/dummy atom symbol
     for r in orbital_positions(w90tbm)
         R³_cart = Rm * _pad_to_3d_vec(r) # Cartesian coordinates
         Printf.format(io, fmt, R³_cart[1], R³_cart[2], R³_cart[3])
@@ -305,7 +305,7 @@ function _write_wannier90_win(
     println(io)
     println(io, "begin unit_cell_cart")
     println(io, "ang")
-    fmt = Printf.Format("%17.10f %17.10f %17.10f\n")
+    fmt = Printf.Format("% .10f % .10f % .10f\n")
     for n in 1:3
         Printf.format(io, fmt, Rm[1, n], Rm[2, n], Rm[3, n])
     end

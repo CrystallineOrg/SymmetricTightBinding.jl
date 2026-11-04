@@ -121,7 +121,7 @@ end
         header = readlines(prefix * "_hr.dat")[1]
         timestamp = r"\d{2}[A-Z][a-z]{2}\d{4} at \d{2}:\d{2}:\d{2}$"
         @test occursin(r"^Created by SymmetricTightBinding\.jl on " * timestamp, header)
-        @test readlines(prefix * "_centres.xyz")[2] == " Wannier centres, " * header
+        @test readlines(prefix * "_centres.xyz")[2] == "Wannier centres. " * header
         @test readlines(prefix * ".win")[1] == "! " * header
 
         # centres: Cartesian positions, embedded in the xy-plane
