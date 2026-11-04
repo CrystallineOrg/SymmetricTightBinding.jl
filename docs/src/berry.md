@@ -1,6 +1,6 @@
 # [Berry curvature and Chern numbers](@id berry)
 
-SymmetricTightBinding.jl implements some functionalities to compute the Berry curvature and associated Chern numbers of parameterized tight-binding models via [`berrycurvature`](@ref), [`chern`](@ref), and [`chern_fukui`](@ref). We illustrate the functionality here, with the canonical example of the Haldane model.
+SymmetricTightBinding.jl implements some functionalities to compute the Berry curvature and associated Chern numbers of parameterized tight-binding models via [`berrycurvature`](@ref), [`chern`](@ref), and [`chern_fukui`](@ref), as well as the quantum metric via [`quantummetric`](@ref). We illustrate the former with the canonical example of the Haldane model, and the latter with the Lieb lattice (see [Quantum metric](@ref)).
 
 ## Haldane model
 
@@ -177,3 +177,77 @@ f
     # normalize by 2π to obtain associated Chern number
     C₃ = Φ / (2π)
     ```
+
+## Quantum metric
+
+The Berry curvature is (minus 2 times) the imaginary part of the *quantum geometric tensor* $Q_{ij} = g_{ij} - \tfrac{\mathrm{i}}{2}\Omega_{ij}$, whose real part is the *quantum metric* $g_{ij}$, available via [`quantummetric`](@ref). The metric can be nonzero even when the Berry curvature vanishes, and even when a band has no dispersion at all. An example is the flat band of the Lieb lattice, which is built from *s*-like orbitals at the 1a and 2c Wyckoff positions of *p*4mm (plane group ⋕11):
+
+```@example lieb
+using Crystalline, SymmetricTightBinding # hide
+brs = bandreps(11, Val(2)) # p4mm
+cbr = @composite brs[1] + brs[10] # (2c|A₁) + (1a|A₁)
+tbm = tb_hamiltonian(cbr) # onsite and nearest-neighbors
+```
+
+Keeping only the nearest-neighbor 2c–1a hopping (`tbm[4]`) and 1a on-site terms (`tbm[3]`), the middle band is perfectly flat and lies at $E = 0$.
+It has vanishing Berry curvature (cf. time-reversal and 2-fold rotation symmetry). Its quantum metric, however, is nonzero:
+
+```@example lieb
+ptbm = tbm([0, 0, 1, 1])
+quantummetric(ptbm, [0.1, 0.2], 2)
+```
+
+At the M point, the flat band touches the band below it: the metric of the flat band alone is then undefined (it diverges as M is approached) and `quantummetric` throws an error. The two touching bands *as a multiplet* nevertheless have a well-defined metric, obtained by passing a range of band indices (as also accepted by [`berrycurvature`](@ref)):
+
+```@example lieb
+quantummetric(ptbm, [1/2, 1/2], 1:2)
+```
+
+!!! details "Visualization: Lieb lattice band structure and quantum metric"
+    The band structure shows the flat middle band, touching the lower band at M:
+
+    ```@example lieb
+    using Brillouin, GLMakie # hide
+    Rs = directbasis(11, Val(2))
+    kpi = interpolate(irrfbz_path(11, Rs), 100)
+    plot(kpi, spectrum(ptbm, kpi))
+    ```
+
+    We visualize the trace of the Cartesian components of $g$, $\operatorname{tr} g = g_{xx} + g_{yy}$, whose Brillouin zone integral is the gauge-invariant part of the Marzari-Vanderbilt Wannier spread. Similar to the Berry curvature visualization above, we evaluate $\operatorname{tr} g$ over the Brillouin zone (with the **k**-grid shifted by half a step to avoid M, where the flat band's metric diverges) and visualize it on a logarithmic color scale:
+
+    ```@example lieb
+    using LinearAlgebra: tr
+
+    Gs = dualbasis(Rs)
+    ks = range(-0.5, 0.5, 101)
+    ks = ks .+ step(ks)/2 # half-step shift: avoids M = (½, ½)
+    k12s = (ReciprocalPoint(k1, k2) for k1 in ks, k2 in ks)
+    gs = [quantummetric(ptbm, k12, 2) for k12 in k12s] # quantum metric of the flat band
+
+    B = stack(Gs) # columns are the primitive reciprocal lattice vectors
+    trgs = [tr(inv(B)' * g * inv(B)) for g in gs] # transform to Cartesian setting & trace
+
+    c = wignerseitz(Gs)
+    kxys = [cartesianize(k12, Gs) for k12 in k12s] # k-points in Cartesian coordinates
+
+    f = Figure()
+    ax = Axis(f[1,1]; aspect=Makie.DataAspect())
+    colormap_kws = (; colormap = :viridis, colorrange = extrema(trgs))
+    for s1 in -1:1, s2 in -1:1 # map across adjacent parallelipiped BZs
+        G = s1 * Gs[1] + s2 * Gs[2]
+        kxys′ = kxys .+ Ref(G)
+        surface!(ax, getindex.(kxys′, 1), getindex.(kxys′, 2), zeros(size(trgs));
+                 color = trgs, shading = NoShading, colorscale = log10, colormap_kws...)
+    end
+    plot!(c)
+    ax.limits = (-1.25π, 1.25π, -1.25π, 1.25π)
+    ax.xlabel = rich("k", subscript("x"); font=:italic)
+    ax.ylabel = rich("k", subscript("y"); font=:italic)
+
+    cb = Colorbar(f[1,2]; label="Quantum metric trace, tr g", scale = log10, colormap_kws...)
+    f
+    ```
+
+Note that the components of $g_{ij}$ refer to the reduced coordinates of $\mathbf{k}$, and that the metric, unlike the Chern number, depends on the orbitals' positions in the unit cell; see [`quantummetric`](@ref) for the conversion to Cartesian components and for the Fourier convention used.
+
+The quantum metric and Berry curvature can also be obtained jointly, as the quantum geometric tensor $Q_{ij} = g_{ij} - \tfrac{\mathrm{i}}{2}\Omega_{ij}$, via [`quantumgeometrictensor`](@ref).

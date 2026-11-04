@@ -9,7 +9,7 @@ using Crystalline: reduce_translation_to_unitrange, constant, free, isapproxin, 
 using Crystalline: AbstractOperation
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
-using StaticArrays: SVector
+using StaticArrays: SVector, SMatrix, MMatrix
 using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, sparse!, nzrange, rowvals, nonzeros
 
 # --- Constants -------------------------------------------------------------------------- #
@@ -59,6 +59,9 @@ include("berry.jl")
 export berrycurvature
 export chern
 export chern_fukui
+include("quantum_geometry.jl")
+export quantummetric
+export quantumgeometrictensor
 include("dos.jl")
 export densityofstates
 include("symmetry_breaking.jl")
