@@ -7,51 +7,51 @@ tbm = tb_hamiltonian(cbr)
 ptbm = tbm([0.0, 1.0])</code></pre><p>To export the model, we pass a file prefix and the (primitive) lattice basis that the model refers to:</p><pre><code class="language-julia hljs">lattice = directbasis(17, Val(2))
 dir = mktempdir()
 paths = write_wannier90(joinpath(dir, &quot;graphene&quot;), ptbm; lattice)
-basename.(values(paths))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;graphene_hr.dat&quot;, &quot;graphene_centres.xyz&quot;, &quot;graphene.win&quot;)</code></pre><p>The <code>_hr.dat</code> file holds the hopping matrices <span>$H(\mathbf{R})$</span>; the <code>_centres.xyz</code> and <code>.win</code> files hold the orbital positions (as Wannier centres) and the lattice vectors. As Wannier90&#39;s formats are three-dimensional, a two-dimensional model is placed in the <span>$xy$</span>-plane:</p><pre><code class="language-julia hljs">for (key, path) in pairs(paths)
-    println(&quot;─── &quot;, key, &quot; ───&quot;)
+basename.(values(paths))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;graphene_hr.dat&quot;, &quot;graphene_centres.xyz&quot;, &quot;graphene.win&quot;)</code></pre><p>The <code>_hr.dat</code> file holds the hopping matrices <span>$H(\mathbf{R})$</span>; the <code>_centres.xyz</code> and <code>.win</code> files hold the orbital positions (as Wannier centres) and the lattice vectors. As Wannier90&#39;s formats are three-dimensional, a two-dimensional model is placed in the <span>$xy$</span>-plane:</p><pre><code class="language-julia hljs">for path in paths
+    println(&quot;─── &quot;, basename(path), &quot; ───&quot;)
     println(read(path, String))
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">─── path_hr ───
-Created by SymmetricTightBinding.jl on 04Nov2026 at 12:17:15
-           2
-           5
-    1    1    1    1    1
-   -1    0    0    1    1       0.000000000000       0.000000000000
-   -1    0    0    2    1       0.000000000000       0.000000000000
-   -1    0    0    1    2       1.000000000000       0.000000000000
-   -1    0    0    2    2       0.000000000000       0.000000000000
-    0   -1    0    1    1       0.000000000000       0.000000000000
-    0   -1    0    2    1       1.000000000000       0.000000000000
-    0   -1    0    1    2       0.000000000000       0.000000000000
-    0   -1    0    2    2       0.000000000000       0.000000000000
-    0    0    0    1    1       0.000000000000       0.000000000000
-    0    0    0    2    1       1.000000000000       0.000000000000
-    0    0    0    1    2       1.000000000000       0.000000000000
-    0    0    0    2    2       0.000000000000       0.000000000000
-    0    1    0    1    1       0.000000000000       0.000000000000
-    0    1    0    2    1       0.000000000000       0.000000000000
-    0    1    0    1    2       1.000000000000       0.000000000000
-    0    1    0    2    2       0.000000000000       0.000000000000
-    1    0    0    1    1       0.000000000000       0.000000000000
-    1    0    0    2    1       1.000000000000       0.000000000000
-    1    0    0    1    2       0.000000000000       0.000000000000
-    1    0    0    2    2       0.000000000000       0.000000000000
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">─── graphene_hr.dat ───
+Created by SymmetricTightBinding.jl on 04Nov2026 at 14:55:48
+2
+5
+1 1 1 1 1
+ -1   0   0   1   1  0.000000000000  0.000000000000
+ -1   0   0   2   1  0.000000000000  0.000000000000
+ -1   0   0   1   2  1.000000000000  0.000000000000
+ -1   0   0   2   2  0.000000000000  0.000000000000
+  0  -1   0   1   1  0.000000000000  0.000000000000
+  0  -1   0   2   1  1.000000000000  0.000000000000
+  0  -1   0   1   2  0.000000000000  0.000000000000
+  0  -1   0   2   2  0.000000000000  0.000000000000
+  0   0   0   1   1  0.000000000000  0.000000000000
+  0   0   0   2   1  1.000000000000  0.000000000000
+  0   0   0   1   2  1.000000000000  0.000000000000
+  0   0   0   2   2  0.000000000000  0.000000000000
+  0   1   0   1   1  0.000000000000  0.000000000000
+  0   1   0   2   1  0.000000000000  0.000000000000
+  0   1   0   1   2  1.000000000000  0.000000000000
+  0   1   0   2   2  0.000000000000  0.000000000000
+  1   0   0   1   1  0.000000000000  0.000000000000
+  1   0   0   2   1  1.000000000000  0.000000000000
+  1   0   0   1   2  0.000000000000  0.000000000000
+  1   0   0   2   2  0.000000000000  0.000000000000
 
-─── path_centres ───
-     2
- Wannier centres, Created by SymmetricTightBinding.jl on 04Nov2026 at 12:17:15
-X      0.0000000000      0.5773502692      0.0000000000
-X      0.5000000000      0.2886751346      0.0000000000
+─── graphene_centres.xyz ───
+2
+Wannier centres. Created by SymmetricTightBinding.jl on 04Nov2026 at 14:55:48
+X  0.0000000000  0.5773502692  0.0000000000
+X  0.5000000000  0.2886751346  0.0000000000
 
-─── path_win ───
-! Created by SymmetricTightBinding.jl on 04Nov2026 at 12:17:15
+─── graphene.win ───
+! Created by SymmetricTightBinding.jl on 04Nov2026 at 14:55:48
 num_wann  = 2
 num_bands = 2
 
 begin unit_cell_cart
 ang
-     1.0000000000      0.0000000000      0.0000000000
-    -0.5000000000      0.8660254038      0.0000000000
-     0.0000000000      0.0000000000      1.0000000000
+ 1.0000000000  0.0000000000  0.0000000000
+-0.5000000000  0.8660254038  0.0000000000
+ 0.0000000000  0.0000000000  1.0000000000
 end unit_cell_cart</code></pre><p>The files can then be loaded e.g. in Python via PythTB or TBmodels:</p><pre><code class="language-python hljs">import pythtb
 m_pythtb = pythtb.W90(dir, &quot;graphene&quot;).model(zero_energy=0.0)
 
@@ -60,4 +60,4 @@ m_tbmodels = tbmodels.Model.from_wannier_files(
     hr_file=f&quot;{dir}/graphene_hr.dat&quot;,
     xyz_file=f&quot;{dir}/graphene_centres.xyz&quot;,
     win_file=f&quot;{dir}/graphene.win&quot;,
-)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../fitting/">« Fitting to band structures</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 4 November 2026 12:19">Wednesday 4 November 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../fitting/">« Fitting to band structures</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 4 November 2026 14:57">Wednesday 4 November 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
