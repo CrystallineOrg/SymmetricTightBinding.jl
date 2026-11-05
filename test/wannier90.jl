@@ -1,6 +1,8 @@
 using Test
 using SymmetricTightBinding
-using SymmetricTightBinding: reciprocal_translation_phase, Wannier90TightBindingModel
+using SymmetricTightBinding: reciprocal_translation_phase, Wannier90TightBindingModel,
+                             read_wannier90, fit_wannier90, _orbit_term_ranges,
+                             _fit_hopping_orbit
 using Crystalline
 using LinearAlgebra
 using StaticArrays: SVector
@@ -152,4 +154,110 @@ end
         lattice³ = DirectBasis([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
         @test_throws TypeError write_wannier90(prefix, ptbm; lattice = lattice³)
     end
+end
+
+@testset "read_wannier90 & fit_wannier90" begin
+    dir = mktempdir()
+
+    # round-trip: `write_wannier90` → `read_wannier90` → `fit_wannier90` recovers `cs`
+    brs², brs³ = bandreps(17, Val(2)), bandreps(227, Val(3))
+    for (cbr, Rs) in ((@composite(brs²[5]), [[0, 0], [1, 0], [1, 1]]),  # graphene
+                      (@composite(brs³[7]), [[0, 0, 0], [1, 0, 0]]))    # (16c|A₁g)
+        tbm = tb_hamiltonian(cbr, Rs)
+        ptbm = tbm(_coefs(length(tbm)))
+        prefix = joinpath(dir, "roundtrip")
+        write_wannier90(prefix, ptbm)
+        w90tbm = read_wannier90(prefix, orbital_positions(ptbm))
+        for k in _kpoints(dim(ptbm))
+            @test w90tbm(k) ≈ ptbm(k) atol = 1e-10
+        end
+        @test fit_wannier90(tbm, w90tbm).cs ≈ ptbm.cs atol = 1e-10
+
+        # a symmetry-breaking perturbation is projected out: the fit is an orthogonal
+        # projection, so fitting the fitted model changes nothing
+        perturbed = Wannier90TightBindingModel(
+            w90tbm.translations,
+            [H + 0.01 * cospi.(0.3 * (1:size(H, 1)) .+ 0.7 * (1:size(H, 2))') for H in w90tbm.hopping_matrices],
+            w90tbm.positions)
+        ptbm′ = fit_wannier90(tbm, perturbed)
+        @test fit_wannier90(tbm, Wannier90TightBindingModel(ptbm′)).cs ≈ ptbm′.cs
+
+        # the per-orbit problems partition the terms, & the round-trip fits are exact
+        orbit_ranges = _orbit_term_ranges(tbm)
+        @test reduce(vcat, collect.(orbit_ranges)) == 1:length(tbm)
+        w90_hoppings = Dict(zip(w90tbm.translations, w90tbm.hopping_matrices))
+        @test all(orbit_ranges) do terms
+            orbit_fit = _fit_hopping_orbit(tbm, terms, w90_hoppings)
+            orbit_fit.residual < 1e-10 * max(1, orbit_fit.w90_norm)
+        end
+    end
+
+    # anti- & non-Hermitian models (incl. hermiticity-related blocks of the former)
+    brs¹ = bandreps(2, Val(1))
+    cbr¹ = @composite brs¹[1] + brs¹[3]
+    for S in (ANTIHERMITIAN, NONHERMITIAN)
+        tbm = tb_hamiltonian(cbr¹, [[0], [1]], S)
+        ptbm = tbm(_coefs(length(tbm)))
+        @test fit_wannier90(tbm, Wannier90TightBindingModel(ptbm)).cs ≈ ptbm.cs
+    end
+
+    # degeneracy weights & `_wsvec.dat` minimal-image shifts (1D model, embedded in 3D)
+    prefix = joinpath(dir, "wsvec")
+    write(prefix * "_hr.dat", """
+        header
+        1
+        2
+        1 2
+        0 0 0 1 1  1.0 0.0
+        1 0 0 1 1  0.5 0.0
+        """)
+    positions = [DirectPoint{1}([0.0])]
+    w90tbm = read_wannier90(prefix, positions) # without `_wsvec.dat`
+    @test w90tbm.translations == [SVector(0), SVector(1)]
+    @test w90tbm.hopping_matrices ≈ [fill(1.0, 1, 1), fill(0.25, 1, 1)]
+    write(prefix * "_wsvec.dat", """
+        ## header
+        0 0 0 1 1
+        1
+        0 0 0
+        1 0 0 1 1
+        2
+        0 0 0
+        -2 0 0
+        """)
+    w90tbm = read_wannier90(prefix, positions)
+    @test w90tbm.translations == [SVector(-1), SVector(0), SVector(1)]
+    @test w90tbm.hopping_matrices ≈ [fill(0.125, 1, 1), fill(1.0, 1, 1), fill(0.125, 1, 1)]
+    @test_throws DimensionMismatch read_wannier90(prefix, [positions; positions])
+
+    # malformed files: a missing `_wsvec.dat` entry; a truncated `_hr.dat`; a block of
+    # records with a duplicate `(i, j)`; a block of records mixing translations
+    write(prefix * "_wsvec.dat", "## header\n0 0 0 1 1\n1\n0 0 0\n")
+    @test_throws ErrorException read_wannier90(prefix, positions)
+    rm(prefix * "_wsvec.dat")
+    write(prefix * "_hr.dat", "header\n1\n2\n1 2\n0 0 0 1 1  1.0 0.0\n")
+    @test_throws ErrorException read_wannier90(prefix, positions)
+    positions² = [DirectPoint{1}([0.0]), DirectPoint{1}([0.5])]
+    write(prefix * "_hr.dat", """
+        header
+        2
+        1
+        1
+        0 0 0 1 1  1.0 0.0
+        0 0 0 2 1  0.5 0.0
+        0 0 0 1 1  0.5 0.0
+        0 0 0 2 2  1.0 0.0
+        """)
+    @test_throws ErrorException read_wannier90(prefix, positions²)
+    write(prefix * "_hr.dat", """
+        header
+        2
+        2
+        1 1
+        0 0 0 1 1  1.0 0.0
+        0 0 0 2 1  0.5 0.0
+        1 0 0 1 2  0.5 0.0
+        0 0 0 2 2  1.0 0.0
+        """)
+    @test_throws ErrorException read_wannier90(prefix, positions²)
 end

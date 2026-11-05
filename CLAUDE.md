@@ -50,6 +50,9 @@ hopping ranges, the package:
 - `subduced_complement(tbm, Rs, sgnum_H)` — new terms from symmetry breaking (`src/symmetry_breaking.jl`)
 - `write_wannier90(prefix, ptbm; lattice)` — export to Wannier90 `_hr.dat` (+ `_centres.xyz`, `.win`)
   for PythTB, TBmodels, WannierTools, … (`src/wannier90.jl`)
+- `read_wannier90(prefix, positions)` / `fit_wannier90(tbm, w90tbm)` — (unexported prototypes)
+  read a Wannier90 `_hr.dat` (+ `_wsvec.dat`); fit a model's `cs` to it by real-space least
+  squares. Worked DFT (DFTK) → Wannier90 → STB example: `examples/dft-wannier90/`
 
 ### Utilities
 - `pin_free!(brs, idx2abc)` — fix free Wyckoff parameters (`src/utils.jl`)
@@ -88,7 +91,7 @@ src/
   dos.jl                    # density of states (generalized Gilat–Raubenheimer)
   gradients.jl              # dH/dc_i and dH/dk_i
   symmetry_breaking.jl      # subduced complement for translationengleiche subgroups
-  wannier90.jl              # `write_wannier90` + (internal) `Wannier90TightBindingModel` (`_hr.dat` layout)
+  wannier90.jl              # `write_wannier90`, `read_wannier90`, `fit_wannier90` + (internal) `Wannier90TightBindingModel` (`_hr.dat` layout)
   utils.jl                  # orbital positions, pin_free!, psd_nullspace!, etc.
   show.jl                   # pretty-printing for all types
 ext/
@@ -112,7 +115,7 @@ test/
   gradients.jl              # hopping/momentum gradient tests
   fitting.jl                # `fit` (Optim extension) + `TightBindingCache` tests
   spinful.jl                # spinful (double group) models, with and without time-reversal
-  wannier90.jl              # `Wannier90TightBindingModel` + `write_wannier90`
+  wannier90.jl              # `Wannier90TightBindingModel`, `write_wannier90`, `read_wannier90`, `fit_wannier90`
   misc.jl                   # AbstractArray interface + assorted issue regressions
 docs/src/
   tutorial.md               # graphene walkthrough
