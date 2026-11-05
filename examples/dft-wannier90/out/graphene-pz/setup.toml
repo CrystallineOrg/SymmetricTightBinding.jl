@@ -1,0 +1,36 @@
+case = "graphene-pz"
+cbr = "(2b|A₁)"
+description = "graphene: the two π bands, as pz Wannier functions on C"
+dim = 2
+lattice_angstrom = [[2.461, 0.0, 0.0], [-1.2304999999999995, 2.1312885187135033, 0.0], [0.0, 0.0, 12.0]]
+sgnum = 17
+
+[atoms]
+positions = [[0.3333333333333333, 0.6666666666666666, 0.0], [0.6666666666666667, 0.33333333333333337, 0.0]]
+species = ["C", "C"]
+
+[dft]
+Ecut = 30
+kgrid = [12, 12, 1]
+kline_density = 40
+n_bands = 16
+pseudo_family = "dojo.nc.sr.lda.v0_4_1.standard.upf"
+reference = "fermi"
+temperature = 0.002
+
+[[projections]]
+center = [0.3333333333333333, 0.6666666666666666, 0.0]
+l = 1
+m = 0
+[[projections]]
+center = [0.6666666666666667, 0.33333333333333337, 0.0]
+l = 1
+m = 0
+
+[wannier]
+dis_froz_max = 3.0
+dis_froz_min = -2.9
+dis_num_iter = 1000
+n_bands = 16
+n_wannier = 2
+num_iter = 1000

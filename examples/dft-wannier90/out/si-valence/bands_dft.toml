@@ -1,0 +1,36 @@
+reference_eV = 4.691857700747341
+fermi_eV = 4.95549395235165
+reference = "vbm"
+
+[[labels]]
+label = "Γ"
+branch = 1
+index = 1
+[[labels]]
+label = "X"
+branch = 1
+index = 25
+[[labels]]
+label = "U"
+branch = 1
+index = 33
+[[labels]]
+label = "K"
+branch = 2
+index = 1
+[[labels]]
+label = "Γ"
+branch = 2
+index = 26
+[[labels]]
+label = "L"
+branch = 2
+index = 47
+[[labels]]
+label = "W"
+branch = 2
+index = 64
+[[labels]]
+label = "X"
+branch = 2
+index = 76

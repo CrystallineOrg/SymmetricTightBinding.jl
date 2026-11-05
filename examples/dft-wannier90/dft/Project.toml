@@ -1,0 +1,7 @@
+[deps]
+Crystalline = "ae5e2be0-a263-11e9-351e-f94dad1eb351"
+DFTK = "acf6eb54-70d9-11e9-0013-234b7a5f5337"
+PseudoPotentialData = "5751a51d-ac76-4487-a056-413ecf6fbe19"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+UnitfulAtomic = "a7773ee8-282e-5fa2-be4e-bd808c38a91a"
+wannier90_jll = "c5400fa0-8d08-52c2-913f-1e3f656c1ce9"

@@ -1,0 +1,29 @@
+Wannier90 model: 3 orbitals, 729 translations
+cross-check vs. Wannier90's `_band.dat`: max |ΔE| = 2.90e-05 eV
+basis alignment |stbₐ⟩ = ∑_b |w90_b⟩ U[b,a], with U = 
+3×3 Matrix{Float64}:
+ -0.0  1.0  -0.0
+  0.0  0.0   1.0
+  1.0  0.0  -0.0
+full model: 125 terms in 35 hopping orbits (tb_hamiltonian: 5.3 s)
+fit: max residual over orbits 7.9e-16 eV; total relative residual 7.2e-16
+full model vs. Wannier90: max |ΔE| = 6.0e-15 eV
+
+compact models (strongest n orbits):
+  orbits  terms  max |δ| (Å)   vs. Wannier90: RMS / max (eV)   vs. DFT: RMS / max (eV)
+      1      2      3.842        0.485 / 0.922                  0.402 / 0.922
+      2      3      3.842        0.265 / 0.482                  0.272 / 0.482
+      3      6      5.433        0.079 / 0.175                  0.071 / 0.175
+      4     10      8.591        0.049 / 0.110                  0.046 / 0.110
+
+compact model: 4 orbits, 10 terms (RMS ≤ 0.050 eV vs. Wannier90)
+  block    δ (reduced)                     |δ| (Å)   cs
+  (1, 1)   [0.0, 0.0, 0.0]                  0.000    0.4782
+  (1, 1)   [1.0, 0.0, 0.0]                  3.842   -0.2688 -0.0294
+  (1, 1)   [1.0, 1.0, 0.0]                  5.433   -0.0881  0.0060  0.0093
+  (1, 1)   [2.0, 1.0, 0.0]                  8.591   -0.0113 -0.0002  0.0001  0.0034
+
+10-term 3×3 ParameterizedTightBindingModel{3} (hermitian, spinless) over (1a|T₂g) with amplitudes:
+ [-0.011319, -0.000174, 0.000146, 0.003394, -0.088092, 0.006012, 0.009257, -0.26878, -0.029432, 0.47817]
+
+wrote out/srvo3-t2g/bands.png

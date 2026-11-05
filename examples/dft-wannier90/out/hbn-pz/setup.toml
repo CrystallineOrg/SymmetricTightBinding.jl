@@ -1,0 +1,35 @@
+case = "hbn-pz"
+cbr = "(1c|A₁) + (1b|A₁)"
+description = "hBN monolayer: the two π bands, as pz Wannier functions on N and B"
+dim = 2
+lattice_angstrom = [[2.504, 0.0, 0.0], [-1.2519999999999993, 2.1685276110762346, 0.0], [0.0, 0.0, 12.0]]
+sgnum = 14
+
+[atoms]
+positions = [[0.6666666666666666, 0.3333333333333333, 0.0], [0.3333333333333333, 0.6666666666666666, 0.0]]
+species = ["N", "B"]
+
+[dft]
+Ecut = 30
+kgrid = [12, 12, 1]
+kline_density = 40
+n_bands = 16
+pseudo_family = "dojo.nc.sr.lda.v0_4_1.standard.upf"
+reference = "vbm"
+
+[[projections]]
+center = [0.6666666666666666, 0.3333333333333333, 0.0]
+l = 1
+m = 0
+[[projections]]
+center = [0.3333333333333333, 0.6666666666666666, 0.0]
+l = 1
+m = 0
+
+[wannier]
+dis_froz_max = 4.7
+dis_froz_min = -1.0
+dis_num_iter = 1000
+n_bands = 16
+n_wannier = 2
+num_iter = 1000

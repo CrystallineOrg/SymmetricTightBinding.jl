@@ -1,0 +1,42 @@
+case = "srvo3-t2g"
+cbr = "(1a|T₂g)"
+description = "SrVO₃: the 3 t₂g bands at the Fermi level, as V t₂g Wannier functions"
+dim = 3
+lattice_angstrom = [[3.842, 0.0, 0.0], [0.0, 3.842, 0.0], [0.0, 0.0, 3.842]]
+sgnum = 221
+
+[atoms]
+positions = [[0.5, 0.5, 0.5], [0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, 0.5]]
+species = ["Sr", "V", "O", "O", "O"]
+
+[dft]
+Ecut = 30
+kgrid = [8, 8, 8]
+kline_density = 40
+n_bands = 26
+pseudo_family = "dojo.nc.sr.lda.v0_4_1.standard.upf"
+reference = "fermi"
+temperature = 0.002
+
+[[projections]]
+center = [0.0, 0.0, 0.0]
+l = 2
+m = -1
+[[projections]]
+center = [0.0, 0.0, 0.0]
+l = 2
+m = 1
+[[projections]]
+center = [0.0, 0.0, 0.0]
+l = 2
+m = -2
+
+[wannier]
+dis_froz_max = 1.15
+dis_froz_min = -1.6
+dis_num_iter = 1000
+dis_win_max = 3.0
+dis_win_min = -1.6
+n_bands = 26
+n_wannier = 3
+num_iter = 1000

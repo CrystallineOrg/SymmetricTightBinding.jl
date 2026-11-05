@@ -1,0 +1,20 @@
+reference_eV = -1.904703083723426
+fermi_eV = -1.904703083723426
+reference = "fermi"
+
+[[labels]]
+label = "Γ"
+branch = 1
+index = 1
+[[labels]]
+label = "M"
+branch = 1
+index = 32
+[[labels]]
+label = "K"
+branch = 1
+index = 50
+[[labels]]
+label = "Γ"
+branch = 1
+index = 86
