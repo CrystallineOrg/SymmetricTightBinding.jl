@@ -20,3 +20,11 @@
   `Array{Int, 4}` indexed as `Mm[i,j,s,t]`. This substantially speeds up constraint
   assembly and hence also `tb_hamiltonian` while also reducing assembly allocations for
   large models.
+
+### New features
+
+- `quantummetric` computes the quantum metric of a band or band multiplet, and
+  `quantumgeometrictensor` the full quantum geometric tensor `Qᵢⱼ = gᵢⱼ - (i/2)Ωᵢⱼ`.
+  `berrycurvature` now also accepts band multiplets (contiguous ranges of band indices)
+  and received minor improvements to error messages (errors for non-Hermitian models and
+  detects band degeneracies near `E = 0` robustly).

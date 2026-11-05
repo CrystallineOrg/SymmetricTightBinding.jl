@@ -2,13 +2,15 @@
     berrycurvature(
         ptbm::ParameterizedTightBindingModel{D},
         k::ReciprocalPointLike{D},
-        n::Integer,
+        ns::Union{Integer, AbstractUnitRange{<:Integer}},
         [∇Hs::NTuple{D, Matrix{ComplexF64}}]
     )  --> Ω
 
-Compute the Berry curvature `Ω` of the `n`th band of the coefficient-parameterized
-tight-binding model `ptbm` at the **k**-point `k`.
-If `D == 3`, `Ω` is a 3-element vector, representing, the three components of the Berry
+Compute the Berry curvature `Ω` of the `ns`th band - or, if `ns` is a contiguous range of
+band indices, of the band multiplet `ns` (see "Band multiplets" below) - of the
+coefficient-parameterized tight-binding model `ptbm` at the **k**-point `k`. The model must
+be Hermitian.
+If `D == 3`, `Ω` is a 3-element vector, representing the three components of the Berry
 curvature pseudovector ``[Ω₁, Ω₂, Ω₃] = [Ω₂₃, Ω₃₁, Ω₁₂]``. 
 If `D == 2`, `Ω` is a scalar, representing the Berry curvature pseudoscalar ``Ω₃ = Ω₁₂``.
 
@@ -22,7 +24,7 @@ The Berry curvature is evaluated using the Kubo-like or "sum-over-states" formul
 ```math
 \\Omega_{ij}^n
 =
-\\sum_{n' \\neq n}
+\\mathrm{i} \\sum_{n' \\neq n}
 \\frac{\\langle n |\\partial H/\\partial k_i|n'\\rangle \\langle n'|\\partial H/\\partial k_j|n\\rangle
        - (j \\leftrightarrow i)}
       {(E_n - E_{n'})^2}
@@ -55,9 +57,58 @@ band and ``E_n`` denoting the energy of the `n`th band. The Berry curvature pseu
     Other sign conventions exist in the literature (e.g., opposite sign), but the above
     is prevailing in the physics and condensed-matter literature.
 
-[^1]: Xiao, Chang, & Niu, *Berry phase effects on electronic properties*, 
-    [Rev. Mod. Phys. **82**, 1959 (2010)](https://doi.org/10.1103/RevModPhys.82.1959), 
+[^1]: Xiao, Chang, & Niu, *Berry phase effects on electronic properties*,
+    [Rev. Mod. Phys. **82**, 1959 (2010)](https://doi.org/10.1103/RevModPhys.82.1959),
     Eq. (1.13).
+
+## Band multiplets
+
+If `ns` is a contiguous range of band indices ``\\mathcal{N}``, the same expression is used,
+but with the sum over intermediate states restricted to bands *outside* ``\\mathcal{N}``:
+
+```math
+\\Omega_{ij}^{\\mathcal{N}}
+=
+-2\\mathrm{Im} \\sum_{n \\in \\mathcal{N}} \\sum_{m \\notin \\mathcal{N}}
+\\frac{\\langle n |\\partial H/\\partial k_i|m\\rangle \\langle m|\\partial H/\\partial k_j|n\\rangle}
+      {(E_n - E_m)^2}.
+```
+
+Equivalently, ``\\Omega_{ij}^{\\mathcal{N}} =
+-2\\mathrm{Im}\\,\\mathrm{Tr}[(\\partial_{k_i} P)(1 - P) (\\partial_{k_j} P)]`` [^2],
+with ``P = \\sum_{n \\in \\mathcal{N}} |u_{n\\mathbf{k}}\\rangle\\langle u_{n\\mathbf{k}}|``
+the projector onto the multiplet.
+
+[^2]: See e.g., Ma, Chen, Fan, & Liu, *Abelian and non-Abelian quantum geometric tensor*,
+    [Phys. Rev. B **81**, 245129 (2010)](https://doi.org/10.1103/PhysRevB.81.245129), Eq.
+    (9), for the multiplet formulation, and Graf & Piéchon, *Berry curvature and quantum
+    metric in N-band systems: An eigenprojector approach*,
+    [Phys. Rev. B **104**, 085114 (2021)](https://doi.org/10.1103/PhysRevB.104.085114),
+    Eq. (3) (there, for a single band).
+
+This is the trace ``\\mathrm{tr}\\, F_{ij}`` of the non-Abelian Berry curvature
+``F_{ij} = \\partial_{k_i}A_j - \\partial_{k_j}A_i - \\mathrm{i}[A_i, A_j]``, i.e., the part
+of it that is unchanged by any mixing of the bands in ``\\mathcal{N}`` among themselves. The
+commutator does not contribute to the trace, which is why the Abelian-looking expression
+above is exact rather than approximate; the restriction to ``m \\notin \\mathcal{N}`` is
+likewise not an ad-hoc omission, but is what the projector ``1 - P`` onto the complement of
+the multiplet produces.
+
+The omitted intra-multiplet terms in fact cancel pairwise here, since interchanging ``n`` and
+``m`` conjugates the numerator while leaving the denominator unchanged. The Berry curvature
+is therefore *additive* over the multiplet, ``\\Omega^{\\mathcal{N}} = \\sum_{n \\in
+\\mathcal{N}} \\Omega^n``, wherever the individual terms exist. What the multiplet form buys
+is that it stays well-defined where they do not: degeneracies *within* `ns` are unproblematic,
+and the multiplet form is the only meaningful choice where bands touch. (Contrast
+[`quantummetric`](@ref), where the same terms *add* under the real part, so that the metric is
+genuinely not additive.) A degeneracy between a band in `ns` and a band outside `ns` remains
+an error.
+
+Only a single multiplet may be requested at a time; for several, broadcast or comprehend over
+them (e.g. `[berrycurvature(ptbm, k, ns) for ns in nsv]`), at the cost of one repeated
+eigensolve per multiplet. Compare [`chern_fukui`](@ref), which does accept several multiplets
+at once — there, the shared work (the eigenvector rows spanning the **k**-mesh) is
+substantial, whereas here it is a single eigensolve.
 
 # Example
 
@@ -73,10 +124,10 @@ julia> tbm = tb_hamiltonian(cbr, [[0,0], [1,0]]);
 ```
 `tbm` is an 8-term model, whose 6th and 8th terms break time-reversal symmetry, but which
 retains inversion symmetry. We can build a parameterized instance of this model and compute
-its Berry curvature at some **k**-point to verify that its evenness under inversion (`k` →
+its Berry curvature at some **k**-point to verify its evenness under inversion (`k` →
 `-k`):
 ```jldoctest berry-curvature; filter = r"(\\d*)\\.(\\d{4})\\d+" => s"\\1.\\2***"
-julia> ptbm = tbm([0, .1, -0, 0, .2, 0, 0, .3]);
+julia> ptbm = tbm([0, .1, 0, 0, .2, 0, 0, .3]);
 
 julia> k = [0.1, 0.2];
 
@@ -135,11 +186,12 @@ reciprocal lattice matrix ``\\mathbf{B} = [\\mathbf{b}_1 \\mathbf{b}_2 \\mathbf{
 ```
 
 Equivalently, the antisymmetric Berry curvature tensors ``\\Omega_{ij}`` (``i,j \\in
-\\{1, 2, 3\\}``, i.e., reduced coordinate basis) and ``\\Omega_{\\mu\\nu} (``\\mu, \\nu = 
-\\{x, y, z\\}``, i.e. Cartesian basis) relates via
+\\{1, 2, 3\\}``, i.e., reduced coordinate basis) and ``\\Omega_{\\mu\\nu}`` (``\\mu, \\nu \\in
+\\{x, y, z\\}``, i.e. Cartesian basis) relate via
 
 ```math
-\\Omega_{ij} = \\sum_{\\mu\\nu} B^T_{i\\mu} \\Omega_{\\mu\\nu} B_{\\nu j}\\
+\\Omega_{ij} = \\sum_{\\mu\\nu} B^T_{i\\mu} \\Omega_{\\mu\\nu} B_{\\nu j},
+\\\\
 \\Omega_{\\mu\\nu} = \\sum_{ij} B^{-T}_{\\mu i} \\Omega_{ij} B^{-1}_{j\\nu}.
 ```
 
@@ -213,64 +265,22 @@ and the area element ``\\mathrm{d}\\mathbf{S}`` cancel out.
 function berrycurvature(
     ptbm::ParameterizedTightBindingModel{D},
     k::ReciprocalPointLike{D},
-    n::Integer,
+    ns::Union{Integer, AbstractUnitRange{<:Integer}},
     ∇Hs::NTuple{D, Matrix{ComplexF64}} = begin
         ntuple(_ -> Matrix{ComplexF64}(undef, ptbm.tbm.N, ptbm.tbm.N), Val(D))
     end
 ) where {D}
-    1 ≤ n ≤ ptbm.tbm.N || error("band index `n` is beyond the model's size")
-    Es, us = solve(ptbm, k; bloch_phase=Val(false))
-    Eₙ = Es[n]
-    if count(≈(Eₙ), Es) > 1
-        error(lazy"band $n is degenerate at $k: non-Abelian Berry curvature is not presently handled")
-    end
-    ∇ptbm = gradient_wrt_momentum(ptbm)
+    D ∈ (2, 3) || error(lazy"Berry curvature is not implemented for $D-dimensional systems")
+    Q = quantumgeometrictensor(ptbm, k, ns, ∇Hs)
 
-    # NB: Below we assume and require H to be Hermitian
+    # Berry curvature tensor from the quantum geometric tensor: Ωᵢⱼ = -2 Im Qᵢⱼ
     if D == 2
-        return _berrycurvature_2d!(k, ∇ptbm, Es, us, n, ∇Hs)
-    elseif D == 3
-        return _berrycurvature_3d!(k, ∇ptbm, Es, us, n, ∇Hs)
-    else
-        error(lazy"Berry curvature is not implemented for $D-dimensional systems")
+        return -2 * imag(Q[1, 2])                       # Ω³ = Ω₁₂
+    else # D == 3
+        return SVector{3, Float64}(-2 * imag(Q[2, 3]),  # Ω¹ = Ω₂₃
+                                   -2 * imag(Q[3, 1]),  # Ω² = Ω₃₁
+                                   -2 * imag(Q[1, 2]))  # Ω³ = Ω₁₂
     end
-end
-
-function _berrycurvature_2d!(k, ∇ptbm, Es, us, n, ∇Hs::NTuple{2, Matrix{ComplexF64}})
-    components = (1, 2) # k₁ & k₂ components of Hamiltonian gradient
-    ∇Hs = ∇ptbm(k, components, ∇Hs)
-
-    Eₙ = Es[n]
-    uₙ = @view us[:, n]
-    Ω³ = 0.0
-    for m in eachindex(Es)
-        m == n && continue
-        uₘ = @view us[:, m]
-        Eₘ = Es[m]
-        Ω³ -= 2*imag(dot(uₙ, ∇Hs[1], uₘ) * dot(uₘ, ∇Hs[2], uₙ)) / (Eₙ - Eₘ)^2  # Ω³ = Ω₁₂
-    end
-
-    return Ω³
-end
-
-function _berrycurvature_3d!(k, ∇ptbm, Es, us, n, ∇Hs::NTuple{3, Matrix{ComplexF64}})
-    components = (1, 2, 3) # k₁, k₂, & k₃ components of Hamiltonian gradient
-    ∇Hs = ∇ptbm(k, components, ∇Hs)
-
-    Eₙ = Es[n]
-    uₙ = @view us[:, n]
-    Ω¹ = Ω² = Ω³ = 0.0
-    for m in eachindex(Es)
-        m == n && continue
-        uₘ = @view us[:, m]
-        Eₘ = Es[m]
-
-        Ω¹ -= 2*imag(dot(uₙ, ∇Hs[2], uₘ) * dot(uₘ, ∇Hs[3], uₙ)) / (Eₙ - Eₘ)^2  # Ω¹ = Ω₂₃
-        Ω² -= 2*imag(dot(uₙ, ∇Hs[3], uₘ) * dot(uₘ, ∇Hs[1], uₙ)) / (Eₙ - Eₘ)^2  # Ω² = Ω₃₁
-        Ω³ -= 2*imag(dot(uₙ, ∇Hs[1], uₘ) * dot(uₘ, ∇Hs[2], uₙ)) / (Eₙ - Eₘ)^2  # Ω³ = Ω₁₂
-    end
-
-    return SVector{3, Float64}(Ω¹, Ω², Ω³)
 end
 
 
