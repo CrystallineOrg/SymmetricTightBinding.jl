@@ -74,6 +74,18 @@ but with the sum over intermediate states restricted to bands *outside* ``\\math
       {(E_n - E_m)^2}.
 ```
 
+Equivalently, ``\\Omega_{ij}^{\\mathcal{N}} =
+-2\\mathrm{Im}\\,\\mathrm{Tr}[(\\partial_{k_i} P)(1 - P) (\\partial_{k_j} P)]`` [^2],
+with ``P = \\sum_{n \\in \\mathcal{N}} |u_{n\\mathbf{k}}\\rangle\\langle u_{n\\mathbf{k}}|``
+the projector onto the multiplet.
+
+[^2]: See e.g., Ma, Chen, Fan, & Liu, *Abelian and non-Abelian quantum geometric tensor*,
+    [Phys. Rev. B **81**, 245129 (2010)](https://doi.org/10.1103/PhysRevB.81.245129), Eq.
+    (9), for the multiplet formulation, and Graf & Piéchon, *Berry curvature and quantum
+    metric in N-band systems: An eigenprojector approach*,
+    [Phys. Rev. B **104**, 085114 (2021)](https://doi.org/10.1103/PhysRevB.104.085114),
+    Eq. (3) (there, for a single band).
+
 This is the trace ``\\mathrm{tr}\\, F_{ij}`` of the non-Abelian Berry curvature
 ``F_{ij} = \\partial_{k_i}A_j - \\partial_{k_j}A_i - \\mathrm{i}[A_i, A_j]``, i.e., the part
 of it that is unchanged by any mixing of the bands in ``\\mathcal{N}`` among themselves. The
