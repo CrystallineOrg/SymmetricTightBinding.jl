@@ -2,11 +2,12 @@ using Documenter
 using SymmetricTightBinding
 using Optim # load the Optim extension so its docstrings (`fit`, …) are available to `@docs`
 
-# use SymmetricTightBinding as the default module for doctests, and also load Crystalline
+# use SymmetricTightBinding as the default module for doctests, and also load Crystalline;
+# LinearAlgebra & StaticArrays are loaded so that e.g., `Hermitian` & `SMatrix` print unqualified
 DocMeta.setdocmeta!(
     SymmetricTightBinding,
     :DocTestSetup,
-    :(using SymmetricTightBinding, Crystalline);
+    :(using SymmetricTightBinding, Crystalline, LinearAlgebra, StaticArrays);
     recursive = true,
 )
 

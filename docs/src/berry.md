@@ -183,7 +183,7 @@ f
 The Berry curvature is (minus 2 times) the imaginary part of the *quantum geometric tensor* $Q_{ij} = g_{ij} - \tfrac{\mathrm{i}}{2}\Omega_{ij}$, whose real part is the *quantum metric* $g_{ij}$, available via [`quantummetric`](@ref). The metric can be nonzero even when the Berry curvature vanishes, and even when a band has no dispersion at all. An example is the flat band of the Lieb lattice, which is built from *s*-like orbitals at the 1a and 2c Wyckoff positions of *p*4mm (plane group ⋕11):
 
 ```@example lieb
-using Crystalline, SymmetricTightBinding # hide
+using Crystalline, SymmetricTightBinding, LinearAlgebra, StaticArrays # hide
 brs = bandreps(11, Val(2)) # p4mm
 cbr = @composite brs[1] + brs[10] # (2c|A₁) + (1a|A₁)
 tbm = tb_hamiltonian(cbr) # onsite and nearest-neighbors

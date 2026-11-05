@@ -4,13 +4,13 @@
         k::ReciprocalPointLike{D},
         ns::Union{Integer, AbstractUnitRange{<:Integer}},
         [∇Hs::NTuple{D, Matrix{ComplexF64}}]
-    )  --> g
+    )  --> g :: Hermitian{Float64, <:SMatrix{D, D, Float64}}
 
 Compute the quantum metric `g` of the `ns`th band - or, if `ns` is a contiguous range of band
 indices, of the band multiplet `ns` (see "Band multiplets" below) - of the
 coefficient-parameterized tight-binding model `ptbm` at the **k**-point `k`. The model must
 be Hermitian.
-The returned `g` is a real, symmetric, positive semi-definite `D`×`D` matrix (an `SMatrix`).
+The returned `g` is a real, symmetric, positive semi-definite `D`×`D` matrix.
 
 The optional `∇Hs` argument is a tuple of work-matrices used to store the momentum gradient
 of the Hamiltonian.
@@ -80,7 +80,7 @@ julia> tbm = tb_hamiltonian(cbr, [[0,0], [1,0]]);
 julia> ptbm = tbm([0, .1, 0, 0, .2, 0, 0, .3]);
 
 julia> quantummetric(ptbm, [0.1, 0.2], 1)
-2×2 StaticArraysCore.SMatrix{2, 2, Float64, 4} with indices SOneTo(2)×SOneTo(2):
+2×2 Hermitian{Float64, SMatrix{2, 2, Float64, 4}} with indices SOneTo(2)×SOneTo(2):
   0.0713504   -0.00803914
  -0.00803914   0.225108
 ```
@@ -127,12 +127,12 @@ end
         k::ReciprocalPointLike{D},
         ns::Union{Integer, AbstractUnitRange{<:Integer}},
         [∇Hs::NTuple{D, Matrix{ComplexF64}}]
-    )  --> Q
+    )  --> Q :: Hermitian{ComplexF64, <:SMatrix{D, D, ComplexF64}}
 
 Compute the quantum geometric tensor `Q` of band `ns` - or, if `ns` is a contiguous range of
 band indices, of the band multiplet `ns` - of the coefficient-parameterized tight-binding
 model `ptbm` at the **k**-point `k`. The returned `Q` is a complex, Hermitian, positive
-semi-definite `D`×`D` matrix (an `SMatrix`), evaluated via the sum-over-states formula:
+semi-definite `D`×`D` matrix, evaluated via the sum-over-states formula:
 
 ```math
 Q_{ij}^{\\mathcal{N}}
@@ -144,10 +144,20 @@ Q_{ij}^{\\mathcal{N}}
 g_{ij}^{\\mathcal{N}} - \\tfrac{\\mathrm{i}}{2}\\Omega_{ij}^{\\mathcal{N}},
 ```
 
-with ``\\mathcal{N}`` the bands in `ns`. That is, `Q` combines the quantum metric
-``g_{ij}`` and the Berry curvature tensor ``\\Omega_{ij}``, as returned by
-[`quantummetric`](@ref) and [`berrycurvature`](@ref); see either for details on input
-arguments, band multiplets, and coordinate conventions.
+with ``\\mathcal{N}`` the bands in `ns`. Equivalently, ``Q_{ij}^{\\mathcal{N}}
+= \\mathrm{Tr}[(\\partial_{k_i} P)(1 - P)(\\partial_{k_j} P)]`` [^1],
+with ``P = \\sum_{n \\in \\mathcal{N}} |u_{n\\mathbf{k}}\\rangle\\langle u_{n\\mathbf{k}}|``
+the projector onto the multiplet. That is, `Q` combines the quantum metric ``g_{ij}`` and
+the Berry curvature tensor ``\\Omega_{ij}``, as returned by [`quantummetric`](@ref) and
+[`berrycurvature`](@ref); see either for details on input arguments, band multiplets, and
+coordinate conventions.
+
+[^1]: See e.g., Ma, Chen, Fan, & Liu, *Abelian and non-Abelian quantum geometric tensor*,
+    [Phys. Rev. B **81**, 245129 (2010)](https://doi.org/10.1103/PhysRevB.81.245129), Eq.
+    (9), for the multiplet formulation, and Graf & Piéchon, *Berry curvature and quantum
+    metric in N-band systems: An eigenprojector approach*,
+    [Phys. Rev. B **104**, 085114 (2021)](https://doi.org/10.1103/PhysRevB.104.085114),
+    Eq. (3) (there, for a single band).
 """
 function quantumgeometrictensor(
     ptbm::ParameterizedTightBindingModel{D},
@@ -185,16 +195,14 @@ function quantumgeometrictensor(
             vs = ntuple(i -> dot(uₙ, ∇Hs[i], uₘ), Val(D))
             ΔE⁻² = 1 / (Eₙ - Eₘ)^2
             for j in 1:D
-                for i in 1:j # upper triangle; the lower triangle follows from Qⱼᵢ = Qᵢⱼ*
-                    Qᵢⱼ = vs[i] * conj(vs[j]) * ΔE⁻²
-                    Q[i, j] += Qᵢⱼ
-                    i ≠ j && (Q[j, i] += conj(Qᵢⱼ))
+                for i in 1:j # upper triangle only; lower triangle implied by `Hermitian`
+                    Q[i, j] += vs[i] * conj(vs[j]) * ΔE⁻²
                 end
             end
         end
     end
 
-    return SMatrix(Q)
+    return Hermitian(SMatrix(Q), :U) # Qⱼᵢ = Qᵢⱼ*
 end
 
 # error if a band in `ns` is degenerate with a band outside `ns`: the sum-over-states
