@@ -2,6 +2,13 @@
 
 ## v0.2.0 (unreleased)
 
+### New features
+
+- `wilsonloop` computes Abelian and non-Abelian Wilson loop spectra (Berry phases) along a
+  closed **k**-loop.
+- `solve` accepts a `scratch` keyword, specifying the matrix to evaluate the Hamiltonian
+  into.
+
 ### Breaking changes
 
 - `sgrep_induced_by_siteir` is renamed to `site_induced_sgrep` (and the internal

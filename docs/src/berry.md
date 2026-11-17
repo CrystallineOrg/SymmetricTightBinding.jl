@@ -94,6 +94,25 @@ chern_fukui(ptbm, 1, Nk)
 
 The Fukui method is also applicable in non-Abelian settings, i.e., for degenerate band multiplets.
 
+!!! note "Chern numbers from Wilson loops"
+    Equivalently, the Chern number is the net winding of the Berry phase of a Wilson loop along ``k_2``, as the loop is advanced across the Brillouin zone along ``k_1``. Using [`wilsonloop`](@ref), we can visualize this Berry phase flow:
+
+    ```@example berry
+    ϕs = [wilsonloop(ptbm, [[k1, k2] for k2 in ks], 1) for k1 in ks] # Berry phases of band 1
+    axis = (; limits = (-0.5, 0.5, -π, π), xlabel = rich("k"; font=:italic) * subscript("1"),
+              ylabel = "Berry phase ϕ(" * rich("k"; font=:italic) * subscript("1") * ")",
+              yticks = ([-π, 0, π], ["-π", "0", "π"]))
+    scatter(ks, ϕs; axis)
+    ```
+
+    From inspection, the Berry phase winds upward by 2π once across the Brillouin zone, i.e., the Chern number is 1.
+    We can also establish this directly by computing the phase winding of `ϕs`:
+
+    ```@example berry
+    Δϕs = diff(ϕs)
+    sum(Δϕ -> rem2pi(Δϕ, RoundNearest), Δϕs) / (2π) # winding: signed phase-accumulation ×(2π)⁻¹
+    ```
+
 [^3]: Fukui, Hatsugai, & Suzuki, *Chern Numbers in Discretized Brillouin Zone: Efficient Method of Computing (Spin) Hall Conductances*, [J. Phys. Soc. Jpn. **74**, 1674 (2005)](https://doi.org/10.1143/JPSJ.74.1674).
 
 ## Phase diagrams
