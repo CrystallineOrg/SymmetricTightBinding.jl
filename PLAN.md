@@ -185,9 +185,9 @@ Done *after* Phase 4 so tests catch regressions. Incremental, file-by-file revie
 
 ### Areas to examine
 
-- **Code duplication in `tightbinding.jl`:** the constraint matrix assembly functions
-  (`representation_constraint_matrices`, `reciprocal_constraints_matrices`,
-  `constraint_hermiticity`) share structural patterns that may be factorable
+- ~~**Code duplication in `tightbinding.jl`:** the constraint matrix assembly functions
+  share structural patterns that may be factorable~~ (done: replaced by the
+  `add_*_constraints!` functions acting on a shared `ConstraintRows`)
 - **Dead/outdated comments:** several reference early development or photonic context
 - **`types.jl` `_getindex` logic:** the pretty-printing path is complex; see if it can be
   simplified without losing functionality

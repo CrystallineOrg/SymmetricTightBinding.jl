@@ -112,7 +112,8 @@ from `br2` to `br1` if `diagonal_block = false` and `S` is not `NONHERMITIAN`).
 - `ordering1 :: OrbitalOrdering{D}`: ordering of the orbitals in `br1`
 - `ordering2 :: OrbitalOrdering{D}`: ordering of the orbitals in `br2`
 - `h_orbit :: HoppingOrbit{D}`: hopping orbit associated to the block
-- `Mm :: Array{Int,4}`: matrix codifying Hamiltonian
+- `Mm :: Matrix{SparseMatrixCSC{Int, Int}}`: matrix codifying Hamiltonian, as `Mm[s,t][i,j]`
+  (see `construct_M_matrix`)
 - `t :: Vector{Float64}`: a basis vector, stored in re/im-doubled format
 - `MmtC :: Array{ComplexF64, 3}`: pre-contracted matrix `Mm` with "complexified" `t`.
 - `diagonal_block :: Bool`: whether this is a diagonal block in the overall Hamiltonian.
@@ -125,30 +126,30 @@ struct TightBindingBlock{
     ordering1::OrbitalOrdering{D}
     ordering2::OrbitalOrdering{D}
     h_orbit::HoppingOrbit{D}
-    Mm::Array{Int, 4}
+    Mm::Matrix{SparseMatrixCSC{Int, Int}}
     t::Vector{Float64}
-    MmtC::Array{ComplexF64, 3} # MmtC[:,i,j] = M[:,:,i,j] * complex.(t[1:N], t[N+1:end])
+    MmtC::Array{ComplexF64, 3} # MmtC[:,i,j] = Mm[i,j] * complex.(t[1:N], t[N+1:end])
     # we include `MmtC` as an optimization: we want `Mm` for structural information (e.g.
     # for plotting), but for computing the block matrix elements, we actually only need
     # the (column-)contracted matrix `MmtC` (see `evaluate_tight_binding_term!`)
     diagonal_block::Bool # whether this is a diagonal block in the overall Hamiltonian
 end
-Base.size(tbb::TightBindingBlock) = (size(tbb.Mm, 3), size(tbb.Mm, 4))
+Base.size(tbb::TightBindingBlock) = size(tbb.Mm)
 function TightBindingBlock{D, S}(
     br1::BandRep{D, IR, SIR},
     br2::BandRep{D, IR, SIR},
     ordering1::OrbitalOrdering{D},
     ordering2::OrbitalOrdering{D},
     h_orbit::HoppingOrbit{D},
-    Mm::AbstractArray{<:Integer, 4},
+    Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}},
     t::AbstractVector{<:Real},
     diagonal_block::Bool
 ) where {D, S, IR, SIR}
     Nᵗ = length(t) ÷ 2
     tC = complex.((@view t[1:Nᵗ]), (@view t[Nᵗ+1:end]))
-    MmtC = Array{ComplexF64}(undef, size(Mm, 1), size(Mm, 3), size(Mm, 4))
-    for j in axes(Mm, 4), i in axes(Mm, 3)
-        MmtC[:, i, j] = (@view Mm[:, :, i, j]) * tC
+    MmtC = Array{ComplexF64}(undef, size(first(Mm), 1), size(Mm, 1), size(Mm, 2))
+    for j in axes(Mm, 2), i in axes(Mm, 1)
+        mul!((@view MmtC[:, i, j]), Mm[i, j], tC)
     end
     tbb = TightBindingBlock{D, S, IR, SIR}(
         br1, 
@@ -245,11 +246,11 @@ function _getindex(
     j::Int,
     conjugate::Bool = false
 ) where {D, S}  
-    @boundscheck 1 ≤ i ≤ size(tbb.Mm, 3) && 1 ≤ j ≤ size(tbb.Mm, 4) ||
+    @boundscheck 1 ≤ i ≤ size(tbb.Mm, 1) && 1 ≤ j ≤ size(tbb.Mm, 2) ||
                  error(BoundsError(tbb, (i, j)))
 
     io = IOBuffer()
-    MⁱʲtC = tbb.MmtC[:, i, j] # = `tbb.Mm[:,:,i,j] * "complexified"(tbb.t)`
+    MⁱʲtC = tbb.MmtC[:, i, j] # = `tbb.Mm[i,j] * "complexified"(tbb.t)`
     if all(v -> abs(v) < SPARSIFICATION_ATOL_DEFAULT, MⁱʲtC)
         return TightBindingElementString("0", #=active=# true)
     end

@@ -10,6 +10,7 @@ using Crystalline: AbstractOperation
 using BlockArrays
 using RowEchelon: rref, rref!           # for `poormans_sparsification`
 using StaticArrays: SVector
+using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, sparse!, nzrange, rowvals, nonzeros
 
 # --- Constants -------------------------------------------------------------------------- #
 
@@ -35,9 +36,10 @@ include("site_representations.jl")
 export site_induced_sgrep
 include("tightbinding.jl")
 export tb_hamiltonian
-include("subspace_intersection.jl")
-include("timereversal.jl")
-include("hermiticity.jl")
+include("constraints/core.jl")
+include("constraints/spatial.jl")
+include("constraints/timereversal.jl")
+include("constraints/hermiticity.jl")
 include("utils.jl")
 export pin_free!
 include("symmetry_analysis.jl")

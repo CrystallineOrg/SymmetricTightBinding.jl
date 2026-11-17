@@ -4,7 +4,23 @@
 using Test
 using SymmetricTightBinding
 using SymmetricTightBinding: obtain_symmetry_related_hoppings
+using SymmetricTightBinding: construct_M_matrix, primitivized_generators,
+    site_induced_sgrep_excl_phase, _permute_symmetry_related_hoppings_under_symmetry_operation,
+    ConstraintRows, add_symmetry_constraints!, add_constraints!, constraint_nullspace!,
+    psd_nullspace!, gram_from_transpose, gram!, RowPermutation, RealConstraintTerm
 using Crystalline
+using LinearAlgebra: svd, rank, norm, nullspace, Symmetric, I
+using SparseArrays: sparse, sparse!
+
+# Split a complex vector `t` into a real matrix `T = [tᴿ -tᴵ; tᴵ tᴿ]`, whose real span is
+# the complex span of `t` (in the re/im-doubled form `[tᴿ; tᴵ]` of coefficient vectors):
+# with `α = αᴿ + iαᴵ`, the upper half of `T * [αᴿ, αᴵ]` is `real(αt)` and its lower half
+# `imag(αt)`, since `αt = (αᴿtᴿ - αᴵtᴵ) + i(αᴿtᴵ + αᴵtᴿ)`. E.g., `split_complex([im, 0])`
+# is `[0 -1; 0 0; 1 0; 0 0]`.
+function split_complex(t::AbstractVector{<:Number})
+    re_t, im_t = reim(t)
+    return [re_t -im_t; im_t re_t]
+end
 
 @testset "AbstractArray interface" begin
     brs = bandreps(16, Val(2))
@@ -134,4 +150,96 @@ end
     tbm = tb_hamiltonian(@composite brs[5]) # graphene, (2b|A₁)
     ptbm = tbm([0, 1])
     @test collect_compatible(ptbm; atol = 1e-6) == collect_compatible(ptbm)
+end
+
+@testset "Sparse `Mm` layout & constraint null spaces" begin
+    samespan(U, W) = rank(U; atol=1e-8) == rank(W; atol=1e-8) == rank([U W]; atol=1e-8)
+    # null space of a tall matrix `A` via its thin SVD (NB: `nullspace(A)` computes the
+    # full SVD, whose m×m `U` is prohibitively large for the tall matrices here)
+    function nullspace_tall(A; atol)
+        size(A, 1) ≥ size(A, 2) || error("expected a tall matrix")
+        F = svd(A)
+        return F.V[:, F.S .≤ atol]
+    end
+
+    # I-43d (many orbitals & partner functions per EBR) & p3 without TR (complex irreps)
+    for (brs, idxs, R) in ((bandreps(220), (5, 8), [0,0,0]), # (12b|E) & (12a|E)
+                           (bandreps(13, 2; timereversal=false), (1, 1), [1,0]))
+        br1, br2 = brs[idxs[1]], brs[idxs[2]]
+        h_orbit = first(obtain_symmetry_related_hoppings([R], br1, br2))
+        gens = primitivized_generators(br1)
+
+        # `Mm[s,t][i,j]` is a matrix of sparse matrices of unit-elements
+        Mm = construct_M_matrix(h_orbit, br1, br2)
+        @test size(Mm) == (occupation(br1), occupation(br2))
+        @test all(M -> all(isone, M.nzval), Mm)
+
+        # reference: the symmetry constraints `(ρₐₐ Mᵢⱼ ρᵦᵦ' - Pᵀ M⁽ˢᵗ⁾)`, built in the
+        # dense layout `Mm_dense[i,j,s,t]` & aggregated as rows over all `i,s,t` & `gens`
+        Mm_dense = [Mm[s,t][i,j] for i in axes(Mm[1], 1), j in axes(Mm[1], 2),
+                                     s in axes(Mm, 1),    t in axes(Mm, 2)]
+        C = mapreduce(vcat, gens) do g
+            ρₐₐ = site_induced_sgrep_excl_phase(br1, g)
+            ρᵦᵦ = site_induced_sgrep_excl_phase(br2, g)
+            Pᵀ = Matrix(_permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, g))
+            Q = similar(Mm_dense, ComplexF64)
+            for i in axes(Mm_dense, 1), j in axes(Mm_dense, 2)
+                Q[i,j,:,:] = ρₐₐ * Mm_dense[i,j,:,:] * ρᵦᵦ'
+            end
+            for s in axes(Mm_dense, 3), t in axes(Mm_dense, 4)
+                Q[:,:,s,t] -= Pᵀ * Mm_dense[:,:,s,t]
+            end
+            reduce(vcat, [Q[:,:,s,t] for s in axes(Q, 3), t in axes(Q, 4)])
+        end
+        N_ref = reduce(hcat, split_complex.(eachcol(nullspace_tall(C; atol=1e-5)))) # realified
+
+        constraints = ConstraintRows(size(Mm[1], 2))
+        add_symmetry_constraints!(constraints, Mm, h_orbit, br1, br2, gens)
+        N = constraint_nullspace!(deepcopy(constraints); atol=1e-5) # (consumes its input)
+        @test size(N, 2) > 0
+        @test samespan(N, N_ref)
+        # `constraint_nullspace!` agrees with the null space of the dense constraint matrix
+        A = zeros(constraints.nrows, 2constraints.J)
+        foreach((i, j, v) -> A[i, j] += v, constraints.is, constraints.js, constraints.vs)
+        @test A == Matrix(sparse(constraints))
+        @test sparse!(deepcopy(constraints)) == sparse(constraints)
+        @test sparse!(deepcopy(constraints); transpose = true) == sparse(constraints)'
+        @test gram!(deepcopy(constraints)) ≈ A' * A
+        @test samespan(N, nullspace_tall(A; atol=1e-5))
+    end
+end
+
+@testset "`RowPermutation`" begin
+    Π = RowPermutation([3, 1, 4, 2])
+    @test Matrix(Π) == sparse(Π) == [0 1 0 0; 0 0 0 1; 1 0 0 0; 0 0 1 0] # Π[σ[i], i] = 1
+    @test Matrix(transpose(Π)) == transpose(Matrix(Π))
+    @test_throws ArgumentError RowPermutation([1, 1, 2])
+    # the lazy product `Π * M`, as a constraint term, agrees with the materialized product
+    M = sparse([1 0 2; 0 3 0; 4 0 0; 0 0 5])
+    c, c′ = ConstraintRows(3), ConstraintRows(3)
+    add_constraints!(c, (RealConstraintTerm(2, -1, Π * M),))
+    add_constraints!(c′, (RealConstraintTerm(2, -1, sparse(Matrix(Π) * M)),))
+    @test sparse(c) == sparse(c′)
+    @test_throws DimensionMismatch Π * sparse([1 0; 0 1])
+end
+
+@testset "`gram_from_transpose`" begin
+    # incl. an empty row & column, and a row with a single nonzero
+    A = sparse([1, 1, 1, 2, 3, 3, 5], [1, 3, 4, 2, 1, 4, 3], [1.0, -2, 3, 4, 5, -6, 7], 5, 5)
+    G = gram_from_transpose(sparse(transpose(A)))
+    @test G isa Symmetric && G.uplo == 'U'
+    @test G ≈ Matrix(A)' * Matrix(A)
+end
+
+@testset "`psd_nullspace!`" begin
+    samespan(U, W) = rank(U; atol=1e-8) == rank(W; atol=1e-8) == rank([U W]; atol=1e-8)
+    for (n, r) in ((12, 7), (20, 1), (9, 9), (6, 0)), uplo in (:U, :L) # incl. full-rank & zero `G`
+        X = cospi.(0.37 .* (1:n) .* (1:r)' .+ 0.11 .* (1:n)) # rank-`r` column space
+        G = Symmetric(X * X', uplo)                          # positive semi-definite
+        N = psd_nullspace!(copy(G); tol = 1e-10)
+        @test size(N) == (n, n - r)
+        @test N' * N ≈ I
+        @test norm(G * N) < 1e-10
+        r < n && @test samespan(N, nullspace(X'))
+    end
 end

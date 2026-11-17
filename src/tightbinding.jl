@@ -100,7 +100,7 @@ function obtain_symmetry_related_hoppings(
     # finally, sort the elements of each orbit into a canonical order (see
     # `sort_orbit_by_sign_pairs!`): this is purely cosmetic, but makes for nicer default
     # printing of the associated Hamiltonian terms
-    sort_orbit_by_sign_pairs!.(h_orbits)
+    foreach(sort_orbit_by_sign_pairs!, h_orbits)
 
     return h_orbits
 end
@@ -356,15 +356,17 @@ end
 # that every δ has a -δ counterpart in `h_orbit` (violating this is UB).
 function _add_reversed_hops!(h_orbit::HoppingOrbit)
     δs = orbit(h_orbit)
-    hoppings_original = [copy(hops) for hops in h_orbit.hoppings]
+    # no. of original hops at each δ: the loop below only appends to `h_orbit.hoppings[…]`,
+    # so the original hops remain the first `nhops[idx]` elements of each
+    nhops = map(length, h_orbit.hoppings)
     for (idx, δ) in enumerate(δs)
         idx′ = something(findfirst(δs) do δ′
             isapprox(-δ, δ′, nothing, false; atol = VEC_CMP_ATOL)
         end)
-        hops = hoppings_original[idx]
+        hops = h_orbit.hoppings[idx]
         hops′ = h_orbit.hoppings[idx′]
-        for hop in hops
-            (qₐ, qᵦ, R) = hop
+        for k in 1:nhops[idx]
+            (qₐ, qᵦ, R) = hops[k]
             rev_hop = (qᵦ, qₐ, -R) # reverse hop
             rev_qₐ, rev_qᵦ, rev_R = rev_hop
             has_counterpart = any(hops′) do hop′
@@ -497,17 +499,18 @@ end
     construct_M_matrix(
         h_orbit::HoppingOrbit{D}, br1::BandRep{D}, br2::BandRep{D},
         [ordering1, ordering2]) 
-        --> Array{Int,4}
+        --> Matrix{SparseMatrixCSC{Int, Int}}
 
 Construct a set of matrices that encode a Hamiltonian term which resembles the hopping
 from EBR `br1` to EBR `br2`.
 
-The encoding is stored as a 4D matrix. Its last two axes correspond to elements of the
-Bloch Hamiltonian H(k); its first axis corresponds to `orbit(h_orbit)` and the associated
-complex exponentials stored in `v`; and its second axis to the elements of the vector `t`.
-That is:
+The encoding `Mm` is stored as a matrix of sparse matrices, `Mm[s,t][i,j]`. Its first
+indexing `[s,t]` corresponds to elements of the Bloch Hamiltonian Hₛₜ(𝐤). The second indexing
+`[i,j]` instead corresponds such that the row index `i` matches to `orbit(h_orbit)[i]` and
+the associated complex exponentials stored in `v[i]`, while the column index `j` matches to
+the elements of the vector `t`. That is:
 
-    Hₛₜ(k) = vᵢ(k) Mᵢⱼₛₜ tⱼ
+    Hₛₜ(k) = vᵢ(k) Mᵢⱼₛₜ tⱼ = vᵀ(k) Mm[s,t] t
 
 See `devdocs.md` for details.
 """
@@ -528,11 +531,11 @@ function construct_M_matrix(
     Q1, Q2 = irdim(br1.siteir), irdim(br2.siteir)
     Q = Q1 * Q2
 
-    # matrix of matrices that will store the matrix-encoding for each Hamiltonian element
-    Mm = zeros(Int, V, V * E * Q, length(ordering1), length(ordering2))
-
-    # fill in the unit-elements of `Mm`
-    for α in eachindex(ordering1), β in eachindex(ordering2)
+    # matrix of sparse matrices that will store the matrix-encoding for each Hamiltonian
+    # element; each `Mm[α, β]` is a V×(V*E*Q) matrix of unit-elements
+    Mm = Matrix{SparseMatrixCSC{Int, Int}}(undef, length(ordering1), length(ordering2))
+    rs, cs = Int[], Int[] # row & column indices of unit-elements in `Mm[α, β]`
+    for β in eachindex(ordering2), α in eachindex(ordering1)
         (q, i) = ordering1[α]
         (w, j) = ordering2[β]
         q = parent(q)
@@ -550,475 +553,48 @@ function construct_M_matrix(
                     # an "ordinary" hopping, from `q` to `w`
                     offset1 = (x - 1) * Q
                     c = offset0 + offset1 + (j - 1) * Q1 + i
-                    Mm[r, c, α, β] = 1
+                    # set `Mm[α, β][r, c] = 1` by setting the row & column indices; `c`
+                    # lies in `offset0 + offset1 .+ (1:Q)`, which is distinct for each
+                    # pair of hop `x` & orbit element `r`, so `cs` is strictly increasing
+                    push!(rs, r); push!(cs, c)
                 end
             end
         end
+        # use the `_sparse_with_unit_columns` instead of `sparse(rs, cs, 1, V, V * E * Q)`
+        # in order to exploit that each column of `Mm[α, β]` has at most one unit-element
+        # and that `cs` is strictly increasing
+        Mm[α, β] = _sparse_with_unit_columns(rs, cs, V, V * E * Q)
+        empty!(rs); empty!(cs)
     end
 
     return Mm
 end
 
-"""
-    representation_constraint_matrices(
-        Mm::AbstractArray{Int,4}, 
-        brₐ::BandRep{D},
-        brᵦ::BandRep{D},
-        gens::AbstractVector{<:AbstractOperation{D}},
-       [orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
-        orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ)]
-    ) --> Vector{Array{ComplexF64,4}}
-
-Build the Q matrix for a particular symmetry operation (or, equivalently, a particular matrix
-from the site-symmetry representation), acting on the M matrix.
-
-(ρₐₐ)ᵣₛ Hₛₜ (ρᵦᵦ⁻¹)ₜₗ = (ρₐₐ)ᵣₛ vᵢ Mᵢⱼₛₜ tⱼ (ρᵦᵦ⁻¹)ₜₗ = vᵢ (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ tⱼ,
-
-then we can define: Qᵢⱼᵣₗ = (ρₐₐ)ᵣₛ Mᵢⱼₛₜ (ρᵦᵦ⁻¹)ₜₗ
-"""
-function representation_constraint_matrices(
-    Mm::AbstractArray{Int, 4},
-    brₐ::BandRep{D},
-    brᵦ::BandRep{D},
-    gens::AbstractVector{<:AbstractOperation{D}},
-    orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
-    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-) where {D}
-    ρsₐₐ = site_induced_sgrep_excl_phase.(Ref(brₐ), gens, Ref(orderingₐ))
-    ρsᵦᵦ = if brₐ == brᵦ # might as well reuse, if same BR
-        ρsₐₐ
-    else
-        site_induced_sgrep_excl_phase.(Ref(brᵦ), gens, Ref(orderingᵦ))
+# build `sparse(rs, cs, 1, m, n)` directly in CSC form, exploiting (& assuming!) that each
+# column of the input has at most one unit-element, and that the column indices `cs` are
+# sorted, i.e., that `cs` is strictly increasing: this is faster than `sparse(rs, cs, 1, …)`;
+# the input is *not* checked for these properties, so they must be ensured by the caller
+function _sparse_with_unit_columns(rs::Vector{Int}, cs::Vector{Int}, m, n)
+    colptr = zeros(Int, n + 1)
+    colptr[1] = 1
+    for c in cs
+        colptr[c+1] = 1
     end
-
-    Qs = [similar(Mm, ComplexF64) for _ in eachindex(gens)]
-    tmp1 = Matrix{ComplexF64}(undef, size(Mm, 3), size(Mm, 4))
-    tmp2 = similar(tmp1)
-    tmp_Mm_ij = similar(tmp1)
-    for (n, (ρₐₐ, ρᵦᵦ)) in enumerate(zip(ρsₐₐ, ρsᵦᵦ))
-        # we have constructed the representation matrices such that gΦ(k) = ρᵀ(g)Φ(Rk);
-        # then, the Hamiltonian will be transformed due to symmetries as
-        # H(g𝐤) = ρₐₐ(g) H(𝐤) ρᵦᵦ⁺(g), this can be translated into the numerical 
-        # matrices as
-        Q = Qs[n]
-        for j in axes(Mm, 2), i in axes(Mm, 1)   # using `tmp*` matrices to reduce allocs
-            tmp_Mm_ij .= (@view Mm[i, j, :, :])  # copy & convert to ComplexF64 eltype⁽*⁾
-            mul!(tmp1, tmp_Mm_ij, ρᵦᵦ')          # tmp1 = Mm[i, j, :, :] * ρᵦᵦ'
-            mul!(tmp2, ρₐₐ, tmp1)                # tmp2 = ρₐₐ * Mm[i, j, :, :] * ρᵦᵦ'
-            Q[i, j, :, :] .= tmp2
-        end
-        # ⁽*⁾: We do the `tmp_Mm_ij .= …` intermediary to ensure the subsequent `mul!` calls
-        #      dispatch to BLAS rather than to a generic fallback (which would happen for
-        #      two reasons: (1) `@view Mm[i, j, :, :]` is not strided and (2) the eltype of
-        #      `Mm` is `Int` while that of `ρᵦᵦ` is `ComplexF64`).
-    end
-
-    return Qs
+    cumsum!(colptr, colptr)
+    rowval = copy(rs)
+    nzval = ones(Int, length(rs))
+    return SparseMatrixCSC(m, n, colptr, rowval, nzval)
 end
 
 """
-    obtain_basis_free_parameters(
-        h_orbit::HoppingOrbit{D},
-        brₐ::BandRep{D}, 
-        brᵦ::BandRep{D}, 
-       [orderingₐ = OrbitalOrdering(brₐ), 
-        orderingᵦ = OrbitalOrdering(brᵦ),
-        diagonal_block::Bool = true,
-        hermiticity::Hermiticity = HERMITIAN]
-        )                            --> Tuple{Array{Int,4}, Vector{Vector{ComplexF64}}}
+    coefficient_count(Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}}) --> Int
 
-Obtain the basis of free parameters for the hopping terms between `brₐ` and `brᵦ` 
-associated with the hopping orbit `h_orbit`.
-
-## Note
-
-The presence or absence of time-reversal symmetry is inferred implicitly from `brₐ` and `brᵦ`.
+Return the number `J` of (complex) hopping coefficients encoded by the M-matrix `Mm` (see
+`construct_M_matrix`), i.e., the length of the coefficient vector `t` in
+`Hₛₜ(k) = vᵀ(k) Mm[s,t] t`. Every `Mm[s,t]` is a V×J matrix (with `V` the number of hopping
+vectors in the orbit), so `J` can be read off from any of them.
 """
-function obtain_basis_free_parameters(
-    h_orbit::HoppingOrbit{D},
-    brₐ::BandRep{D},
-    brᵦ::BandRep{D},
-    orderingₐ::OrbitalOrdering{D} = OrbitalOrdering(brₐ),
-    orderingᵦ::OrbitalOrdering{D} = OrbitalOrdering(brᵦ),
-    diagonal_block::Bool = true,
-    hermiticity::Hermiticity = HERMITIAN,
-) where {D}
-    num(brₐ) == num(brᵦ) || error("input `BandRep`s must come from the same space group")
-    brₐ.timereversal == brᵦ.timereversal || error("input `BandRep`s must have identical time-reversal symmetry")
-    timereversal = brₐ.timereversal
-
-    # generators in a primitive basis (double group generators, for spinful band
-    # representations)
-    gens = primitivized_generators(brₐ)
-
-    # encode Hamiltonian as a coefficient matrix sandwiched by exponentials & hopping ampl.
-    Mm = construct_M_matrix(h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ)
-
-    # actual computation
-    tₐᵦ_basis_reim = _obtain_basis_free_parameters(
-        h_orbit,
-        brₐ,
-        brᵦ,
-        orderingₐ,
-        orderingᵦ,
-        Mm,
-        gens,
-        timereversal,
-        diagonal_block,
-        hermiticity,
-    )
-
-    return Mm, tₐᵦ_basis_reim
-end
-
-function _obtain_basis_free_parameters(
-    h_orbit::HoppingOrbit{D},
-    brₐ::BandRep{D},
-    brᵦ::BandRep{D},
-    orderingₐ::OrbitalOrdering{D},
-    orderingᵦ::OrbitalOrdering{D},
-    Mm::Array{Int, 4},
-    gens::AbstractVector{<:AbstractOperation{D}},
-    timereversal::Bool,
-    diagonal_block::Bool,
-    hermiticity::Hermiticity,
-) where {D}
-    # encode representation constraints on Hₐᵦ
-    Qs = representation_constraint_matrices(Mm, brₐ, brᵦ, gens, orderingₐ, orderingᵦ)
-
-    # encode reciprocal-rotation constraints on Hₐᵦ
-    Zs = reciprocal_constraints_matrices(Mm, gens, h_orbit)
-
-    # build an aggregate constraint matrix, over all generators, acting on the hopping
-    # coefficient vector tₐᵦ associated with h_orbit
-    constraints = _aggregate_constraints(Qs, Zs)
-    tₐᵦ_basis_matrix = _retrying_nullspace(constraints; atol = NULLSPACE_ATOL_DEFAULT)
-
-    # at this point, the coefficient-space spanning `tₐᵦ_basis` is implicitly complex; this
-    # is conceptually not too nice for a Hamiltonian, and we'd like to work with strictly
-    # real coefficients. To that end, we "split" the possible products of such complex
-    # coefficients with a complex basis vector into two vectors, where the lower half of
-    # each represents the imaginary part of the product. The benefit of this is that it
-    # becomes possible to take the complex conjugate of each element "symbolically" by
-    # simply multiplying with [1 0; 0 -1] (block matrix). We need to do this anyway if we
-    # we have `timereversal = true`, but it's nice to just have a shared representation
-    # of the basis vectors, so we do it here as well.
-
-    # If the set of basis vectors obtained from symmetry constraints was empty, there's no
-    # point in continuing: we then return early
-    isempty(tₐᵦ_basis_matrix) && return Vector{Vector{Float64}}()
-
-    # Details: we split each potentially complex "basis" vector `t = tₐᵦ_basis[i]` into
-    # two real vectors `x` and `y`, such that the _real_ span of `x` and `y` is equivalent
-    # to the complex span of `t`; the key is that we must interpret the lower halfs of `x`
-    # and `y` as representing imaginary numbers. Crucially, this must be kept in mind
-    # everywhere that we use a coefficient vector. In particular, we now must always
-    # interpret `Mm` as acting like `[Mm Mm]` when meeting a "doubled" basis vector of this
-    # kind.
-    # Example: we have `t₁ = [im,0]`, `t₂ = [1,im]`, and `tₐᵦ_basis = [t₁,t₂]`, then:
-    #    ```
-    #    julia> tₐᵦ_basis_split = split_complex.(tₐᵦ_basis)
-    #    2-element Vector{Matrix{Int64}}:
-    #     [0 -1; 0 0; 1 0; 0 0]
-    #     [1 0; 0 -1; 0 1; 1 0]
-    #
-    #    julia> tₐᵦ_basis_split_matrix = reduce(hcat, tₐᵦ_basis_split)
-    #    4×4 Matrix{Int64}:
-    #     0  -1  1   0
-    #     0   0  0  -1
-    #     1   0  0   1
-    #     0   0  1   0
-    #    ```
-    # See `split_complex` for more details on the real/imaginary splitting.
-    N = 2size(Mm, 2) # number of elements per `t`-vector, when doubled
-    tₐᵦ_basis_reim = split_complex.(eachcol(tₐᵦ_basis_matrix))
-    tₐᵦ_basis_reim_matrix = reduce(hcat, tₐᵦ_basis_reim; init=Matrix{Float64}(undef, N, 0))
-
-    ## ----------------------------------------------------------------------------------- #
-    if timereversal # "add" and "intersect" the associated TRS constraints
-        # now we construct the TRS constraints, and then intersect the allowable basis terms
-        # of these constraints with those corresponding to the previously computed basis
-        tₐᵦ_basis_tr_reim_matrix = obtain_basis_free_parameters_TRS(
-            h_orbit, brₐ, brᵦ, orderingₐ, orderingᵦ, Mm
-        )
-        tₐᵦ_basis_reim_matrix = subspace_intersection(
-            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_tr_reim_matrix; atol=NULLSPACE_ATOL_DEFAULT
-        )
-    end
-    isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
-
-    # ------------------------------------------------------------------------------------ #
-    # "add" and "intersect" the associated hermiticity constraints if this is a diagonal block
-    if diagonal_block && hermiticity ≠ NONHERMITIAN
-        antihermitian = hermiticity === ANTIHERMITIAN
-        tₐᵦ_basis_herm_reim_matrix = obtain_basis_free_parameters_hermiticity(
-            h_orbit,
-            brₐ,
-            brᵦ,
-            antihermitian,
-            orderingₐ,
-            orderingᵦ,
-            Mm,
-        )
-        tₐᵦ_basis_reim_matrix = subspace_intersection(
-            tₐᵦ_basis_reim_matrix, tₐᵦ_basis_herm_reim_matrix; atol=NULLSPACE_ATOL_DEFAULT
-        )
-    end
-    isempty(tₐᵦ_basis_reim_matrix) && return Vector{Vector{Float64}}()
-
-    # ------------------------------------------------------------------------------------ #
-    # Make sure we have a reasonably pretty-looking basis in the end by sparsifying and
-    # dropping near-zero elements explicitly
-
-    # convert null-space to a sparse column form
-    tₐᵦ_basis_reim_matrix_form′ = _poormans_sparsification(tₐᵦ_basis_reim_matrix)
-    tₐᵦ_basis_reim = [collect(v) for v in eachcol(tₐᵦ_basis_reim_matrix_form′)]
-
-    # prune near-zero elements of basis vectors
-    _prune_at_threshold!(tₐᵦ_basis_reim)
-
-    return tₐᵦ_basis_reim
-end
-
-# Wrapper around `nullspace` that falls back to QR-iteration SVD if the default
-# divide-and-conquer SVD (`gesdd!`) fails with a `LAPACKException`. The fallback is slower
-# but unconditionally convergent, and is needed for large constraint matrices arising in
-# high-symmetry space groups (e.g., SG 230) on some platforms/LAPACK implementations.
-function _retrying_nullspace(
-    A;
-    atol::Real = 0.0,
-    rtol::Real = (min(size(A)...) * eps(real(float(oneunit(eltype(A)))))) * iszero(atol)
-)
-    try
-        return nullspace(A; atol, rtol)
-    catch e
-        e isa LinearAlgebra.LAPACKException || rethrow(e)
-        # the below simply copies the LinearAlgebra implementation of nullspace, with the
-        # only adjustment being to pass `alg = LinearAlgebra.QRIteration()` to `svd` to
-        # ensure convergence; 
-        # TODO: change to `nullspace(A; atol, rtol, alg = LinearAlgebra.QRIteration())`
-        #       if https://github.com/JuliaLang/LinearAlgebra.jl/issues/1571 is resolved
-        SVD = svd(A; full = true, alg = LinearAlgebra.QRIteration())
-        tol = max(atol, SVD.S[1]*rtol)
-        indstart = sum(s -> s .> tol, SVD.S) + 1
-        return copy((@view SVD.Vt[indstart:end,:])')
-    end
-end
-
-function _aggregate_constraints(
-    Q::AbstractArray{<:Number, 4},
-    Z::Union{AbstractArray{<:Number, 4}, <:Number},
-    row_atol::Real = 1e-10,
-)
-    # store constraints in one big vector initially; then we reshape to a matrix after
-    constraint_vs = Vector{promote_type(eltype(Q), eltype(Z))}()
-    _aggregate_constraints!(constraint_vs, Q, Z, row_atol)
-
-    # return a C×J matrix where each row is a constraint, across C constraints
-    J = size(Q, 2) # number of elements per constraint
-    return _reshape_aggregate_constraints(constraint_vs, J)
-end
-
-function _aggregate_constraints(
-    # same as `_aggregate_constraints(Q, V)` but for a vector of Qs and Zs
-    Qs::AbstractVector{<:AbstractArray{<:Number, 4}},
-    Zs::AbstractVector{<:AbstractArray{<:Number, 4}},
-    row_atol::Real = 1e-10,
-)
-    constraint_vs = Vector{promote_type(eltype(eltype(Qs)), eltype(eltype(Zs)))}()
-    for (Q, Z) in zip(Qs, Zs)
-        _aggregate_constraints!(constraint_vs, Q, Z, row_atol)
-    end
-    J = size(first(Qs), 2)
-    return _reshape_aggregate_constraints(constraint_vs, J)
-end
-
-function _aggregate_constraints!( # modifies `constraint_vs` in place
-    constraint_vs::Vector{<:Number},
-    Q::AbstractArray{<:Number, 4},
-    Z::Union{AbstractArray{<:Number, 4}, <:Number},
-    row_atol::Real = 1e-10,
-)
-    # store constraints in one big vector initially; then we reshape to a matrix after
-    J = size(Q, 2)
-    c = Vector{eltype(constraint_vs)}(undef, J)
-
-    # avoid repeated recomputation of `norm(c′)` in collinearity check below
-    norms = if isempty(constraint_vs)
-        Vector{typeof(norm(c))}()
-    else # `constraint_vs` is not empty
-        map(1:J:length(constraint_vs)) do n
-            c′ = @view constraint_vs[n:n+J-1]
-            norm(c′)
-        end
-    end
-
-    # aggregate constraints into `constraint_vs`
-    for t in axes(Q, 4), s in axes(Q, 3), i in axes(Q, 1)
-        q = @view Q[i, :, s, t]
-        z = Z isa Number ? Z : @view Z[i, :, s, t]
-        c .= q .- z
-
-        # don't add empty or near-empty constraints
-        norm_c = norm(c)
-        norm_c < row_atol && continue
-
-        # check whether `c` is collinear w/ any existing constraint; if so, don't add again
-        c_dot_c′s = reshape(constraint_vs, J, length(constraint_vs) ÷ J)' * c # elements are `dot(c′, c)`, with `c′` an existing constraint
-        collinear = any(zip(c_dot_c′s, norms)) do (c_dot_c′, norm_c′)
-            # NB: works also if zip(…) is empty, cf. `any("empty iterator") = false`
-            abs(c_dot_c′) ≈ norm_c * norm_c′ # collinear if true
-        end
-        collinear && continue
-
-        # add the constraint to the list
-        append!(constraint_vs, c)
-        append!(norms, norm_c)
-    end
-
-    return constraint_vs
-end
-
-function _reshape_aggregate_constraints(
-    constraint_vs::Vector{<:Number}, # vector of inline-concatenated constraints
-    J::Int, # number of elements per constraint: ≡ size(Mm,2) = size(Q,2) = size(Z,2)
-)
-    C = length(constraint_vs) ÷ J # number of constraints
-    return permutedims(reshape(constraint_vs, J, C))
-end
-
-"""
-    reciprocal_constraints_matrices(
-        Mm::AbstractArray{Int,4}, 
-        gens::AbstractVector{<:AbstractOperation{D}},
-        h_orbit::HoppingOrbit{D}
-    ) --> Vector{Array{Int,4}}
-
-Compute the reciprocal constraints matrices for the generators of the SG. This is done by
-permuting the rows of the M matrix according to the symmetry operation acting on k-space.
-See more details in
-`permute_symmetry_related_hoppings_under_symmetry_operation` and `devdocs.md`.
-"""
-function reciprocal_constraints_matrices(
-    Mm::AbstractArray{Int, 4},
-    gens::AbstractVector{<:AbstractOperation{D}},
-    h_orbit::HoppingOrbit{D},
-) where {D}
-    Zs = Vector{Array{Int, 4}}(undef, length(gens))
-    for (i, op) in enumerate(gens)
-        Z = similar(Mm)
-        Pᵀ = transpose(
-            _permute_symmetry_related_hoppings_under_symmetry_operation(h_orbit, op),
-        )
-        for t in axes(Mm, 4)
-            for s in axes(Mm, 3) # vᵀ Ρᵀ Mₛₜ t ⇒ vₗ Ρᵀₗᵢ Mᵢⱼₛₜ tⱼ = vₗ Pᵢₗ Mᵢⱼₛₜ tⱼ
-                # evaluate `Z[:, :, s, t] = Pᵀ * Mm[:, :, s, t]` via `mul!`
-                mul!((@view Z[:, :, s, t]), Pᵀ, (@view Mm[:, :, s, t]))
-            end
-        end
-        Zs[i] = Z
-    end
-    return Zs
-end
-
-"""
-Build the P matrix for a particular symmetry operation acting on k-space, which permutes the
-rows of the M matrix.
-
-To obtain the P matrix, we exploit that the action is on exponentials of the type
-``exp(-2πi𝐤⋅δ)``, and instead act on δ ∈ `h_orbit.orbit` rather than on k. Because of this,
-we need to use the inverse of the rotation part of the symmetry operation.
-
-!!! details "Sketch of proof"
-    Assume g={R|τ} and `Crystalline` implements gk=(R⁻¹)ᵀk. Then
-    (gk)⋅δ = ((R⁻¹)ᵀk)⋅δ + τ = k⋅(R⁻¹)δ.
-
-!!! info
-    It is assumed that the operation `op` is provided in a primitive setting.
-
-!!! warning
-    This function is an internal helper function for `reciprocal_constraints_matrices` and
-    is not part of the public API.
-"""
-function _permute_symmetry_related_hoppings_under_symmetry_operation(
-    h_orbit::HoppingOrbit{D},
-    op::AbstractOperation{D}, # only the rotation part is used
-) where {D}
-    # P is a square matrix that acts as `op` on `v`, i.e., represents ``op ∘ v``, via a
-    # matrix-vector product `P*v`. Equivalently, `P` can act on `M` (via its transpose)
-    # for expressions of the kind (Pv)ᵀ M … = vᵀ Pᵀ M …
-    P = zeros(Int, length(orbit(h_orbit)), length(orbit(h_orbit)))
-    for (i, δᵢ) in enumerate(orbit(h_orbit))
-        # crystalline implements gk = [R⁻¹]ᵀk. However, since we don't have access to k,
-        # being a symbolic variable, we will translate its action into δ. For this,
-        # we implement a simple trick: ([R⁻¹]ᵀ k)·r = R⁻¹ᵢⱼ kᵢ rⱼ = k·(R⁻¹ r)
-        R⁻¹ = SymOperation(inv(rotation(op))) # rotation-only part of `op`
-        δᵢ′ = compose(R⁻¹, δᵢ)
-        j = findfirst(orbit(h_orbit)) do δ′′
-            isapprox(δᵢ′, δ′′, nothing, false; atol = VEC_CMP_ATOL)
-        end
-        isnothing(j) &&
-            error(lazy"hopping element $δᵢ not closed under $op in $(orbit(h_orbit))")
-        P[i, j] = 1
-        # since P acts as g v = P v, we have (gv)ᵢ = vⱼ = ∑ₖ Pᵢₖ vₖ so Pᵢₖ = δᵢⱼ
-    end
-    return P
-end
-
-"""
-Poor man's "matrix sparsification" via the reduced row echelon form.
-
-!!! warning
-    This function is an internal helper function for `obtain_basis_free_parameters` and
-    is not part of the public API.
-"""
-function _poormans_sparsification(
-    A::AbstractMatrix{<:Number};
-    rref_tol::Union{Nothing, Float64} = SPARSIFICATION_ATOL_DEFAULT,
-)
-    # following appendix E of the Qsymm paper (https://arxiv.org/abs/1806.08363) [copied
-    # over from Neumann.jl] [copied over from MPBUtils.jl]
-    if !isnothing(rref_tol)
-        # use a relatively low tolerance in `rref` to avoid explosions of errors
-        # NB: this optional tolerance argument of `rref!` is undocumented :(
-        return transpose(rref!(copy(transpose(A)), rref_tol))
-    end
-    return transpose(rref(transpose(A)))
-end
-
-"""
-Prune near-zero elements of vectors in `vs`.
-
-!!! warning
-    This function is an internal helper function for `obtain_basis_free_parameters` and
-    is not part of the public API.
-"""
-function _prune_at_threshold!(
-    vs::AbstractVector{<:AbstractVector{T}};
-    atol::Real = PRUNE_ATOL_DEFAULT,
-) where {T <: Complex}
-    for v in vs
-        for (j, vⱼ) in enumerate(v)
-            rⱼ, iⱼ = reim(vⱼ)
-            rⱼ′ = ifelse(abs(rⱼ) < atol, zero(real(T)), rⱼ)
-            iⱼ′ = ifelse(abs(iⱼ) < atol, zero(real(T)), iⱼ)
-            v[j] = T(rⱼ′, iⱼ′)
-        end
-    end
-    return vs
-end
-
-function _prune_at_threshold!(
-    vs::AbstractVector{<:AbstractVector{T}};
-    atol::Real = PRUNE_ATOL_DEFAULT,
-) where {T <: Real} # needed for type consistency in TRS implementation
-    for v in vs
-        for (j, vⱼ) in enumerate(v)
-            v[j] = abs(vⱼ) < atol ? zero(T) : vⱼ
-        end
-    end
-    return vs
-end
+coefficient_count(Mm::AbstractMatrix{SparseMatrixCSC{Int, Int}}) = size(first(Mm), 2)
 
 # ---------------------------------------------------------------------------- #
 
@@ -1185,25 +761,3 @@ function tb_hamiltonian(
 ) 
     return tb_hamiltonian(cbr, Rs, Val(S))
 end
-#=
-"""
-    occupation(br::BandRep{D}) --> Int
-
-Counts the number of orbitals in a band representation `br`. This is done by taking 
-the multiplicity of the Wyckoff position associated to `br`, dividing it by the 
-centering volume fraction (excluding copies due to conventional setting) and 
-multiplying it by the dimension of the site irrep.
-
-NB: This is equivalent to `occupation(br)`..!
-"""
-function occupation(br::BandRep{D}) where {D}
-    mult = multiplicity(position(br)) # multiplicity in conventional setting
-    # we need the Wyckoff multiplicity, excluding conventional-centering copies, so we
-    # divide by the number of centering-translations
-    cntr = centering(num(br), D)
-    denom = centering_volume_fraction(cntr, Val(D), Val(D))
-    mult = div(mult, denom)
-
-    return mult * irdim(br.siteir)
-end
-=#

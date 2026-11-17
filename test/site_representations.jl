@@ -208,7 +208,7 @@ using LinearAlgebra: I
         for h_orbit in h_orbits
             Mm, ts = obtain_basis_free_parameters(h_orbit, br, br)
             Mm′, ts′ = obtain_basis_free_parameters(h_orbit, br, br, ordering′, ordering′)
-            @test Mm′ == Mm[:, :, p, p]
+            @test Mm′ == Mm[p, p]
             @test ts′ ≈ ts
         end
     end
